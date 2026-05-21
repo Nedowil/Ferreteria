@@ -14,11 +14,21 @@ class RolesAndPermissionsSeeder extends Seeder
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $permissions = [
+            // Usuarios
             'usuarios.ver',
             'usuarios.crear',
             'usuarios.editar',
             'usuarios.eliminar',
             'roles.gestionar',
+            // Catalogos (categorias, marcas, unidades)
+            'catalogos.gestionar',
+            // Productos
+            'productos.ver',
+            'productos.crear',
+            'productos.editar',
+            'productos.eliminar',
+            // Inventario
+            'inventario.ajustar',
         ];
 
         foreach ($permissions as $permission) {
@@ -28,7 +38,17 @@ class RolesAndPermissionsSeeder extends Seeder
         $admin = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
         $admin->syncPermissions(Permission::all());
 
-        Role::firstOrCreate(['name' => 'vendedor', 'guard_name' => 'web']);
-        Role::firstOrCreate(['name' => 'almacenista', 'guard_name' => 'web']);
+        $almacenista = Role::firstOrCreate(['name' => 'almacenista', 'guard_name' => 'web']);
+        $almacenista->syncPermissions([
+            'catalogos.gestionar',
+            'productos.ver',
+            'productos.crear',
+            'productos.editar',
+            'productos.eliminar',
+            'inventario.ajustar',
+        ]);
+
+        $vendedor = Role::firstOrCreate(['name' => 'vendedor', 'guard_name' => 'web']);
+        $vendedor->syncPermissions(['productos.ver']);
     }
 }

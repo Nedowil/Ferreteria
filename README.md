@@ -5,7 +5,7 @@ Aplicación web para administrar una ferretería. Construida en **Laravel 13** c
 ## Módulos planificados
 
 - [x] Autenticación + Usuarios y Roles
-- [ ] Productos / Inventario
+- [x] Productos / Inventario (categorías, marcas, unidades, productos, movimientos de stock)
 - [ ] Proveedores
 - [ ] Compras (entradas de mercancía)
 - [ ] Clientes
