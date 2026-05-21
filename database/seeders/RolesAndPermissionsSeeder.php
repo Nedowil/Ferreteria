@@ -39,6 +39,15 @@ class RolesAndPermissionsSeeder extends Seeder
             'compras.crear',
             'compras.recibir',
             'compras.cancelar',
+            // Clientes
+            'clientes.ver',
+            'clientes.crear',
+            'clientes.editar',
+            'clientes.eliminar',
+            // Ventas / POS
+            'ventas.ver',
+            'ventas.crear',
+            'ventas.cancelar',
         ];
 
         foreach ($permissions as $permission) {
@@ -67,6 +76,13 @@ class RolesAndPermissionsSeeder extends Seeder
         ]);
 
         $vendedor = Role::firstOrCreate(['name' => 'vendedor', 'guard_name' => 'web']);
-        $vendedor->syncPermissions(['productos.ver']);
+        $vendedor->syncPermissions([
+            'productos.ver',
+            'clientes.ver',
+            'clientes.crear',
+            'clientes.editar',
+            'ventas.ver',
+            'ventas.crear',
+        ]);
     }
 }

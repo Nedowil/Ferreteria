@@ -1,8 +1,11 @@
 @php
     use App\Models\Product;
+    use App\Models\Sale;
     $productsCount = Product::count();
     $lowStockCount = Product::lowStock()->count();
     $lowStockProducts = Product::lowStock()->orderBy('name')->limit(5)->get();
+    $todaySalesCount = Sale::whereDate('date', today())->where('status', Sale::STATUS_COMPLETADA)->count();
+    $todaySalesTotal = Sale::whereDate('date', today())->where('status', Sale::STATUS_COMPLETADA)->sum('total');
 @endphp
 
 <x-app-layout>
@@ -12,7 +15,12 @@
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-white shadow-sm rounded-lg p-6">
+                    <div class="text-sm text-gray-500">Ventas hoy</div>
+                    <div class="text-3xl font-semibold">{{ $todaySalesCount }}</div>
+                    <div class="text-sm text-green-700 mt-1">${{ number_format($todaySalesTotal, 2) }}</div>
+                </div>
                 <div class="bg-white shadow-sm rounded-lg p-6">
                     <div class="text-sm text-gray-500">Productos registrados</div>
                     <div class="text-3xl font-semibold">{{ $productsCount }}</div>

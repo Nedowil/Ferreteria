@@ -52,6 +52,24 @@
                         </x-nav-link>
                     @endcan
 
+                    @can('clientes.ver')
+                        <x-nav-link :href="route('admin.clientes.index')" :active="request()->routeIs('admin.clientes.*')">
+                            Clientes
+                        </x-nav-link>
+                    @endcan
+
+                    @can('ventas.crear')
+                        <x-nav-link :href="route('admin.ventas.pos')" :active="request()->routeIs('admin.ventas.pos')">
+                            POS
+                        </x-nav-link>
+                    @endcan
+
+                    @can('ventas.ver')
+                        <x-nav-link :href="route('admin.ventas.index')" :active="request()->routeIs('admin.ventas.index') || request()->routeIs('admin.ventas.show')">
+                            Ventas
+                        </x-nav-link>
+                    @endcan
+
                     @auth
                         @if (auth()->user()->hasRole('admin'))
                             <x-nav-link :href="route('admin.usuarios.index')" :active="request()->routeIs('admin.usuarios.*')">

@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Brand;
 use App\Models\Category;
+use App\Models\Customer;
 use App\Models\Product;
 use App\Models\Supplier;
 use App\Models\Unit;
@@ -71,6 +72,14 @@ class InventorySeeder extends Seeder
         ];
         foreach ($suppliers as $s) {
             Supplier::firstOrCreate(['name' => $s['name']], $s + ['active' => true]);
+        }
+
+        $customers = [
+            ['name' => 'Publico en general', 'tax_id' => null],
+            ['name' => 'Constructora del Valle SA', 'tax_id' => 'CVA950101ABC', 'email' => 'compras@cdv.example', 'phone' => '5555-1001'],
+        ];
+        foreach ($customers as $c) {
+            Customer::firstOrCreate(['name' => $c['name']], $c + ['active' => true]);
         }
     }
 }

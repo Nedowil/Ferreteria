@@ -2,9 +2,11 @@
 
 use App\Http\Controllers\Admin\BrandController;
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\PurchaseController;
+use App\Http\Controllers\Admin\SaleController;
 use App\Http\Controllers\Admin\SupplierController;
 use App\Http\Controllers\Admin\UnitController;
 use App\Http\Controllers\Admin\UserController;
@@ -88,6 +90,28 @@ Route::middleware(['auth', 'verified'])
 
         Route::middleware('permission:compras.cancelar')->group(function () {
             Route::post('compras/{compra}/cancelar', [PurchaseController::class, 'cancel'])->name('compras.cancel');
+        });
+
+        Route::middleware('permission:clientes.ver')->group(function () {
+            Route::resource('clientes', CustomerController::class)
+                ->except('show')
+                ->parameters(['clientes' => 'cliente']);
+        });
+
+        Route::middleware('permission:ventas.ver')->group(function () {
+            Route::get('ventas', [SaleController::class, 'index'])->name('ventas.index');
+            Route::get('ventas/{venta}', [SaleController::class, 'show'])->name('ventas.show');
+            Route::get('ventas/{venta}/ticket', [SaleController::class, 'ticket'])->name('ventas.ticket');
+        });
+
+        Route::middleware('permission:ventas.crear')->group(function () {
+            Route::get('pos', [SaleController::class, 'pos'])->name('ventas.pos');
+            Route::get('pos/productos', [SaleController::class, 'searchProducts'])->name('ventas.search_products');
+            Route::post('ventas', [SaleController::class, 'store'])->name('ventas.store');
+        });
+
+        Route::middleware('permission:ventas.cancelar')->group(function () {
+            Route::post('ventas/{venta}/cancelar', [SaleController::class, 'cancel'])->name('ventas.cancel');
         });
     });
 

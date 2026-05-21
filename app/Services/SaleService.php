@@ -1,0 +1,145 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\InventoryMovement;
+use App\Models\Product;
+use App\Models\Sale;
+use Illuminate\Support\Facades\DB;
+
+class SaleService
+{
+    public function __construct(private InventoryService $inventory)
+    {
+    }
+
+    public function generateFolio(): string
+    {
+        return DB::transaction(function () {
+            $last = Sale::lockForUpdate()->orderByDesc('id')->first();
+            $next = ($last?->id ?? 0) + 1;
+
+            return 'V-' . str_pad((string) $next, 6, '0', STR_PAD_LEFT);
+        });
+    }
+
+    /**
+     * Crea una venta, valida stock, descuenta inventario y genera movimientos de salida.
+     *
+     * @param  array<int,array{product_id:int,quantity:float,unit_price:float,discount?:float}>  $items
+     */
+    public function create(array $data, array $items, ?int $userId = null): Sale
+    {
+        return DB::transaction(function () use ($data, $items, $userId) {
+            if (empty($items)) {
+                throw new \DomainException('La venta debe tener al menos una partida.');
+            }
+
+            $subtotal = 0.0;
+            $totalDiscount = 0.0;
+            $normalized = [];
+
+            foreach ($items as $item) {
+                $product = Product::lockForUpdate()->findOrFail($item['product_id']);
+
+                $qty = (float) $item['quantity'];
+                $price = (float) $item['unit_price'];
+                $discount = (float) ($item['discount'] ?? 0);
+                $lineSubtotal = ($qty * $price) - $discount;
+
+                if ($lineSubtotal < 0) {
+                    throw new \DomainException("Descuento mayor al subtotal en producto {$product->name}.");
+                }
+
+                if ((float) $product->stock < $qty) {
+                    throw new \DomainException("Stock insuficiente para {$product->name}. Disponible: {$product->stock}.");
+                }
+
+                $subtotal += $qty * $price;
+                $totalDiscount += $discount;
+                $normalized[] = [
+                    'product' => $product,
+                    'quantity' => $qty,
+                    'unit_price' => $price,
+                    'discount' => $discount,
+                    'subtotal' => $lineSubtotal,
+                ];
+            }
+
+            $tax = (float) ($data['tax'] ?? 0);
+            $total = ($subtotal - $totalDiscount) + $tax;
+            $paid = (float) ($data['paid_amount'] ?? $total);
+
+            if ($paid < $total) {
+                throw new \DomainException('El monto pagado es menor al total.');
+            }
+
+            $sale = Sale::create([
+                'folio' => $this->generateFolio(),
+                'customer_id' => $data['customer_id'] ?? null,
+                'user_id' => $userId,
+                'date' => now(),
+                'subtotal' => $subtotal,
+                'discount' => $totalDiscount,
+                'tax' => $tax,
+                'total' => $total,
+                'payment_method' => $data['payment_method'] ?? 'efectivo',
+                'paid_amount' => $paid,
+                'change_amount' => $paid - $total,
+                'status' => Sale::STATUS_COMPLETADA,
+                'notes' => $data['notes'] ?? null,
+            ]);
+
+            foreach ($normalized as $n) {
+                $sale->items()->create([
+                    'product_id' => $n['product']->id,
+                    'quantity' => $n['quantity'],
+                    'unit_price' => $n['unit_price'],
+                    'discount' => $n['discount'],
+                    'subtotal' => $n['subtotal'],
+                ]);
+
+                $this->inventory->applyMovement(
+                    product: $n['product'],
+                    type: InventoryMovement::TYPE_SALIDA,
+                    quantity: $n['quantity'],
+                    reason: "Venta {$sale->folio}",
+                    userId: $userId,
+                    reference: $sale,
+                );
+            }
+
+            return $sale;
+        });
+    }
+
+    public function cancel(Sale $sale, ?int $userId = null): Sale
+    {
+        return DB::transaction(function () use ($sale, $userId) {
+            $sale = Sale::with('items')->lockForUpdate()->findOrFail($sale->id);
+
+            if (! $sale->isCompletada()) {
+                throw new \DomainException('Solo se pueden cancelar ventas completadas.');
+            }
+
+            foreach ($sale->items as $item) {
+                $product = Product::lockForUpdate()->findOrFail($item->product_id);
+                $this->inventory->applyMovement(
+                    product: $product,
+                    type: InventoryMovement::TYPE_ENTRADA,
+                    quantity: (float) $item->quantity,
+                    reason: "Cancelacion venta {$sale->folio}",
+                    userId: $userId,
+                    reference: $sale,
+                );
+            }
+
+            $sale->update([
+                'status' => Sale::STATUS_CANCELADA,
+                'cancelled_at' => now(),
+            ]);
+
+            return $sale;
+        });
+    }
+}
