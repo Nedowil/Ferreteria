@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\Supplier;
 use App\Models\Unit;
 use Illuminate\Database\Seeder;
 
@@ -62,6 +63,14 @@ class InventorySeeder extends Seeder
                     'active' => true,
                 ]),
             );
+        }
+
+        $suppliers = [
+            ['name' => 'Distribuidora Truper SA de CV', 'tax_id' => 'DTR901234ABC', 'phone' => '5555-0001', 'email' => 'ventas@truper.example'],
+            ['name' => 'Ferreteria Mayoreo del Norte', 'tax_id' => 'FMN880101XYZ', 'phone' => '5555-0002', 'email' => 'contacto@fmn.example'],
+        ];
+        foreach ($suppliers as $s) {
+            Supplier::firstOrCreate(['name' => $s['name']], $s + ['active' => true]);
         }
     }
 }

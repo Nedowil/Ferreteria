@@ -6,8 +6,8 @@ Aplicación web para administrar una ferretería. Construida en **Laravel 13** c
 
 - [x] Autenticación + Usuarios y Roles
 - [x] Productos / Inventario (categorías, marcas, unidades, productos, movimientos de stock)
-- [ ] Proveedores
-- [ ] Compras (entradas de mercancía)
+- [x] Proveedores
+- [x] Compras (registro pendiente → recibida → genera entradas de inventario)
 - [ ] Clientes
 - [ ] Punto de Venta (POS)
 - [ ] Caja (apertura/cierre, arqueo)

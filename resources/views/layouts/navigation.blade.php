@@ -40,6 +40,18 @@
                         </x-dropdown>
                     @endcan
 
+                    @can('proveedores.ver')
+                        <x-nav-link :href="route('admin.proveedores.index')" :active="request()->routeIs('admin.proveedores.*')">
+                            Proveedores
+                        </x-nav-link>
+                    @endcan
+
+                    @can('compras.ver')
+                        <x-nav-link :href="route('admin.compras.index')" :active="request()->routeIs('admin.compras.*')">
+                            Compras
+                        </x-nav-link>
+                    @endcan
+
                     @auth
                         @if (auth()->user()->hasRole('admin'))
                             <x-nav-link :href="route('admin.usuarios.index')" :active="request()->routeIs('admin.usuarios.*')">

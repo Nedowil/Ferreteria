@@ -4,6 +4,8 @@ use App\Http\Controllers\Admin\BrandController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\PurchaseController;
+use App\Http\Controllers\Admin\SupplierController;
 use App\Http\Controllers\Admin\UnitController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\ProfileController;
@@ -62,6 +64,30 @@ Route::middleware(['auth', 'verified'])
 
         Route::middleware('permission:inventario.ajustar')->group(function () {
             Route::post('inventario/{producto}/movimientos', [InventoryController::class, 'store'])->name('inventario.movimientos.store');
+        });
+
+        Route::middleware('permission:proveedores.ver')->group(function () {
+            Route::resource('proveedores', SupplierController::class)
+                ->except('show')
+                ->parameters(['proveedores' => 'proveedor']);
+        });
+
+        Route::middleware('permission:compras.ver')->group(function () {
+            Route::get('compras', [PurchaseController::class, 'index'])->name('compras.index');
+            Route::get('compras/{compra}', [PurchaseController::class, 'show'])->name('compras.show');
+        });
+
+        Route::middleware('permission:compras.crear')->group(function () {
+            Route::get('compras-nueva', [PurchaseController::class, 'create'])->name('compras.create');
+            Route::post('compras', [PurchaseController::class, 'store'])->name('compras.store');
+        });
+
+        Route::middleware('permission:compras.recibir')->group(function () {
+            Route::post('compras/{compra}/recibir', [PurchaseController::class, 'receive'])->name('compras.receive');
+        });
+
+        Route::middleware('permission:compras.cancelar')->group(function () {
+            Route::post('compras/{compra}/cancelar', [PurchaseController::class, 'cancel'])->name('compras.cancel');
         });
     });
 

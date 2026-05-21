@@ -29,6 +29,16 @@ class RolesAndPermissionsSeeder extends Seeder
             'productos.eliminar',
             // Inventario
             'inventario.ajustar',
+            // Proveedores
+            'proveedores.ver',
+            'proveedores.crear',
+            'proveedores.editar',
+            'proveedores.eliminar',
+            // Compras
+            'compras.ver',
+            'compras.crear',
+            'compras.recibir',
+            'compras.cancelar',
         ];
 
         foreach ($permissions as $permission) {
@@ -46,6 +56,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'productos.editar',
             'productos.eliminar',
             'inventario.ajustar',
+            'proveedores.ver',
+            'proveedores.crear',
+            'proveedores.editar',
+            'proveedores.eliminar',
+            'compras.ver',
+            'compras.crear',
+            'compras.recibir',
+            'compras.cancelar',
         ]);
 
         $vendedor = Role::firstOrCreate(['name' => 'vendedor', 'guard_name' => 'web']);
