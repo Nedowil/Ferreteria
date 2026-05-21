@@ -11,10 +11,9 @@ Aplicación web para administrar una ferretería. Construida en **Laravel 13** c
 - [x] Clientes
 - [x] Punto de Venta (POS) con ticket imprimible
 - [x] Caja (apertura, movimientos manuales ingreso/egreso, arqueo y cierre)
-- [ ] Caja (apertura/cierre, arqueo)
+- [x] Reportes (ventas por periodo, top productos/clientes/proveedores, utilidad bruta, stock muerto, corte diario, valor de inventario)
 - [ ] Facturación / Tickets
-- [ ] Reportes
-- [ ] Dashboard con KPIs
+- [x] Dashboard con KPIs (ventas hoy, stock bajo)
 
 ## Requisitos
 

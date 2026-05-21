@@ -76,6 +76,12 @@
                         </x-nav-link>
                     @endcan
 
+                    @can('reportes.ver')
+                        <x-nav-link :href="route('admin.reportes.index')" :active="request()->routeIs('admin.reportes.*')">
+                            Reportes
+                        </x-nav-link>
+                    @endcan
+
                     @auth
                         @if (auth()->user()->hasRole('admin'))
                             <x-nav-link :href="route('admin.usuarios.index')" :active="request()->routeIs('admin.usuarios.*')">

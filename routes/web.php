@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\PurchaseController;
+use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\SaleController;
 use App\Http\Controllers\Admin\SupplierController;
 use App\Http\Controllers\Admin\UnitController;
@@ -131,6 +132,21 @@ Route::middleware(['auth', 'verified'])
         Route::middleware('permission:caja.cerrar')->group(function () {
             Route::post('caja/{caja}/cerrar', [CashController::class, 'close'])->name('caja.close');
         });
+
+        Route::middleware('permission:reportes.ver')
+            ->prefix('reportes')
+            ->name('reportes.')
+            ->group(function () {
+                Route::get('/', [ReportController::class, 'index'])->name('index');
+                Route::get('ventas', [ReportController::class, 'sales'])->name('sales');
+                Route::get('productos-top', [ReportController::class, 'topProducts'])->name('top_products');
+                Route::get('utilidad', [ReportController::class, 'profit'])->name('profit');
+                Route::get('clientes-top', [ReportController::class, 'topCustomers'])->name('top_customers');
+                Route::get('proveedores-top', [ReportController::class, 'topSuppliers'])->name('top_suppliers');
+                Route::get('stock-muerto', [ReportController::class, 'deadStock'])->name('dead_stock');
+                Route::get('corte-diario', [ReportController::class, 'dailyCash'])->name('daily_cash');
+                Route::get('valor-inventario', [ReportController::class, 'inventoryValue'])->name('inventory_value');
+            });
     });
 
 require __DIR__.'/auth.php';

@@ -54,6 +54,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'caja.cerrar',
             'caja.movimientos',
             'caja.ver_todas',
+            // Reportes
+            'reportes.ver',
         ];
 
         foreach ($permissions as $permission) {
