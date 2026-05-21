@@ -48,6 +48,12 @@ class RolesAndPermissionsSeeder extends Seeder
             'ventas.ver',
             'ventas.crear',
             'ventas.cancelar',
+            // Caja
+            'caja.ver',
+            'caja.abrir',
+            'caja.cerrar',
+            'caja.movimientos',
+            'caja.ver_todas',
         ];
 
         foreach ($permissions as $permission) {
@@ -83,6 +89,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'clientes.editar',
             'ventas.ver',
             'ventas.crear',
+            'caja.ver',
+            'caja.abrir',
+            'caja.cerrar',
+            'caja.movimientos',
         ]);
     }
 }

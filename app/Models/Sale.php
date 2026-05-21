@@ -15,6 +15,7 @@ class Sale extends Model
         'folio',
         'customer_id',
         'user_id',
+        'cash_session_id',
         'date',
         'subtotal',
         'discount',
@@ -42,6 +43,11 @@ class Sale extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function cashSession(): BelongsTo
+    {
+        return $this->belongsTo(CashSession::class);
     }
 
     public function user(): BelongsTo

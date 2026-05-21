@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\BrandController;
+use App\Http\Controllers\Admin\CashController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\InventoryController;
@@ -112,6 +113,23 @@ Route::middleware(['auth', 'verified'])
 
         Route::middleware('permission:ventas.cancelar')->group(function () {
             Route::post('ventas/{venta}/cancelar', [SaleController::class, 'cancel'])->name('ventas.cancel');
+        });
+
+        Route::middleware('permission:caja.ver')->group(function () {
+            Route::get('caja', [CashController::class, 'index'])->name('caja.index');
+            Route::get('caja/{caja}', [CashController::class, 'show'])->name('caja.show');
+        });
+
+        Route::middleware('permission:caja.abrir')->group(function () {
+            Route::post('caja/abrir', [CashController::class, 'open'])->name('caja.open');
+        });
+
+        Route::middleware('permission:caja.movimientos')->group(function () {
+            Route::post('caja/{caja}/movimientos', [CashController::class, 'storeMovement'])->name('caja.movimientos.store');
+        });
+
+        Route::middleware('permission:caja.cerrar')->group(function () {
+            Route::post('caja/{caja}/cerrar', [CashController::class, 'close'])->name('caja.close');
         });
     });
 

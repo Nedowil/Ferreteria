@@ -70,6 +70,12 @@
                         </x-nav-link>
                     @endcan
 
+                    @can('caja.ver')
+                        <x-nav-link :href="route('admin.caja.index')" :active="request()->routeIs('admin.caja.*')">
+                            Caja
+                        </x-nav-link>
+                    @endcan
+
                     @auth
                         @if (auth()->user()->hasRole('admin'))
                             <x-nav-link :href="route('admin.usuarios.index')" :active="request()->routeIs('admin.usuarios.*')">

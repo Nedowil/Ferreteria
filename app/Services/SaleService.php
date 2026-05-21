@@ -9,8 +9,10 @@ use Illuminate\Support\Facades\DB;
 
 class SaleService
 {
-    public function __construct(private InventoryService $inventory)
-    {
+    public function __construct(
+        private InventoryService $inventory,
+        private CashService $cash,
+    ) {
     }
 
     public function generateFolio(): string
@@ -109,7 +111,9 @@ class SaleService
                 );
             }
 
-            return $sale;
+            $this->cash->registerSale($sale);
+
+            return $sale->refresh();
         });
     }
 
@@ -138,6 +142,8 @@ class SaleService
                 'status' => Sale::STATUS_CANCELADA,
                 'cancelled_at' => now(),
             ]);
+
+            $this->cash->registerSaleCancellation($sale);
 
             return $sale;
         });
