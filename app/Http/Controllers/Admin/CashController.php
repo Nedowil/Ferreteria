@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CashMovement;
 use App\Models\CashSession;
 use App\Services\CashService;
+use App\Support\CurrentBranch;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -57,6 +58,7 @@ class CashController extends Controller
                 userId: auth()->id(),
                 openingAmount: (float) $data['opening_amount'],
                 notes: $data['opening_notes'] ?? null,
+                branchId: CurrentBranch::id(),
             );
         } catch (\DomainException $e) {
             return back()->withErrors(['open' => $e->getMessage()]);

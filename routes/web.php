@@ -1,5 +1,9 @@
 <?php
 
+use App\Http\Controllers\Admin\AuditLogController;
+use App\Http\Controllers\Admin\BackupController;
+use App\Http\Controllers\Admin\BranchController;
+use App\Http\Controllers\Admin\BranchSwitcherController;
 use App\Http\Controllers\Admin\BrandController;
 use App\Http\Controllers\Admin\CashController;
 use App\Http\Controllers\Admin\CategoryController;
@@ -142,6 +146,23 @@ Route::middleware(['auth', 'verified'])
             Route::put('configuracion/emisor', [CompanySettingController::class, 'update'])->name('configuracion.empresa.update');
         });
 
+        Route::middleware('permission:sucursales.gestionar')->group(function () {
+            Route::resource('sucursales', BranchController::class)->parameters(['sucursales' => 'sucursal'])->except('show');
+        });
+        // Cambio de sucursal disponible para cualquier usuario autenticado
+        Route::post('sucursal/cambiar', [BranchSwitcherController::class, 'switch'])->name('sucursal.switch');
+
+        Route::middleware('permission:auditoria.ver')->group(function () {
+            Route::get('auditoria', [AuditLogController::class, 'index'])->name('auditoria.index');
+        });
+
+        Route::middleware('permission:backup.gestionar')->group(function () {
+            Route::get('backups', [BackupController::class, 'index'])->name('backup.index');
+            Route::post('backups/run', [BackupController::class, 'run'])->name('backup.run');
+            Route::get('backups/{filename}', [BackupController::class, 'download'])->name('backup.download');
+            Route::delete('backups/{filename}', [BackupController::class, 'destroy'])->name('backup.destroy');
+        });
+
         Route::middleware('permission:cotizaciones.ver')->group(function () {
             Route::get('cotizaciones', [QuotationController::class, 'index'])->name('cotizaciones.index');
             Route::get('cotizaciones/{cotizacion}', [QuotationController::class, 'show'])->name('cotizaciones.show');
@@ -194,5 +215,13 @@ Route::middleware(['auth', 'verified'])
                 Route::get('valor-inventario', [ReportController::class, 'inventoryValue'])->name('inventory_value');
             });
     });
+
+// Rutas publicas firmadas para compartir PDFs por WhatsApp/email sin requerir login
+Route::get('p/factura/{sale}', [\App\Http\Controllers\Public\PublicDocumentController::class, 'sale'])
+    ->name('public.documents.sale')
+    ->middleware('signed');
+Route::get('p/cotizacion/{quotation}', [\App\Http\Controllers\Public\PublicDocumentController::class, 'quotation'])
+    ->name('public.documents.quotation')
+    ->middleware('signed');
 
 require __DIR__.'/auth.php';

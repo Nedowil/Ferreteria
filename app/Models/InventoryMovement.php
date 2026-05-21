@@ -13,6 +13,7 @@ class InventoryMovement extends Model
     public const TYPE_AJUSTE = 'ajuste';
 
     protected $fillable = [
+        'branch_id',
         'product_id',
         'user_id',
         'type',
@@ -33,6 +34,11 @@ class InventoryMovement extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     public function user(): BelongsTo

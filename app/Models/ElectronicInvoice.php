@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ElectronicInvoice extends Model
 {
+    use Auditable;
+
     public const STATUS_PENDIENTE = 'pendiente';
     public const STATUS_CERTIFICADA = 'certificada';
     public const STATUS_ANULADA = 'anulada';

@@ -2,18 +2,22 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Purchase extends Model
 {
+    use Auditable;
+
     public const STATUS_PENDIENTE = 'pendiente';
     public const STATUS_RECIBIDA = 'recibida';
     public const STATUS_CANCELADA = 'cancelada';
 
     protected $fillable = [
         'folio',
+        'branch_id',
         'supplier_id',
         'user_id',
         'date',
@@ -37,6 +41,11 @@ class Purchase extends Model
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     public function user(): BelongsTo

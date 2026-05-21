@@ -24,5 +24,11 @@ class DatabaseSeeder extends Seeder
         if (! $admin->hasRole('admin')) {
             $admin->assignRole('admin');
         }
+
+        // Asigna sucursal principal al admin si existe
+        $main = \App\Models\Branch::where('is_main', true)->first();
+        if ($main && ! $admin->branches()->where('branches.id', $main->id)->exists()) {
+            $admin->branches()->attach($main->id, ['is_default' => true]);
+        }
     }
 }

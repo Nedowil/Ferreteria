@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Quotation extends Model
 {
+    use Auditable;
+
     public const STATUS_VIGENTE = 'vigente';
     public const STATUS_ACEPTADA = 'aceptada';
     public const STATUS_EXPIRADA = 'expirada';
@@ -16,6 +19,7 @@ class Quotation extends Model
 
     protected $fillable = [
         'folio',
+        'branch_id',
         'customer_id',
         'user_id',
         'date',

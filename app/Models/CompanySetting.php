@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
 
 class CompanySetting extends Model
 {
+    use Auditable;
+
     public const REGIMEN_PEQUENO = 'PEQUENO_CONTRIBUYENTE';
     public const REGIMEN_GENERAL = 'GENERAL';
 

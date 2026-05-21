@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Services\SaleService;
+use App\Support\CurrentBranch;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -53,8 +54,9 @@ class SaleController extends Controller
     public function searchProducts(Request $request): JsonResponse
     {
         $term = trim((string) $request->input('q'));
+        $branchId = CurrentBranch::id();
 
-        $query = Product::with('unit')
+        $query = Product::with(['unit', 'stocks' => fn ($q) => $branchId ? $q->where('branch_id', $branchId) : $q])
             ->where('active', true);
 
         if ($term !== '') {
@@ -72,7 +74,8 @@ class SaleController extends Controller
             'name' => $p->name,
             'unit' => $p->unit?->abbreviation,
             'sale_price' => (float) $p->sale_price,
-            'stock' => (float) $p->stock,
+            'stock' => $p->stockFor($branchId),
+            'exact_barcode_match' => $term !== '' && $p->barcode === $term,
         ]);
 
         return response()->json($products);
@@ -84,7 +87,7 @@ class SaleController extends Controller
         $items = $this->validateItems($request);
 
         try {
-            $sale = $this->service->create($data, $items, auth()->id());
+            $sale = $this->service->create($data, $items, auth()->id(), CurrentBranch::id());
         } catch (\DomainException $e) {
             return back()->withErrors(['sale' => $e->getMessage()])->withInput();
         }

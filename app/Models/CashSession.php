@@ -2,16 +2,20 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CashSession extends Model
 {
+    use Auditable;
+
     public const STATUS_ABIERTA = 'abierta';
     public const STATUS_CERRADA = 'cerrada';
 
     protected $fillable = [
+        'branch_id',
         'user_id',
         'opened_at',
         'closed_at',
@@ -36,6 +40,11 @@ class CashSession extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     public function movements(): HasMany

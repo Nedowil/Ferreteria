@@ -107,7 +107,10 @@
                                 </x-slot>
                                 <x-slot name="content">
                                     <x-dropdown-link :href="route('admin.usuarios.index')">Usuarios</x-dropdown-link>
+                                    <x-dropdown-link :href="route('admin.sucursales.index')">Sucursales</x-dropdown-link>
                                     <x-dropdown-link :href="route('admin.configuracion.empresa.edit')">Datos del emisor</x-dropdown-link>
+                                    <x-dropdown-link :href="route('admin.auditoria.index')">Auditoria</x-dropdown-link>
+                                    <x-dropdown-link :href="route('admin.backup.index')">Backups</x-dropdown-link>
                                 </x-slot>
                             </x-dropdown>
                         @endif
@@ -115,8 +118,30 @@
                 </div>
             </div>
 
-            <!-- Settings Dropdown -->
+            <!-- Selector de sucursal + Settings -->
             <div class="hidden sm:flex sm:items-center sm:ms-6">
+                @auth
+                    @php
+                        $currentBranch = \App\Support\CurrentBranch::model();
+                        $availableBranches = auth()->user()->hasRole('admin')
+                            ? \App\Models\Branch::where('active', true)->orderBy('name')->get()
+                            : auth()->user()->branches()->where('branches.active', true)->orderBy('branches.name')->get();
+                    @endphp
+                    @if ($availableBranches->count() > 0)
+                        <form method="POST" action="{{ route('admin.sucursal.switch') }}" class="me-3 flex items-center gap-1">
+                            @csrf
+                            <span class="text-xs text-gray-500">📍</span>
+                            <select name="branch_id" onchange="this.form.submit()"
+                                    class="text-xs border-gray-300 rounded-md shadow-sm py-1">
+                                @foreach ($availableBranches as $b)
+                                    <option value="{{ $b->id }}" @selected($currentBranch?->id === $b->id)>{{ $b->name }}</option>
+                                @endforeach
+                            </select>
+                        </form>
+                    @endif
+                @endauth
+            </div>
+            <div class="hidden sm:flex sm:items-center">
                 <x-dropdown align="right" width="48">
                     <x-slot name="trigger">
                         <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">

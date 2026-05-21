@@ -67,6 +67,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'facturas.ver',
             'facturas.emitir',
             'facturas.anular',
+            // Multi-sucursal / Admin operacional
+            'sucursales.gestionar',
+            'auditoria.ver',
+            'backup.gestionar',
         ];
 
         foreach ($permissions as $permission) {

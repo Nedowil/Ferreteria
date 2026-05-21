@@ -2,17 +2,21 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Sale extends Model
 {
+    use Auditable;
+
     public const STATUS_COMPLETADA = 'completada';
     public const STATUS_CANCELADA = 'cancelada';
 
     protected $fillable = [
         'folio',
+        'branch_id',
         'customer_id',
         'user_id',
         'cash_session_id',
@@ -43,6 +47,11 @@ class Sale extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     public function cashSession(): BelongsTo

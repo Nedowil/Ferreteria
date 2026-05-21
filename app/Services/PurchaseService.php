@@ -28,11 +28,12 @@ class PurchaseService
      *
      * @param  array<int,array{product_id:int,quantity:float,unit_cost:float}>  $items
      */
-    public function create(array $data, array $items, ?int $userId = null): Purchase
+    public function create(array $data, array $items, ?int $userId = null, ?int $branchId = null): Purchase
     {
-        return DB::transaction(function () use ($data, $items, $userId) {
+        return DB::transaction(function () use ($data, $items, $userId, $branchId) {
             $purchase = Purchase::create([
                 'folio' => $this->generateFolio(),
+                'branch_id' => $branchId,
                 'supplier_id' => $data['supplier_id'],
                 'user_id' => $userId,
                 'date' => $data['date'],
@@ -106,6 +107,7 @@ class PurchaseService
                     reason: "Compra {$purchase->folio}",
                     userId: $userId,
                     reference: $purchase,
+                    branchId: $purchase->branch_id,
                 );
 
                 $product->purchase_price = $item->unit_cost;

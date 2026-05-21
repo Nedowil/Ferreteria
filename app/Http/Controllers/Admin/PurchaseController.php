@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\Supplier;
 use App\Services\PurchaseService;
+use App\Support\CurrentBranch;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -61,6 +62,7 @@ class PurchaseController extends Controller
             data: $data,
             items: $items,
             userId: auth()->id(),
+            branchId: CurrentBranch::id(),
         );
 
         return redirect()->route('admin.compras.show', $purchase)->with('status', 'Compra registrada como pendiente.');

@@ -30,9 +30,9 @@ class SaleService
      *
      * @param  array<int,array{product_id:int,quantity:float,unit_price:float,discount?:float}>  $items
      */
-    public function create(array $data, array $items, ?int $userId = null): Sale
+    public function create(array $data, array $items, ?int $userId = null, ?int $branchId = null): Sale
     {
-        return DB::transaction(function () use ($data, $items, $userId) {
+        return DB::transaction(function () use ($data, $items, $userId, $branchId) {
             if (empty($items)) {
                 throw new \DomainException('La venta debe tener al menos una partida.');
             }
@@ -53,8 +53,9 @@ class SaleService
                     throw new \DomainException("Descuento mayor al subtotal en producto {$product->name}.");
                 }
 
-                if ((float) $product->stock < $qty) {
-                    throw new \DomainException("Stock insuficiente para {$product->name}. Disponible: {$product->stock}.");
+                $available = $branchId ? $product->stockFor($branchId) : (float) $product->stock;
+                if ($available < $qty) {
+                    throw new \DomainException("Stock insuficiente para {$product->name}. Disponible: {$available}.");
                 }
 
                 $subtotal += $qty * $price;
@@ -78,6 +79,7 @@ class SaleService
 
             $sale = Sale::create([
                 'folio' => $this->generateFolio(),
+                'branch_id' => $branchId,
                 'customer_id' => $data['customer_id'] ?? null,
                 'user_id' => $userId,
                 'date' => now(),
@@ -108,6 +110,7 @@ class SaleService
                     reason: "Venta {$sale->folio}",
                     userId: $userId,
                     reference: $sale,
+                    branchId: $branchId,
                 );
             }
 
@@ -135,6 +138,7 @@ class SaleService
                     reason: "Cancelacion venta {$sale->folio}",
                     userId: $userId,
                     reference: $sale,
+                    branchId: $sale->branch_id,
                 );
             }
 

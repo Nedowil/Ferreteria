@@ -2,10 +2,12 @@
 
 namespace Database\Seeders;
 
+use App\Models\Branch;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Customer;
 use App\Models\Product;
+use App\Models\ProductStock;
 use App\Models\Supplier;
 use App\Models\Unit;
 use Illuminate\Database\Seeder;
@@ -14,6 +16,18 @@ class InventorySeeder extends Seeder
 {
     public function run(): void
     {
+        // Sucursal principal por defecto
+        $mainBranch = Branch::firstOrCreate(
+            ['code' => 'PRINCIPAL'],
+            [
+                'name' => 'Sucursal Principal',
+                'address' => '5a Avenida 10-25 Zona 1, Guatemala',
+                'phone' => '2222-3333',
+                'is_main' => true,
+                'active' => true,
+            ],
+        );
+
         $units = [
             ['name' => 'Pieza', 'abbreviation' => 'pza'],
             ['name' => 'Metro', 'abbreviation' => 'm'],
@@ -55,7 +69,7 @@ class InventorySeeder extends Seeder
         ];
 
         foreach ($samples as $s) {
-            Product::firstOrCreate(
+            $product = Product::firstOrCreate(
                 ['sku' => $s['sku']],
                 array_merge($s, [
                     'category_id' => $herr?->id,
@@ -63,6 +77,12 @@ class InventorySeeder extends Seeder
                     'unit_id' => $pza?->id,
                     'active' => true,
                 ]),
+            );
+
+            // Stock por sucursal: replica el stock global en la sucursal principal
+            ProductStock::firstOrCreate(
+                ['product_id' => $product->id, 'branch_id' => $mainBranch->id],
+                ['stock' => $product->stock, 'min_stock' => $product->min_stock],
             );
         }
 

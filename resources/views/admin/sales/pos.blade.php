@@ -20,9 +20,17 @@
                     <!-- Columna izquierda: buscador + resultados -->
                     <div class="lg:col-span-2 bg-white shadow-sm rounded-lg p-4">
                         <div class="flex gap-2">
-                            <input type="text" x-model="query" @input.debounce.300ms="search()" @keydown.enter.prevent="firstResult()"
-                                   placeholder="Buscar por SKU, codigo de barras o nombre... (Enter = primer resultado)"
-                                   class="flex-1 border-gray-300 rounded-md shadow-sm" autofocus />
+                            <input type="text" x-model="query"
+                                   x-ref="search"
+                                   @keydown="onKeydown($event)"
+                                   @input="onInput()"
+                                   @blur="refocus()"
+                                   placeholder="Escanea un codigo de barras o busca por SKU/nombre..."
+                                   class="flex-1 border-gray-300 rounded-md shadow-sm" autofocus autocomplete="off" />
+                        </div>
+
+                        <div x-show="lastScanned" x-transition class="mt-2 p-2 bg-green-100 text-green-800 rounded text-sm">
+                            <strong>✓ Escaneado:</strong> <span x-text="lastScanned"></span>
                         </div>
 
                         <div class="mt-3 max-h-96 overflow-y-auto border rounded">
@@ -171,17 +179,71 @@
                 total: 0,
                 change: 0,
 
+                // Deteccion de scanner: los lectores envian caracteres a alta velocidad
+                lastKeyTime: 0,
+                lastScanned: '',
+                scannerThresholdMs: 35,
+                searchTimer: null,
+                debounceMs: 300,
+
                 init() {
                     this.search();
+                    setInterval(() => {
+                        if (this.lastScanned && Date.now() - this.lastScanTime > 1500) {
+                            this.lastScanned = '';
+                        }
+                    }, 500);
                 },
                 async search() {
                     const url = new URL('{{ route('admin.ventas.search_products') }}', window.location.origin);
                     if (this.query) url.searchParams.set('q', this.query);
                     const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
                     this.results = await res.json();
+                    return this.results;
                 },
-                firstResult() {
-                    if (this.results.length > 0 && this.results[0].stock > 0) this.addItem(this.results[0]);
+                async onInput() {
+                    const now = Date.now();
+                    const gap = now - this.lastKeyTime;
+                    this.lastKeyTime = now;
+
+                    clearTimeout(this.searchTimer);
+                    this.searchTimer = setTimeout(() => this.search(), this.debounceMs);
+
+                    // Si la velocidad de typing indica scanner (caracteres consecutivos
+                    // con gap muy pequeno), preparar deteccion de barcode exacto
+                    if (gap < this.scannerThresholdMs && this.query.length >= 6) {
+                        this.scheduleBarcodeMatch();
+                    }
+                },
+                onKeydown(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        // Intenta primero match exacto de codigo de barras
+                        this.tryExactBarcodeMatch();
+                    }
+                },
+                async tryExactBarcodeMatch() {
+                    if (!this.query) return;
+                    const term = this.query;
+                    const products = await this.search();
+                    const exact = products.find(p => p.barcode === term);
+                    if (exact) {
+                        this.addItem(exact);
+                        this.lastScanned = `${exact.sku} — ${exact.name}`;
+                        this.lastScanTime = Date.now();
+                        this.query = '';
+                    } else if (products.length > 0 && products[0].stock > 0) {
+                        this.addItem(products[0]);
+                        this.query = '';
+                    }
+                },
+                scheduleBarcodeMatch() {
+                    clearTimeout(this.barcodeTimer);
+                    this.barcodeTimer = setTimeout(() => this.tryExactBarcodeMatch(), 80);
+                },
+                refocus() {
+                    // Manten el foco en el buscador para que el scanner siempre funcione
+                    setTimeout(() => this.$refs.search?.focus(), 50);
                 },
                 addItem(p) {
                     if (p.stock <= 0) return;

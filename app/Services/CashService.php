@@ -17,14 +17,15 @@ class CashService
             ->first();
     }
 
-    public function open(int $userId, float $openingAmount, ?string $notes = null): CashSession
+    public function open(int $userId, float $openingAmount, ?string $notes = null, ?int $branchId = null): CashSession
     {
-        return DB::transaction(function () use ($userId, $openingAmount, $notes) {
+        return DB::transaction(function () use ($userId, $openingAmount, $notes, $branchId) {
             if ($this->currentSessionFor($userId)) {
                 throw new \DomainException('Ya tienes una sesion de caja abierta.');
             }
 
             return CashSession::create([
+                'branch_id' => $branchId,
                 'user_id' => $userId,
                 'opened_at' => now(),
                 'opening_amount' => $openingAmount,

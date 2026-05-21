@@ -14,6 +14,11 @@ Aplicación web para administrar una ferretería. Construida en **Laravel 13** c
 - [x] Reportes (ventas por periodo, top productos/clientes/proveedores, utilidad bruta, stock muerto, corte diario, valor de inventario)
 - [x] Facturación: ticket térmico + factura PDF (carta) + cotizaciones con PDF
 - [x] FEL Guatemala — scaffolding completo con adapter genérico para certificador
+- [x] Multi-sucursal (stock por sucursal, selector en sesión, asignación de usuarios)
+- [x] Log de auditoría (create/update/delete) en modelos clave
+- [x] Backup automático diario con descarga desde admin
+- [x] Envío de facturas y cotizaciones por WhatsApp (signed URLs públicas)
+- [x] POS con detección de lector de código de barras automático
 - [x] Dashboard con KPIs (ventas hoy, stock bajo)
 
 ## Requisitos
