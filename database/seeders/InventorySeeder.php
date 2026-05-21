@@ -75,11 +75,28 @@ class InventorySeeder extends Seeder
         }
 
         $customers = [
-            ['name' => 'Publico en general', 'tax_id' => null],
-            ['name' => 'Constructora del Valle SA', 'tax_id' => 'CVA950101ABC', 'email' => 'compras@cdv.example', 'phone' => '5555-1001'],
+            ['name' => 'Publico en general', 'tax_id' => 'CF'],
+            ['name' => 'Constructora del Valle SA', 'tax_id' => '1234567-8', 'email' => 'compras@cdv.example', 'phone' => '5555-1001'],
         ];
         foreach ($customers as $c) {
             Customer::firstOrCreate(['name' => $c['name']], $c + ['active' => true]);
         }
+
+        \App\Models\CompanySetting::firstOrCreate([], [
+            'commercial_name' => 'Ferreteria Central',
+            'legal_name' => 'Ferreteria Central, S.A.',
+            'tax_id' => 'CF',
+            'tax_regime' => \App\Models\CompanySetting::REGIMEN_PEQUENO,
+            'address' => '5a Avenida 10-25 Zona 1',
+            'municipality' => 'Guatemala',
+            'department' => 'Guatemala',
+            'postal_code' => '01001',
+            'phone' => '2222-3333',
+            'email' => 'ventas@ferreteriacentral.gt',
+            'country_code' => 'GT',
+            'currency_code' => 'GTQ',
+            'default_tax_rate' => 12.00,
+            'prices_include_tax' => true,
+        ]);
     }
 }

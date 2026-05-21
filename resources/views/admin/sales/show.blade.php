@@ -84,13 +84,33 @@
                     </div>
                 @endif
 
-                <div class="mt-6 flex gap-3">
+                <div class="mt-6 flex gap-3 flex-wrap">
                     <a href="{{ route('admin.ventas.index') }}" class="text-gray-600">← Volver al listado</a>
 
                     <a href="{{ route('admin.ventas.ticket', $sale) }}" target="_blank"
                        class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Imprimir ticket</a>
 
+                    <a href="{{ route('admin.ventas.factura_pdf', $sale) }}" target="_blank"
+                       class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Factura PDF</a>
+
                     @if ($sale->isCompletada())
+                        @if ($sale->electronicInvoice && $sale->electronicInvoice->isCertificada())
+                            <a href="{{ route('admin.fel.show', $sale->electronicInvoice) }}"
+                               class="px-4 py-2 bg-green-600 text-white rounded">
+                                Ver FEL ({{ $sale->electronicInvoice->uuid ? substr($sale->electronicInvoice->uuid, 0, 8).'…' : 'pendiente' }})
+                            </a>
+                        @else
+                            @can('facturas.emitir')
+                                <form method="POST" action="{{ route('admin.fel.emit', $sale) }}"
+                                      onsubmit="return confirm('Generar factura electronica?');">
+                                    @csrf
+                                    <button class="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700">
+                                        Emitir FEL
+                                    </button>
+                                </form>
+                            @endcan
+                        @endif
+
                         @can('ventas.cancelar')
                             <form method="POST" action="{{ route('admin.ventas.cancel', $sale) }}"
                                   onsubmit="return confirm('Cancelar venta? Se restituira el stock.');">

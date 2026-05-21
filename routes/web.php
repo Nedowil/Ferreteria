@@ -3,10 +3,14 @@
 use App\Http\Controllers\Admin\BrandController;
 use App\Http\Controllers\Admin\CashController;
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\CompanySettingController;
 use App\Http\Controllers\Admin\CustomerController;
+use App\Http\Controllers\Admin\FelController;
 use App\Http\Controllers\Admin\InventoryController;
+use App\Http\Controllers\Admin\InvoiceController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\PurchaseController;
+use App\Http\Controllers\Admin\QuotationController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\SaleController;
 use App\Http\Controllers\Admin\SupplierController;
@@ -131,6 +135,48 @@ Route::middleware(['auth', 'verified'])
 
         Route::middleware('permission:caja.cerrar')->group(function () {
             Route::post('caja/{caja}/cerrar', [CashController::class, 'close'])->name('caja.close');
+        });
+
+        Route::middleware('permission:configuracion.gestionar')->group(function () {
+            Route::get('configuracion/emisor', [CompanySettingController::class, 'edit'])->name('configuracion.empresa.edit');
+            Route::put('configuracion/emisor', [CompanySettingController::class, 'update'])->name('configuracion.empresa.update');
+        });
+
+        Route::middleware('permission:cotizaciones.ver')->group(function () {
+            Route::get('cotizaciones', [QuotationController::class, 'index'])->name('cotizaciones.index');
+            Route::get('cotizaciones/{cotizacion}', [QuotationController::class, 'show'])->name('cotizaciones.show');
+            Route::get('cotizaciones/{cotizacion}/pdf', [QuotationController::class, 'pdf'])->name('cotizaciones.pdf');
+        });
+
+        Route::middleware('permission:cotizaciones.crear')->group(function () {
+            Route::get('cotizaciones-nueva', [QuotationController::class, 'create'])->name('cotizaciones.create');
+            Route::post('cotizaciones', [QuotationController::class, 'store'])->name('cotizaciones.store');
+        });
+
+        Route::middleware('permission:cotizaciones.convertir')->group(function () {
+            Route::post('cotizaciones/{cotizacion}/convertir', [QuotationController::class, 'convert'])->name('cotizaciones.convert');
+        });
+
+        Route::middleware('permission:cotizaciones.cancelar')->group(function () {
+            Route::post('cotizaciones/{cotizacion}/cancelar', [QuotationController::class, 'cancel'])->name('cotizaciones.cancel');
+        });
+
+        Route::middleware('permission:ventas.ver')->group(function () {
+            Route::get('ventas/{venta}/factura-pdf', [InvoiceController::class, 'simplePdf'])->name('ventas.factura_pdf');
+        });
+
+        Route::middleware('permission:facturas.emitir')->group(function () {
+            Route::post('ventas/{venta}/fel', [FelController::class, 'emit'])->name('fel.emit');
+        });
+
+        Route::middleware('permission:facturas.ver')->group(function () {
+            Route::get('fel', [FelController::class, 'index'])->name('fel.index');
+            Route::get('fel/{factura}', [FelController::class, 'show'])->name('fel.show');
+            Route::get('fel/{factura}/xml', [FelController::class, 'xml'])->name('fel.xml');
+        });
+
+        Route::middleware('permission:facturas.anular')->group(function () {
+            Route::post('fel/{factura}/anular', [FelController::class, 'annul'])->name('fel.annul');
         });
 
         Route::middleware('permission:reportes.ver')

@@ -12,7 +12,8 @@ Aplicación web para administrar una ferretería. Construida en **Laravel 13** c
 - [x] Punto de Venta (POS) con ticket imprimible
 - [x] Caja (apertura, movimientos manuales ingreso/egreso, arqueo y cierre)
 - [x] Reportes (ventas por periodo, top productos/clientes/proveedores, utilidad bruta, stock muerto, corte diario, valor de inventario)
-- [ ] Facturación / Tickets
+- [x] Facturación: ticket térmico + factura PDF (carta) + cotizaciones con PDF
+- [x] FEL Guatemala — scaffolding completo con adapter genérico para certificador
 - [x] Dashboard con KPIs (ventas hoy, stock bajo)
 
 ## Requisitos

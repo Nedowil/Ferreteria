@@ -56,6 +56,17 @@ class RolesAndPermissionsSeeder extends Seeder
             'caja.ver_todas',
             // Reportes
             'reportes.ver',
+            // Configuracion
+            'configuracion.gestionar',
+            // Cotizaciones
+            'cotizaciones.ver',
+            'cotizaciones.crear',
+            'cotizaciones.convertir',
+            'cotizaciones.cancelar',
+            // Facturacion FEL
+            'facturas.ver',
+            'facturas.emitir',
+            'facturas.anular',
         ];
 
         foreach ($permissions as $permission) {
@@ -95,6 +106,12 @@ class RolesAndPermissionsSeeder extends Seeder
             'caja.abrir',
             'caja.cerrar',
             'caja.movimientos',
+            'cotizaciones.ver',
+            'cotizaciones.crear',
+            'cotizaciones.convertir',
+            'cotizaciones.cancelar',
+            'facturas.ver',
+            'facturas.emitir',
         ]);
     }
 }

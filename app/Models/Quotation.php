@@ -6,48 +6,41 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Sale extends Model
+class Quotation extends Model
 {
-    public const STATUS_COMPLETADA = 'completada';
+    public const STATUS_VIGENTE = 'vigente';
+    public const STATUS_ACEPTADA = 'aceptada';
+    public const STATUS_EXPIRADA = 'expirada';
+    public const STATUS_CONVERTIDA = 'convertida';
     public const STATUS_CANCELADA = 'cancelada';
 
     protected $fillable = [
         'folio',
         'customer_id',
         'user_id',
-        'cash_session_id',
         'date',
+        'valid_until',
         'subtotal',
         'discount',
         'tax',
         'total',
-        'payment_method',
-        'paid_amount',
-        'change_amount',
         'status',
-        'cancelled_at',
+        'converted_sale_id',
         'notes',
     ];
 
     protected $casts = [
-        'date' => 'datetime',
-        'cancelled_at' => 'datetime',
+        'date' => 'date',
+        'valid_until' => 'date',
         'subtotal' => 'decimal:2',
         'discount' => 'decimal:2',
         'tax' => 'decimal:2',
         'total' => 'decimal:2',
-        'paid_amount' => 'decimal:2',
-        'change_amount' => 'decimal:2',
     ];
 
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
-    }
-
-    public function cashSession(): BelongsTo
-    {
-        return $this->belongsTo(CashSession::class);
     }
 
     public function user(): BelongsTo
@@ -57,16 +50,21 @@ class Sale extends Model
 
     public function items(): HasMany
     {
-        return $this->hasMany(SaleItem::class);
+        return $this->hasMany(QuotationItem::class);
     }
 
-    public function electronicInvoice()
+    public function convertedSale(): BelongsTo
     {
-        return $this->hasOne(ElectronicInvoice::class);
+        return $this->belongsTo(Sale::class, 'converted_sale_id');
     }
 
-    public function isCompletada(): bool
+    public function isEditable(): bool
     {
-        return $this->status === self::STATUS_COMPLETADA;
+        return $this->status === self::STATUS_VIGENTE;
+    }
+
+    public function isExpired(): bool
+    {
+        return $this->valid_until && $this->valid_until->isPast();
     }
 }
