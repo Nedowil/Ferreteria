@@ -2,15 +2,14 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Attributes\Description;
-use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
 
-#[Signature('backup:run {--keep=14 : Numero de backups a conservar}')]
-#[Description('Genera un backup ZIP con la base de datos y archivos de storage/app/public')]
 class BackupRun extends Command
 {
+    protected $signature = 'backup:run {--keep=14 : Numero de backups a conservar}';
+    protected $description = 'Genera un backup ZIP con la base de datos y archivos de storage/app/public';
+
     public function handle(): int
     {
         $backupsDir = storage_path('app/backups');
