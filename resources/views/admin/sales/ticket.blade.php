@@ -33,7 +33,7 @@
     <hr>
     <div>Cliente: {{ $sale->customer?->name ?? 'Publico en general' }}</div>
     @if ($sale->customer?->tax_id)
-        <div>RFC: {{ $sale->customer->tax_id }}</div>
+        <div>NIT: {{ $sale->customer->tax_id }}</div>
     @endif
     <hr>
     <table>
@@ -42,27 +42,27 @@
                 <td colspan="3">{{ $it->product?->name }}</td>
             </tr>
             <tr>
-                <td>{{ rtrim(rtrim(number_format($it->quantity, 2, '.', ''), '0'), '.') }} x ${{ number_format($it->unit_price, 2) }}</td>
+                <td>{{ rtrim(rtrim(number_format($it->quantity, 2, '.', ''), '0'), '.') }} x Q{{ number_format($it->unit_price, 2) }}</td>
                 @if ($it->discount > 0)
-                    <td class="right">-${{ number_format($it->discount, 2) }}</td>
+                    <td class="right">-Q{{ number_format($it->discount, 2) }}</td>
                 @endif
-                <td class="right">${{ number_format($it->subtotal, 2) }}</td>
+                <td class="right">Q{{ number_format($it->subtotal, 2) }}</td>
             </tr>
         @endforeach
     </table>
     <hr>
-    <div class="row"><span>Subtotal</span><span>${{ number_format($sale->subtotal, 2) }}</span></div>
+    <div class="row"><span>Subtotal</span><span>Q{{ number_format($sale->subtotal, 2) }}</span></div>
     @if ($sale->discount > 0)
-        <div class="row"><span>Descuento</span><span>- ${{ number_format($sale->discount, 2) }}</span></div>
+        <div class="row"><span>Descuento</span><span>- Q{{ number_format($sale->discount, 2) }}</span></div>
     @endif
     @if ($sale->tax > 0)
-        <div class="row"><span>IVA</span><span>${{ number_format($sale->tax, 2) }}</span></div>
+        <div class="row"><span>IVA</span><span>Q{{ number_format($sale->tax, 2) }}</span></div>
     @endif
-    <div class="row total"><span>TOTAL</span><span>${{ number_format($sale->total, 2) }}</span></div>
+    <div class="row total"><span>TOTAL</span><span>Q{{ number_format($sale->total, 2) }}</span></div>
     <hr>
-    <div class="row"><span>{{ ucfirst($sale->payment_method) }}</span><span>${{ number_format($sale->paid_amount, 2) }}</span></div>
+    <div class="row"><span>{{ ucfirst($sale->payment_method) }}</span><span>Q{{ number_format($sale->paid_amount, 2) }}</span></div>
     @if ($sale->payment_method === 'efectivo')
-        <div class="row"><span>Cambio</span><span>${{ number_format($sale->change_amount, 2) }}</span></div>
+        <div class="row"><span>Cambio</span><span>Q{{ number_format($sale->change_amount, 2) }}</span></div>
     @endif
     <hr>
     <div class="center">¡Gracias por su compra!</div>

@@ -49,7 +49,7 @@
                             <td class="px-3 py-2 text-sm">{{ $q->valid_until?->format('Y-m-d') ?? '—' }}</td>
                             <td class="px-3 py-2">{{ $q->customer?->name ?? 'Publico en general' }}</td>
                             <td class="px-3 py-2">{{ $q->user?->name }}</td>
-                            <td class="px-3 py-2 text-right">${{ number_format($q->total, 2) }}</td>
+                            <td class="px-3 py-2 text-right">Q{{ number_format($q->total, 2) }}</td>
                             <td class="px-3 py-2">
                                 <span class="text-xs px-2 py-1 rounded
                                     @class([

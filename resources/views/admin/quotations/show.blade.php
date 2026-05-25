@@ -56,17 +56,17 @@
                             <td class="px-2 py-2 font-mono text-xs">{{ $it->product?->sku }}</td>
                             <td class="px-2 py-2">{{ $it->product?->name }}</td>
                             <td class="px-2 py-2 text-right">{{ rtrim(rtrim(number_format($it->quantity, 2, '.', ''), '0'), '.') }}</td>
-                            <td class="px-2 py-2 text-right">${{ number_format($it->unit_price, 2) }}</td>
-                            <td class="px-2 py-2 text-right">${{ number_format($it->discount, 2) }}</td>
-                            <td class="px-2 py-2 text-right">${{ number_format($it->subtotal, 2) }}</td>
+                            <td class="px-2 py-2 text-right">Q{{ number_format($it->unit_price, 2) }}</td>
+                            <td class="px-2 py-2 text-right">Q{{ number_format($it->discount, 2) }}</td>
+                            <td class="px-2 py-2 text-right">Q{{ number_format($it->subtotal, 2) }}</td>
                         </tr>
                     @endforeach
                     </tbody>
                     <tfoot class="bg-gray-50">
-                        <tr><td colspan="5" class="px-2 py-2 text-right font-semibold">Subtotal</td><td class="px-2 py-2 text-right">${{ number_format($quotation->subtotal, 2) }}</td></tr>
-                        <tr><td colspan="5" class="px-2 py-2 text-right font-semibold">Descuento</td><td class="px-2 py-2 text-right">- ${{ number_format($quotation->discount, 2) }}</td></tr>
-                        <tr><td colspan="5" class="px-2 py-2 text-right font-semibold">IVA</td><td class="px-2 py-2 text-right">${{ number_format($quotation->tax, 2) }}</td></tr>
-                        <tr class="border-t-2"><td colspan="5" class="px-2 py-2 text-right font-bold">Total</td><td class="px-2 py-2 text-right font-bold">${{ number_format($quotation->total, 2) }}</td></tr>
+                        <tr><td colspan="5" class="px-2 py-2 text-right font-semibold">Subtotal</td><td class="px-2 py-2 text-right">Q{{ number_format($quotation->subtotal, 2) }}</td></tr>
+                        <tr><td colspan="5" class="px-2 py-2 text-right font-semibold">Descuento</td><td class="px-2 py-2 text-right">- Q{{ number_format($quotation->discount, 2) }}</td></tr>
+                        <tr><td colspan="5" class="px-2 py-2 text-right font-semibold">IVA</td><td class="px-2 py-2 text-right">Q{{ number_format($quotation->tax, 2) }}</td></tr>
+                        <tr class="border-t-2"><td colspan="5" class="px-2 py-2 text-right font-bold">Total</td><td class="px-2 py-2 text-right font-bold">Q{{ number_format($quotation->total, 2) }}</td></tr>
                     </tfoot>
                 </table>
 

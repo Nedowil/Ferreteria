@@ -40,7 +40,7 @@
                             <td class="px-3 py-2 text-sm text-gray-500">{{ $i + 1 }}</td>
                             <td class="px-3 py-2">{{ $row->name }}</td>
                             <td class="px-3 py-2 text-right">{{ $row->total_sales }}</td>
-                            <td class="px-3 py-2 text-right">${{ number_format($row->total_revenue, 2) }}</td>
+                            <td class="px-3 py-2 text-right">Q{{ number_format($row->total_revenue, 2) }}</td>
                         </tr>
                     @empty
                         <tr><td colspan="4" class="px-3 py-6 text-center text-gray-500">Sin ventas en el periodo.</td></tr>

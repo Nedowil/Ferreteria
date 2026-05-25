@@ -21,7 +21,7 @@
                             <div class="text-sm text-gray-500">Tu sesion de caja esta</div>
                             <div class="text-2xl font-bold text-green-700">ABIERTA</div>
                             <div class="text-sm text-gray-500 mt-2">Abierta: {{ $current->opened_at->format('Y-m-d H:i') }}</div>
-                            <div class="text-sm text-gray-500">Monto inicial: ${{ number_format($current->opening_amount, 2) }}</div>
+                            <div class="text-sm text-gray-500">Monto inicial: Q{{ number_format($current->opening_amount, 2) }}</div>
                         </div>
                         <a href="{{ route('admin.caja.show', $current) }}"
                            class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Ir a sesion →</a>
@@ -74,8 +74,8 @@
                             <td class="px-3 py-2 text-sm">{{ $s->opened_at->format('Y-m-d H:i') }}</td>
                             <td class="px-3 py-2 text-sm">{{ $s->closed_at?->format('Y-m-d H:i') ?? '—' }}</td>
                             <td class="px-3 py-2">{{ $s->user?->name }}</td>
-                            <td class="px-3 py-2 text-right">${{ number_format($s->opening_amount, 2) }}</td>
-                            <td class="px-3 py-2 text-right">${{ number_format($s->expected_cash, 2) }}</td>
+                            <td class="px-3 py-2 text-right">Q{{ number_format($s->opening_amount, 2) }}</td>
+                            <td class="px-3 py-2 text-right">Q{{ number_format($s->expected_cash, 2) }}</td>
                             <td class="px-3 py-2 text-right">{{ $s->counted_cash !== null ? '$'.number_format($s->counted_cash, 2) : '—' }}</td>
                             <td class="px-3 py-2 text-right
                                 @if ($s->status === 'cerrada')

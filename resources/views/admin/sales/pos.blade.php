@@ -49,7 +49,7 @@
                                     <tr class="border-t hover:bg-indigo-50 cursor-pointer" @click="addItem(p)">
                                         <td class="px-2 py-1 font-mono text-xs" x-text="p.sku"></td>
                                         <td class="px-2 py-1" x-text="p.name"></td>
-                                        <td class="px-2 py-1 text-right">$<span x-text="p.sale_price.toFixed(2)"></span></td>
+                                        <td class="px-2 py-1 text-right">Q<span x-text="p.sale_price.toFixed(2)"></span></td>
                                         <td class="px-2 py-1 text-right" :class="p.stock <= 0 ? 'text-red-600' : ''" x-text="p.stock + ' ' + (p.unit || '')"></td>
                                         <td class="px-2 py-1 text-right">
                                             <button type="button" :disabled="p.stock <= 0" class="text-indigo-600 disabled:text-gray-400">+ Agregar</button>
@@ -107,7 +107,7 @@
                                                    x-model.number="item.unit_price" @input="recalc()"
                                                    class="w-full text-right border-gray-300 rounded text-sm" />
                                         </td>
-                                        <td class="px-2 py-1 text-right">$<span x-text="(item.quantity * item.unit_price).toFixed(2)"></span></td>
+                                        <td class="px-2 py-1 text-right">Q<span x-text="(item.quantity * item.unit_price).toFixed(2)"></span></td>
                                         <td class="px-2 py-1 text-center">
                                             <button type="button" @click="removeItem(idx)" class="text-red-600">✕</button>
                                         </td>
@@ -121,14 +121,14 @@
                         </div>
 
                         <div class="mt-3 space-y-1 text-sm">
-                            <div class="flex justify-between"><span>Subtotal</span><span>$<span x-text="subtotal.toFixed(2)"></span></span></div>
+                            <div class="flex justify-between"><span>Subtotal</span><span>Q<span x-text="subtotal.toFixed(2)"></span></span></div>
                             <div class="flex justify-between items-center">
                                 <span>IVA</span>
                                 <input type="number" step="0.01" min="0" name="tax" x-model.number="tax" @input="recalc()"
                                        class="w-24 text-right border-gray-300 rounded text-sm" />
                             </div>
                             <div class="flex justify-between text-lg font-bold border-t pt-1">
-                                <span>Total</span><span>$<span x-text="total.toFixed(2)"></span></span>
+                                <span>Total</span><span>Q<span x-text="total.toFixed(2)"></span></span>
                             </div>
                         </div>
 
@@ -152,7 +152,7 @@
 
                         <div class="mt-2 flex justify-between text-lg font-bold">
                             <span>Cambio</span>
-                            <span :class="change < 0 ? 'text-red-600' : 'text-green-700'">$<span x-text="change.toFixed(2)"></span></span>
+                            <span :class="change < 0 ? 'text-red-600' : 'text-green-700'">Q<span x-text="change.toFixed(2)"></span></span>
                         </div>
 
                         <button type="submit" :disabled="items.length === 0 || change < 0"

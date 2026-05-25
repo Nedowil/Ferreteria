@@ -53,7 +53,7 @@
                                 <td class="px-3 py-2">{{ $s->customer?->name ?? 'Publico en general' }}</td>
                                 <td class="px-3 py-2">{{ $s->user?->name }}</td>
                                 <td class="px-3 py-2 text-sm">{{ ucfirst($s->payment_method) }}</td>
-                                <td class="px-3 py-2 text-right">${{ number_format($s->total, 2) }}</td>
+                                <td class="px-3 py-2 text-right">Q{{ number_format($s->total, 2) }}</td>
                                 <td class="px-3 py-2">
                                     <span class="text-xs px-2 py-1 rounded
                                         @class([

@@ -22,7 +22,7 @@
                             <x-input-error :messages="$errors->get('name')" class="mt-2" />
                         </div>
                         <div>
-                            <x-input-label for="tax_id" value="RFC / Tax ID" />
+                            <x-input-label for="tax_id" value="NIT" />
                             <x-text-input id="tax_id" name="tax_id" type="text" class="mt-1 block w-full"
                                           :value="old('tax_id', $supplier->tax_id)" />
                         </div>

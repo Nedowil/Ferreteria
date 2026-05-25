@@ -71,22 +71,22 @@
                 <td>{{ $it->product?->sku }}</td>
                 <td>{{ $it->product?->name }}</td>
                 <td class="right">{{ rtrim(rtrim(number_format($it->quantity, 2, '.', ''), '0'), '.') }} {{ $it->product?->unit?->abbreviation }}</td>
-                <td class="right">${{ number_format($it->unit_price, 2) }}</td>
-                <td class="right">${{ number_format($it->discount, 2) }}</td>
-                <td class="right">${{ number_format($it->subtotal, 2) }}</td>
+                <td class="right">Q{{ number_format($it->unit_price, 2) }}</td>
+                <td class="right">Q{{ number_format($it->discount, 2) }}</td>
+                <td class="right">Q{{ number_format($it->subtotal, 2) }}</td>
             </tr>
         @endforeach
         </tbody>
     </table>
 
     <table class="totals" style="margin-top: 8px;">
-        <tr><td class="label">Subtotal:</td><td class="value">${{ number_format($sale->subtotal, 2) }}</td></tr>
-        <tr><td class="label">Descuento:</td><td class="value">- ${{ number_format($sale->discount, 2) }}</td></tr>
-        <tr><td class="label">IVA:</td><td class="value">${{ number_format($sale->tax, 2) }}</td></tr>
-        <tr><td class="label grand">TOTAL:</td><td class="value grand">${{ number_format($sale->total, 2) }}</td></tr>
-        <tr><td class="label muted">Pago ({{ ucfirst($sale->payment_method) }}):</td><td class="value muted">${{ number_format($sale->paid_amount, 2) }}</td></tr>
+        <tr><td class="label">Subtotal:</td><td class="value">Q{{ number_format($sale->subtotal, 2) }}</td></tr>
+        <tr><td class="label">Descuento:</td><td class="value">- Q{{ number_format($sale->discount, 2) }}</td></tr>
+        <tr><td class="label">IVA:</td><td class="value">Q{{ number_format($sale->tax, 2) }}</td></tr>
+        <tr><td class="label grand">TOTAL:</td><td class="value grand">Q{{ number_format($sale->total, 2) }}</td></tr>
+        <tr><td class="label muted">Pago ({{ ucfirst($sale->payment_method) }}):</td><td class="value muted">Q{{ number_format($sale->paid_amount, 2) }}</td></tr>
         @if ($sale->payment_method === 'efectivo')
-            <tr><td class="label muted">Cambio:</td><td class="value muted">${{ number_format($sale->change_amount, 2) }}</td></tr>
+            <tr><td class="label muted">Cambio:</td><td class="value muted">Q{{ number_format($sale->change_amount, 2) }}</td></tr>
         @endif
     </table>
 

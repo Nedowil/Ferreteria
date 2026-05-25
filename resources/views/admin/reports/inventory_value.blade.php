@@ -12,15 +12,15 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="bg-white shadow-sm rounded-lg p-6">
                     <div class="text-sm text-gray-500">Valor a costo</div>
-                    <div class="text-2xl font-semibold text-red-600">${{ number_format($totalCostValue, 2) }}</div>
+                    <div class="text-2xl font-semibold text-red-600">Q{{ number_format($totalCostValue, 2) }}</div>
                 </div>
                 <div class="bg-white shadow-sm rounded-lg p-6">
                     <div class="text-sm text-gray-500">Valor a precio de venta</div>
-                    <div class="text-2xl font-semibold text-green-700">${{ number_format($totalSaleValue, 2) }}</div>
+                    <div class="text-2xl font-semibold text-green-700">Q{{ number_format($totalSaleValue, 2) }}</div>
                 </div>
                 <div class="bg-white shadow-sm rounded-lg p-6">
                     <div class="text-sm text-gray-500">Utilidad potencial</div>
-                    <div class="text-2xl font-semibold">${{ number_format($potentialProfit, 2) }}</div>
+                    <div class="text-2xl font-semibold">Q{{ number_format($potentialProfit, 2) }}</div>
                 </div>
             </div>
 
@@ -45,10 +45,10 @@
                             <td class="px-3 py-2">{{ $p->name }}</td>
                             <td class="px-3 py-2 text-sm">{{ $p->category?->name }}</td>
                             <td class="px-3 py-2 text-right">{{ rtrim(rtrim(number_format($p->stock, 2, '.', ''), '0'), '.') }} {{ $p->unit?->abbreviation }}</td>
-                            <td class="px-3 py-2 text-right">${{ number_format($p->purchase_price, 2) }}</td>
-                            <td class="px-3 py-2 text-right">${{ number_format($p->sale_price, 2) }}</td>
-                            <td class="px-3 py-2 text-right text-red-600">${{ number_format((float) $p->stock * (float) $p->purchase_price, 2) }}</td>
-                            <td class="px-3 py-2 text-right text-green-700">${{ number_format((float) $p->stock * (float) $p->sale_price, 2) }}</td>
+                            <td class="px-3 py-2 text-right">Q{{ number_format($p->purchase_price, 2) }}</td>
+                            <td class="px-3 py-2 text-right">Q{{ number_format($p->sale_price, 2) }}</td>
+                            <td class="px-3 py-2 text-right text-red-600">Q{{ number_format((float) $p->stock * (float) $p->purchase_price, 2) }}</td>
+                            <td class="px-3 py-2 text-right text-green-700">Q{{ number_format((float) $p->stock * (float) $p->sale_price, 2) }}</td>
                         </tr>
                     @empty
                         <tr><td colspan="8" class="px-3 py-6 text-center text-gray-500">Sin productos con stock.</td></tr>

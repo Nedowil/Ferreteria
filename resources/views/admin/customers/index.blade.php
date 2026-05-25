@@ -17,7 +17,7 @@
 
                 <div class="flex justify-between items-center mb-4 gap-3">
                     <form method="GET" class="flex gap-2">
-                        <input type="text" name="q" value="{{ $search }}" placeholder="Buscar por nombre, RFC, telefono o email"
+                        <input type="text" name="q" value="{{ $search }}" placeholder="Buscar por nombre, NIT, telefono o email"
                                class="border-gray-300 rounded-md shadow-sm w-96" />
                         <button class="px-4 py-2 bg-gray-700 text-white rounded">Buscar</button>
                     </form>
@@ -31,7 +31,7 @@
                     <thead class="bg-gray-50">
                     <tr>
                         <th class="px-3 py-2 text-left text-xs uppercase">Nombre</th>
-                        <th class="px-3 py-2 text-left text-xs uppercase">RFC</th>
+                        <th class="px-3 py-2 text-left text-xs uppercase">NIT</th>
                         <th class="px-3 py-2 text-left text-xs uppercase">Telefono</th>
                         <th class="px-3 py-2 text-left text-xs uppercase">Email</th>
                         <th class="px-3 py-2 text-left text-xs uppercase">Activo</th>

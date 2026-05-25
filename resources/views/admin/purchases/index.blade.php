@@ -58,7 +58,7 @@
                                 <td class="px-3 py-2">{{ $p->date->format('Y-m-d') }}</td>
                                 <td class="px-3 py-2">{{ $p->supplier?->name }}</td>
                                 <td class="px-3 py-2 text-gray-500">{{ $p->invoice_number }}</td>
-                                <td class="px-3 py-2 text-right">${{ number_format($p->total, 2) }}</td>
+                                <td class="px-3 py-2 text-right">Q{{ number_format($p->total, 2) }}</td>
                                 <td class="px-3 py-2">
                                     <span class="text-xs px-2 py-1 rounded
                                         @class([

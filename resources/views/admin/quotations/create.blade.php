@@ -86,7 +86,7 @@
                                                :name="`items[${idx}][discount]`" x-model.number="item.discount"
                                                @input="recalc()" class="w-full text-right border-gray-300 rounded text-sm" />
                                     </td>
-                                    <td class="px-2 py-1 text-right">$<span x-text="((item.quantity * item.unit_price) - item.discount).toFixed(2)"></span></td>
+                                    <td class="px-2 py-1 text-right">Q<span x-text="((item.quantity * item.unit_price) - item.discount).toFixed(2)"></span></td>
                                     <td class="px-2 py-1 text-center">
                                         <button type="button" @click="removeItem(idx)" class="text-red-600">✕</button>
                                     </td>
@@ -94,10 +94,10 @@
                             </template>
                             </tbody>
                             <tfoot class="bg-gray-50">
-                                <tr><td colspan="4" class="px-2 py-2 text-right font-semibold">Subtotal</td><td class="px-2 py-2 text-right">$<span x-text="subtotal.toFixed(2)"></span></td><td></td></tr>
-                                <tr><td colspan="4" class="px-2 py-2 text-right font-semibold">Descuento</td><td class="px-2 py-2 text-right">$<span x-text="totalDiscount.toFixed(2)"></span></td><td></td></tr>
-                                <tr><td colspan="4" class="px-2 py-2 text-right font-semibold">IVA</td><td class="px-2 py-2 text-right">$<span x-text="(parseFloat(tax)||0).toFixed(2)"></span></td><td></td></tr>
-                                <tr class="border-t-2"><td colspan="4" class="px-2 py-2 text-right font-bold">Total</td><td class="px-2 py-2 text-right font-bold">$<span x-text="total.toFixed(2)"></span></td><td></td></tr>
+                                <tr><td colspan="4" class="px-2 py-2 text-right font-semibold">Subtotal</td><td class="px-2 py-2 text-right">Q<span x-text="subtotal.toFixed(2)"></span></td><td></td></tr>
+                                <tr><td colspan="4" class="px-2 py-2 text-right font-semibold">Descuento</td><td class="px-2 py-2 text-right">Q<span x-text="totalDiscount.toFixed(2)"></span></td><td></td></tr>
+                                <tr><td colspan="4" class="px-2 py-2 text-right font-semibold">IVA</td><td class="px-2 py-2 text-right">Q<span x-text="(parseFloat(tax)||0).toFixed(2)"></span></td><td></td></tr>
+                                <tr class="border-t-2"><td colspan="4" class="px-2 py-2 text-right font-bold">Total</td><td class="px-2 py-2 text-right font-bold">Q<span x-text="total.toFixed(2)"></span></td><td></td></tr>
                             </tfoot>
                         </table>
 

@@ -35,31 +35,31 @@
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div class="border rounded p-3">
                         <div class="text-xs text-gray-500">Inicial</div>
-                        <div class="text-xl font-semibold">${{ number_format($session->opening_amount, 2) }}</div>
+                        <div class="text-xl font-semibold">Q{{ number_format($session->opening_amount, 2) }}</div>
                     </div>
                     <div class="border rounded p-3">
                         <div class="text-xs text-gray-500">Ventas efectivo</div>
-                        <div class="text-xl font-semibold">${{ number_format($totalsByMethod['efectivo'], 2) }}</div>
+                        <div class="text-xl font-semibold">Q{{ number_format($totalsByMethod['efectivo'], 2) }}</div>
                     </div>
                     <div class="border rounded p-3">
                         <div class="text-xs text-gray-500">Ventas tarjeta</div>
-                        <div class="text-xl font-semibold">${{ number_format($totalsByMethod['tarjeta'], 2) }}</div>
+                        <div class="text-xl font-semibold">Q{{ number_format($totalsByMethod['tarjeta'], 2) }}</div>
                     </div>
                     <div class="border rounded p-3">
                         <div class="text-xs text-gray-500">Ventas transferencia</div>
-                        <div class="text-xl font-semibold">${{ number_format($totalsByMethod['transferencia'], 2) }}</div>
+                        <div class="text-xl font-semibold">Q{{ number_format($totalsByMethod['transferencia'], 2) }}</div>
                     </div>
                 </div>
 
                 <div class="mt-4 grid grid-cols-2 md:grid-cols-3 gap-4">
                     <div class="border rounded p-3 bg-indigo-50">
                         <div class="text-xs text-gray-500">Efectivo esperado</div>
-                        <div class="text-2xl font-bold text-indigo-700">${{ number_format($expected, 2) }}</div>
+                        <div class="text-2xl font-bold text-indigo-700">Q{{ number_format($expected, 2) }}</div>
                     </div>
                     @if ($session->status === 'cerrada')
                         <div class="border rounded p-3">
                             <div class="text-xs text-gray-500">Efectivo contado</div>
-                            <div class="text-2xl font-bold">${{ number_format($session->counted_cash, 2) }}</div>
+                            <div class="text-2xl font-bold">Q{{ number_format($session->counted_cash, 2) }}</div>
                         </div>
                         <div class="border rounded p-3
                             @if ((float) $session->difference > 0) bg-green-50
@@ -70,7 +70,7 @@
                                 @if ((float) $session->difference > 0) text-green-700
                                 @elseif ((float) $session->difference < 0) text-red-600
                                 @endif">
-                                ${{ number_format($session->difference, 2) }}
+                                Q{{ number_format($session->difference, 2) }}
                             </div>
                         </div>
                     @endif
@@ -126,7 +126,7 @@
                 @can('caja.cerrar')
                     <div class="bg-white shadow-sm sm:rounded-lg p-6 ring-2 ring-yellow-200">
                         <h3 class="font-semibold mb-3">Cerrar caja (arqueo)</h3>
-                        <p class="text-sm text-gray-600 mb-3">Cuenta el efectivo fisico que hay en caja y captúralo aquí. El sistema calculará la diferencia contra el efectivo esperado (${{ number_format($expected, 2) }}).</p>
+                        <p class="text-sm text-gray-600 mb-3">Cuenta el efectivo fisico que hay en caja y captúralo aquí. El sistema calculará la diferencia contra el efectivo esperado (Q{{ number_format($expected, 2) }}).</p>
                         <form method="POST" action="{{ route('admin.caja.close', $session) }}"
                               onsubmit="return confirm('Cerrar la caja? Esta accion no se puede deshacer.');"
                               class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
@@ -179,7 +179,7 @@
                                 @if ($m->type === 'devolucion' || $m->type === 'egreso') text-red-600
                                 @else text-green-700
                                 @endif">
-                                {{ in_array($m->type, ['devolucion', 'egreso']) ? '-' : '+' }}${{ number_format($m->amount, 2) }}
+                                {{ in_array($m->type, ['devolucion', 'egreso']) ? '-' : '+' }}Q{{ number_format($m->amount, 2) }}
                             </td>
                             <td class="px-3 py-2 text-sm">
                                 @if ($m->sale_id)

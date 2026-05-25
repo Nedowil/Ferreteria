@@ -27,16 +27,16 @@
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div class="bg-white shadow-sm rounded-lg p-6">
                     <div class="text-sm text-gray-500">Ingresos</div>
-                    <div class="text-2xl font-semibold text-green-700">${{ number_format($totalRevenue, 2) }}</div>
+                    <div class="text-2xl font-semibold text-green-700">Q{{ number_format($totalRevenue, 2) }}</div>
                 </div>
                 <div class="bg-white shadow-sm rounded-lg p-6">
                     <div class="text-sm text-gray-500">Costo de ventas</div>
-                    <div class="text-2xl font-semibold text-red-600">${{ number_format($totalCost, 2) }}</div>
+                    <div class="text-2xl font-semibold text-red-600">Q{{ number_format($totalCost, 2) }}</div>
                 </div>
                 <div class="bg-white shadow-sm rounded-lg p-6">
                     <div class="text-sm text-gray-500">Utilidad bruta</div>
                     <div class="text-2xl font-semibold @if ($totalProfit < 0) text-red-600 @else text-green-700 @endif">
-                        ${{ number_format($totalProfit, 2) }}
+                        Q{{ number_format($totalProfit, 2) }}
                     </div>
                 </div>
                 <div class="bg-white shadow-sm rounded-lg p-6">
@@ -67,10 +67,10 @@
                             <td class="px-3 py-2 font-mono text-xs">{{ $row->sku }}</td>
                             <td class="px-3 py-2">{{ $row->name }}</td>
                             <td class="px-3 py-2 text-right">{{ rtrim(rtrim(number_format($row->total_quantity, 2, '.', ''), '0'), '.') }}</td>
-                            <td class="px-3 py-2 text-right">${{ number_format($row->total_revenue, 2) }}</td>
-                            <td class="px-3 py-2 text-right text-red-600">${{ number_format($row->total_cost, 2) }}</td>
+                            <td class="px-3 py-2 text-right">Q{{ number_format($row->total_revenue, 2) }}</td>
+                            <td class="px-3 py-2 text-right text-red-600">Q{{ number_format($row->total_cost, 2) }}</td>
                             <td class="px-3 py-2 text-right font-semibold @if ($row->gross_profit < 0) text-red-600 @else text-green-700 @endif">
-                                ${{ number_format($row->gross_profit, 2) }}
+                                Q{{ number_format($row->gross_profit, 2) }}
                             </td>
                             <td class="px-3 py-2 text-right">{{ number_format($margin, 1) }}%</td>
                         </tr>

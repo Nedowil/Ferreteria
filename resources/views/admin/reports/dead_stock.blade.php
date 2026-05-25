@@ -42,7 +42,7 @@
                             <td class="px-3 py-2 text-sm">{{ $p->category?->name }}</td>
                             <td class="px-3 py-2 text-sm">{{ $p->brand?->name }}</td>
                             <td class="px-3 py-2 text-right">{{ rtrim(rtrim(number_format($p->stock, 2, '.', ''), '0'), '.') }}</td>
-                            <td class="px-3 py-2 text-right">${{ number_format((float) $p->stock * (float) $p->purchase_price, 2) }}</td>
+                            <td class="px-3 py-2 text-right">Q{{ number_format((float) $p->stock * (float) $p->purchase_price, 2) }}</td>
                         </tr>
                     @empty
                         <tr><td colspan="6" class="px-3 py-6 text-center text-gray-500">Todos los productos tienen movimiento reciente.</td></tr>

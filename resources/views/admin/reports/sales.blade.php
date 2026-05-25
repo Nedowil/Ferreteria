@@ -27,12 +27,12 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="bg-white shadow-sm rounded-lg p-6">
                     <div class="text-sm text-gray-500">Ventas totales</div>
-                    <div class="text-3xl font-semibold text-green-700">${{ number_format($totalSales, 2) }}</div>
+                    <div class="text-3xl font-semibold text-green-700">Q{{ number_format($totalSales, 2) }}</div>
                     <div class="text-sm text-gray-500 mt-1">{{ $totalCount }} ventas</div>
                 </div>
                 <div class="bg-white shadow-sm rounded-lg p-6">
                     <div class="text-sm text-gray-500">Ticket promedio</div>
-                    <div class="text-3xl font-semibold">${{ number_format($avgTicket, 2) }}</div>
+                    <div class="text-3xl font-semibold">Q{{ number_format($avgTicket, 2) }}</div>
                 </div>
                 <div class="bg-white shadow-sm rounded-lg p-6">
                     <div class="text-sm text-gray-500">Por metodo de pago</div>
@@ -40,7 +40,7 @@
                         @foreach (['efectivo', 'tarjeta', 'transferencia'] as $pm)
                             <div class="flex justify-between">
                                 <span class="capitalize">{{ $pm }}</span>
-                                <span>${{ number_format($byPaymentMethod[$pm]['total'] ?? 0, 2) }}</span>
+                                <span>Q{{ number_format($byPaymentMethod[$pm]['total'] ?? 0, 2) }}</span>
                             </div>
                         @endforeach
                     </div>
@@ -67,7 +67,7 @@
                         <tr>
                             <td class="px-3 py-1 text-sm">{{ $row['day'] }}</td>
                             <td class="px-3 py-1 text-right">{{ $row['count'] }}</td>
-                            <td class="px-3 py-1 text-right">${{ number_format($row['total'], 2) }}</td>
+                            <td class="px-3 py-1 text-right">Q{{ number_format($row['total'], 2) }}</td>
                         </tr>
                     @endforeach
                     </tbody>

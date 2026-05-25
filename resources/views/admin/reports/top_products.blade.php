@@ -47,7 +47,7 @@
                             <td class="px-3 py-2 font-mono text-xs">{{ $row->sku }}</td>
                             <td class="px-3 py-2">{{ $row->name }}</td>
                             <td class="px-3 py-2 text-right">{{ rtrim(rtrim(number_format($row->total_quantity, 2, '.', ''), '0'), '.') }}</td>
-                            <td class="px-3 py-2 text-right">${{ number_format($row->total_revenue, 2) }}</td>
+                            <td class="px-3 py-2 text-right">Q{{ number_format($row->total_revenue, 2) }}</td>
                         </tr>
                     @empty
                         <tr><td colspan="5" class="px-3 py-6 text-center text-gray-500">Sin ventas en el periodo.</td></tr>

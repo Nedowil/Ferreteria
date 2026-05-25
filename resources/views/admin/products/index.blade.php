@@ -69,7 +69,7 @@
                                 </td>
                                 <td class="px-3 py-2 text-gray-600">{{ $p->category?->name }}</td>
                                 <td class="px-3 py-2 text-gray-600">{{ $p->brand?->name }}</td>
-                                <td class="px-3 py-2 text-right">${{ number_format($p->sale_price, 2) }}</td>
+                                <td class="px-3 py-2 text-right">Q{{ number_format($p->sale_price, 2) }}</td>
                                 <td class="px-3 py-2 text-right">
                                     {{ rtrim(rtrim(number_format($p->stock, 2, '.', ''), '0'), '.') }}
                                     {{ $p->unit?->abbreviation }}

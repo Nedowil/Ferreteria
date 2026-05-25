@@ -22,15 +22,15 @@
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div class="bg-white shadow-sm rounded-lg p-6">
                     <div class="text-sm text-gray-500">Inicial total</div>
-                    <div class="text-2xl font-semibold">${{ number_format($totals['opening'], 2) }}</div>
+                    <div class="text-2xl font-semibold">Q{{ number_format($totals['opening'], 2) }}</div>
                 </div>
                 <div class="bg-white shadow-sm rounded-lg p-6">
                     <div class="text-sm text-gray-500">Esperado total</div>
-                    <div class="text-2xl font-semibold text-indigo-700">${{ number_format($totals['expected'], 2) }}</div>
+                    <div class="text-2xl font-semibold text-indigo-700">Q{{ number_format($totals['expected'], 2) }}</div>
                 </div>
                 <div class="bg-white shadow-sm rounded-lg p-6">
                     <div class="text-sm text-gray-500">Contado total</div>
-                    <div class="text-2xl font-semibold">${{ number_format($totals['counted'], 2) }}</div>
+                    <div class="text-2xl font-semibold">Q{{ number_format($totals['counted'], 2) }}</div>
                 </div>
                 <div class="bg-white shadow-sm rounded-lg p-6">
                     <div class="text-sm text-gray-500">Diferencia neta</div>
@@ -38,7 +38,7 @@
                         @if ($totals['difference'] > 0) text-green-700
                         @elseif ($totals['difference'] < 0) text-red-600
                         @endif">
-                        ${{ number_format($totals['difference'], 2) }}
+                        Q{{ number_format($totals['difference'], 2) }}
                     </div>
                 </div>
             </div>
@@ -64,14 +64,14 @@
                             <td class="px-3 py-2">{{ $s->user?->name }}</td>
                             <td class="px-3 py-2 text-sm">{{ $s->opened_at->format('H:i') }}</td>
                             <td class="px-3 py-2 text-sm">{{ $s->closed_at->format('H:i') }}</td>
-                            <td class="px-3 py-2 text-right">${{ number_format($s->opening_amount, 2) }}</td>
-                            <td class="px-3 py-2 text-right">${{ number_format($s->expected_cash, 2) }}</td>
-                            <td class="px-3 py-2 text-right">${{ number_format($s->counted_cash, 2) }}</td>
+                            <td class="px-3 py-2 text-right">Q{{ number_format($s->opening_amount, 2) }}</td>
+                            <td class="px-3 py-2 text-right">Q{{ number_format($s->expected_cash, 2) }}</td>
+                            <td class="px-3 py-2 text-right">Q{{ number_format($s->counted_cash, 2) }}</td>
                             <td class="px-3 py-2 text-right
                                 @if ((float) $s->difference > 0) text-green-700
                                 @elseif ((float) $s->difference < 0) text-red-600
                                 @endif">
-                                ${{ number_format($s->difference, 2) }}
+                                Q{{ number_format($s->difference, 2) }}
                             </td>
                             <td class="px-3 py-2 text-right">
                                 <a href="{{ route('admin.caja.show', $s) }}" class="text-indigo-600 text-sm">Ver</a>
