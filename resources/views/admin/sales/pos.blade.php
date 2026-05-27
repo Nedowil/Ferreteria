@@ -466,6 +466,11 @@
                     this.query = '';
                     this.search();
                     this.recalc();
+                    // Sugerencia: si el usuario no ha capturado un pago aun, autorrellena con el total
+                    if (this.payment_method === 'efectivo' && (this.paid_amount === 0 || this.paid_amount === null || this.paid_amount === '')) {
+                        this.paid_amount = this.total;
+                        this.change = 0;
+                    }
                 },
                 removeItem(idx) {
                     this.items.splice(idx, 1);
@@ -476,13 +481,10 @@
                     this.recalc();
                 },
                 recalc() {
-                    const prevTotal = this.total;
                     this.subtotal = this.items.reduce((s, i) => s + (i.quantity || 0) * (i.unit_price || 0), 0);
                     this.total = this.subtotal + (parseFloat(this.tax) || 0);
                     if (this.payment_method !== 'efectivo') {
-                        this.paid_amount = this.total;
-                    } else if (this.paid_amount === 0 || this.paid_amount === prevTotal) {
-                        // Autorrellena el pago exacto en efectivo solo si el usuario no ha capturado un monto distinto
+                        // Tarjeta/transferencia: el monto pagado es siempre el total
                         this.paid_amount = this.total;
                     }
                     this.change = (parseFloat(this.paid_amount) || 0) - this.total;
