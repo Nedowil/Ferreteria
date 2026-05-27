@@ -173,12 +173,13 @@
                         </div>
 
                         <div class="mt-3 space-y-1 text-sm">
+                            <input type="hidden" name="tax" :value="tax.toFixed(2)" />
                             <div class="flex justify-between"><span>Subtotal</span><span>Q<span x-text="subtotal.toFixed(2)"></span></span></div>
-                            <div class="flex justify-between items-center">
-                                <span>IVA</span>
-                                <input type="text" inputmode="decimal" name="tax" x-model="tax" @input="recalc()" @focus="$event.target.select()"
-                                       placeholder="0.00"
-                                       class="w-24 text-right border-gray-300 rounded text-sm focus:border-orange-500 focus:ring-orange-500" />
+                            <div class="flex justify-between text-slate-600">
+                                <span>Monto gravable</span><span>Q<span x-text="taxableAmount.toFixed(2)"></span></span>
+                            </div>
+                            <div class="flex justify-between text-slate-600">
+                                <span>IVA ({{ (int) $company->default_tax_rate }}%)</span><span>Q<span x-text="tax.toFixed(2)"></span></span>
                             </div>
                             <div class="flex justify-between text-lg font-bold border-t pt-1">
                                 <span>Total</span><span>Q<span x-text="total.toFixed(2)"></span></span>
@@ -317,7 +318,11 @@
                 },
                 payment_method: 'efectivo',
                 paid_amount: 0,
+                // Configuracion fiscal del emisor (desde CompanySetting)
+                taxRate: {{ (float) $company->default_tax_rate }},
+                pricesIncludeTax: {{ $company->prices_include_tax ? 'true' : 'false' }},
                 tax: 0,
+                taxableAmount: 0,
                 subtotal: 0,
                 total: 0,
                 change: 0,
@@ -492,7 +497,21 @@
                 },
                 recalc() {
                     this.subtotal = this.items.reduce((s, i) => s + (i.quantity || 0) * (i.unit_price || 0), 0);
-                    this.total = this.subtotal + this.parseAmount(this.tax);
+
+                    // Calculo del IVA segun configuracion del emisor
+                    if (this.pricesIncludeTax) {
+                        // Precios ya incluyen IVA: extraerlo del subtotal
+                        // IVA = subtotal * tasa / (100 + tasa)
+                        this.taxableAmount = this.subtotal / (1 + this.taxRate / 100);
+                        this.tax = this.subtotal - this.taxableAmount;
+                        this.total = this.subtotal;
+                    } else {
+                        // Precios sin IVA: agregar IVA al subtotal
+                        this.taxableAmount = this.subtotal;
+                        this.tax = this.subtotal * this.taxRate / 100;
+                        this.total = this.subtotal + this.tax;
+                    }
+
                     if (this.payment_method !== 'efectivo') {
                         // Tarjeta/transferencia: el monto pagado es siempre el total
                         this.paid_amount = this.total.toFixed(2);

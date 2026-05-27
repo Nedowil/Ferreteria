@@ -48,6 +48,7 @@ class SaleController extends Controller
     {
         return view('admin.sales.pos', [
             'customers' => Customer::where('active', true)->orderBy('name')->get(['id', 'name', 'tax_id']),
+            'company' => \App\Models\CompanySetting::current(),
         ]);
     }
 
