@@ -186,23 +186,37 @@
                             </div>
                         </div>
 
-                        <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
-                            <div>
-                                <label class="block text-xs">Metodo</label>
-                                <select name="payment_method" x-model="payment_method" @change="onPaymentChange()"
-                                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm">
-                                    <option value="efectivo">Efectivo</option>
-                                    <option value="tarjeta">Tarjeta</option>
-                                    <option value="transferencia">Transferencia</option>
-                                </select>
+                        <div class="mt-3 text-sm">
+                            <label class="block text-xs mb-1">Metodo de pago</label>
+                            <input type="hidden" name="payment_method" :value="payment_method" />
+                            <div class="grid grid-cols-3 gap-2">
+                                <button type="button" @click="payment_method = 'efectivo'; onPaymentChange()"
+                                        :class="payment_method === 'efectivo' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'"
+                                        class="px-2 py-2 rounded-md border text-xs font-semibold transition flex flex-col items-center gap-1">
+                                    <span class="text-xl">💵</span>
+                                    Efectivo
+                                </button>
+                                <button type="button" @click="payment_method = 'tarjeta'; onPaymentChange()"
+                                        :class="payment_method === 'tarjeta' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'"
+                                        class="px-2 py-2 rounded-md border text-xs font-semibold transition flex flex-col items-center gap-1">
+                                    <span class="text-xl">💳</span>
+                                    Tarjeta
+                                </button>
+                                <button type="button" @click="payment_method = 'transferencia'; onPaymentChange()"
+                                        :class="payment_method === 'transferencia' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'"
+                                        class="px-2 py-2 rounded-md border text-xs font-semibold transition flex flex-col items-center gap-1">
+                                    <span class="text-xl">🏦</span>
+                                    Transferencia
+                                </button>
                             </div>
-                            <div>
-                                <label class="block text-xs">Pagado</label>
-                                <input type="text" inputmode="decimal" name="paid_amount"
-                                       x-model="paid_amount" @input="recalc()" @focus="$event.target.select()"
-                                       placeholder="0.00"
-                                       class="mt-1 block w-full text-right border-gray-300 rounded-md shadow-sm text-sm focus:border-orange-500 focus:ring-orange-500" />
-                            </div>
+                        </div>
+
+                        <div class="mt-3 text-sm">
+                            <label class="block text-xs">Pagado</label>
+                            <input type="text" inputmode="decimal" name="paid_amount"
+                                   x-model="paid_amount" @input="recalc()" @focus="$event.target.select()"
+                                   placeholder="0.00"
+                                   class="mt-1 block w-full text-right border-gray-300 rounded-md shadow-sm text-lg font-semibold focus:border-orange-500 focus:ring-orange-500" />
                         </div>
 
                         <div class="mt-2 flex justify-between text-lg font-bold">
