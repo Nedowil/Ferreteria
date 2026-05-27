@@ -15,10 +15,10 @@
             <form method="POST" action="{{ route('admin.ventas.store') }}" @submit="onSubmit($event)">
                 @csrf
 
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
 
-                    <!-- Columna izquierda: buscador + resultados -->
-                    <div class="lg:col-span-2 bg-white shadow-sm rounded-lg p-4">
+                    <!-- Columna izquierda: buscador + resultados (3 de 5 = 60%) -->
+                    <div class="lg:col-span-3 bg-white shadow-sm rounded-lg p-4">
                         <div class="flex gap-2">
                             <input type="text" x-model="query"
                                    x-ref="search"
@@ -64,8 +64,8 @@
                         </div>
                     </div>
 
-                    <!-- Columna derecha: carrito + cobro -->
-                    <div class="bg-white shadow-sm rounded-lg p-4 flex flex-col">
+                    <!-- Columna derecha: carrito + cobro (2 de 5 = 40%) -->
+                    <div class="lg:col-span-2 bg-white shadow-sm rounded-lg p-5 flex flex-col">
                         <div class="mb-3" @click.outside="customerSearchOpen = false">
                             <label class="text-sm font-medium text-gray-700">Cliente</label>
                             <input type="hidden" name="customer_id" :value="customer_id" />
@@ -172,16 +172,16 @@
                             </table>
                         </div>
 
-                        <div class="mt-3 space-y-1 text-sm">
+                        <div class="mt-4 space-y-2 text-base">
                             <input type="hidden" name="tax" :value="tax.toFixed(2)" />
-                            <div class="flex justify-between"><span>Subtotal</span><span>Q<span x-text="subtotal.toFixed(2)"></span></span></div>
-                            <div class="flex justify-between text-slate-600">
+                            <div class="flex justify-between"><span class="text-slate-600">Subtotal</span><span class="font-medium">Q<span x-text="subtotal.toFixed(2)"></span></span></div>
+                            <div class="flex justify-between text-sm text-slate-500">
                                 <span>Monto gravable</span><span>Q<span x-text="taxableAmount.toFixed(2)"></span></span>
                             </div>
-                            <div class="flex justify-between text-slate-600">
+                            <div class="flex justify-between text-sm text-slate-500">
                                 <span>IVA ({{ (int) $company->default_tax_rate }}%)</span><span>Q<span x-text="tax.toFixed(2)"></span></span>
                             </div>
-                            <div class="flex justify-between text-lg font-bold border-t pt-1">
+                            <div class="flex justify-between text-2xl font-bold border-t-2 pt-2 text-slate-800">
                                 <span>Total</span><span>Q<span x-text="total.toFixed(2)"></span></span>
                             </div>
                         </div>
@@ -219,7 +219,7 @@
                                    class="mt-1 block w-full text-right border-gray-300 rounded-md shadow-sm text-lg font-semibold focus:border-orange-500 focus:ring-orange-500" />
                         </div>
 
-                        <div class="mt-2 flex justify-between text-lg font-bold">
+                        <div class="mt-3 flex justify-between text-2xl font-bold">
                             <span>Cambio</span>
                             <span :class="change < 0 ? 'text-red-600' : 'text-green-700'">Q<span x-text="change.toFixed(2)"></span></span>
                         </div>
@@ -234,7 +234,7 @@
                         </div>
 
                         <button type="submit" :disabled="items.length === 0 || change < 0"
-                                class="mt-4 w-full py-3 bg-green-600 text-white rounded-lg text-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-lg transition">
+                                class="mt-5 w-full py-4 bg-green-600 text-white rounded-lg text-xl font-bold hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-lg transition">
                             <span x-show="items.length === 0">Carrito vacio</span>
                             <span x-show="items.length > 0 && change < 0">Falta pago</span>
                             <span x-show="items.length > 0 && change >= 0">Cobrar Q<span x-text="total.toFixed(2)"></span></span>
