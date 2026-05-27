@@ -66,21 +66,63 @@
 
                     <!-- Columna derecha: carrito + cobro -->
                     <div class="bg-white shadow-sm rounded-lg p-4 flex flex-col">
-                        <div class="mb-3">
+                        <div class="mb-3" @click.outside="customerSearchOpen = false">
                             <label class="text-sm font-medium text-gray-700">Cliente</label>
+                            <input type="hidden" name="customer_id" :value="customer_id" />
+
                             <div class="flex gap-2 mt-1">
-                                <select name="customer_id" x-model="customer_id"
-                                        class="flex-1 border-gray-300 rounded-md shadow-sm text-sm focus:border-orange-500 focus:ring-orange-500">
-                                    <option value="">Publico en general</option>
-                                    <template x-for="c in customers" :key="c.id">
-                                        <option :value="c.id" x-text="c.label"></option>
-                                    </template>
-                                </select>
+                                <div class="relative flex-1">
+                                    <input type="text" x-model="customerSearch"
+                                           @focus="customerSearchOpen = true"
+                                           @input="customerSearchOpen = true"
+                                           @keydown.escape="customerSearchOpen = false"
+                                           placeholder="Buscar cliente por nombre o NIT..."
+                                           autocomplete="off"
+                                           class="w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-orange-500 focus:ring-orange-500 pr-8" />
+
+                                    <!-- Boton limpiar -->
+                                    <button type="button" x-show="customer_id || customerSearch"
+                                            @click="clearCustomer()"
+                                            class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 text-lg leading-none">
+                                        ✕
+                                    </button>
+
+                                    <!-- Dropdown de resultados -->
+                                    <div x-show="customerSearchOpen" x-cloak x-transition
+                                         class="absolute z-30 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-64 overflow-y-auto">
+
+                                        <!-- Opcion: Publico en general -->
+                                        <div @click="selectCustomer({ id: '', label: 'Publico en general' })"
+                                             class="px-3 py-2 hover:bg-orange-50 cursor-pointer text-sm flex items-center gap-2 border-b">
+                                            <span class="text-lg">👥</span>
+                                            <span class="font-medium text-slate-700">Publico en general</span>
+                                        </div>
+
+                                        <template x-for="c in filteredCustomers" :key="c.id">
+                                            <div @click="selectCustomer(c)"
+                                                 class="px-3 py-2 hover:bg-orange-50 cursor-pointer text-sm">
+                                                <div class="font-medium text-slate-800" x-text="c.label"></div>
+                                            </div>
+                                        </template>
+
+                                        <div x-show="filteredCustomers.length === 0 && customerSearch.length > 0"
+                                             class="px-3 py-4 text-center text-sm text-slate-500">
+                                            Sin coincidencias
+                                            @can('clientes.crear')
+                                                <button type="button" @click.stop="openCustomerModalWithName(customerSearch)"
+                                                        class="block mx-auto mt-2 px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded text-xs font-semibold">
+                                                    + Crear "<span x-text="customerSearch"></span>"
+                                                </button>
+                                            @endcan
+                                        </div>
+                                    </div>
+                                </div>
+
                                 @can('clientes.crear')
                                     <button type="button" @click="openCustomerModal()"
                                             title="Nuevo cliente"
                                             class="px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded-md text-sm font-bold shadow flex items-center gap-1">
-                                        + <span class="hidden lg:inline">Nuevo</span>
+                                        +
                                     </button>
                                 @endcan
                             </div>
@@ -253,6 +295,13 @@
                 items: [],
                 customers: @json($customers->map(fn($c) => ['id' => $c->id, 'label' => $c->name . ($c->tax_id ? " ($c->tax_id)" : '')])),
                 customer_id: '',
+                customerSearch: '',
+                customerSearchOpen: false,
+                get filteredCustomers() {
+                    const term = this.customerSearch.toLowerCase().trim();
+                    if (!term) return this.customers.slice(0, 50);
+                    return this.customers.filter(c => c.label.toLowerCase().includes(term)).slice(0, 50);
+                },
                 payment_method: 'efectivo',
                 paid_amount: 0,
                 tax: 0,
@@ -282,11 +331,25 @@
                     }, 500);
                 },
 
+                selectCustomer(c) {
+                    this.customer_id = c.id ? String(c.id) : '';
+                    this.customerSearch = c.id ? c.label : '';
+                    this.customerSearchOpen = false;
+                },
+                clearCustomer() {
+                    this.customer_id = '';
+                    this.customerSearch = '';
+                    this.customerSearchOpen = false;
+                },
                 openCustomerModal() {
                     this.newCustomer = { name: '', tax_id: '', phone: '', email: '', address: '' };
                     this.customerError = '';
                     this.showCustomerModal = true;
                     setTimeout(() => this.$refs.newCustName?.focus(), 100);
+                },
+                openCustomerModalWithName(name) {
+                    this.openCustomerModal();
+                    this.newCustomer.name = name;
                 },
                 closeCustomerModal() {
                     this.showCustomerModal = false;
@@ -319,8 +382,9 @@
                         }
                         const data = await res.json();
                         // Agrega al selector y selecciona
-                        this.customers.push({ id: data.id, label: data.label });
-                        this.customer_id = String(data.id);
+                        const newC = { id: data.id, label: data.label };
+                        this.customers.push(newC);
+                        this.selectCustomer(newC);
                         this.closeCustomerModal();
                     } catch (e) {
                         this.customerError = 'Error de conexion: ' + e.message;
