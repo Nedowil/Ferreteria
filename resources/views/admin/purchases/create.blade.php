@@ -17,15 +17,31 @@
                     @csrf
 
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div>
-                            <x-input-label for="supplier_id" value="Proveedor *" />
-                            <select id="supplier_id" name="supplier_id" required
-                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                                <option value="">— Selecciona —</option>
-                                @foreach ($suppliers as $s)
-                                    <option value="{{ $s->id }}" @selected(old('supplier_id') == $s->id)>{{ $s->name }}</option>
-                                @endforeach
-                            </select>
+
+                        <!-- Proveedor con buscador -->
+                        <div @click.outside="supplierOpen = false">
+                            <x-input-label value="Proveedor *" />
+                            <input type="hidden" name="supplier_id" :value="supplier_id" required />
+                            <div class="relative mt-1">
+                                <input type="text" x-model="supplierSearch"
+                                       @focus="supplierOpen = true" @input="supplierOpen = true"
+                                       @keydown.escape="supplierOpen = false"
+                                       placeholder="Buscar proveedor..."
+                                       autocomplete="off"
+                                       class="w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-orange-500 focus:ring-orange-500 pr-7" />
+                                <button type="button" x-show="supplier_id || supplierSearch" @click="clearSupplier()"
+                                        class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500">✕</button>
+
+                                <div x-show="supplierOpen" x-cloak x-transition
+                                     class="absolute z-30 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                                    <template x-for="s in filteredSuppliers" :key="s.id">
+                                        <div @click="selectSupplier(s)"
+                                             class="px-3 py-2 hover:bg-orange-50 cursor-pointer text-sm" x-text="s.label"></div>
+                                    </template>
+                                    <div x-show="filteredSuppliers.length === 0"
+                                         class="px-3 py-3 text-center text-sm text-slate-500">Sin coincidencias</div>
+                                </div>
+                            </div>
                         </div>
 
                         <div>
@@ -41,7 +57,7 @@
                         </div>
 
                         <div>
-                            <x-input-label for="tax" value="Impuesto (IVA) $" />
+                            <x-input-label for="tax" value="Impuesto (IVA) Q" />
                             <x-text-input id="tax" name="tax" type="number" step="0.01" min="0"
                                           x-model="tax" @input="recalc()"
                                           class="mt-1 block w-full" :value="old('tax', 0)" />
@@ -64,14 +80,30 @@
                             <template x-for="(item, idx) in items" :key="idx">
                                 <tr class="border-t">
                                     <td class="px-2 py-1">
-                                        <select :name="`items[${idx}][product_id]`" x-model="item.product_id"
-                                                @change="onProductChange(idx)" required
-                                                class="block w-full border-gray-300 rounded-md shadow-sm">
-                                            <option value="">— Producto —</option>
-                                            <template x-for="p in products" :key="p.id">
-                                                <option :value="p.id" x-text="`${p.sku} — ${p.name}`"></option>
-                                            </template>
-                                        </select>
+                                        <input type="hidden" :name="`items[${idx}][product_id]`" :value="item.product_id" />
+                                        <div class="relative" x-data="{ open: false }" @click.outside="open = false">
+                                            <input type="text" x-model="item.search"
+                                                   @focus="open = true" @input="open = true"
+                                                   @keydown.escape="open = false"
+                                                   :required="!item.product_id"
+                                                   placeholder="Buscar producto por nombre o SKU..."
+                                                   autocomplete="off"
+                                                   class="w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-orange-500 focus:ring-orange-500" />
+
+                                            <div x-show="open" x-cloak x-transition
+                                                 class="absolute z-20 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-56 overflow-y-auto">
+                                                <template x-for="p in filterProducts(item.search)" :key="p.id">
+                                                    <div @click="selectProduct(idx, p); open = false"
+                                                         class="px-3 py-2 hover:bg-orange-50 cursor-pointer text-sm">
+                                                        <div class="font-mono text-xs text-slate-500" x-text="p.sku"></div>
+                                                        <div class="font-medium" x-text="p.name"></div>
+                                                        <div class="text-xs text-blue-700">Costo: Q<span x-text="parseFloat(p.purchase_price).toFixed(2)"></span></div>
+                                                    </div>
+                                                </template>
+                                                <div x-show="filterProducts(item.search).length === 0"
+                                                     class="px-3 py-3 text-center text-sm text-slate-500">Sin coincidencias</div>
+                                            </div>
+                                        </div>
                                     </td>
                                     <td class="px-2 py-1">
                                         <input type="number" step="0.01" min="0.01" required
@@ -112,7 +144,7 @@
                         </table>
 
                         <button type="button" @click="addItem()"
-                                class="mt-3 px-3 py-1 bg-gray-700 text-white rounded text-sm">+ Agregar partida</button>
+                                class="mt-3 px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded text-sm font-semibold">+ Agregar partida</button>
                     </div>
 
                     <div>
@@ -130,33 +162,51 @@
         </div>
     </div>
 
-    @push('scripts')
-    @endpush
-
     <script>
         function purchaseForm() {
-            const products = @json($products);
             return {
-                products,
+                products: @json($products),
+                suppliers: @json($suppliers->map(fn($s) => ['id' => $s->id, 'label' => $s->name . ($s->tax_id ? " ($s->tax_id)" : '')])),
+                supplier_id: '',
+                supplierSearch: '',
+                supplierOpen: false,
                 items: [],
                 tax: 0,
                 subtotal: 0,
                 total: 0,
-                init() {
-                    this.addItem();
+
+                get filteredSuppliers() {
+                    const t = this.supplierSearch.toLowerCase().trim();
+                    if (!t) return this.suppliers.slice(0, 50);
+                    return this.suppliers.filter(s => s.label.toLowerCase().includes(t)).slice(0, 50);
+                },
+                filterProducts(term) {
+                    const t = (term || '').toLowerCase().trim();
+                    if (!t) return this.products.slice(0, 30);
+                    return this.products.filter(p =>
+                        p.name.toLowerCase().includes(t) ||
+                        p.sku.toLowerCase().includes(t)
+                    ).slice(0, 30);
+                },
+                selectSupplier(s) {
+                    this.supplier_id = String(s.id);
+                    this.supplierSearch = s.label;
+                    this.supplierOpen = false;
+                },
+                clearSupplier() {
+                    this.supplier_id = ''; this.supplierSearch = ''; this.supplierOpen = false;
+                },
+                selectProduct(idx, p) {
+                    this.items[idx].product_id = p.id;
+                    this.items[idx].search = `${p.sku} — ${p.name}`;
+                    this.items[idx].unit_cost = parseFloat(p.purchase_price) || 0;
                     this.recalc();
                 },
-                addItem() {
-                    this.items.push({ product_id: '', quantity: 1, unit_cost: 0 });
-                },
+                init() { this.addItem(); this.recalc(); },
+                addItem() { this.items.push({ product_id: '', search: '', quantity: 1, unit_cost: 0 }); },
                 removeItem(idx) {
                     this.items.splice(idx, 1);
                     if (this.items.length === 0) this.addItem();
-                    this.recalc();
-                },
-                onProductChange(idx) {
-                    const p = this.products.find(p => p.id == this.items[idx].product_id);
-                    if (p) this.items[idx].unit_cost = parseFloat(p.purchase_price) || 0;
                     this.recalc();
                 },
                 recalc() {
