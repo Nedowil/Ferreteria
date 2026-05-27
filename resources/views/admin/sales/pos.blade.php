@@ -207,9 +207,20 @@
                             <span :class="change < 0 ? 'text-red-600' : 'text-green-700'">Q<span x-text="change.toFixed(2)"></span></span>
                         </div>
 
+                        <!-- Sugerencia rapida si pagado < total -->
+                        <div x-show="items.length > 0 && change < 0" x-cloak class="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2 flex items-center justify-between gap-2">
+                            <span>Falta indicar cuanto pago el cliente</span>
+                            <button type="button" @click="paid_amount = total; recalc()"
+                                    class="px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded text-xs font-bold whitespace-nowrap">
+                                Pago exacto (Q<span x-text="total.toFixed(2)"></span>)
+                            </button>
+                        </div>
+
                         <button type="submit" :disabled="items.length === 0 || change < 0"
-                                class="mt-4 w-full py-3 bg-green-600 text-white rounded-lg text-lg font-semibold hover:bg-green-700 disabled:bg-gray-400">
-                            Cobrar
+                                class="mt-4 w-full py-3 bg-green-600 text-white rounded-lg text-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-lg transition">
+                            <span x-show="items.length === 0">Carrito vacio</span>
+                            <span x-show="items.length > 0 && change < 0">Falta pago</span>
+                            <span x-show="items.length > 0 && change >= 0">Cobrar Q<span x-text="total.toFixed(2)"></span></span>
                         </button>
                     </div>
                 </div>
@@ -465,9 +476,15 @@
                     this.recalc();
                 },
                 recalc() {
+                    const prevTotal = this.total;
                     this.subtotal = this.items.reduce((s, i) => s + (i.quantity || 0) * (i.unit_price || 0), 0);
                     this.total = this.subtotal + (parseFloat(this.tax) || 0);
-                    if (this.payment_method !== 'efectivo') this.paid_amount = this.total;
+                    if (this.payment_method !== 'efectivo') {
+                        this.paid_amount = this.total;
+                    } else if (this.paid_amount === 0 || this.paid_amount === prevTotal) {
+                        // Autorrellena el pago exacto en efectivo solo si el usuario no ha capturado un monto distinto
+                        this.paid_amount = this.total;
+                    }
                     this.change = (parseFloat(this.paid_amount) || 0) - this.total;
                 },
                 onSubmit(e) {
