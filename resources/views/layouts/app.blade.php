@@ -12,7 +12,15 @@
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    <body class="font-sans antialiased bg-slate-100" x-data="{ sidebarOpen: false }">
+    <body class="font-sans antialiased bg-slate-100"
+          x-data="{
+              sidebarOpen: false,
+              sidebarCollapsed: localStorage.getItem('sidebarCollapsed') === '1',
+              toggleCollapsed() {
+                  this.sidebarCollapsed = !this.sidebarCollapsed;
+                  localStorage.setItem('sidebarCollapsed', this.sidebarCollapsed ? '1' : '0');
+              }
+          }">
         <div class="min-h-screen flex">
 
             @include('layouts.sidebar')
@@ -22,14 +30,26 @@
                  class="fixed inset-0 bg-black/50 z-30 lg:hidden"></div>
 
             <!-- Main content -->
-            <div class="flex-1 lg:ml-64 flex flex-col min-h-screen">
+            <div class="flex-1 flex flex-col min-h-screen transition-all duration-300"
+                 :class="sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'">
                 <!-- Topbar -->
                 <header class="bg-white border-b border-slate-200 sticky top-0 z-20">
                     <div class="flex items-center justify-between px-4 lg:px-6 py-3">
                         <div class="flex items-center gap-3">
+                            <!-- Hamburger movil -->
                             <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden text-slate-600 hover:text-slate-900">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                                </svg>
+                            </button>
+                            <!-- Toggle desktop -->
+                            <button @click="toggleCollapsed()" class="hidden lg:flex text-slate-500 hover:text-orange-500 hover:bg-orange-50 p-2 rounded-lg transition"
+                                    :title="sidebarCollapsed ? 'Expandir menu' : 'Contraer menu'">
+                                <svg x-show="!sidebarCollapsed" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/>
+                                </svg>
+                                <svg x-show="sidebarCollapsed" x-cloak class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/>
                                 </svg>
                             </button>
                             @isset($header)
