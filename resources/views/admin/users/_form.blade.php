@@ -2,21 +2,21 @@
 
 <div class="space-y-4">
     <div>
-        <x-input-label for="name" :value="__('Nombre')" />
+        <x-input-label for="name" value="Nombre" />
         <x-text-input id="name" name="name" type="text" class="mt-1 block w-full"
                       :value="old('name', $user->name ?? '')" required autofocus />
         <x-input-error :messages="$errors->get('name')" class="mt-2" />
     </div>
 
     <div>
-        <x-input-label for="email" :value="__('Email')" />
+        <x-input-label for="email" value="Email" />
         <x-text-input id="email" name="email" type="email" class="mt-1 block w-full"
                       :value="old('email', $user->email ?? '')" required />
         <x-input-error :messages="$errors->get('email')" class="mt-2" />
     </div>
 
     <div>
-        <x-input-label for="password" :value="__('Contraseña')" />
+        <x-input-label for="password" value="Contrasena" />
         <x-text-input id="password" name="password" type="password" class="mt-1 block w-full"
                       :required="! isset($user)" autocomplete="new-password" />
         @isset($user)
@@ -26,13 +26,13 @@
     </div>
 
     <div>
-        <x-input-label for="password_confirmation" :value="__('Confirmar contraseña')" />
+        <x-input-label for="password_confirmation" value="Confirmar contrasena" />
         <x-text-input id="password_confirmation" name="password_confirmation" type="password"
                       class="mt-1 block w-full" autocomplete="new-password" />
     </div>
 
     <div>
-        <x-input-label for="role" :value="__('Rol')" />
+        <x-input-label for="role" value="Rol" />
         <select id="role" name="role" required
                 class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
             <option value="">— Selecciona un rol —</option>
