@@ -36,31 +36,89 @@
         </a>
 
         @can('productos.ver')
-            <a href="{{ route('admin.productos.index') }}"
-               class="flex items-center gap-3 px-3 py-2 rounded-lg transition
-                      {{ request()->routeIs('admin.productos.*') || request()->routeIs('admin.inventario.*') ? 'bg-orange-600 text-white shadow-lg' : 'hover:bg-slate-800' }}">
-                <span class="text-xl">📦</span>
-                <span class="text-sm font-medium">Productos</span>
-            </a>
+            <div x-data="{ open: {{ request()->routeIs('admin.productos.*') || request()->routeIs('admin.inventario.*') ? 'true' : 'false' }} }">
+                <button @click="open = !open"
+                        class="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-800 transition
+                               {{ request()->routeIs('admin.productos.*') || request()->routeIs('admin.inventario.*') ? 'bg-slate-800 text-white' : '' }}">
+                    <div class="flex items-center gap-3">
+                        <span class="text-xl">📦</span>
+                        <span class="text-sm font-medium">Productos</span>
+                    </div>
+                    <svg :class="open ? 'rotate-90' : ''" class="w-4 h-4 transition text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </button>
+                <div x-show="open" x-cloak x-transition class="ml-3 mt-1 space-y-1 pl-3 border-l-2 border-orange-500/30">
+                    @can('productos.crear')
+                        <a href="{{ route('admin.productos.create') }}"
+                           class="flex items-center justify-between px-3 py-2 rounded-md text-sm transition
+                                  {{ request()->routeIs('admin.productos.create') ? 'bg-orange-600 text-white' : 'text-slate-300 hover:text-white hover:bg-slate-800' }}">
+                            <span class="flex items-center gap-2">
+                                <span class="w-1 h-4 rounded bg-orange-500"></span>
+                                Crear Producto
+                            </span>
+                            <span class="text-orange-300">›</span>
+                        </a>
+                    @endcan
+                    <a href="{{ route('admin.productos.index') }}"
+                       class="flex items-center justify-between px-3 py-2 rounded-md text-sm transition
+                              {{ request()->routeIs('admin.productos.index') || request()->routeIs('admin.productos.edit') ? 'bg-orange-600 text-white' : 'text-slate-300 hover:text-white hover:bg-slate-800' }}">
+                        <span class="flex items-center gap-2">
+                            <span class="w-1 h-4 rounded bg-orange-500"></span>
+                            Listado de Productos
+                        </span>
+                        <span class="text-orange-300">›</span>
+                    </a>
+                    <a href="{{ route('admin.inventario.low_stock') }}"
+                       class="flex items-center justify-between px-3 py-2 rounded-md text-sm transition
+                              {{ request()->routeIs('admin.inventario.*') ? 'bg-orange-600 text-white' : 'text-slate-300 hover:text-white hover:bg-slate-800' }}">
+                        <span class="flex items-center gap-2">
+                            <span class="w-1 h-4 rounded bg-orange-500"></span>
+                            Stock Bajo
+                        </span>
+                        <span class="text-orange-300">›</span>
+                    </a>
+                </div>
+            </div>
         @endcan
 
         @can('catalogos.gestionar')
             <div x-data="{ open: {{ request()->routeIs('admin.categorias.*') || request()->routeIs('admin.marcas.*') || request()->routeIs('admin.unidades.*') ? 'true' : 'false' }} }">
                 <button @click="open = !open"
-                        class="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-800 transition">
+                        class="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-800 transition
+                               {{ request()->routeIs('admin.categorias.*') || request()->routeIs('admin.marcas.*') || request()->routeIs('admin.unidades.*') ? 'bg-slate-800 text-white' : '' }}">
                     <div class="flex items-center gap-3">
                         <span class="text-xl">📚</span>
                         <span class="text-sm font-medium">Catalogos</span>
                     </div>
-                    <svg :class="open ? 'rotate-90' : ''" class="w-4 h-4 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    <svg :class="open ? 'rotate-90' : ''" class="w-4 h-4 transition text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                 </button>
-                <div x-show="open" x-cloak class="ml-8 mt-1 space-y-1">
+                <div x-show="open" x-cloak x-transition class="ml-3 mt-1 space-y-1 pl-3 border-l-2 border-orange-500/30">
                     <a href="{{ route('admin.categorias.index') }}"
-                       class="block px-3 py-1.5 text-sm rounded {{ request()->routeIs('admin.categorias.*') ? 'text-orange-400 font-semibold' : 'text-slate-400 hover:text-white' }}">Categorias</a>
+                       class="flex items-center justify-between px-3 py-2 rounded-md text-sm transition
+                              {{ request()->routeIs('admin.categorias.*') ? 'bg-orange-600 text-white' : 'text-slate-300 hover:text-white hover:bg-slate-800' }}">
+                        <span class="flex items-center gap-2">
+                            <span class="w-1 h-4 rounded bg-orange-500"></span>
+                            Categorias
+                        </span>
+                        <span class="text-orange-300">›</span>
+                    </a>
                     <a href="{{ route('admin.marcas.index') }}"
-                       class="block px-3 py-1.5 text-sm rounded {{ request()->routeIs('admin.marcas.*') ? 'text-orange-400 font-semibold' : 'text-slate-400 hover:text-white' }}">Marcas</a>
+                       class="flex items-center justify-between px-3 py-2 rounded-md text-sm transition
+                              {{ request()->routeIs('admin.marcas.*') ? 'bg-orange-600 text-white' : 'text-slate-300 hover:text-white hover:bg-slate-800' }}">
+                        <span class="flex items-center gap-2">
+                            <span class="w-1 h-4 rounded bg-orange-500"></span>
+                            Marcas
+                        </span>
+                        <span class="text-orange-300">›</span>
+                    </a>
                     <a href="{{ route('admin.unidades.index') }}"
-                       class="block px-3 py-1.5 text-sm rounded {{ request()->routeIs('admin.unidades.*') ? 'text-orange-400 font-semibold' : 'text-slate-400 hover:text-white' }}">Unidades</a>
+                       class="flex items-center justify-between px-3 py-2 rounded-md text-sm transition
+                              {{ request()->routeIs('admin.unidades.*') ? 'bg-orange-600 text-white' : 'text-slate-300 hover:text-white hover:bg-slate-800' }}">
+                        <span class="flex items-center gap-2">
+                            <span class="w-1 h-4 rounded bg-orange-500"></span>
+                            Unidades
+                        </span>
+                        <span class="text-orange-300">›</span>
+                    </a>
                 </div>
             </div>
         @endcan
