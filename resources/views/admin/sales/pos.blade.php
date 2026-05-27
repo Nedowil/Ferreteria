@@ -68,12 +68,22 @@
                     <div class="bg-white shadow-sm rounded-lg p-4 flex flex-col">
                         <div class="mb-3">
                             <label class="text-sm font-medium text-gray-700">Cliente</label>
-                            <select name="customer_id" x-model="customer_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm">
-                                <option value="">Publico en general</option>
-                                @foreach ($customers as $c)
-                                    <option value="{{ $c->id }}">{{ $c->name }}{{ $c->tax_id ? " ($c->tax_id)" : '' }}</option>
-                                @endforeach
-                            </select>
+                            <div class="flex gap-2 mt-1">
+                                <select name="customer_id" x-model="customer_id"
+                                        class="flex-1 border-gray-300 rounded-md shadow-sm text-sm focus:border-orange-500 focus:ring-orange-500">
+                                    <option value="">Publico en general</option>
+                                    <template x-for="c in customers" :key="c.id">
+                                        <option :value="c.id" x-text="c.label"></option>
+                                    </template>
+                                </select>
+                                @can('clientes.crear')
+                                    <button type="button" @click="openCustomerModal()"
+                                            title="Nuevo cliente"
+                                            class="px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded-md text-sm font-bold shadow flex items-center gap-1">
+                                        + <span class="hidden lg:inline">Nuevo</span>
+                                    </button>
+                                @endcan
+                            </div>
                         </div>
 
                         <div class="flex-1 max-h-80 overflow-y-auto border rounded">
@@ -162,6 +172,76 @@
                     </div>
                 </div>
             </form>
+
+            <!-- Modal nuevo cliente -->
+            <div x-show="showCustomerModal" x-cloak x-transition.opacity
+                 class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+                 @keydown.escape.window="closeCustomerModal()">
+                <div @click.outside="closeCustomerModal()"
+                     class="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden"
+                     x-transition.scale>
+
+                    <div class="bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-4 flex justify-between items-center">
+                        <h3 class="text-white font-bold text-lg flex items-center gap-2">
+                            <span class="text-2xl">👤</span> Nuevo cliente
+                        </h3>
+                        <button type="button" @click="closeCustomerModal()" class="text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center">
+                            ✕
+                        </button>
+                    </div>
+
+                    <div class="p-6 space-y-3">
+                        <template x-if="customerError">
+                            <div class="p-2 bg-red-100 text-red-800 rounded text-sm" x-text="customerError"></div>
+                        </template>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700">Nombre <span class="text-red-500">*</span></label>
+                            <input type="text" x-model="newCustomer.name" required x-ref="newCustName"
+                                   placeholder="Nombre del cliente"
+                                   class="mt-1 block w-full border-slate-300 rounded-md shadow-sm focus:border-orange-500 focus:ring-orange-500" />
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700">NIT</label>
+                            <input type="text" x-model="newCustomer.tax_id"
+                                   placeholder="CF si es consumidor final"
+                                   class="mt-1 block w-full border-slate-300 rounded-md shadow-sm focus:border-orange-500 focus:ring-orange-500" />
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700">Telefono</label>
+                                <input type="text" x-model="newCustomer.phone"
+                                       class="mt-1 block w-full border-slate-300 rounded-md shadow-sm focus:border-orange-500 focus:ring-orange-500" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700">Email</label>
+                                <input type="email" x-model="newCustomer.email"
+                                       class="mt-1 block w-full border-slate-300 rounded-md shadow-sm focus:border-orange-500 focus:ring-orange-500" />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700">Direccion</label>
+                            <input type="text" x-model="newCustomer.address"
+                                   class="mt-1 block w-full border-slate-300 rounded-md shadow-sm focus:border-orange-500 focus:ring-orange-500" />
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-50 px-6 py-3 flex justify-end gap-2 border-t">
+                        <button type="button" @click="closeCustomerModal()"
+                                class="px-4 py-2 bg-slate-200 text-slate-700 rounded-md hover:bg-slate-300 text-sm font-medium">
+                            Cancelar
+                        </button>
+                        <button type="button" @click="saveCustomer()" :disabled="savingCustomer"
+                                class="px-5 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-md hover:from-orange-600 hover:to-orange-700 text-sm font-bold shadow disabled:opacity-50">
+                            <span x-show="!savingCustomer">Guardar y seleccionar</span>
+                            <span x-show="savingCustomer">Guardando...</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -171,6 +251,7 @@
                 query: '',
                 results: [],
                 items: [],
+                customers: @json($customers->map(fn($c) => ['id' => $c->id, 'label' => $c->name . ($c->tax_id ? " ($c->tax_id)" : '')])),
                 customer_id: '',
                 payment_method: 'efectivo',
                 paid_amount: 0,
@@ -178,6 +259,12 @@
                 subtotal: 0,
                 total: 0,
                 change: 0,
+
+                // Modal de cliente
+                showCustomerModal: false,
+                savingCustomer: false,
+                customerError: '',
+                newCustomer: { name: '', tax_id: '', phone: '', email: '', address: '' },
 
                 // Deteccion de scanner: los lectores envian caracteres a alta velocidad
                 lastKeyTime: 0,
@@ -193,6 +280,53 @@
                             this.lastScanned = '';
                         }
                     }, 500);
+                },
+
+                openCustomerModal() {
+                    this.newCustomer = { name: '', tax_id: '', phone: '', email: '', address: '' };
+                    this.customerError = '';
+                    this.showCustomerModal = true;
+                    setTimeout(() => this.$refs.newCustName?.focus(), 100);
+                },
+                closeCustomerModal() {
+                    this.showCustomerModal = false;
+                    setTimeout(() => this.$refs.search?.focus(), 50);
+                },
+                async saveCustomer() {
+                    if (!this.newCustomer.name.trim()) {
+                        this.customerError = 'El nombre es obligatorio';
+                        return;
+                    }
+                    this.savingCustomer = true;
+                    this.customerError = '';
+                    try {
+                        const res = await fetch('{{ route('admin.clientes.quick') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            },
+                            body: JSON.stringify(this.newCustomer),
+                        });
+                        if (!res.ok) {
+                            const body = await res.json().catch(() => ({}));
+                            this.customerError = body.message || 'Error al guardar';
+                            const errors = body.errors ? Object.values(body.errors).flat().join(', ') : '';
+                            if (errors) this.customerError = errors;
+                            this.savingCustomer = false;
+                            return;
+                        }
+                        const data = await res.json();
+                        // Agrega al selector y selecciona
+                        this.customers.push({ id: data.id, label: data.label });
+                        this.customer_id = String(data.id);
+                        this.closeCustomerModal();
+                    } catch (e) {
+                        this.customerError = 'Error de conexion: ' + e.message;
+                    } finally {
+                        this.savingCustomer = false;
+                    }
                 },
                 async search() {
                     const url = new URL('{{ route('admin.ventas.search_products') }}', window.location.origin);

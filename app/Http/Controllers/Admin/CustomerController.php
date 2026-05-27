@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -61,6 +62,31 @@ class CustomerController extends Controller
         $cliente->delete();
 
         return redirect()->route('admin.clientes.index')->with('status', 'Cliente eliminado.');
+    }
+
+    /**
+     * Crea un cliente rapido desde el POS y devuelve JSON con los datos para
+     * agregarlo al selector sin recargar la pagina.
+     */
+    public function quickStore(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:180'],
+            'tax_id' => ['nullable', 'string', 'max:30'],
+            'phone' => ['nullable', 'string', 'max:30'],
+            'email' => ['nullable', 'email', 'max:120'],
+            'address' => ['nullable', 'string', 'max:255'],
+        ]);
+        $data['active'] = true;
+
+        $customer = Customer::create($data);
+
+        return response()->json([
+            'id' => $customer->id,
+            'name' => $customer->name,
+            'tax_id' => $customer->tax_id,
+            'label' => $customer->name . ($customer->tax_id ? " ({$customer->tax_id})" : ''),
+        ], 201);
     }
 
     private function validated(Request $request): array

@@ -108,6 +108,10 @@ Route::middleware(['auth', 'verified'])
                 ->parameters(['clientes' => 'cliente']);
         });
 
+        Route::middleware('permission:clientes.crear')->group(function () {
+            Route::post('clientes/quick', [CustomerController::class, 'quickStore'])->name('clientes.quick');
+        });
+
         Route::middleware('permission:ventas.ver')->group(function () {
             Route::get('ventas', [SaleController::class, 'index'])->name('ventas.index');
             Route::get('ventas/{venta}', [SaleController::class, 'show'])->name('ventas.show');
