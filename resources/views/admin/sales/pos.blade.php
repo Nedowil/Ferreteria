@@ -317,7 +317,7 @@
                     return this.customers.filter(c => c.label.toLowerCase().includes(term)).slice(0, 50);
                 },
                 payment_method: 'efectivo',
-                paid_amount: 0,
+                paid_amount: '',
                 // Configuracion fiscal del emisor (desde CompanySetting)
                 taxRate: {{ (float) $company->default_tax_rate }},
                 pricesIncludeTax: {{ $company->prices_include_tax ? 'true' : 'false' }},
@@ -473,11 +473,6 @@
                     this.query = '';
                     this.search();
                     this.recalc();
-                    // Sugerencia: si el usuario no ha capturado un pago aun, autorrellena con el total
-                    if (this.payment_method === 'efectivo' && this.parseAmount(this.paid_amount) === 0) {
-                        this.paid_amount = this.total.toFixed(2);
-                        this.change = 0;
-                    }
                 },
                 removeItem(idx) {
                     this.items.splice(idx, 1);
