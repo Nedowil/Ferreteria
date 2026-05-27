@@ -79,10 +79,16 @@
         </tbody>
     </table>
 
+    @php
+        $gravable = max(0, $sale->total - $sale->tax);
+    @endphp
     <table class="totals" style="margin-top: 8px;">
         <tr><td class="label">Subtotal:</td><td class="value">Q{{ number_format($sale->subtotal, 2) }}</td></tr>
-        <tr><td class="label">Descuento:</td><td class="value">- Q{{ number_format($sale->discount, 2) }}</td></tr>
-        <tr><td class="label">IVA:</td><td class="value">Q{{ number_format($sale->tax, 2) }}</td></tr>
+        @if ($sale->discount > 0)
+            <tr><td class="label">Descuento:</td><td class="value">- Q{{ number_format($sale->discount, 2) }}</td></tr>
+        @endif
+        <tr><td class="label muted">Monto gravable:</td><td class="value muted">Q{{ number_format($gravable, 2) }}</td></tr>
+        <tr><td class="label">IVA ({{ (int) $company->default_tax_rate }}%):</td><td class="value">Q{{ number_format($sale->tax, 2) }}</td></tr>
         <tr><td class="label grand">TOTAL:</td><td class="value grand">Q{{ number_format($sale->total, 2) }}</td></tr>
         <tr><td class="label muted">Pago ({{ ucfirst($sale->payment_method) }}):</td><td class="value muted">Q{{ number_format($sale->paid_amount, 2) }}</td></tr>
         @if ($sale->payment_method === 'efectivo')

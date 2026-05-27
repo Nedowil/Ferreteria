@@ -75,10 +75,16 @@
         </tbody>
     </table>
 
+    @php
+        $gravableQ = max(0, $quotation->total - $quotation->tax);
+    @endphp
     <table class="totals" style="margin-top: 8px;">
         <tr><td class="label">Subtotal:</td><td class="value">Q{{ number_format($quotation->subtotal, 2) }}</td></tr>
-        <tr><td class="label">Descuento:</td><td class="value">- Q{{ number_format($quotation->discount, 2) }}</td></tr>
-        <tr><td class="label">IVA:</td><td class="value">Q{{ number_format($quotation->tax, 2) }}</td></tr>
+        @if ($quotation->discount > 0)
+            <tr><td class="label">Descuento:</td><td class="value">- Q{{ number_format($quotation->discount, 2) }}</td></tr>
+        @endif
+        <tr><td class="label muted">Monto gravable:</td><td class="value muted">Q{{ number_format($gravableQ, 2) }}</td></tr>
+        <tr><td class="label">IVA ({{ (int) $company->default_tax_rate }}%):</td><td class="value">Q{{ number_format($quotation->tax, 2) }}</td></tr>
         <tr><td class="label grand">TOTAL:</td><td class="value grand">Q{{ number_format($quotation->total, 2) }}</td></tr>
     </table>
 

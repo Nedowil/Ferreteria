@@ -59,10 +59,11 @@
                                           :value="old('valid_until', now()->addDays(15)->toDateString())" />
                         </div>
                         <div>
-                            <x-input-label for="tax" value="IVA Q" />
-                            <x-text-input id="tax" name="tax" type="number" step="0.01" min="0"
-                                          x-model="tax" @input="recalc()"
-                                          class="mt-1 block w-full" :value="old('tax', 0)" />
+                            <x-input-label value="IVA ({{ (int) $company->default_tax_rate }}%) — automatico" />
+                            <input type="hidden" name="tax" :value="tax.toFixed(2)" />
+                            <div class="mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm text-slate-700 text-right">
+                                Q<span x-text="tax.toFixed(2)"></span>
+                            </div>
                         </div>
                     </div>
 
@@ -133,7 +134,8 @@
                             <tfoot class="bg-gray-50">
                                 <tr><td colspan="4" class="px-2 py-2 text-right font-semibold">Subtotal</td><td class="px-2 py-2 text-right">Q<span x-text="subtotal.toFixed(2)"></span></td><td></td></tr>
                                 <tr><td colspan="4" class="px-2 py-2 text-right font-semibold">Descuento</td><td class="px-2 py-2 text-right">Q<span x-text="totalDiscount.toFixed(2)"></span></td><td></td></tr>
-                                <tr><td colspan="4" class="px-2 py-2 text-right font-semibold">IVA</td><td class="px-2 py-2 text-right">Q<span x-text="(parseFloat(tax)||0).toFixed(2)"></span></td><td></td></tr>
+                                <tr><td colspan="4" class="px-2 py-2 text-right text-slate-500">Monto gravable</td><td class="px-2 py-2 text-right text-slate-500">Q<span x-text="taxableAmount.toFixed(2)"></span></td><td></td></tr>
+                                <tr><td colspan="4" class="px-2 py-2 text-right text-slate-500">IVA ({{ (int) $company->default_tax_rate }}%)</td><td class="px-2 py-2 text-right text-slate-500">Q<span x-text="tax.toFixed(2)"></span></td><td></td></tr>
                                 <tr class="border-t-2"><td colspan="4" class="px-2 py-2 text-right font-bold">Total</td><td class="px-2 py-2 text-right font-bold">Q<span x-text="total.toFixed(2)"></span></td><td></td></tr>
                             </tfoot>
                         </table>
@@ -164,7 +166,10 @@
                 customerSearch: '',
                 customerOpen: false,
                 items: [],
+                taxRate: {{ (float) $company->default_tax_rate }},
+                pricesIncludeTax: {{ $company->prices_include_tax ? 'true' : 'false' }},
                 tax: 0,
+                taxableAmount: 0,
                 subtotal: 0,
                 totalDiscount: 0,
                 total: 0,
@@ -202,7 +207,19 @@
                 recalc() {
                     this.subtotal = this.items.reduce((s, i) => s + (i.quantity || 0) * (i.unit_price || 0), 0);
                     this.totalDiscount = this.items.reduce((s, i) => s + (i.discount || 0), 0);
-                    this.total = this.subtotal - this.totalDiscount + (parseFloat(this.tax) || 0);
+                    const baseAmount = this.subtotal - this.totalDiscount;
+
+                    if (this.pricesIncludeTax) {
+                        // Precios ya incluyen IVA: extraer el IVA del base
+                        this.taxableAmount = baseAmount / (1 + this.taxRate / 100);
+                        this.tax = baseAmount - this.taxableAmount;
+                        this.total = baseAmount;
+                    } else {
+                        // Precios sin IVA: agregar IVA al base
+                        this.taxableAmount = baseAmount;
+                        this.tax = baseAmount * this.taxRate / 100;
+                        this.total = baseAmount + this.tax;
+                    }
                 },
             };
         }

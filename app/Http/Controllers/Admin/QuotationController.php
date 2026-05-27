@@ -40,6 +40,7 @@ class QuotationController extends Controller
         return view('admin.quotations.create', [
             'customers' => Customer::where('active', true)->orderBy('name')->get(['id', 'name', 'tax_id']),
             'products' => Product::where('active', true)->orderBy('name')->get(['id', 'sku', 'name', 'sale_price']),
+            'company' => \App\Models\CompanySetting::current(),
         ]);
     }
 
