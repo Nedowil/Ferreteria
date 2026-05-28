@@ -81,11 +81,25 @@ class QuotationService
                 ]);
             }
 
+            // Calcular IVA y total segun la configuracion del emisor para
+            // mantener consistencia con el POS y los PDFs
+            $company = \App\Models\CompanySetting::current();
+            $taxRate = (float) $company->default_tax_rate;
+            $baseAmount = $subtotal - $totalDiscount;
+
+            if ($company->prices_include_tax) {
+                $finalTax = $taxRate > 0 ? round($baseAmount - ($baseAmount / (1 + $taxRate / 100)), 2) : 0;
+                $total = $baseAmount;
+            } else {
+                $finalTax = round($baseAmount * $taxRate / 100, 2);
+                $total = $baseAmount + $finalTax;
+            }
+
             $quotation->update([
                 'subtotal' => $subtotal,
                 'discount' => $totalDiscount,
-                'tax' => $tax,
-                'total' => $subtotal - $totalDiscount + $tax,
+                'tax' => $finalTax,
+                'total' => $total,
             ]);
         });
     }

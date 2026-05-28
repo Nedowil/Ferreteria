@@ -69,8 +69,22 @@ class SaleService
                 ];
             }
 
-            $tax = (float) ($data['tax'] ?? 0);
-            $total = ($subtotal - $totalDiscount) + $tax;
+            // Calcular total e IVA segun configuracion del emisor para evitar
+            // doble suma cuando los precios ya incluyen IVA
+            $company = \App\Models\CompanySetting::current();
+            $taxRate = (float) $company->default_tax_rate;
+            $baseAmount = $subtotal - $totalDiscount;
+
+            if ($company->prices_include_tax) {
+                // Precios incluyen IVA: el IVA esta dentro del subtotal
+                $total = $baseAmount;
+                $tax = $taxRate > 0 ? round($baseAmount - ($baseAmount / (1 + $taxRate / 100)), 2) : 0;
+            } else {
+                // Precios sin IVA: agregar IVA al subtotal
+                $tax = round($baseAmount * $taxRate / 100, 2);
+                $total = $baseAmount + $tax;
+            }
+
             $paid = (float) ($data['paid_amount'] ?? $total);
 
             if ($paid < $total) {
