@@ -65,6 +65,51 @@ class QuotationController extends Controller
         return view('admin.quotations.show', ['quotation' => $cotizacion]);
     }
 
+    public function modal(Quotation $cotizacion): \Illuminate\Http\JsonResponse
+    {
+        $cotizacion->load(['customer', 'user', 'items.product.unit', 'convertedSale']);
+        $company = \App\Models\CompanySetting::current();
+        $gravable = max(0, (float) $cotizacion->total - (float) $cotizacion->tax);
+
+        return response()->json([
+            'id' => $cotizacion->id,
+            'folio' => $cotizacion->folio,
+            'date' => $cotizacion->date->format('d/m/Y'),
+            'valid_until' => $cotizacion->valid_until?->format('d/m/Y'),
+            'status' => $cotizacion->status,
+            'subtotal' => (float) $cotizacion->subtotal,
+            'discount' => (float) $cotizacion->discount,
+            'tax' => (float) $cotizacion->tax,
+            'taxable' => $gravable,
+            'total' => (float) $cotizacion->total,
+            'tax_rate' => (int) $company->default_tax_rate,
+            'notes' => $cotizacion->notes,
+            'customer' => $cotizacion->customer ? [
+                'name' => $cotizacion->customer->name,
+                'tax_id' => $cotizacion->customer->tax_id,
+                'phone' => $cotizacion->customer->phone,
+            ] : null,
+            'user' => $cotizacion->user?->name,
+            'converted_sale' => $cotizacion->convertedSale ? [
+                'folio' => $cotizacion->convertedSale->folio,
+                'url' => route('admin.ventas.show', $cotizacion->convertedSale),
+            ] : null,
+            'items' => $cotizacion->items->map(fn ($it) => [
+                'sku' => $it->product?->sku,
+                'name' => $it->product?->name,
+                'unit' => $it->product?->unit?->abbreviation,
+                'quantity' => (float) $it->quantity,
+                'unit_price' => (float) $it->unit_price,
+                'discount' => (float) $it->discount,
+                'subtotal' => (float) $it->subtotal,
+            ]),
+            'urls' => [
+                'show' => route('admin.cotizaciones.show', $cotizacion),
+                'pdf' => route('admin.cotizaciones.pdf', $cotizacion),
+            ],
+        ]);
+    }
+
     public function pdf(Quotation $cotizacion): Response
     {
         $cotizacion->load(['customer', 'user', 'items.product.unit']);

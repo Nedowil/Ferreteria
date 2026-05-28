@@ -71,6 +71,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'sucursales.gestionar',
             'auditoria.ver',
             'backup.gestionar',
+            'imports.gestionar',
         ];
 
         foreach ($permissions as $permission) {

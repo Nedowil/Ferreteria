@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CompanySettingController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\FelController;
+use App\Http\Controllers\Admin\ImportController;
 use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\InvoiceController;
 use App\Http\Controllers\Admin\ProductController;
@@ -90,6 +91,7 @@ Route::middleware(['auth', 'verified'])
 
         Route::middleware('permission:compras.ver')->group(function () {
             Route::get('compras', [PurchaseController::class, 'index'])->name('compras.index');
+            Route::get('compras/{compra}/modal', [PurchaseController::class, 'modal'])->name('compras.modal');
             Route::get('compras/{compra}', [PurchaseController::class, 'show'])->name('compras.show');
         });
 
@@ -135,6 +137,7 @@ Route::middleware(['auth', 'verified'])
 
         Route::middleware('permission:caja.ver')->group(function () {
             Route::get('caja', [CashController::class, 'index'])->name('caja.index');
+            Route::get('caja/{caja}/modal', [CashController::class, 'modal'])->name('caja.modal');
             Route::get('caja/{caja}', [CashController::class, 'show'])->name('caja.show');
         });
 
@@ -165,6 +168,14 @@ Route::middleware(['auth', 'verified'])
             Route::get('auditoria', [AuditLogController::class, 'index'])->name('auditoria.index');
         });
 
+        Route::middleware('permission:imports.gestionar')->group(function () {
+            Route::get('importar', [ImportController::class, 'index'])->name('import.index');
+            Route::get('importar/plantilla/{tipo}', [ImportController::class, 'template'])->name('import.template');
+            Route::post('importar/clientes', [ImportController::class, 'customers'])->name('import.customers');
+            Route::post('importar/productos', [ImportController::class, 'products'])->name('import.products');
+            Route::post('importar/ventas', [ImportController::class, 'sales'])->name('import.sales');
+        });
+
         Route::middleware('permission:backup.gestionar')->group(function () {
             Route::get('backups', [BackupController::class, 'index'])->name('backup.index');
             Route::post('backups/run', [BackupController::class, 'run'])->name('backup.run');
@@ -174,6 +185,7 @@ Route::middleware(['auth', 'verified'])
 
         Route::middleware('permission:cotizaciones.ver')->group(function () {
             Route::get('cotizaciones', [QuotationController::class, 'index'])->name('cotizaciones.index');
+            Route::get('cotizaciones/{cotizacion}/modal', [QuotationController::class, 'modal'])->name('cotizaciones.modal');
             Route::get('cotizaciones/{cotizacion}', [QuotationController::class, 'show'])->name('cotizaciones.show');
             Route::get('cotizaciones/{cotizacion}/pdf', [QuotationController::class, 'pdf'])->name('cotizaciones.pdf');
         });

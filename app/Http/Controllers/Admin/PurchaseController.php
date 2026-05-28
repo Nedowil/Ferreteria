@@ -75,6 +75,41 @@ class PurchaseController extends Controller
         return view('admin.purchases.show', ['purchase' => $compra]);
     }
 
+    public function modal(Purchase $compra): \Illuminate\Http\JsonResponse
+    {
+        $compra->load(['supplier', 'user', 'items.product.unit']);
+
+        return response()->json([
+            'id' => $compra->id,
+            'folio' => $compra->folio,
+            'date' => $compra->date->format('d/m/Y'),
+            'received_at' => $compra->received_at?->format('d/m/Y H:i'),
+            'status' => $compra->status,
+            'invoice_number' => $compra->invoice_number,
+            'subtotal' => (float) $compra->subtotal,
+            'tax' => (float) $compra->tax,
+            'total' => (float) $compra->total,
+            'notes' => $compra->notes,
+            'supplier' => $compra->supplier ? [
+                'name' => $compra->supplier->name,
+                'tax_id' => $compra->supplier->tax_id,
+                'phone' => $compra->supplier->phone,
+            ] : null,
+            'user' => $compra->user?->name,
+            'items' => $compra->items->map(fn ($it) => [
+                'sku' => $it->product?->sku,
+                'name' => $it->product?->name,
+                'unit' => $it->product?->unit?->abbreviation,
+                'quantity' => (float) $it->quantity,
+                'unit_cost' => (float) $it->unit_cost,
+                'subtotal' => (float) $it->subtotal,
+            ]),
+            'urls' => [
+                'show' => route('admin.compras.show', $compra),
+            ],
+        ]);
+    }
+
     public function receive(Purchase $compra): RedirectResponse
     {
         try {

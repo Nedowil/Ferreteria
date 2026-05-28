@@ -46,6 +46,41 @@ class CashController extends Controller
         ]);
     }
 
+    public function modal(CashSession $caja): \Illuminate\Http\JsonResponse
+    {
+        $caja->load(['user', 'movements.user']);
+        $expected = $caja->isAbierta()
+            ? $this->service->computeExpected($caja)
+            : (float) $caja->expected_cash;
+        $totalsByMethod = $this->service->totalsByPaymentMethod($caja);
+
+        return response()->json([
+            'id' => $caja->id,
+            'status' => $caja->status,
+            'opened_at' => $caja->opened_at->format('d/m/Y H:i'),
+            'closed_at' => $caja->closed_at?->format('d/m/Y H:i'),
+            'opening_amount' => (float) $caja->opening_amount,
+            'expected' => (float) $expected,
+            'counted_cash' => $caja->counted_cash !== null ? (float) $caja->counted_cash : null,
+            'difference' => (float) $caja->difference,
+            'user' => $caja->user?->name,
+            'totals_by_method' => $totalsByMethod,
+            'opening_notes' => $caja->opening_notes,
+            'closing_notes' => $caja->closing_notes,
+            'movements' => $caja->movements->map(fn ($m) => [
+                'type' => $m->type,
+                'payment_method' => $m->payment_method,
+                'amount' => (float) $m->amount,
+                'description' => $m->description,
+                'user' => $m->user?->name,
+                'time' => $m->created_at->format('H:i:s'),
+            ]),
+            'urls' => [
+                'show' => route('admin.caja.show', $caja),
+            ],
+        ]);
+    }
+
     public function open(Request $request): RedirectResponse
     {
         $data = $request->validate([
