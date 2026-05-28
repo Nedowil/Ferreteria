@@ -170,7 +170,7 @@
                 supplier_id: '',
                 supplierSearch: '',
                 supplierOpen: false,
-                items: [],
+                items: [{ product_id: '', search: '', quantity: 1, unit_cost: 0 }],
                 tax: 0,
                 subtotal: 0,
                 total: 0,
@@ -202,7 +202,7 @@
                     this.items[idx].unit_cost = parseFloat(p.purchase_price) || 0;
                     this.recalc();
                 },
-                init() { this.addItem(); this.recalc(); },
+                init() { this.recalc(); },
                 addItem() { this.items.push({ product_id: '', search: '', quantity: 1, unit_cost: 0 }); },
                 removeItem(idx) {
                     this.items.splice(idx, 1);

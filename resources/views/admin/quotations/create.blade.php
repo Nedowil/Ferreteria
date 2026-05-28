@@ -165,7 +165,7 @@
                 customer_id: '',
                 customerSearch: '',
                 customerOpen: false,
-                items: [],
+                items: [{ product_id: '', search: '', quantity: 1, unit_price: 0, discount: 0 }],
                 taxRate: {{ (float) $company->default_tax_rate }},
                 pricesIncludeTax: {{ $company->prices_include_tax ? 'true' : 'false' }},
                 tax: 0,
@@ -201,7 +201,7 @@
                     this.items[idx].unit_price = parseFloat(p.sale_price) || 0;
                     this.recalc();
                 },
-                init() { this.addItem(); this.recalc(); },
+                init() { this.recalc(); },
                 addItem() { this.items.push({ product_id: '', search: '', quantity: 1, unit_price: 0, discount: 0 }); },
                 removeItem(idx) { this.items.splice(idx, 1); if (this.items.length === 0) this.addItem(); this.recalc(); },
                 recalc() {
