@@ -212,6 +212,7 @@
                 @php
                     $adminItems = [
                         ['route' => 'admin.usuarios.index', 'label' => 'Usuarios', 'icon' => '👤', 'pattern' => 'admin.usuarios.*'],
+                        ['route' => 'admin.roles.index', 'label' => 'Roles y permisos', 'icon' => '🔑', 'pattern' => 'admin.roles.*'],
                         ['route' => 'admin.sucursales.index', 'label' => 'Sucursales', 'icon' => '🏪', 'pattern' => 'admin.sucursales.*'],
                         ['route' => 'admin.configuracion.empresa.edit', 'label' => 'Datos del emisor', 'icon' => '🏢', 'pattern' => 'admin.configuracion.*'],
                         ['route' => 'admin.auditoria.index', 'label' => 'Auditoria', 'icon' => '🔍', 'pattern' => 'admin.auditoria.*'],
