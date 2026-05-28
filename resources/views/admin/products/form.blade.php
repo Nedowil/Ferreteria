@@ -87,14 +87,14 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <x-input-label for="purchase_price" value="Precio de compra *" />
-                            <x-text-input id="purchase_price" name="purchase_price" type="number" step="0.01" min="0"
+                            <x-text-input id="purchase_price" name="purchase_price" type="text" inputmode="decimal"
                                           class="mt-1 block w-full"
                                           :value="old('purchase_price', $product->purchase_price)" required />
                             <x-input-error :messages="$errors->get('purchase_price')" class="mt-2" />
                         </div>
                         <div>
                             <x-input-label for="sale_price" value="Precio de venta *" />
-                            <x-text-input id="sale_price" name="sale_price" type="number" step="0.01" min="0"
+                            <x-text-input id="sale_price" name="sale_price" type="text" inputmode="decimal"
                                           class="mt-1 block w-full"
                                           :value="old('sale_price', $product->sale_price)" required />
                             <x-input-error :messages="$errors->get('sale_price')" class="mt-2" />
@@ -105,7 +105,7 @@
                         @unless ($product->exists)
                             <div>
                                 <x-input-label for="stock" value="Stock inicial" />
-                                <x-text-input id="stock" name="stock" type="number" step="0.01" min="0"
+                                <x-text-input id="stock" name="stock" type="text" inputmode="decimal"
                                               class="mt-1 block w-full"
                                               :value="old('stock', $product->stock)" />
                             </div>
@@ -120,7 +120,7 @@
                         @endunless
                         <div>
                             <x-input-label for="min_stock" value="Stock minimo *" />
-                            <x-text-input id="min_stock" name="min_stock" type="number" step="0.01" min="0"
+                            <x-text-input id="min_stock" name="min_stock" type="text" inputmode="decimal"
                                           class="mt-1 block w-full"
                                           :value="old('min_stock', $product->min_stock)" required />
                             <x-input-error :messages="$errors->get('min_stock')" class="mt-2" />

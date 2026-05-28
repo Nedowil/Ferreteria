@@ -52,7 +52,7 @@
                         </div>
                         <div>
                             <x-input-label for="default_tax_rate" value="IVA por defecto (%) *" />
-                            <x-text-input id="default_tax_rate" name="default_tax_rate" type="number" step="0.01" min="0" max="100"
+                            <x-text-input id="default_tax_rate" name="default_tax_rate" type="text" inputmode="decimal" max="100"
                                           class="mt-1 block w-full" :value="old('default_tax_rate', $company->default_tax_rate)" required />
                         </div>
                     </div>

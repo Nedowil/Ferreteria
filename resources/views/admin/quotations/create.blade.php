@@ -110,18 +110,18 @@
                                         </div>
                                     </td>
                                     <td class="px-2 py-1">
-                                        <input type="number" step="0.01" min="0.01" required
-                                               :name="`items[${idx}][quantity]`" x-model.number="item.quantity"
+                                        <input type="text" inputmode="decimal" required
+                                               :name="`items[${idx}][quantity]`" x-model="item.quantity"
                                                @input="recalc()" class="w-full text-right border-gray-300 rounded text-sm" />
                                     </td>
                                     <td class="px-2 py-1">
-                                        <input type="number" step="0.01" min="0" required
-                                               :name="`items[${idx}][unit_price]`" x-model.number="item.unit_price"
+                                        <input type="text" inputmode="decimal" required
+                                               :name="`items[${idx}][unit_price]`" x-model="item.unit_price"
                                                @input="recalc()" class="w-full text-right border-gray-300 rounded text-sm" />
                                     </td>
                                     <td class="px-2 py-1">
-                                        <input type="number" step="0.01" min="0"
-                                               :name="`items[${idx}][discount]`" x-model.number="item.discount"
+                                        <input type="text" inputmode="decimal"
+                                               :name="`items[${idx}][discount]`" x-model="item.discount"
                                                @input="recalc()" class="w-full text-right border-gray-300 rounded text-sm" />
                                     </td>
                                     <td class="px-2 py-1 text-right">Q<span x-text="((item.quantity * item.unit_price) - item.discount).toFixed(2)"></span></td>
@@ -205,8 +205,9 @@
                 addItem() { this.items.push({ product_id: '', search: '', quantity: 1, unit_price: 0, discount: 0 }); },
                 removeItem(idx) { this.items.splice(idx, 1); if (this.items.length === 0) this.addItem(); this.recalc(); },
                 recalc() {
-                    this.subtotal = this.items.reduce((s, i) => s + (i.quantity || 0) * (i.unit_price || 0), 0);
-                    this.totalDiscount = this.items.reduce((s, i) => s + (i.discount || 0), 0);
+                    const num = (v) => { const n = parseFloat(String(v ?? '').replace(',', '.')); return isNaN(n) ? 0 : n; };
+                    this.subtotal = this.items.reduce((s, i) => s + num(i.quantity) * num(i.unit_price), 0);
+                    this.totalDiscount = this.items.reduce((s, i) => s + num(i.discount), 0);
                     const baseAmount = this.subtotal - this.totalDiscount;
 
                     if (this.pricesIncludeTax) {

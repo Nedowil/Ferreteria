@@ -47,7 +47,7 @@
 
                         <div>
                             <x-input-label for="quantity" value="Cantidad" />
-                            <x-text-input id="quantity" name="quantity" type="number" step="0.01" min="0.01"
+                            <x-text-input id="quantity" name="quantity" type="text" inputmode="decimal"
                                           class="mt-1 block w-full" :value="old('quantity')" required />
                         </div>
 

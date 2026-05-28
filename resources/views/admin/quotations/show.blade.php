@@ -126,7 +126,7 @@
                             </div>
                             <div>
                                 <x-input-label for="paid_amount" value="Monto pagado" />
-                                <x-text-input id="paid_amount" name="paid_amount" type="number" step="0.01" min="0"
+                                <x-text-input id="paid_amount" name="paid_amount" type="text" inputmode="decimal"
                                               :value="$quotation->total" required class="mt-1 block w-full" />
                             </div>
                             <div>

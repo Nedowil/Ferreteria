@@ -36,7 +36,7 @@
                             @csrf
                             <div>
                                 <x-input-label for="opening_amount" value="Monto inicial en efectivo *" />
-                                <x-text-input id="opening_amount" name="opening_amount" type="number" step="0.01" min="0"
+                                <x-text-input id="opening_amount" name="opening_amount" type="text" inputmode="decimal"
                                               class="mt-1 block w-full" :value="old('opening_amount', 0)" required />
                             </div>
                             <div class="md:col-span-2">

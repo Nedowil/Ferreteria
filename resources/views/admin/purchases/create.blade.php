@@ -58,7 +58,7 @@
 
                         <div>
                             <x-input-label for="tax" value="Impuesto (IVA) Q" />
-                            <x-text-input id="tax" name="tax" type="number" step="0.01" min="0"
+                            <x-text-input id="tax" name="tax" type="text" inputmode="decimal"
                                           x-model="tax" @input="recalc()"
                                           class="mt-1 block w-full" :value="old('tax', 0)" />
                         </div>
@@ -106,14 +106,14 @@
                                         </div>
                                     </td>
                                     <td class="px-2 py-1">
-                                        <input type="number" step="0.01" min="0.01" required
-                                               :name="`items[${idx}][quantity]`" x-model.number="item.quantity"
+                                        <input type="text" inputmode="decimal" required
+                                               :name="`items[${idx}][quantity]`" x-model="item.quantity"
                                                @input="recalc()"
                                                class="block w-full text-right border-gray-300 rounded-md shadow-sm" />
                                     </td>
                                     <td class="px-2 py-1">
-                                        <input type="number" step="0.01" min="0" required
-                                               :name="`items[${idx}][unit_cost]`" x-model.number="item.unit_cost"
+                                        <input type="text" inputmode="decimal" required
+                                               :name="`items[${idx}][unit_cost]`" x-model="item.unit_cost"
                                                @input="recalc()"
                                                class="block w-full text-right border-gray-300 rounded-md shadow-sm" />
                                     </td>
@@ -210,8 +210,9 @@
                     this.recalc();
                 },
                 recalc() {
-                    this.subtotal = this.items.reduce((s, i) => s + (i.quantity || 0) * (i.unit_cost || 0), 0);
-                    this.total = this.subtotal + (parseFloat(this.tax) || 0);
+                    const num = (v) => { const n = parseFloat(String(v ?? '').replace(',', '.')); return isNaN(n) ? 0 : n; };
+                    this.subtotal = this.items.reduce((s, i) => s + num(i.quantity) * num(i.unit_cost), 0);
+                    this.total = this.subtotal + num(this.tax);
                 },
             };
         }

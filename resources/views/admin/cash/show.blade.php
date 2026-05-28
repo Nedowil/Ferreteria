@@ -108,7 +108,7 @@
                             </div>
                             <div>
                                 <x-input-label for="amount" value="Monto *" />
-                                <x-text-input id="amount" name="amount" type="number" step="0.01" min="0.01"
+                                <x-text-input id="amount" name="amount" type="text" inputmode="decimal"
                                               class="mt-1 block w-full" required />
                             </div>
                             <div class="md:col-span-2">
@@ -133,7 +133,7 @@
                             @csrf
                             <div>
                                 <x-input-label for="counted_cash" value="Efectivo contado *" />
-                                <x-text-input id="counted_cash" name="counted_cash" type="number" step="0.01" min="0"
+                                <x-text-input id="counted_cash" name="counted_cash" type="text" inputmode="decimal"
                                               class="mt-1 block w-full" required />
                             </div>
                             <div class="md:col-span-2">
