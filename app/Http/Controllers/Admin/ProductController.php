@@ -114,6 +114,51 @@ class ProductController extends Controller
      * Muestra una etiqueta imprimible con el codigo de barras del producto.
      * Se puede solicitar varias copias con ?copias=N (1-60).
      */
+    /**
+     * Crea un producto rapido desde el POS y devuelve JSON con los datos para
+     * que aparezca en el buscador sin recargar la pagina.
+     */
+    public function quickStore(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:180'],
+            'sale_price' => ['required', 'numeric', 'min:0'],
+            'purchase_price' => ['nullable', 'numeric', 'min:0'],
+            'stock' => ['nullable', 'numeric', 'min:0'],
+            'min_stock' => ['nullable', 'numeric', 'min:0'],
+        ]);
+
+        $product = Product::create([
+            'sku' => $this->ensureSku(null, $data['name']),
+            'barcode' => $this->ensureBarcode(null),
+            'name' => $data['name'],
+            'purchase_price' => $data['purchase_price'] ?? 0,
+            'sale_price' => $data['sale_price'],
+            'stock' => $data['stock'] ?? 0,
+            'min_stock' => $data['min_stock'] ?? 0,
+            'active' => true,
+        ]);
+
+        // Crear stock por sucursal si se indico
+        if (! empty($data['stock']) && $branchId = \App\Support\CurrentBranch::id()) {
+            \App\Models\ProductStock::firstOrCreate(
+                ['product_id' => $product->id, 'branch_id' => $branchId],
+                ['stock' => $data['stock'], 'min_stock' => $data['min_stock'] ?? 0],
+            );
+        }
+
+        return response()->json([
+            'id' => $product->id,
+            'sku' => $product->sku,
+            'barcode' => $product->barcode,
+            'name' => $product->name,
+            'unit' => null,
+            'sale_price' => (float) $product->sale_price,
+            'stock' => (float) $product->stock,
+            'exact_barcode_match' => false,
+        ], 201);
+    }
+
     public function label(Request $request, Product $producto): View
     {
         $copias = max(1, min(60, (int) $request->input('copias', 1)));

@@ -27,6 +27,13 @@
                                    @blur="refocus()"
                                    placeholder="Escanea un codigo de barras o busca por SKU/nombre..."
                                    class="flex-1 border-gray-300 rounded-md shadow-sm" autofocus autocomplete="off" />
+                            @can('productos.crear')
+                                <button type="button" @click="openProductModal()"
+                                        title="Nuevo producto"
+                                        class="px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md text-sm font-bold shadow flex items-center gap-1 whitespace-nowrap">
+                                    + Nuevo producto
+                                </button>
+                            @endcan
                         </div>
 
                         <div x-show="lastScanned" x-transition class="mt-2 p-2 bg-green-100 text-green-800 rounded text-sm">
@@ -314,6 +321,82 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Modal nuevo producto -->
+            <div x-show="showProductModal" x-cloak x-transition.opacity
+                 class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+                 @keydown.escape.window="closeProductModal()">
+                <div @click.outside="closeProductModal()"
+                     class="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden"
+                     x-transition.scale>
+
+                    <div class="bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-4 flex justify-between items-center">
+                        <h3 class="text-white font-bold text-lg flex items-center gap-2">
+                            <span class="text-2xl">📦</span> Nuevo producto
+                        </h3>
+                        <button type="button" @click="closeProductModal()" class="text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center">
+                            ✕
+                        </button>
+                    </div>
+
+                    <div class="p-6 space-y-3">
+                        <template x-if="productError">
+                            <div class="p-2 bg-red-100 text-red-800 rounded text-sm" x-text="productError"></div>
+                        </template>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700">Nombre <span class="text-red-500">*</span></label>
+                            <input type="text" x-model="newProduct.name" required x-ref="newProdName"
+                                   placeholder="Nombre del producto"
+                                   class="mt-1 block w-full border-slate-300 rounded-md shadow-sm focus:border-orange-500 focus:ring-orange-500" />
+                            <p class="text-xs text-slate-500 mt-1">El SKU y codigo de barras se generan automaticamente</p>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700">Precio venta Q <span class="text-red-500">*</span></label>
+                                <input type="text" inputmode="decimal" x-model="newProduct.sale_price" required
+                                       placeholder="0.00"
+                                       class="mt-1 block w-full text-right border-slate-300 rounded-md shadow-sm focus:border-orange-500 focus:ring-orange-500" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700">Precio compra Q</label>
+                                <input type="text" inputmode="decimal" x-model="newProduct.purchase_price"
+                                       placeholder="0.00"
+                                       class="mt-1 block w-full text-right border-slate-300 rounded-md shadow-sm focus:border-orange-500 focus:ring-orange-500" />
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700">Stock inicial</label>
+                                <input type="text" inputmode="decimal" x-model="newProduct.stock"
+                                       placeholder="0"
+                                       class="mt-1 block w-full text-right border-slate-300 rounded-md shadow-sm focus:border-orange-500 focus:ring-orange-500" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700">Stock minimo</label>
+                                <input type="text" inputmode="decimal" x-model="newProduct.min_stock"
+                                       placeholder="0"
+                                       class="mt-1 block w-full text-right border-slate-300 rounded-md shadow-sm focus:border-orange-500 focus:ring-orange-500" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-50 px-6 py-3 flex justify-end gap-2 border-t">
+                        <button type="button" @click="closeProductModal()"
+                                class="px-4 py-2 bg-slate-200 text-slate-700 rounded-md hover:bg-slate-300 text-sm font-medium">
+                            Cancelar
+                        </button>
+                        <button type="button" @click="saveProduct()" :disabled="savingProduct"
+                                class="px-5 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-md hover:from-orange-600 hover:to-orange-700 text-sm font-bold shadow disabled:opacity-50">
+                            <span x-show="!savingProduct">Guardar y agregar al carrito</span>
+                            <span x-show="savingProduct">Guardando...</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -349,6 +432,12 @@
                 customerError: '',
                 newCustomer: { name: '', tax_id: '', phone: '', email: '', address: '' },
 
+                // Modal de producto
+                showProductModal: false,
+                savingProduct: false,
+                productError: '',
+                newProduct: { name: '', sale_price: '', purchase_price: '', stock: '', min_stock: '' },
+
                 // Deteccion de scanner: los lectores envian caracteres a alta velocidad
                 lastKeyTime: 0,
                 lastScanned: '',
@@ -380,6 +469,68 @@
                     this.customerError = '';
                     this.showCustomerModal = true;
                     setTimeout(() => this.$refs.newCustName?.focus(), 100);
+                },
+
+                openProductModal() {
+                    this.newProduct = { name: '', sale_price: '', purchase_price: '', stock: '', min_stock: '' };
+                    this.productError = '';
+                    this.showProductModal = true;
+                    setTimeout(() => this.$refs.newProdName?.focus(), 100);
+                },
+                closeProductModal() {
+                    this.showProductModal = false;
+                    setTimeout(() => this.$refs.search?.focus(), 50);
+                },
+                async saveProduct() {
+                    if (! this.newProduct.name.trim()) {
+                        this.productError = 'El nombre es obligatorio';
+                        return;
+                    }
+                    if (! this.newProduct.sale_price || this.parseAmount(this.newProduct.sale_price) <= 0) {
+                        this.productError = 'El precio de venta es obligatorio y debe ser mayor a 0';
+                        return;
+                    }
+                    this.savingProduct = true;
+                    this.productError = '';
+                    try {
+                        const payload = {
+                            name: this.newProduct.name,
+                            sale_price: this.parseAmount(this.newProduct.sale_price),
+                            purchase_price: this.parseAmount(this.newProduct.purchase_price),
+                            stock: this.parseAmount(this.newProduct.stock),
+                            min_stock: this.parseAmount(this.newProduct.min_stock),
+                        };
+                        const res = await fetch('{{ route('admin.productos.quick') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            },
+                            body: JSON.stringify(payload),
+                        });
+                        if (! res.ok) {
+                            const body = await res.json().catch(() => ({}));
+                            const errors = body.errors ? Object.values(body.errors).flat().join(', ') : '';
+                            this.productError = errors || body.message || 'Error al guardar';
+                            this.savingProduct = false;
+                            return;
+                        }
+                        const data = await res.json();
+                        this.closeProductModal();
+                        // Si tiene stock, agrega al carrito automaticamente
+                        if (data.stock > 0) {
+                            this.addItem(data);
+                        } else {
+                            // Mostrar en los resultados de busqueda
+                            this.query = data.sku;
+                            this.search();
+                        }
+                    } catch (e) {
+                        this.productError = 'Error de conexion: ' + e.message;
+                    } finally {
+                        this.savingProduct = false;
+                    }
                 },
                 openCustomerModalWithName(name) {
                     this.openCustomerModal();
@@ -477,7 +628,7 @@
                     // Manten el foco en el buscador para que el scanner siempre funcione.
                     // EXCEPCION: si esta abierto el modal de cliente, no robar el foco.
                     setTimeout(() => {
-                        if (this.showCustomerModal) return;
+                        if (this.showCustomerModal || this.showProductModal) return;
                         // Tampoco si el usuario tiene focus en otro input editable
                         const active = document.activeElement;
                         if (active && (active.tagName === 'INPUT' || active.tagName === 'SELECT' || active.tagName === 'TEXTAREA') && active !== this.$refs.search) {

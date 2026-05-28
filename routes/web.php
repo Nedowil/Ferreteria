@@ -64,6 +64,7 @@ Route::middleware(['auth', 'verified'])
         Route::middleware('permission:productos.crear')->group(function () {
             Route::get('productos/create', [ProductController::class, 'create'])->name('productos.create');
             Route::post('productos', [ProductController::class, 'store'])->name('productos.store');
+            Route::post('productos/quick', [ProductController::class, 'quickStore'])->name('productos.quick');
         });
 
         Route::middleware('permission:productos.editar')->group(function () {
