@@ -212,11 +212,13 @@
                         </div>
 
                         <div class="mt-3 text-sm">
-                            <label class="block text-xs">Pagado</label>
+                            <label class="block text-xs mb-1">Pagado (Q)</label>
                             <input type="text" inputmode="decimal" name="paid_amount"
-                                   x-model="paid_amount" @input="recalc()" @focus="$event.target.select()"
+                                   :value="paid_amount"
+                                   @input="paid_amount = $event.target.value; recalc()"
                                    placeholder="0.00"
-                                   class="mt-1 block w-full text-right border-gray-300 rounded-md shadow-sm text-lg font-semibold focus:border-orange-500 focus:ring-orange-500" />
+                                   autocomplete="off"
+                                   class="block w-full text-right border-2 border-orange-200 rounded-md shadow-sm text-xl font-bold focus:border-orange-500 focus:ring-2 focus:ring-orange-300 py-3 px-3" />
                         </div>
 
                         <div class="mt-3 flex justify-between text-2xl font-bold">
