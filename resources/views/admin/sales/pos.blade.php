@@ -148,18 +148,18 @@
                                             <input type="hidden" :name="`items[${idx}][product_id]`" :value="item.product.id" />
                                         </td>
                                         <td class="px-2 py-1">
-                                            <input type="number" step="0.01" min="0.01" :max="item.product.stock"
+                                            <input type="text" inputmode="decimal"
                                                    :name="`items[${idx}][quantity]`"
-                                                   x-model.number="item.quantity" @input="recalc()"
-                                                   class="w-full text-right border-gray-300 rounded text-sm" />
+                                                   x-model="item.quantity" @input="recalc()"
+                                                   class="w-full text-right border-gray-300 rounded text-sm py-1 px-2 focus:border-orange-500 focus:ring-orange-500" />
                                         </td>
                                         <td class="px-2 py-1">
-                                            <input type="number" step="0.01" min="0"
+                                            <input type="text" inputmode="decimal"
                                                    :name="`items[${idx}][unit_price]`"
-                                                   x-model.number="item.unit_price" @input="recalc()"
-                                                   class="w-full text-right border-gray-300 rounded text-sm" />
+                                                   x-model="item.unit_price" @input="recalc()"
+                                                   class="w-full text-right border-gray-300 rounded text-sm py-1 px-2 focus:border-orange-500 focus:ring-orange-500" />
                                         </td>
-                                        <td class="px-2 py-1 text-right">Q<span x-text="(item.quantity * item.unit_price).toFixed(2)"></span></td>
+                                        <td class="px-2 py-1 text-right">Q<span x-text="(parseAmount(item.quantity) * parseAmount(item.unit_price)).toFixed(2)"></span></td>
                                         <td class="px-2 py-1 text-center">
                                             <button type="button" @click="removeItem(idx)" class="text-red-600">✕</button>
                                         </td>
@@ -481,10 +481,11 @@
                     if (p.stock <= 0) return;
                     const existing = this.items.find(i => i.product.id === p.id);
                     if (existing) {
-                        if (existing.quantity + 1 > p.stock) return;
-                        existing.quantity++;
+                        const currentQty = this.parseAmount(existing.quantity);
+                        if (currentQty + 1 > p.stock) return;
+                        existing.quantity = String(currentQty + 1);
                     } else {
-                        this.items.push({ product: p, quantity: 1, unit_price: p.sale_price });
+                        this.items.push({ product: p, quantity: '1', unit_price: String(p.sale_price) });
                     }
                     this.query = '';
                     this.search();
@@ -507,7 +508,7 @@
                     return isNaN(n) ? 0 : n;
                 },
                 recalc() {
-                    this.subtotal = this.items.reduce((s, i) => s + (i.quantity || 0) * (i.unit_price || 0), 0);
+                    this.subtotal = this.items.reduce((s, i) => s + this.parseAmount(i.quantity) * this.parseAmount(i.unit_price), 0);
 
                     // Calculo del IVA segun configuracion del emisor
                     if (this.pricesIncludeTax) {
