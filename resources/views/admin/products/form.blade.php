@@ -16,15 +16,25 @@
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <x-input-label for="sku" value="SKU *" />
+                            <x-input-label for="sku" value="SKU (codigo interno)" />
                             <x-text-input id="sku" name="sku" type="text" class="mt-1 block w-full"
-                                          :value="old('sku', $product->sku)" required />
+                                          :value="old('sku', $product->sku)"
+                                          placeholder="Se genera automaticamente si lo dejas vacio" />
+                            <p class="text-xs text-slate-500 mt-1">Ej: MAR-0001. Si lo dejas vacio se crea con las primeras letras del nombre.</p>
                             <x-input-error :messages="$errors->get('sku')" class="mt-2" />
                         </div>
                         <div>
                             <x-input-label for="barcode" value="Codigo de barras" />
                             <x-text-input id="barcode" name="barcode" type="text" class="mt-1 block w-full"
-                                          :value="old('barcode', $product->barcode)" />
+                                          :value="old('barcode', $product->barcode)"
+                                          placeholder="Se genera automaticamente (EAN-13)" />
+                            <p class="text-xs text-slate-500 mt-1">Si tu producto ya trae codigo de barras, escanealo aqui. Si no, se genera uno propio.</p>
+                            @if ($product->exists && $product->barcode)
+                                <a href="{{ route('admin.productos.label', $product) }}" target="_blank"
+                                   class="inline-flex items-center gap-1 mt-2 px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded text-xs font-semibold">
+                                    🖨 Imprimir etiqueta
+                                </a>
+                            @endif
                         </div>
                     </div>
 

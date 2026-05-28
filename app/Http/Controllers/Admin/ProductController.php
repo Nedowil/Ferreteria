@@ -5,11 +5,13 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\Category;
+use App\Models\CompanySetting;
 use App\Models\Product;
 use App\Models\Unit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class ProductController extends Controller
@@ -60,6 +62,10 @@ class ProductController extends Controller
         $data = $this->validated($request);
         $data['image_path'] = $this->uploadImage($request);
 
+        // Auto-genera SKU y codigo de barras si quedaron vacios
+        $data['sku'] = $this->ensureSku($data['sku'] ?? null, $data['name']);
+        $data['barcode'] = $this->ensureBarcode($data['barcode'] ?? null);
+
         Product::create($data);
 
         return redirect()->route('admin.productos.index')->with('status', 'Producto creado.');
@@ -88,6 +94,10 @@ class ProductController extends Controller
 
         unset($data['stock']);
 
+        // Conserva el SKU/barcode existente si lo borraron, o regenera si esta vacio
+        $data['sku'] = $this->ensureSku($data['sku'] ?? null, $data['name'], $producto->id);
+        $data['barcode'] = $this->ensureBarcode($data['barcode'] ?? null);
+
         $producto->update($data);
 
         return redirect()->route('admin.productos.index')->with('status', 'Producto actualizado.');
@@ -100,12 +110,27 @@ class ProductController extends Controller
         return redirect()->route('admin.productos.index')->with('status', 'Producto eliminado.');
     }
 
+    /**
+     * Muestra una etiqueta imprimible con el codigo de barras del producto.
+     * Se puede solicitar varias copias con ?copias=N (1-60).
+     */
+    public function label(Request $request, Product $producto): View
+    {
+        $copias = max(1, min(60, (int) $request->input('copias', 1)));
+
+        return view('admin.products.label', [
+            'product' => $producto,
+            'company' => CompanySetting::current(),
+            'copias' => $copias,
+        ]);
+    }
+
     private function validated(Request $request, ?int $ignoreId = null): array
     {
         $unique = 'unique:products,sku' . ($ignoreId ? ",{$ignoreId}" : '');
 
         $data = $request->validate([
-            'sku' => ['required', 'string', 'max:60', $unique],
+            'sku' => ['nullable', 'string', 'max:60', $unique],
             'barcode' => ['nullable', 'string', 'max:60'],
             'name' => ['required', 'string', 'max:180'],
             'description' => ['nullable', 'string'],
@@ -133,5 +158,67 @@ class ProductController extends Controller
         }
 
         return $request->file('image')->store('products', 'public');
+    }
+
+    /**
+     * Construye un SKU basado en las primeras letras del nombre + correlativo.
+     * Ej. "Martillo de bola" -> "MAR-0042"
+     */
+    private function ensureSku(?string $sku, string $name, ?int $ignoreId = null): string
+    {
+        if ($sku && trim($sku) !== '') {
+            return trim($sku);
+        }
+
+        $prefix = strtoupper(substr(Str::ascii(preg_replace('/[^A-Za-z]/', '', $name)), 0, 3));
+        if (strlen($prefix) < 3) {
+            $prefix = str_pad($prefix, 3, 'P');
+        }
+
+        $counter = 1;
+        do {
+            $candidate = $prefix . '-' . str_pad((string) $counter, 4, '0', STR_PAD_LEFT);
+            $exists = Product::where('sku', $candidate)
+                ->when($ignoreId, fn ($q) => $q->where('id', '!=', $ignoreId))
+                ->exists();
+            $counter++;
+        } while ($exists && $counter < 100000);
+
+        return $candidate;
+    }
+
+    /**
+     * Genera un codigo de barras de 13 digitos compatible con EAN-13.
+     * Usa prefijo 200 (codigos de uso interno permitidos por GS1).
+     */
+    private function ensureBarcode(?string $barcode): string
+    {
+        if ($barcode && trim($barcode) !== '') {
+            return trim($barcode);
+        }
+
+        // Construir 12 digitos: prefijo "200" + timestamp microsegundos (9 digitos)
+        do {
+            $base = '200' . substr((string) (int) (microtime(true) * 1000), -9);
+            $base = str_pad($base, 12, '0', STR_PAD_LEFT);
+            $checkDigit = $this->ean13CheckDigit($base);
+            $candidate = $base . $checkDigit;
+        } while (Product::where('barcode', $candidate)->exists());
+
+        return $candidate;
+    }
+
+    /**
+     * Calcula el digito verificador EAN-13.
+     */
+    private function ean13CheckDigit(string $digits12): string
+    {
+        $sum = 0;
+        for ($i = 0; $i < 12; $i++) {
+            $sum += (int) $digits12[$i] * (($i % 2 === 0) ? 1 : 3);
+        }
+        $check = (10 - ($sum % 10)) % 10;
+
+        return (string) $check;
     }
 }

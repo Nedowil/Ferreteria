@@ -75,6 +75,7 @@
                                     {{ $p->unit?->abbreviation }}
                                 </td>
                                 <td class="px-3 py-2 text-right space-x-2 whitespace-nowrap">
+                                    <a href="{{ route('admin.productos.label', $p) }}" target="_blank" class="text-orange-600" title="Imprimir etiqueta">🖨</a>
                                     <a href="{{ route('admin.inventario.show', $p) }}" class="text-gray-700">Inventario</a>
                                     @can('productos.editar')
                                         <a href="{{ route('admin.productos.edit', $p) }}" class="text-indigo-600">Editar</a>
