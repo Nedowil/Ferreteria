@@ -474,8 +474,17 @@
                     this.barcodeTimer = setTimeout(() => this.tryExactBarcodeMatch(), 80);
                 },
                 refocus() {
-                    // Manten el foco en el buscador para que el scanner siempre funcione
-                    setTimeout(() => this.$refs.search?.focus(), 50);
+                    // Manten el foco en el buscador para que el scanner siempre funcione.
+                    // EXCEPCION: si esta abierto el modal de cliente, no robar el foco.
+                    setTimeout(() => {
+                        if (this.showCustomerModal) return;
+                        // Tampoco si el usuario tiene focus en otro input editable
+                        const active = document.activeElement;
+                        if (active && (active.tagName === 'INPUT' || active.tagName === 'SELECT' || active.tagName === 'TEXTAREA') && active !== this.$refs.search) {
+                            return;
+                        }
+                        this.$refs.search?.focus();
+                    }, 50);
                 },
                 addItem(p) {
                     if (p.stock <= 0) return;
