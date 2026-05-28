@@ -137,6 +137,56 @@ class FelSoapCertificador implements FelCertificadorInterface
         }
     }
 
+    public function lookupTaxId(string $taxId): array
+    {
+        $endpoint = config('fel.endpoints.lookup');
+        if (empty($endpoint)) {
+            return ['success' => false, 'error' => 'FEL_LOOKUP_URL no configurada en .env'];
+        }
+
+        try {
+            $payload = [
+                'nit_emisor' => $this->credentials['emisor_nit'] ?? null,
+                'requestor' => $this->credentials['requestor_nit'] ?? null,
+                'username' => $this->credentials['username'] ?? null,
+                'password' => $this->credentials['password'] ?? null,
+                'token' => $this->credentials['token'] ?? null,
+                'nit' => $taxId,
+                'cui' => $taxId,
+                'environment' => $this->getEnvironment(),
+            ];
+
+            $response = Http::timeout(config('fel.timeout', 30))
+                ->withHeaders($this->buildHeaders())
+                ->post($endpoint, $payload);
+
+            if (! $response->successful()) {
+                return ['success' => false, 'error' => 'HTTP ' . $response->status() . ': ' . $response->body()];
+            }
+
+            $body = $response->json() ?? [];
+            $success = (bool) ($body['resultado'] ?? $body['success'] ?? $body['ok'] ?? ! empty($body['nombre']));
+
+            if (! $success) {
+                return ['success' => false, 'error' => $body['mensaje'] ?? 'No encontrado en SAT', 'raw' => $body];
+            }
+
+            return [
+                'success' => true,
+                'tax_id' => $body['nit'] ?? $body['cui'] ?? $taxId,
+                'name' => $body['nombre'] ?? $body['name'] ?? '',
+                'address' => $body['direccion'] ?? $body['address'] ?? null,
+                'phone' => $body['telefono'] ?? null,
+                'email' => $body['correo'] ?? null,
+                'regime' => $body['regimen'] ?? null,
+                'raw' => $body,
+            ];
+        } catch (\Throwable $e) {
+            Log::error('FEL lookup failed', ['exception' => $e->getMessage()]);
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
     public function getName(): string
     {
         return (string) (config('fel.certificador') ?: 'SOAP');

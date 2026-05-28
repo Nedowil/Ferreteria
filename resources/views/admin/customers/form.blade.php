@@ -21,10 +21,41 @@
                                           :value="old('name', $customer->name)" required autofocus />
                             <x-input-error :messages="$errors->get('name')" class="mt-2" />
                         </div>
-                        <div>
-                            <x-input-label for="tax_id" value="NIT" />
-                            <x-text-input id="tax_id" name="tax_id" type="text" class="mt-1 block w-full"
-                                          :value="old('tax_id', $customer->tax_id)" />
+                        <div x-data="{ nit: '{{ $customer->tax_id }}', looking: false, msg: '', msgErr: false, async lookup() {
+                            if (! this.nit.trim()) { this.msg = 'Escribe un NIT o DPI'; this.msgErr = true; return; }
+                            this.looking = true; this.msg = '';
+                            try {
+                                const url = new URL('{{ route('admin.clientes.lookup_sat') }}', window.location.origin);
+                                url.searchParams.set('tax_id', this.nit.trim());
+                                const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                                const data = await res.json();
+                                if (data.success) {
+                                    this.nit = data.tax_id || this.nit;
+                                    const name = document.getElementById('name'); if (name && data.name && ! name.value) name.value = data.name;
+                                    const addr = document.getElementById('address'); if (addr && data.address && ! addr.value) addr.value = data.address;
+                                    const phone = document.getElementById('phone'); if (phone && data.phone && ! phone.value) phone.value = data.phone;
+                                    const email = document.getElementById('email'); if (email && data.email && ! email.value) email.value = data.email;
+                                    this.msg = '✓ Encontrado en SAT'; this.msgErr = false;
+                                } else {
+                                    this.msg = data.error || 'No encontrado'; this.msgErr = true;
+                                }
+                            } catch (e) { this.msg = 'Error: ' + e.message; this.msgErr = true; }
+                            finally { this.looking = false; }
+                        }}">
+                            <x-input-label for="tax_id" value="NIT / DPI" />
+                            <div class="flex gap-2 mt-1">
+                                <input id="tax_id" name="tax_id" type="text" x-model="nit"
+                                       @keydown.enter.prevent="lookup()"
+                                       class="flex-1 border-gray-300 rounded-md shadow-sm focus:border-orange-500 focus:ring-orange-500" />
+                                <button type="button" @click="lookup()" :disabled="looking"
+                                        class="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-sm font-semibold disabled:opacity-50">
+                                    <span x-show="!looking">🔍 SAT</span>
+                                    <span x-show="looking">...</span>
+                                </button>
+                            </div>
+                            <template x-if="msg">
+                                <div class="text-xs mt-1" :class="msgErr ? 'text-red-600' : 'text-green-700'" x-text="msg"></div>
+                            </template>
                         </div>
                     </div>
 

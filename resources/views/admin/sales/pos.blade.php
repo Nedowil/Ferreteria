@@ -282,10 +282,25 @@
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-slate-700">NIT</label>
-                            <input type="text" x-model="newCustomer.tax_id"
-                                   placeholder="CF si es consumidor final"
-                                   class="mt-1 block w-full border-slate-300 rounded-md shadow-sm focus:border-orange-500 focus:ring-orange-500" />
+                            <label class="block text-sm font-medium text-slate-700">NIT / DPI</label>
+                            <div class="flex gap-2 mt-1">
+                                <input type="text" x-model="newCustomer.tax_id"
+                                       @keydown.enter.prevent="lookupSat()"
+                                       placeholder="CF si es consumidor final"
+                                       class="flex-1 block w-full border-slate-300 rounded-md shadow-sm focus:border-orange-500 focus:ring-orange-500" />
+                                <button type="button" @click="lookupSat()" :disabled="lookingUp"
+                                        title="Buscar en SAT"
+                                        class="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-sm font-semibold flex items-center gap-1 disabled:opacity-50">
+                                    <span x-show="!lookingUp">🔍 SAT</span>
+                                    <span x-show="lookingUp">...</span>
+                                </button>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-1">Ingresa el NIT o DPI y presiona <strong>🔍 SAT</strong> para autocompletar nombre y direccion.</p>
+                            <template x-if="lookupMessage">
+                                <div class="mt-1 text-xs"
+                                     :class="lookupMessageType === 'error' ? 'text-red-600' : 'text-green-700'"
+                                     x-text="lookupMessage"></div>
+                            </template>
                         </div>
 
                         <div class="grid grid-cols-2 gap-3">
@@ -431,6 +446,9 @@
                 savingCustomer: false,
                 customerError: '',
                 newCustomer: { name: '', tax_id: '', phone: '', email: '', address: '' },
+                lookingUp: false,
+                lookupMessage: '',
+                lookupMessageType: '',
 
                 // Modal de producto
                 showProductModal: false,
@@ -467,8 +485,42 @@
                 openCustomerModal() {
                     this.newCustomer = { name: '', tax_id: '', phone: '', email: '', address: '' };
                     this.customerError = '';
+                    this.lookupMessage = '';
                     this.showCustomerModal = true;
                     setTimeout(() => this.$refs.newCustName?.focus(), 100);
+                },
+                async lookupSat() {
+                    const taxId = (this.newCustomer.tax_id || '').trim();
+                    if (! taxId) {
+                        this.lookupMessage = 'Ingresa un NIT o DPI primero';
+                        this.lookupMessageType = 'error';
+                        return;
+                    }
+                    this.lookingUp = true;
+                    this.lookupMessage = '';
+                    try {
+                        const url = new URL('{{ route('admin.clientes.lookup_sat') }}', window.location.origin);
+                        url.searchParams.set('tax_id', taxId);
+                        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                        const data = await res.json();
+                        if (data.success) {
+                            this.newCustomer.name = data.name || this.newCustomer.name;
+                            this.newCustomer.tax_id = data.tax_id || taxId;
+                            if (data.address) this.newCustomer.address = data.address;
+                            if (data.phone) this.newCustomer.phone = data.phone;
+                            if (data.email) this.newCustomer.email = data.email;
+                            this.lookupMessage = '✓ Encontrado en SAT';
+                            this.lookupMessageType = 'success';
+                        } else {
+                            this.lookupMessage = data.error || 'No encontrado';
+                            this.lookupMessageType = 'error';
+                        }
+                    } catch (e) {
+                        this.lookupMessage = 'Error de conexion: ' + e.message;
+                        this.lookupMessageType = 'error';
+                    } finally {
+                        this.lookingUp = false;
+                    }
                 },
 
                 openProductModal() {

@@ -30,6 +30,7 @@ return [
     'endpoints' => [
         'certification' => env('FEL_CERTIFICATION_URL'),
         'cancellation' => env('FEL_CANCELLATION_URL'),
+        'lookup' => env('FEL_LOOKUP_URL'),
     ],
 
     'timeout' => (int) env('FEL_TIMEOUT', 30),

@@ -43,6 +43,45 @@ class FelStubCertificador implements FelCertificadorInterface
         ];
     }
 
+    public function lookupTaxId(string $taxId): array
+    {
+        // Simula la consulta SAT con algunos NIT/DPI conocidos.
+        $taxId = trim(strtoupper($taxId));
+        $known = [
+            'CF' => ['name' => 'Consumidor Final', 'address' => 'Ciudad', 'regime' => 'PEQ'],
+            '12345678' => ['name' => 'Constructora del Valle SA', 'address' => 'Zona 4, Guatemala', 'regime' => 'GEN'],
+            '46851372' => ['name' => 'Ferreteria Central', 'address' => 'Uspantan, Quiche', 'regime' => 'PEQ'],
+        ];
+
+        if (isset($known[$taxId])) {
+            return [
+                'success' => true,
+                'tax_id' => $taxId,
+                'name' => $known[$taxId]['name'],
+                'address' => $known[$taxId]['address'],
+                'regime' => $known[$taxId]['regime'],
+                'raw' => ['mode' => 'stub', 'note' => 'Datos simulados. Configurar FEL_DRIVER=soap para consulta real al SAT.'],
+            ];
+        }
+
+        // Para NIT/DPI con formato valido (numerico) devuelve uno generico simulado
+        if (preg_match('/^[0-9]{7,13}-?[0-9]?$/', $taxId)) {
+            return [
+                'success' => true,
+                'tax_id' => $taxId,
+                'name' => 'Contribuyente ' . $taxId,
+                'address' => 'Direccion no disponible (modo simulado)',
+                'regime' => 'GEN',
+                'raw' => ['mode' => 'stub'],
+            ];
+        }
+
+        return [
+            'success' => false,
+            'error' => "NIT/DPI '{$taxId}' no valido o no encontrado. Configura FEL_DRIVER=soap con tu certificador para consultar el SAT real.",
+        ];
+    }
+
     public function getName(): string
     {
         return 'STUB';

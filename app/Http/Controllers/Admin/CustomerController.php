@@ -65,6 +65,22 @@ class CustomerController extends Controller
     }
 
     /**
+     * Consulta el padron del SAT por NIT o DPI/CUI usando el certificador
+     * configurado (en modo stub devuelve datos simulados).
+     */
+    public function lookupSat(Request $request, \App\Services\Fel\FelCertificadorInterface $cert): JsonResponse
+    {
+        $taxId = trim((string) $request->input('tax_id'));
+        if ($taxId === '') {
+            return response()->json(['success' => false, 'error' => 'Indica el NIT o DPI a buscar'], 422);
+        }
+
+        $result = $cert->lookupTaxId($taxId);
+
+        return response()->json($result, $result['success'] ? 200 : 404);
+    }
+
+    /**
      * Crea un cliente rapido desde el POS y devuelve JSON con los datos para
      * agregarlo al selector sin recargar la pagina.
      */

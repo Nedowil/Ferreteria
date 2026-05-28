@@ -116,6 +116,7 @@ Route::middleware(['auth', 'verified'])
 
         Route::middleware('permission:clientes.crear')->group(function () {
             Route::post('clientes/quick', [CustomerController::class, 'quickStore'])->name('clientes.quick');
+            Route::get('clientes/lookup-sat', [CustomerController::class, 'lookupSat'])->name('clientes.lookup_sat');
         });
 
         Route::middleware('permission:ventas.ver')->group(function () {

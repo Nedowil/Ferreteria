@@ -27,6 +27,23 @@ interface FelCertificadorInterface
      */
     public function cancel(string $uuid, string $reason, string $documentDate): array;
 
+    /**
+     * Consulta el padron del SAT por NIT o DPI/CUI.
+     *
+     * @return array{
+     *   success: bool,
+     *   name?: string,
+     *   tax_id?: string,
+     *   address?: string,
+     *   phone?: string,
+     *   email?: string,
+     *   regime?: string,
+     *   raw?: mixed,
+     *   error?: string
+     * }
+     */
+    public function lookupTaxId(string $taxId): array;
+
     public function getName(): string;
 
     public function getEnvironment(): string;
