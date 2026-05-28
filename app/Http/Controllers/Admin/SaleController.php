@@ -103,6 +103,58 @@ class SaleController extends Controller
         return view('admin.sales.show', ['sale' => $venta]);
     }
 
+    public function modal(Sale $venta): \Illuminate\Http\JsonResponse
+    {
+        $venta->load(['customer', 'user', 'items.product.unit', 'electronicInvoice']);
+        $company = \App\Models\CompanySetting::current();
+        $gravable = max(0, (float) $venta->total - (float) $venta->tax);
+
+        return response()->json([
+            'id' => $venta->id,
+            'folio' => $venta->folio,
+            'date' => $venta->date->format('d/m/Y H:i'),
+            'status' => $venta->status,
+            'cancelled_at' => $venta->cancelled_at?->format('d/m/Y H:i'),
+            'payment_method' => $venta->payment_method,
+            'subtotal' => (float) $venta->subtotal,
+            'discount' => (float) $venta->discount,
+            'tax' => (float) $venta->tax,
+            'taxable' => $gravable,
+            'total' => (float) $venta->total,
+            'paid_amount' => (float) $venta->paid_amount,
+            'change_amount' => (float) $venta->change_amount,
+            'tax_rate' => (int) $company->default_tax_rate,
+            'customer' => $venta->customer ? [
+                'name' => $venta->customer->name,
+                'tax_id' => $venta->customer->tax_id,
+                'phone' => $venta->customer->phone,
+                'address' => $venta->customer->address,
+            ] : null,
+            'user' => $venta->user?->name,
+            'items' => $venta->items->map(fn ($it) => [
+                'sku' => $it->product?->sku,
+                'name' => $it->product?->name,
+                'unit' => $it->product?->unit?->abbreviation,
+                'quantity' => (float) $it->quantity,
+                'unit_price' => (float) $it->unit_price,
+                'discount' => (float) $it->discount,
+                'subtotal' => (float) $it->subtotal,
+            ]),
+            'fel' => $venta->electronicInvoice ? [
+                'status' => $venta->electronicInvoice->status,
+                'uuid' => $venta->electronicInvoice->uuid,
+                'serie' => $venta->electronicInvoice->serie,
+                'numero' => $venta->electronicInvoice->numero,
+                'certificador' => $venta->electronicInvoice->certificador,
+            ] : null,
+            'urls' => [
+                'show' => route('admin.ventas.show', $venta),
+                'ticket' => route('admin.ventas.ticket', $venta),
+                'pdf' => route('admin.ventas.factura_pdf', $venta),
+            ],
+        ]);
+    }
+
     public function ticket(Sale $venta): View
     {
         $venta->load(['customer', 'user', 'items.product.unit']);

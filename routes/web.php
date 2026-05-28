@@ -118,6 +118,7 @@ Route::middleware(['auth', 'verified'])
 
         Route::middleware('permission:ventas.ver')->group(function () {
             Route::get('ventas', [SaleController::class, 'index'])->name('ventas.index');
+            Route::get('ventas/{venta}/modal', [SaleController::class, 'modal'])->name('ventas.modal');
             Route::get('ventas/{venta}', [SaleController::class, 'show'])->name('ventas.show');
             Route::get('ventas/{venta}/ticket', [SaleController::class, 'ticket'])->name('ventas.ticket');
         });
