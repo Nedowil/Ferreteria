@@ -53,13 +53,42 @@
                                 </thead>
                                 <tbody>
                                 <template x-for="p in results" :key="p.id">
-                                    <tr class="border-t hover:bg-indigo-50 cursor-pointer" @click="addItem(p)">
-                                        <td class="px-2 py-1 font-mono text-xs" x-text="p.sku"></td>
-                                        <td class="px-2 py-1" x-text="p.name"></td>
-                                        <td class="px-2 py-1 text-right">Q<span x-text="p.sale_price.toFixed(2)"></span></td>
-                                        <td class="px-2 py-1 text-right" :class="p.stock <= 0 ? 'text-red-600' : ''" x-text="p.stock + ' ' + (p.unit || '')"></td>
-                                        <td class="px-2 py-1 text-right">
-                                            <button type="button" :disabled="p.stock <= 0" class="text-indigo-600 disabled:text-gray-400">+ Agregar</button>
+                                    <tr class="border-t hover:bg-indigo-50"
+                                        @click="if (!p.has_box) addItem(p, 'unit')">
+                                        <td class="px-2 py-1 font-mono text-xs cursor-pointer" x-text="p.sku"></td>
+                                        <td class="px-2 py-1 cursor-pointer">
+                                            <div x-text="p.name"></div>
+                                            <template x-if="p.has_box">
+                                                <div class="text-xs text-amber-700 font-semibold">
+                                                    📦 <span x-text="p.box_label"></span>: Q<span x-text="p.box_price.toFixed(2)"></span>
+                                                    (<span x-text="p.box_factor"></span> uds)
+                                                </div>
+                                            </template>
+                                        </td>
+                                        <td class="px-2 py-1 text-right cursor-pointer">Q<span x-text="p.sale_price.toFixed(2)"></span></td>
+                                        <td class="px-2 py-1 text-right cursor-pointer" :class="p.stock <= 0 ? 'text-red-600' : ''" x-text="p.stock + ' ' + (p.unit || '')"></td>
+                                        <td class="px-2 py-1 text-right whitespace-nowrap">
+                                            <template x-if="! p.has_box">
+                                                <button type="button" :disabled="p.stock <= 0"
+                                                        @click.stop="addItem(p, 'unit')"
+                                                        class="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs disabled:bg-gray-300">
+                                                    + Agregar
+                                                </button>
+                                            </template>
+                                            <template x-if="p.has_box">
+                                                <div class="flex gap-1 justify-end">
+                                                    <button type="button" :disabled="p.stock <= 0"
+                                                            @click.stop="addItem(p, 'unit')"
+                                                            class="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs disabled:bg-gray-300">
+                                                        + Unidad
+                                                    </button>
+                                                    <button type="button" :disabled="p.stock < p.box_factor"
+                                                            @click.stop="addItem(p, 'box')"
+                                                            class="px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded text-xs disabled:bg-gray-300">
+                                                        + <span x-text="p.box_label"></span>
+                                                    </button>
+                                                </div>
+                                            </template>
                                         </td>
                                     </tr>
                                 </template>
@@ -147,12 +176,22 @@
                                 </tr>
                                 </thead>
                                 <tbody>
-                                <template x-for="(item, idx) in items" :key="item.product.id">
+                                <template x-for="(item, idx) in items" :key="idx">
                                     <tr class="border-t">
                                         <td class="px-2 py-1">
                                             <div x-text="item.product.name"></div>
-                                            <div class="text-xs text-gray-500 font-mono" x-text="item.product.sku"></div>
+                                            <div class="text-xs text-gray-500 font-mono">
+                                                <span x-text="item.product.sku"></span>
+                                                <template x-if="item.sell_mode === 'box'">
+                                                    <span class="ml-1 px-1 bg-amber-200 text-amber-900 rounded text-xs" x-text="item.unit_label"></span>
+                                                </template>
+                                                <template x-if="item.sell_mode === 'unit'">
+                                                    <span class="ml-1 px-1 bg-slate-200 text-slate-700 rounded text-xs">Unidad</span>
+                                                </template>
+                                            </div>
                                             <input type="hidden" :name="`items[${idx}][product_id]`" :value="item.product.id" />
+                                            <input type="hidden" :name="`items[${idx}][unit_label]`" :value="item.unit_label" />
+                                            <input type="hidden" :name="`items[${idx}][units_factor]`" :value="item.units_factor" />
                                         </td>
                                         <td class="px-2 py-1">
                                             <input type="text" inputmode="decimal"
@@ -689,15 +728,31 @@
                         this.$refs.search?.focus();
                     }, 50);
                 },
-                addItem(p) {
-                    if (p.stock <= 0) return;
-                    const existing = this.items.find(i => i.product.id === p.id);
+                addItem(p, mode) {
+                    mode = mode || 'unit';
+                    const isBox = mode === 'box' && p.has_box;
+                    const price = isBox ? p.box_price : p.sale_price;
+                    const factor = isBox ? p.box_factor : 1;
+                    const unitLabel = isBox ? p.box_label : (p.unit || 'Unidad');
+                    const stockNeeded = factor; // 1 unidad de empaque = box_factor unidades de stock
+
+                    if (p.stock < stockNeeded) return;
+
+                    // Busca linea existente del MISMO producto y MISMO modo
+                    const existing = this.items.find(i => i.product.id === p.id && i.sell_mode === mode);
                     if (existing) {
                         const currentQty = this.parseAmount(existing.quantity);
-                        if (currentQty + 1 > p.stock) return;
+                        if ((currentQty + 1) * factor > p.stock) return;
                         existing.quantity = String(currentQty + 1);
                     } else {
-                        this.items.push({ product: p, quantity: '1', unit_price: String(p.sale_price) });
+                        this.items.push({
+                            product: p,
+                            quantity: '1',
+                            unit_price: String(price),
+                            sell_mode: mode,
+                            unit_label: unitLabel,
+                            units_factor: factor,
+                        });
                     }
                     this.query = '';
                     this.search();

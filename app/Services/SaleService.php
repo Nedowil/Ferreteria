@@ -47,6 +47,9 @@ class SaleService
                 $qty = (float) $item['quantity'];
                 $price = (float) $item['unit_price'];
                 $discount = (float) ($item['discount'] ?? 0);
+                $factor = (float) ($item['units_factor'] ?? 1);
+                $unitLabel = $item['unit_label'] ?? 'Unidad';
+                $stockNeeded = $qty * $factor; // unidades reales descontadas
                 $lineSubtotal = ($qty * $price) - $discount;
 
                 if ($lineSubtotal < 0) {
@@ -54,8 +57,8 @@ class SaleService
                 }
 
                 $available = $branchId ? $product->stockFor($branchId) : (float) $product->stock;
-                if ($available < $qty) {
-                    throw new \DomainException("Stock insuficiente para {$product->name}. Disponible: {$available}.");
+                if ($available < $stockNeeded) {
+                    throw new \DomainException("Stock insuficiente para {$product->name}. Disponible: {$available} unidades, requeridas: {$stockNeeded}.");
                 }
 
                 $subtotal += $qty * $price;
@@ -66,6 +69,9 @@ class SaleService
                     'unit_price' => $price,
                     'discount' => $discount,
                     'subtotal' => $lineSubtotal,
+                    'units_factor' => $factor,
+                    'unit_label' => $unitLabel,
+                    'stock_qty' => $stockNeeded,
                 ];
             }
 
@@ -115,13 +121,20 @@ class SaleService
                     'unit_price' => $n['unit_price'],
                     'discount' => $n['discount'],
                     'subtotal' => $n['subtotal'],
+                    'unit_label' => $n['unit_label'],
+                    'units_factor' => $n['units_factor'],
                 ]);
+
+                $reason = "Venta {$sale->folio}";
+                if ($n['units_factor'] > 1) {
+                    $reason .= " ({$n['quantity']} {$n['unit_label']} = {$n['stock_qty']} und)";
+                }
 
                 $this->inventory->applyMovement(
                     product: $n['product'],
                     type: InventoryMovement::TYPE_SALIDA,
-                    quantity: $n['quantity'],
-                    reason: "Venta {$sale->folio}",
+                    quantity: $n['stock_qty'],
+                    reason: $reason,
                     userId: $userId,
                     reference: $sale,
                     branchId: $branchId,
@@ -145,10 +158,11 @@ class SaleService
 
             foreach ($sale->items as $item) {
                 $product = Product::lockForUpdate()->findOrFail($item->product_id);
+                $stockQty = (float) $item->quantity * (float) ($item->units_factor ?: 1);
                 $this->inventory->applyMovement(
                     product: $product,
                     type: InventoryMovement::TYPE_ENTRADA,
-                    quantity: (float) $item->quantity,
+                    quantity: $stockQty,
                     reason: "Cancelacion venta {$sale->folio}",
                     userId: $userId,
                     reference: $sale,

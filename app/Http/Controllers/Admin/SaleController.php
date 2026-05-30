@@ -75,6 +75,10 @@ class SaleController extends Controller
             'name' => $p->name,
             'unit' => $p->unit?->abbreviation,
             'sale_price' => (float) $p->sale_price,
+            'box_label' => $p->box_label,
+            'box_price' => $p->box_price ? (float) $p->box_price : null,
+            'box_factor' => (float) ($p->box_factor ?: 1),
+            'has_box' => ! empty($p->box_label) && (float) ($p->box_price ?? 0) > 0 && (float) ($p->box_factor ?? 1) > 1,
             'stock' => $p->stockFor($branchId),
             'exact_barcode_match' => $term !== '' && $p->barcode === $term,
         ]);
@@ -192,6 +196,8 @@ class SaleController extends Controller
             'items.*.quantity' => ['required', 'numeric', 'min:0.01'],
             'items.*.unit_price' => ['required', 'numeric', 'min:0'],
             'items.*.discount' => ['nullable', 'numeric', 'min:0'],
+            'items.*.unit_label' => ['nullable', 'string', 'max:30'],
+            'items.*.units_factor' => ['nullable', 'numeric', 'min:0.01'],
         ]);
 
         return $validated['items'];

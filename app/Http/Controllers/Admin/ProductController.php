@@ -66,7 +66,15 @@ class ProductController extends Controller
         $data['sku'] = $this->ensureSku($data['sku'] ?? null, $data['name']);
         $data['barcode'] = $this->ensureBarcode($data['barcode'] ?? null);
 
-        Product::create($data);
+        $product = Product::create($data);
+
+        // Crea stock en la sucursal activa si se indico stock inicial
+        if (! empty($data['stock']) && $branchId = \App\Support\CurrentBranch::id()) {
+            \App\Models\ProductStock::firstOrCreate(
+                ['product_id' => $product->id, 'branch_id' => $branchId],
+                ['stock' => $data['stock'], 'min_stock' => $data['min_stock']],
+            );
+        }
 
         return redirect()->route('admin.productos.index')->with('status', 'Producto creado.');
     }
@@ -184,6 +192,9 @@ class ProductController extends Controller
             'unit_id' => ['nullable', 'exists:units,id'],
             'purchase_price' => ['required', 'numeric', 'min:0'],
             'sale_price' => ['required', 'numeric', 'min:0'],
+            'box_label' => ['nullable', 'string', 'max:30'],
+            'box_price' => ['nullable', 'numeric', 'min:0'],
+            'box_factor' => ['nullable', 'numeric', 'min:0.01'],
             'stock' => ['nullable', 'numeric', 'min:0'],
             'min_stock' => ['required', 'numeric', 'min:0'],
             'image' => ['nullable', 'image', 'max:2048'],
@@ -191,6 +202,7 @@ class ProductController extends Controller
 
         $data['active'] = $request->boolean('active');
         $data['stock'] = $data['stock'] ?? 0;
+        $data['box_factor'] = $data['box_factor'] ?? 1;
         unset($data['image']);
 
         return $data;

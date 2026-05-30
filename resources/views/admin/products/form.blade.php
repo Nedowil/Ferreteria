@@ -93,11 +93,46 @@
                             <x-input-error :messages="$errors->get('purchase_price')" class="mt-2" />
                         </div>
                         <div>
-                            <x-input-label for="sale_price" value="Precio de venta *" />
+                            <x-input-label for="sale_price" value="Precio de venta (unidad) *" />
                             <x-text-input id="sale_price" name="sale_price" type="text" inputmode="decimal"
                                           class="mt-1 block w-full"
                                           :value="old('sale_price', $product->sale_price)" required />
                             <x-input-error :messages="$errors->get('sale_price')" class="mt-2" />
+                        </div>
+                    </div>
+
+                    <!-- Venta por empaque (caja, rollo, yarda, fardo...) -->
+                    <div class="border-l-4 border-amber-400 bg-amber-50 p-4 rounded">
+                        <h3 class="font-semibold text-slate-800 mb-2 flex items-center gap-2">
+                            📦 Venta por empaque (opcional)
+                        </h3>
+                        <p class="text-xs text-slate-600 mb-3">
+                            Si este producto tambien se vende en cantidad mayor (caja, rollo, yarda, fardo, etc) llena los 3 campos.
+                            En el POS el vendedor podra elegir si vende por unidad o por empaque.
+                        </p>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div>
+                                <x-input-label for="box_label" value="Etiqueta del empaque" />
+                                <x-text-input id="box_label" name="box_label" type="text"
+                                              placeholder="Ej. Caja, Rollo, Yarda, Fardo"
+                                              class="mt-1 block w-full"
+                                              :value="old('box_label', $product->box_label)" />
+                            </div>
+                            <div>
+                                <x-input-label for="box_price" value="Precio del empaque (Q)" />
+                                <x-text-input id="box_price" name="box_price" type="text" inputmode="decimal"
+                                              placeholder="0.00"
+                                              class="mt-1 block w-full"
+                                              :value="old('box_price', $product->box_price)" />
+                            </div>
+                            <div>
+                                <x-input-label for="box_factor" value="Unidades por empaque" />
+                                <x-text-input id="box_factor" name="box_factor" type="text" inputmode="decimal"
+                                              placeholder="Ej. 100"
+                                              class="mt-1 block w-full"
+                                              :value="old('box_factor', $product->box_factor)" />
+                                <p class="text-xs text-slate-500 mt-1">Cuantas unidades trae cada empaque</p>
+                            </div>
                         </div>
                     </div>
 

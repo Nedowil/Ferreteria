@@ -14,6 +14,8 @@ class SaleItem extends Model
         'unit_price',
         'discount',
         'subtotal',
+        'unit_label',
+        'units_factor',
     ];
 
     protected $casts = [
@@ -21,6 +23,7 @@ class SaleItem extends Model
         'unit_price' => 'decimal:2',
         'discount' => 'decimal:2',
         'subtotal' => 'decimal:2',
+        'units_factor' => 'decimal:2',
     ];
 
     public function sale(): BelongsTo
