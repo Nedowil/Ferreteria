@@ -179,13 +179,18 @@ class SaleController extends Controller
 
     private function validateSale(Request $request): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'customer_id' => ['nullable', 'exists:customers,id'],
             'payment_method' => ['required', 'in:efectivo,tarjeta,transferencia'],
             'paid_amount' => ['required', 'numeric', 'min:0'],
             'tax' => ['nullable', 'numeric', 'min:0'],
+            'discount' => ['nullable', 'numeric', 'min:0'],
             'notes' => ['nullable', 'string'],
-        ]) + ['tax' => (float) $request->input('tax', 0)];
+        ]);
+        $data['tax'] = (float) $request->input('tax', 0);
+        $data['discount'] = (float) $request->input('discount', 0);
+
+        return $data;
     }
 
     private function validateItems(Request $request): array

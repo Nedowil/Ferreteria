@@ -220,7 +220,17 @@
 
                         <div class="mt-4 space-y-2 text-base">
                             <input type="hidden" name="tax" :value="tax.toFixed(2)" />
+                            <input type="hidden" name="discount" :value="parseAmount(discount).toFixed(2)" />
                             <div class="flex justify-between"><span class="text-slate-600">Subtotal</span><span class="font-medium">Q<span x-text="subtotal.toFixed(2)"></span></span></div>
+
+                            <div class="flex justify-between items-center">
+                                <span class="text-slate-600">Descuento Q</span>
+                                <input type="text" inputmode="decimal" x-model="discount"
+                                       @input="recalc()" @focus="$event.target.select()"
+                                       placeholder="0.00"
+                                       class="w-28 text-right border border-orange-200 rounded text-sm py-1 px-2 focus:border-orange-500 focus:ring-orange-500" />
+                            </div>
+
                             <div class="flex justify-between text-sm text-slate-500">
                                 <span>Monto gravable</span><span>Q<span x-text="taxableAmount.toFixed(2)"></span></span>
                             </div>
@@ -471,6 +481,7 @@
                 },
                 payment_method: 'efectivo',
                 paid_amount: '',
+                discount: '',
                 // Configuracion fiscal del emisor (desde CompanySetting)
                 taxRate: {{ (float) $company->default_tax_rate }},
                 pricesIncludeTax: {{ $company->prices_include_tax ? 'true' : 'false' }},
@@ -777,18 +788,22 @@
                 recalc() {
                     this.subtotal = this.items.reduce((s, i) => s + this.parseAmount(i.quantity) * this.parseAmount(i.unit_price), 0);
 
+                    // Aplica descuento manual sobre el subtotal
+                    let discountAmount = this.parseAmount(this.discount);
+                    if (discountAmount > this.subtotal) discountAmount = this.subtotal;
+                    const baseAmount = this.subtotal - discountAmount;
+
                     // Calculo del IVA segun configuracion del emisor
                     if (this.pricesIncludeTax) {
-                        // Precios ya incluyen IVA: extraerlo del subtotal
-                        // IVA = subtotal * tasa / (100 + tasa)
-                        this.taxableAmount = this.subtotal / (1 + this.taxRate / 100);
-                        this.tax = this.subtotal - this.taxableAmount;
-                        this.total = this.subtotal;
+                        // Precios ya incluyen IVA: extraerlo del base con descuento aplicado
+                        this.taxableAmount = baseAmount / (1 + this.taxRate / 100);
+                        this.tax = baseAmount - this.taxableAmount;
+                        this.total = baseAmount;
                     } else {
-                        // Precios sin IVA: agregar IVA al subtotal
-                        this.taxableAmount = this.subtotal;
-                        this.tax = this.subtotal * this.taxRate / 100;
-                        this.total = this.subtotal + this.tax;
+                        // Precios sin IVA: agregar IVA al base con descuento aplicado
+                        this.taxableAmount = baseAmount;
+                        this.tax = baseAmount * this.taxRate / 100;
+                        this.total = baseAmount + this.tax;
                     }
 
                     if (this.payment_method !== 'efectivo') {

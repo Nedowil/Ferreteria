@@ -79,6 +79,11 @@ class SaleService
             // doble suma cuando los precios ya incluyen IVA
             $company = \App\Models\CompanySetting::current();
             $taxRate = (float) $company->default_tax_rate;
+
+            // Descuento global (campo "discount") o suma de descuentos por linea
+            $globalDiscount = (float) ($data['discount'] ?? 0);
+            $totalDiscount = max($totalDiscount, $globalDiscount);
+            if ($totalDiscount > $subtotal) $totalDiscount = $subtotal;
             $baseAmount = $subtotal - $totalDiscount;
 
             if ($company->prices_include_tax) {
