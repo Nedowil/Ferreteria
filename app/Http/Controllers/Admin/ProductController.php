@@ -66,7 +66,11 @@ class ProductController extends Controller
         $data['sku'] = $this->ensureSku($data['sku'] ?? null, $data['name']);
         $data['barcode'] = $this->ensureBarcode($data['barcode'] ?? null);
 
+        $presentations = $data['presentations'] ?? [];
+        unset($data['presentations']);
+
         $product = Product::create($data);
+        $this->syncPresentations($product, $presentations);
 
         // Crea stock en la sucursal activa si se indico stock inicial
         if (! empty($data['stock']) && $branchId = \App\Support\CurrentBranch::id()) {
@@ -81,6 +85,7 @@ class ProductController extends Controller
 
     public function edit(Product $producto): View
     {
+        $producto->load('presentations');
         return view('admin.products.form', [
             'product' => $producto,
             'categories' => Category::where('active', true)->orderBy('name')->get(),
@@ -101,12 +106,15 @@ class ProductController extends Controller
         }
 
         unset($data['stock']);
+        $presentations = $data['presentations'] ?? [];
+        unset($data['presentations']);
 
         // Conserva el SKU/barcode existente si lo borraron, o regenera si esta vacio
         $data['sku'] = $this->ensureSku($data['sku'] ?? null, $data['name'], $producto->id);
         $data['barcode'] = $this->ensureBarcode($data['barcode'] ?? null);
 
         $producto->update($data);
+        $this->syncPresentations($producto, $presentations);
 
         return redirect()->route('admin.productos.index')->with('status', 'Producto actualizado.');
     }
@@ -192,20 +200,41 @@ class ProductController extends Controller
             'unit_id' => ['nullable', 'exists:units,id'],
             'purchase_price' => ['required', 'numeric', 'min:0'],
             'sale_price' => ['required', 'numeric', 'min:0'],
-            'box_label' => ['nullable', 'string', 'max:30'],
-            'box_price' => ['nullable', 'numeric', 'min:0'],
-            'box_factor' => ['nullable', 'numeric', 'min:0.01'],
             'stock' => ['nullable', 'numeric', 'min:0'],
             'min_stock' => ['required', 'numeric', 'min:0'],
             'image' => ['nullable', 'image', 'max:2048'],
+            'presentations' => ['nullable', 'array'],
+            'presentations.*.label' => ['nullable', 'string', 'max:30'],
+            'presentations.*.units_factor' => ['nullable', 'numeric', 'min:0.001'],
+            'presentations.*.price' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $data['active'] = $request->boolean('active');
         $data['stock'] = $data['stock'] ?? 0;
-        $data['box_factor'] = $data['box_factor'] ?? 1;
         unset($data['image']);
 
         return $data;
+    }
+
+    /**
+     * Reemplaza las presentaciones (libra, caja, rollo, etc.) del producto.
+     */
+    private function syncPresentations(\App\Models\Product $product, array $rows): void
+    {
+        $product->presentations()->withoutGlobalScopes()->delete();
+        \App\Models\ProductPresentation::where('product_id', $product->id)->delete();
+        $order = 1;
+        foreach ($rows as $row) {
+            if (empty($row['label']) || ! isset($row['units_factor']) || ! isset($row['price'])) continue;
+            \App\Models\ProductPresentation::create([
+                'product_id' => $product->id,
+                'label' => trim($row['label']),
+                'units_factor' => (float) $row['units_factor'],
+                'price' => (float) $row['price'],
+                'display_order' => $order++,
+                'active' => true,
+            ]);
+        }
     }
 
     private function uploadImage(Request $request): ?string

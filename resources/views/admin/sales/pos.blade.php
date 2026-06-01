@@ -54,41 +54,35 @@
                                 <tbody>
                                 <template x-for="p in results" :key="p.id">
                                     <tr class="border-t hover:bg-indigo-50"
-                                        @click="if (!p.has_box) addItem(p, 'unit')">
+                                        @click="if (!(p.presentations && p.presentations.length)) addItem(p, null)">
                                         <td class="px-2 py-1 font-mono text-xs cursor-pointer" x-text="p.sku"></td>
                                         <td class="px-2 py-1 cursor-pointer">
                                             <div x-text="p.name"></div>
-                                            <template x-if="p.has_box">
-                                                <div class="text-xs text-amber-700 font-semibold">
-                                                    📦 <span x-text="p.box_label"></span>: Q<span x-text="p.box_price.toFixed(2)"></span>
-                                                    (<span x-text="p.box_factor"></span> uds)
+                                            <template x-if="p.presentations && p.presentations.length">
+                                                <div class="text-xs text-amber-700 font-semibold flex flex-wrap gap-x-2">
+                                                    <template x-for="pr in p.presentations" :key="pr.label">
+                                                        <span>📦 <span x-text="pr.label"></span>: Q<span x-text="pr.price.toFixed(2)"></span> (<span x-text="pr.units_factor"></span> uds)</span>
+                                                    </template>
                                                 </div>
                                             </template>
                                         </td>
                                         <td class="px-2 py-1 text-right cursor-pointer">Q<span x-text="p.sale_price.toFixed(2)"></span></td>
                                         <td class="px-2 py-1 text-right cursor-pointer" :class="p.stock <= 0 ? 'text-red-600' : ''" x-text="p.stock + ' ' + (p.unit || '')"></td>
                                         <td class="px-2 py-1 text-right whitespace-nowrap">
-                                            <template x-if="! p.has_box">
+                                            <div class="flex flex-wrap gap-1 justify-end">
                                                 <button type="button" :disabled="p.stock <= 0"
-                                                        @click.stop="addItem(p, 'unit')"
+                                                        @click.stop="addItem(p, null)"
                                                         class="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs disabled:bg-gray-300">
-                                                    + Agregar
+                                                    + Unidad
                                                 </button>
-                                            </template>
-                                            <template x-if="p.has_box">
-                                                <div class="flex gap-1 justify-end">
-                                                    <button type="button" :disabled="p.stock <= 0"
-                                                            @click.stop="addItem(p, 'unit')"
-                                                            class="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs disabled:bg-gray-300">
-                                                        + Unidad
-                                                    </button>
-                                                    <button type="button" :disabled="p.stock < p.box_factor"
-                                                            @click.stop="addItem(p, 'box')"
+                                                <template x-for="pr in (p.presentations || [])" :key="pr.label">
+                                                    <button type="button" :disabled="p.stock < pr.units_factor"
+                                                            @click.stop="addItem(p, pr)"
                                                             class="px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded text-xs disabled:bg-gray-300">
-                                                        + <span x-text="p.box_label"></span>
+                                                        + <span x-text="pr.label"></span>
                                                     </button>
-                                                </div>
-                                            </template>
+                                                </template>
+                                            </div>
                                         </td>
                                     </tr>
                                 </template>
@@ -182,12 +176,9 @@
                                             <div x-text="item.product.name"></div>
                                             <div class="text-xs text-gray-500 font-mono">
                                                 <span x-text="item.product.sku"></span>
-                                                <template x-if="item.sell_mode === 'box'">
-                                                    <span class="ml-1 px-1 bg-amber-200 text-amber-900 rounded text-xs" x-text="item.unit_label"></span>
-                                                </template>
-                                                <template x-if="item.sell_mode === 'unit'">
-                                                    <span class="ml-1 px-1 bg-slate-200 text-slate-700 rounded text-xs">Unidad</span>
-                                                </template>
+                                                <span class="ml-1 px-1 rounded text-xs"
+                                                      :class="item.units_factor > 1 ? 'bg-amber-200 text-amber-900' : 'bg-slate-200 text-slate-700'"
+                                                      x-text="item.unit_label"></span>
                                             </div>
                                             <input type="hidden" :name="`items[${idx}][product_id]`" :value="item.product.id" />
                                             <input type="hidden" :name="`items[${idx}][unit_label]`" :value="item.unit_label" />
@@ -739,18 +730,16 @@
                         this.$refs.search?.focus();
                     }, 50);
                 },
-                addItem(p, mode) {
-                    mode = mode || 'unit';
-                    const isBox = mode === 'box' && p.has_box;
-                    const price = isBox ? p.box_price : p.sale_price;
-                    const factor = isBox ? p.box_factor : 1;
-                    const unitLabel = isBox ? p.box_label : (p.unit || 'Unidad');
-                    const stockNeeded = factor; // 1 unidad de empaque = box_factor unidades de stock
+                addItem(p, presentation) {
+                    // presentation null/undefined = venta por unidad simple
+                    const price = presentation ? presentation.price : p.sale_price;
+                    const factor = presentation ? presentation.units_factor : 1;
+                    const unitLabel = presentation ? presentation.label : (p.unit || 'Unidad');
 
-                    if (p.stock < stockNeeded) return;
+                    if (p.stock < factor) return;
 
-                    // Busca linea existente del MISMO producto y MISMO modo
-                    const existing = this.items.find(i => i.product.id === p.id && i.sell_mode === mode);
+                    // Misma partida = mismo producto + misma etiqueta de presentacion
+                    const existing = this.items.find(i => i.product.id === p.id && i.unit_label === unitLabel);
                     if (existing) {
                         const currentQty = this.parseAmount(existing.quantity);
                         if ((currentQty + 1) * factor > p.stock) return;
@@ -760,7 +749,6 @@
                             product: p,
                             quantity: '1',
                             unit_price: String(price),
-                            sell_mode: mode,
                             unit_label: unitLabel,
                             units_factor: factor,
                         });

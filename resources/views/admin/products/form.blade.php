@@ -101,39 +101,73 @@
                         </div>
                     </div>
 
-                    <!-- Venta por empaque (caja, rollo, yarda, fardo...) -->
-                    <div class="border-l-4 border-amber-400 bg-amber-50 p-4 rounded">
-                        <h3 class="font-semibold text-slate-800 mb-2 flex items-center gap-2">
-                            📦 Venta por empaque (opcional)
-                        </h3>
-                        <p class="text-xs text-slate-600 mb-3">
-                            Si este producto tambien se vende en cantidad mayor (caja, rollo, yarda, fardo, etc) llena los 3 campos.
-                            En el POS el vendedor podra elegir si vende por unidad o por empaque.
-                        </p>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <!-- Presentaciones adicionales (libra, media libra, caja, rollo, yarda, fardo...) -->
+                    @php
+                        $existingPresentations = $product->exists ? $product->presentations->map(fn($p) => [
+                            'label' => $p->label,
+                            'units_factor' => (float) $p->units_factor,
+                            'price' => (float) $p->price,
+                        ])->toArray() : [];
+                    @endphp
+                    <div class="border-l-4 border-amber-400 bg-amber-50 p-4 rounded"
+                         x-data="{ rows: @js($existingPresentations) }">
+                        <div class="flex justify-between items-start mb-2">
                             <div>
-                                <x-input-label for="box_label" value="Etiqueta del empaque" />
-                                <x-text-input id="box_label" name="box_label" type="text"
-                                              placeholder="Ej. Caja, Rollo, Yarda, Fardo"
-                                              class="mt-1 block w-full"
-                                              :value="old('box_label', $product->box_label)" />
+                                <h3 class="font-semibold text-slate-800 flex items-center gap-2">
+                                    📦 Presentaciones adicionales (opcional)
+                                </h3>
+                                <p class="text-xs text-slate-600 mt-1">
+                                    Si este producto se vende tambien por <strong>libra, media libra, caja, rollo, yarda, fardo, etc</strong>,
+                                    agrega cada presentacion con su etiqueta, cuantas unidades trae y su precio. El POS mostrara
+                                    un boton para cada presentacion ademas del de unidad simple.
+                                </p>
                             </div>
-                            <div>
-                                <x-input-label for="box_price" value="Precio del empaque (Q)" />
-                                <x-text-input id="box_price" name="box_price" type="text" inputmode="decimal"
-                                              placeholder="0.00"
-                                              class="mt-1 block w-full"
-                                              :value="old('box_price', $product->box_price)" />
-                            </div>
-                            <div>
-                                <x-input-label for="box_factor" value="Unidades por empaque" />
-                                <x-text-input id="box_factor" name="box_factor" type="text" inputmode="decimal"
-                                              placeholder="Ej. 100"
-                                              class="mt-1 block w-full"
-                                              :value="old('box_factor', $product->box_factor)" />
-                                <p class="text-xs text-slate-500 mt-1">Cuantas unidades trae cada empaque</p>
-                            </div>
+                            <button type="button" @click="rows.push({ label: '', units_factor: 1, price: 0 })"
+                                    class="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded text-sm font-semibold whitespace-nowrap">
+                                + Agregar
+                            </button>
                         </div>
+
+                        <div x-show="rows.length === 0" class="text-center text-sm text-slate-500 py-3">
+                            Sin presentaciones adicionales. Solo se vende por unidad.
+                        </div>
+
+                        <div class="space-y-2">
+                            <template x-for="(row, idx) in rows" :key="idx">
+                                <div class="grid grid-cols-12 gap-2 items-end bg-white p-2 rounded border border-amber-200">
+                                    <div class="col-span-12 md:col-span-4">
+                                        <label class="text-xs font-medium text-slate-700">Etiqueta</label>
+                                        <input type="text" :name="`presentations[${idx}][label]`" x-model="row.label"
+                                               placeholder="Ej. Libra, Media libra, Caja"
+                                               class="mt-1 block w-full border-slate-300 rounded-md shadow-sm text-sm focus:border-orange-500 focus:ring-orange-500" />
+                                    </div>
+                                    <div class="col-span-6 md:col-span-3">
+                                        <label class="text-xs font-medium text-slate-700">Unidades / presentacion</label>
+                                        <input type="text" inputmode="decimal" :name="`presentations[${idx}][units_factor]`" x-model="row.units_factor"
+                                               placeholder="Ej. 1, 0.5, 100"
+                                               class="mt-1 block w-full text-right border-slate-300 rounded-md shadow-sm text-sm focus:border-orange-500 focus:ring-orange-500" />
+                                    </div>
+                                    <div class="col-span-5 md:col-span-3">
+                                        <label class="text-xs font-medium text-slate-700">Precio (Q)</label>
+                                        <input type="text" inputmode="decimal" :name="`presentations[${idx}][price]`" x-model="row.price"
+                                               placeholder="0.00"
+                                               class="mt-1 block w-full text-right border-slate-300 rounded-md shadow-sm text-sm focus:border-orange-500 focus:ring-orange-500" />
+                                    </div>
+                                    <div class="col-span-1 md:col-span-2 flex justify-end">
+                                        <button type="button" @click="rows.splice(idx, 1)"
+                                                title="Eliminar"
+                                                class="px-2 py-2 bg-red-500 hover:bg-red-600 text-white rounded text-sm">✕</button>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+
+                        <p class="text-xs text-slate-500 mt-3 italic">
+                            Ejemplo: para tornillos en libra, media libra y caja —
+                            <code class="bg-white px-1 rounded">Libra · 1 unidad/lb · Q15</code>,
+                            <code class="bg-white px-1 rounded">Media libra · 0.5 · Q8</code>,
+                            <code class="bg-white px-1 rounded">Caja · 100 · Q80</code>
+                        </p>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">

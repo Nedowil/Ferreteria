@@ -23,9 +23,6 @@ class Product extends Model
         'unit_id',
         'purchase_price',
         'sale_price',
-        'box_label',
-        'box_price',
-        'box_factor',
         'stock',
         'min_stock',
         'image_path',
@@ -35,8 +32,6 @@ class Product extends Model
     protected $casts = [
         'purchase_price' => 'decimal:2',
         'sale_price' => 'decimal:2',
-        'box_price' => 'decimal:2',
-        'box_factor' => 'decimal:2',
         'stock' => 'decimal:2',
         'min_stock' => 'decimal:2',
         'active' => 'boolean',
@@ -65,6 +60,11 @@ class Product extends Model
     public function stocks(): HasMany
     {
         return $this->hasMany(ProductStock::class);
+    }
+
+    public function presentations(): HasMany
+    {
+        return $this->hasMany(ProductPresentation::class)->where('active', true)->orderBy('display_order');
     }
 
     public function stockFor(?int $branchId): float
