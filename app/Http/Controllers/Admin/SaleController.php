@@ -84,9 +84,11 @@ class SaleController extends Controller
                 'base_unit_label' => $p->base_unit_label ?: 'unidad',
                 'container_label' => $p->container_label,
                 'container_factor' => $p->container_factor ? (float) $p->container_factor : null,
-                'container_price' => ($p->container_factor && $p->sale_price)
-                    ? round((float) $p->sale_price * (float) $p->container_factor, 2)
-                    : null,
+                'container_price' => $p->container_price
+                    ? (float) $p->container_price
+                    : (($p->container_factor && $p->sale_price)
+                        ? round((float) $p->sale_price * (float) $p->container_factor, 2)
+                        : null),
                 'sale_price' => (float) $p->sale_price,
                 'stock' => $stock,
                 'stock_formatted' => $p->formatStockMixed($stock),

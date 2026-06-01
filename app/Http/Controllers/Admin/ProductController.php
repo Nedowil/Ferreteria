@@ -201,6 +201,7 @@ class ProductController extends Controller
             'base_unit_label' => ['nullable', 'string', 'max:30'],
             'container_label' => ['nullable', 'string', 'max:30'],
             'container_factor' => ['nullable', 'numeric', 'gt:0'],
+            'container_price' => ['nullable', 'numeric', 'min:0'],
             'purchase_price' => ['required', 'numeric', 'min:0'],
             'sale_price' => ['required', 'numeric', 'min:0'],
             'stock' => ['nullable', 'numeric', 'min:0'],
@@ -228,6 +229,7 @@ class ProductController extends Controller
         if (empty($data['container_label']) || empty($data['container_factor'])) {
             $data['container_label'] = null;
             $data['container_factor'] = null;
+            $data['container_price'] = null;
         }
 
         unset($data['image']);

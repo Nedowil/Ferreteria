@@ -24,6 +24,7 @@ class Product extends Model
         'base_unit_label',
         'container_label',
         'container_factor',
+        'container_price',
         'purchase_price',
         'sale_price',
         'stock',
@@ -38,6 +39,7 @@ class Product extends Model
         'stock' => 'decimal:2',
         'min_stock' => 'decimal:2',
         'container_factor' => 'decimal:4',
+        'container_price' => 'decimal:2',
         'active' => 'boolean',
     ];
 

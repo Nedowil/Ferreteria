@@ -102,13 +102,14 @@
                             Ej. Tachuelas: base = onza, empaque = caja de 16 onzas.
                         </p>
 
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
                             <div>
                                 <x-input-label for="base_unit_label" value="Unidad base *" />
                                 <x-text-input id="base_unit_label" name="base_unit_label" type="text"
                                               class="mt-1 block w-full"
                                               placeholder="libra, onza, metro, unidad..."
                                               :value="old('base_unit_label', $product->base_unit_label ?: 'unidad')" required />
+                                <p class="text-xs text-slate-500 mt-1">El precio de venta y stock minimo se ingresan en esta unidad.</p>
                             </div>
                             <div>
                                 <x-input-label for="container_label" value="Empaque (opcional)" />
@@ -124,6 +125,14 @@
                                               placeholder="50, 100, 16..."
                                               :value="old('container_factor', $product->container_factor ? rtrim(rtrim(number_format($product->container_factor, 4, '.', ''),'0'),'.') : '')" />
                                 <p class="text-xs text-slate-500 mt-1">Ej. 50 libras por caja, 100 metros por rollo</p>
+                            </div>
+                            <div>
+                                <x-input-label for="container_price" value="Precio por empaque (Q)" />
+                                <x-text-input id="container_price" name="container_price" type="text" inputmode="decimal"
+                                              class="mt-1 block w-full"
+                                              placeholder="700.00"
+                                              :value="old('container_price', $product->container_price)" />
+                                <p class="text-xs text-slate-500 mt-1">Precio especial cuando se vende un empaque completo (suele ser menor que precio base x factor).</p>
                             </div>
                         </div>
                     </div>
