@@ -110,7 +110,7 @@
                         ])->toArray() : [];
                     @endphp
                     <div class="border-l-4 border-amber-400 bg-amber-50 p-4 rounded"
-                         x-data="{ rows: @js($existingPresentations) }">
+                         x-data="{ rows: @js($existingPresentations), parseNum(v){ const n = parseFloat(String(v).replace(',','.')); return isNaN(n)?0:n; } }">
                         <div class="flex justify-between items-start mb-2">
                             <div>
                                 <h3 class="font-semibold text-slate-800 flex items-center gap-2">
@@ -118,8 +118,15 @@
                                 </h3>
                                 <p class="text-xs text-slate-600 mt-1">
                                     Si este producto se vende tambien por <strong>libra, media libra, caja, rollo, yarda, fardo, etc</strong>,
-                                    agrega cada presentacion con su etiqueta, cuantas unidades trae y su precio. El POS mostrara
-                                    un boton para cada presentacion ademas del de unidad simple.
+                                    agrega cada presentacion. El campo <strong>"Factor de stock"</strong> es <strong>cuanto se descuenta del stock</strong>
+                                    cuando vendes <strong>1</strong> de esa presentacion. El stock se guarda siempre en la <strong>unidad base</strong> que usaste al registrar el producto.
+                                </p>
+                                <p class="text-xs text-slate-600 mt-1">
+                                    Ejemplo: si registraste stock <strong>en cajas</strong> y una caja contiene 2 libras (4 medias libras, 32 onzas),
+                                    entonces: <code class="bg-white px-1 rounded">Libra → 0.5</code>,
+                                    <code class="bg-white px-1 rounded">Media libra → 0.25</code>,
+                                    <code class="bg-white px-1 rounded">Onza → 0.03125</code>,
+                                    <code class="bg-white px-1 rounded">Caja → 1</code>.
                                 </p>
                             </div>
                             <button type="button" @click="rows.push({ label: '', units_factor: 1, price: 0 })"
@@ -134,40 +141,43 @@
 
                         <div class="space-y-2">
                             <template x-for="(row, idx) in rows" :key="idx">
-                                <div class="grid grid-cols-12 gap-2 items-end bg-white p-2 rounded border border-amber-200">
-                                    <div class="col-span-12 md:col-span-4">
-                                        <label class="text-xs font-medium text-slate-700">Etiqueta</label>
-                                        <input type="text" :name="`presentations[${idx}][label]`" x-model="row.label"
-                                               placeholder="Ej. Libra, Media libra, Caja"
-                                               class="mt-1 block w-full border-slate-300 rounded-md shadow-sm text-sm focus:border-orange-500 focus:ring-orange-500" />
+                                <div class="bg-white p-2 rounded border border-amber-200">
+                                    <div class="grid grid-cols-12 gap-2 items-end">
+                                        <div class="col-span-12 md:col-span-4">
+                                            <label class="text-xs font-medium text-slate-700">Etiqueta</label>
+                                            <input type="text" :name="`presentations[${idx}][label]`" x-model="row.label"
+                                                   placeholder="Ej. Libra, Media libra, Caja"
+                                                   class="mt-1 block w-full border-slate-300 rounded-md shadow-sm text-sm focus:border-orange-500 focus:ring-orange-500" />
+                                        </div>
+                                        <div class="col-span-6 md:col-span-3">
+                                            <label class="text-xs font-medium text-slate-700">Factor de stock</label>
+                                            <input type="text" inputmode="decimal" :name="`presentations[${idx}][units_factor]`" x-model="row.units_factor"
+                                                   placeholder="Ej. 1, 0.5, 0.25, 100"
+                                                   class="mt-1 block w-full text-right border-slate-300 rounded-md shadow-sm text-sm focus:border-orange-500 focus:ring-orange-500" />
+                                        </div>
+                                        <div class="col-span-5 md:col-span-3">
+                                            <label class="text-xs font-medium text-slate-700">Precio (Q)</label>
+                                            <input type="text" inputmode="decimal" :name="`presentations[${idx}][price]`" x-model="row.price"
+                                                   placeholder="0.00"
+                                                   class="mt-1 block w-full text-right border-slate-300 rounded-md shadow-sm text-sm focus:border-orange-500 focus:ring-orange-500" />
+                                        </div>
+                                        <div class="col-span-1 md:col-span-2 flex justify-end">
+                                            <button type="button" @click="rows.splice(idx, 1)"
+                                                    title="Eliminar"
+                                                    class="px-2 py-2 bg-red-500 hover:bg-red-600 text-white rounded text-sm">✕</button>
+                                        </div>
                                     </div>
-                                    <div class="col-span-6 md:col-span-3">
-                                        <label class="text-xs font-medium text-slate-700">Unidades / presentacion</label>
-                                        <input type="text" inputmode="decimal" :name="`presentations[${idx}][units_factor]`" x-model="row.units_factor"
-                                               placeholder="Ej. 1, 0.5, 100"
-                                               class="mt-1 block w-full text-right border-slate-300 rounded-md shadow-sm text-sm focus:border-orange-500 focus:ring-orange-500" />
-                                    </div>
-                                    <div class="col-span-5 md:col-span-3">
-                                        <label class="text-xs font-medium text-slate-700">Precio (Q)</label>
-                                        <input type="text" inputmode="decimal" :name="`presentations[${idx}][price]`" x-model="row.price"
-                                               placeholder="0.00"
-                                               class="mt-1 block w-full text-right border-slate-300 rounded-md shadow-sm text-sm focus:border-orange-500 focus:ring-orange-500" />
-                                    </div>
-                                    <div class="col-span-1 md:col-span-2 flex justify-end">
-                                        <button type="button" @click="rows.splice(idx, 1)"
-                                                title="Eliminar"
-                                                class="px-2 py-2 bg-red-500 hover:bg-red-600 text-white rounded text-sm">✕</button>
+                                    <div class="text-xs mt-1 px-1"
+                                         :class="parseNum(row.units_factor) > 0 ? 'text-emerald-700' : 'text-red-600'"
+                                         x-show="row.label">
+                                        ⓘ Al vender <strong>1 <span x-text="row.label || 'presentacion'"></span></strong>
+                                        se descontaran <strong x-text="parseNum(row.units_factor).toFixed(4).replace(/0+$/,'').replace(/\.$/,'')"></strong>
+                                        del stock.
+                                        <span x-show="parseNum(row.units_factor) <= 0">⚠ Factor invalido</span>
                                     </div>
                                 </div>
                             </template>
                         </div>
-
-                        <p class="text-xs text-slate-500 mt-3 italic">
-                            Ejemplo: para tornillos en libra, media libra y caja —
-                            <code class="bg-white px-1 rounded">Libra · 1 unidad/lb · Q15</code>,
-                            <code class="bg-white px-1 rounded">Media libra · 0.5 · Q8</code>,
-                            <code class="bg-white px-1 rounded">Caja · 100 · Q80</code>
-                        </p>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -67,7 +67,8 @@
                                             </template>
                                         </td>
                                         <td class="px-2 py-1 text-right cursor-pointer">Q<span x-text="p.sale_price.toFixed(2)"></span></td>
-                                        <td class="px-2 py-1 text-right cursor-pointer" :class="p.stock <= 0 ? 'text-red-600' : ''" x-text="p.stock + ' ' + (p.unit || '')"></td>
+                                        <td class="px-2 py-1 text-right cursor-pointer" :class="p.stock <= 0 ? 'text-red-600' : ''"
+                                            x-text="formatStock(p.stock) + ' ' + (p.unit || '')"></td>
                                         <td class="px-2 py-1 text-right whitespace-nowrap">
                                             <div class="flex flex-wrap gap-1 justify-end">
                                                 <button type="button" :disabled="p.stock <= 0"
@@ -764,6 +765,12 @@
                 onPaymentChange() {
                     if (this.payment_method !== 'efectivo') this.paid_amount = this.total;
                     this.recalc();
+                },
+                formatStock(value) {
+                    const n = parseFloat(value);
+                    if (isNaN(n)) return '0';
+                    // Si es entero exacto, muestra sin decimales. Si no, hasta 2 decimales.
+                    return Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/0+$/,'').replace(/\.$/,'');
                 },
                 parseAmount(value) {
                     // Acepta tanto "100" como "100.50" o "100,50" (coma o punto)
