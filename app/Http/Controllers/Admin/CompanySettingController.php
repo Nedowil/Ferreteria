@@ -38,6 +38,11 @@ class CompanySettingController extends Controller
             'default_tax_rate' => ['required', 'numeric', 'min:0', 'max:100'],
             'prices_include_tax' => ['nullable', 'boolean'],
             'logo' => ['nullable', 'image', 'max:2048'],
+            'printer_mode' => ['required', 'in:system,bluetooth,network'],
+            'printer_ip' => ['nullable', 'ip'],
+            'printer_port' => ['nullable', 'integer', 'min:1', 'max:65535'],
+            'printer_width' => ['required', 'integer', 'in:58,80'],
+            'printer_auto_cut' => ['nullable', 'boolean'],
         ]);
 
         if ($request->hasFile('logo')) {
@@ -49,6 +54,8 @@ class CompanySettingController extends Controller
         unset($data['logo']);
 
         $data['prices_include_tax'] = $request->boolean('prices_include_tax');
+        $data['printer_auto_cut'] = $request->boolean('printer_auto_cut');
+        $data['printer_port'] = $data['printer_port'] ?? 9100;
 
         $company->update($data);
 

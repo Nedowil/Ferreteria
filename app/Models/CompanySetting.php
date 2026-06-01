@@ -29,12 +29,18 @@ class CompanySetting extends Model
         'default_tax_rate',
         'prices_include_tax',
         'phrases',
+        'printer_mode',
+        'printer_ip',
+        'printer_port',
+        'printer_width',
+        'printer_auto_cut',
     ];
 
     protected $casts = [
         'default_tax_rate' => 'decimal:2',
         'prices_include_tax' => 'boolean',
         'phrases' => 'array',
+        'printer_auto_cut' => 'boolean',
     ];
 
     public static function current(): self

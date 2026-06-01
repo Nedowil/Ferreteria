@@ -54,8 +54,12 @@
 <body>
 
 <div class="toolbar no-print">
-    <a href="#" class="btn" onclick="window.print(); return false;">🖨 Imprimir</a>
+    @php $printerMode = $company->printer_mode ?: 'system'; @endphp
+    <a href="#" class="btn" onclick="printTicket(); return false;" id="btnPrint">🖨 Imprimir
+        @if ($printerMode === 'bluetooth') (Bluetooth) @elseif ($printerMode === 'network') (Red) @endif
+    </a>
     <a href="{{ route('admin.ventas.show', $sale) }}" class="btn gray">Cerrar</a>
+    <span id="printStatus" style="display:none; color:#fff; margin-left:6px; font-family:sans-serif; font-size:12px;"></span>
 </div>
 
 <!-- HEADER -->
@@ -176,7 +180,111 @@
 <div class="cert" style="margin-top:6px;">Hecho por Ferreteria Central</div>
 
 <script>
-    window.addEventListener('load', () => setTimeout(() => window.print(), 300));
+    const PRINTER_MODE = @json($printerMode);
+    const SALE_ID = {{ $sale->id }};
+    const ESCPOS_URL = @json(route('admin.ventas.escpos', $sale));
+    const NETWORK_URL = @json(route('admin.ventas.print_network', $sale));
+    const CSRF = '{{ csrf_token() }}';
+
+    // UUIDs estandar usados por la mayoria de impresoras termicas BLE
+    // (Xprinter, Goojprt PT-210, Munbyn, Bixolon SPP-R200, etc.)
+    const BT_SERVICE_UUID = '000018f0-0000-1000-8000-00805f9b34fb';
+    const BT_CHAR_UUID    = '00002af1-0000-1000-8000-00805f9b34fb';
+
+    function setStatus(msg, ok) {
+        const el = document.getElementById('printStatus');
+        el.textContent = msg;
+        el.style.display = 'inline';
+        el.style.color = ok === false ? '#fecaca' : '#bbf7d0';
+    }
+
+    async function printTicket() {
+        const btn = document.getElementById('btnPrint');
+        btn.style.pointerEvents = 'none';
+        try {
+            if (PRINTER_MODE === 'bluetooth') {
+                await printBluetooth();
+            } else if (PRINTER_MODE === 'network') {
+                await printNetwork();
+            } else {
+                window.print();
+            }
+        } finally {
+            btn.style.pointerEvents = 'auto';
+        }
+    }
+
+    async function fetchEscposBytes() {
+        const res = await fetch(ESCPOS_URL, { headers: { 'Accept': 'application/json' } });
+        if (!res.ok) throw new Error('No se pudo generar el ticket');
+        const data = await res.json();
+        return Uint8Array.from(atob(data.bytes), c => c.charCodeAt(0));
+    }
+
+    async function printBluetooth() {
+        if (!('bluetooth' in navigator)) {
+            alert('Tu navegador no soporta Bluetooth Web. Usa Chrome o Edge en Windows/Android/macOS, sobre HTTPS.');
+            return;
+        }
+        setStatus('Buscando impresora...');
+        const bytes = await fetchEscposBytes();
+        let device;
+        try {
+            device = await navigator.bluetooth.requestDevice({
+                acceptAllDevices: true,
+                optionalServices: [BT_SERVICE_UUID],
+            });
+        } catch (e) {
+            setStatus('Cancelado por el usuario', false);
+            return;
+        }
+        try {
+            setStatus('Conectando a ' + (device.name || 'impresora') + '...');
+            const server = await device.gatt.connect();
+            const service = await server.getPrimaryService(BT_SERVICE_UUID);
+            const characteristic = await service.getCharacteristic(BT_CHAR_UUID);
+            setStatus('Imprimiendo...');
+            const CHUNK = 180;
+            for (let i = 0; i < bytes.length; i += CHUNK) {
+                await characteristic.writeValueWithoutResponse(bytes.slice(i, i + CHUNK));
+            }
+            setStatus('✓ Ticket impreso');
+            setTimeout(() => device.gatt.disconnect(), 1500);
+        } catch (e) {
+            setStatus('Error: ' + e.message, false);
+        }
+    }
+
+    async function printNetwork() {
+        setStatus('Enviando a impresora de red...');
+        try {
+            const res = await fetch(NETWORK_URL, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': CSRF,
+                },
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                setStatus('Error: ' + (data.error || res.statusText), false);
+                return;
+            }
+            setStatus('✓ Ticket enviado');
+        } catch (e) {
+            setStatus('Error de red: ' + e.message, false);
+        }
+    }
+
+    // Auto-imprimir solo cuando el modo es Sistema (los otros requieren clic del usuario por seguridad)
+    window.addEventListener('load', () => {
+        if (PRINTER_MODE === 'system') {
+            setTimeout(() => window.print(), 300);
+        } else if (PRINTER_MODE === 'network') {
+            setTimeout(() => printTicket(), 300);
+        }
+        // Bluetooth siempre requiere clic del usuario (API de seguridad del navegador)
+    });
 </script>
 
 </body>

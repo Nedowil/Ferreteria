@@ -121,6 +121,79 @@
                         @endif
                     </div>
 
+                    <!-- IMPRESORA DE TICKETS -->
+                    <div class="border-l-4 border-orange-400 bg-orange-50 p-4 rounded"
+                         x-data="{ mode: @js(old('printer_mode', $company->printer_mode ?: 'system')) }">
+                        <h3 class="font-semibold text-slate-800 flex items-center gap-2">
+                            🖨 Impresora de tickets
+                        </h3>
+                        <p class="text-xs text-slate-600 mt-1">
+                            Elige como se imprimen los tickets de venta. El <strong>corte automatico</strong> solo aplica
+                            en modos Bluetooth y Red (las impresoras del sistema lo manejan con su driver).
+                        </p>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-2 mt-3">
+                            <label class="flex items-start gap-2 p-3 bg-white rounded border cursor-pointer"
+                                   :class="mode === 'system' ? 'border-orange-500 ring-2 ring-orange-200' : 'border-slate-200'">
+                                <input type="radio" name="printer_mode" value="system" x-model="mode" class="mt-1" />
+                                <span>
+                                    <span class="font-semibold text-sm">🖥 Sistema</span>
+                                    <span class="block text-xs text-slate-500">Usa el dialogo de impresion del navegador (cualquier impresora instalada por USB, AirPrint, etc.)</span>
+                                </span>
+                            </label>
+                            <label class="flex items-start gap-2 p-3 bg-white rounded border cursor-pointer"
+                                   :class="mode === 'bluetooth' ? 'border-orange-500 ring-2 ring-orange-200' : 'border-slate-200'">
+                                <input type="radio" name="printer_mode" value="bluetooth" x-model="mode" class="mt-1" />
+                                <span>
+                                    <span class="font-semibold text-sm">📶 Bluetooth</span>
+                                    <span class="block text-xs text-slate-500">El navegador busca la impresora y se conecta. Requiere Chrome/Edge en Windows, Android o macOS.</span>
+                                </span>
+                            </label>
+                            <label class="flex items-start gap-2 p-3 bg-white rounded border cursor-pointer"
+                                   :class="mode === 'network' ? 'border-orange-500 ring-2 ring-orange-200' : 'border-slate-200'">
+                                <input type="radio" name="printer_mode" value="network" x-model="mode" class="mt-1" />
+                                <span>
+                                    <span class="font-semibold text-sm">🌐 Red (RJ45/WiFi)</span>
+                                    <span class="block text-xs text-slate-500">Impresora con IP fija conectada al router por cable o WiFi.</span>
+                                </span>
+                            </label>
+                        </div>
+
+                        <div x-show="mode === 'network'" x-cloak class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
+                            <div>
+                                <x-input-label for="printer_ip" value="IP de la impresora" />
+                                <x-text-input id="printer_ip" name="printer_ip" type="text"
+                                              :value="old('printer_ip', $company->printer_ip)"
+                                              placeholder="192.168.1.100" class="mt-1 block w-full" />
+                                <p class="text-xs text-slate-500 mt-1">La consultas en la prueba de impresion de la propia impresora.</p>
+                            </div>
+                            <div>
+                                <x-input-label for="printer_port" value="Puerto" />
+                                <x-text-input id="printer_port" name="printer_port" type="text" inputmode="numeric"
+                                              :value="old('printer_port', $company->printer_port ?: 9100)"
+                                              placeholder="9100" class="mt-1 block w-full" />
+                                <p class="text-xs text-slate-500 mt-1">9100 es el estandar (RAW).</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
+                            <div>
+                                <x-input-label for="printer_width" value="Ancho de papel" />
+                                <select id="printer_width" name="printer_width" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                    <option value="80" @selected(old('printer_width', $company->printer_width ?: 80) == 80)>80 mm (estandar)</option>
+                                    <option value="58" @selected(old('printer_width', $company->printer_width) == 58)>58 mm (mini)</option>
+                                </select>
+                            </div>
+                            <div class="md:col-span-2 flex items-end">
+                                <label class="inline-flex items-center gap-2">
+                                    <input type="checkbox" name="printer_auto_cut" value="1"
+                                           @checked(old('printer_auto_cut', $company->printer_auto_cut ?? true)) class="rounded" />
+                                    <span>✂ Corte automatico al final del ticket</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="flex gap-3">
                         <x-primary-button>Guardar</x-primary-button>
                     </div>

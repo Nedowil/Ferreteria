@@ -171,6 +171,39 @@ class SaleController extends Controller
         return view('admin.sales.ticket', ['sale' => $venta]);
     }
 
+    public function escposBytes(Sale $venta, \App\Services\Printer\EscPosBuilder $builder): JsonResponse
+    {
+        $venta->load(['customer', 'items.product', 'electronicInvoice']);
+        $bytes = $builder->buildReceipt($venta, \App\Models\CompanySetting::current());
+
+        return response()->json(['bytes' => base64_encode($bytes)]);
+    }
+
+    public function printNetwork(
+        Sale $venta,
+        \App\Services\Printer\EscPosBuilder $builder,
+        \App\Services\Printer\NetworkPrinter $printer,
+    ): JsonResponse {
+        $company = \App\Models\CompanySetting::current();
+        if (! $company->printer_ip) {
+            return response()->json(['error' => 'No hay impresora de red configurada en Configuracion del emisor.'], 422);
+        }
+
+        $venta->load(['customer', 'items.product', 'electronicInvoice']);
+
+        try {
+            $printer->send(
+                $company->printer_ip,
+                (int) ($company->printer_port ?: 9100),
+                $builder->buildReceipt($venta, $company),
+            );
+        } catch (\Throwable $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+
+        return response()->json(['ok' => true]);
+    }
+
     public function cancel(Sale $venta): RedirectResponse
     {
         try {

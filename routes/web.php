@@ -124,6 +124,8 @@ Route::middleware(['auth', 'verified'])
             Route::get('ventas/{venta}/modal', [SaleController::class, 'modal'])->name('ventas.modal');
             Route::get('ventas/{venta}', [SaleController::class, 'show'])->name('ventas.show');
             Route::get('ventas/{venta}/ticket', [SaleController::class, 'ticket'])->name('ventas.ticket');
+            Route::get('ventas/{venta}/escpos', [SaleController::class, 'escposBytes'])->name('ventas.escpos');
+            Route::post('ventas/{venta}/imprimir-red', [SaleController::class, 'printNetwork'])->name('ventas.print_network');
         });
 
         Route::middleware('permission:ventas.crear')->group(function () {
