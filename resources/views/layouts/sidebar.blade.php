@@ -1,3 +1,4 @@
+@php $sidebarCompany = \App\Models\CompanySetting::current(); @endphp
 <aside class="fixed inset-y-0 left-0 bg-slate-900 text-slate-200 z-40 transform transition-all duration-300 lg:translate-x-0"
        :class="[
            sidebarOpen ? 'translate-x-0' : '-translate-x-full',
@@ -6,12 +7,21 @@
 
     <!-- Logo / brand -->
     <div class="h-16 flex items-center px-5 border-b border-slate-800" :class="sidebarCollapsed ? 'justify-center' : 'gap-3'">
-        <div class="w-10 h-10 flex-shrink-0 rounded-lg bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center text-2xl shadow-lg">
-            🔧
-        </div>
+        @if ($sidebarCompany->logo_path)
+            <div class="w-10 h-10 flex-shrink-0 rounded-lg bg-white flex items-center justify-center overflow-hidden shadow-lg p-1">
+                <img src="{{ asset('storage/'.$sidebarCompany->logo_path) }}" alt="logo" class="max-w-full max-h-full object-contain" />
+            </div>
+        @else
+            <div class="w-10 h-10 flex-shrink-0 rounded-lg bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center text-2xl shadow-lg">
+                🔧
+            </div>
+        @endif
         <div x-show="!sidebarCollapsed" x-cloak>
-            <div class="text-white font-bold leading-tight">Ferreteria</div>
-            <div class="text-orange-400 text-sm font-semibold leading-tight">Central</div>
+            @php
+                $parts = explode(' ', $sidebarCompany->commercial_name ?: 'Ferreteria Central', 2);
+            @endphp
+            <div class="text-white font-bold leading-tight">{{ $parts[0] }}</div>
+            <div class="text-orange-400 text-sm font-semibold leading-tight">{{ $parts[1] ?? '' }}</div>
         </div>
     </div>
 

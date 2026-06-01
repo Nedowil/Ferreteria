@@ -23,15 +23,23 @@
         </style>
     </head>
     <body class="font-sans antialiased">
+        @php $company = \App\Models\CompanySetting::current(); @endphp
         <div class="min-h-screen flex flex-col md:flex-row">
 
             <!-- Lado izquierdo: branding -->
             <div class="hero-pattern md:w-1/2 flex flex-col justify-center items-center p-8 text-white">
                 <div class="text-center max-w-md">
-                    <div class="inline-flex items-center justify-center w-24 h-24 rounded-2xl bg-gradient-to-br from-orange-500 to-red-600 shadow-2xl mb-6 text-6xl">
-                        🔧
-                    </div>
-                    <h1 class="text-4xl font-bold mb-2">Ferreteria Central</h1>
+                    @if ($company->logo_path)
+                        <div class="inline-flex items-center justify-center bg-white rounded-2xl shadow-2xl mb-6 p-3 overflow-hidden">
+                            <img src="{{ asset('storage/'.$company->logo_path) }}" alt="{{ $company->commercial_name }}"
+                                 class="h-32 w-auto object-contain" />
+                        </div>
+                    @else
+                        <div class="inline-flex items-center justify-center w-24 h-24 rounded-2xl bg-gradient-to-br from-orange-500 to-red-600 shadow-2xl mb-6 text-6xl">
+                            🔧
+                        </div>
+                    @endif
+                    <h1 class="text-4xl font-bold mb-2">{{ $company->commercial_name }}</h1>
                     <p class="text-orange-300 text-lg mb-8">Sistema de gestion integral</p>
 
                     <div class="grid grid-cols-3 gap-3 mt-12">
@@ -71,8 +79,13 @@
             <div class="md:w-1/2 flex flex-col justify-center items-center p-8 bg-slate-50">
                 <div class="w-full max-w-md">
                     <div class="md:hidden text-center mb-6">
-                        <div class="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 text-4xl mb-2">🔧</div>
-                        <h1 class="text-2xl font-bold text-slate-800">Ferreteria Central</h1>
+                        @if ($company->logo_path)
+                            <img src="{{ asset('storage/'.$company->logo_path) }}" alt="{{ $company->commercial_name }}"
+                                 class="h-20 w-auto mx-auto mb-2" />
+                        @else
+                            <div class="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 text-4xl mb-2">🔧</div>
+                        @endif
+                        <h1 class="text-2xl font-bold text-slate-800">{{ $company->commercial_name }}</h1>
                     </div>
 
                     <div class="bg-white rounded-2xl shadow-xl p-8">
