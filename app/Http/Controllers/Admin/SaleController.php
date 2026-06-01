@@ -72,21 +72,32 @@ class SaleController extends Controller
             });
         }
 
-        $products = $query->orderBy('name')->limit(15)->get()->map(fn ($p) => [
-            'id' => $p->id,
-            'sku' => $p->sku,
-            'barcode' => $p->barcode,
-            'name' => $p->name,
-            'unit' => $p->unit?->abbreviation,
-            'sale_price' => (float) $p->sale_price,
-            'stock' => $p->stockFor($branchId),
-            'presentations' => $p->presentations->map(fn ($pr) => [
-                'label' => $pr->label,
-                'units_factor' => (float) $pr->units_factor,
-                'price' => (float) $pr->price,
-            ])->values(),
-            'exact_barcode_match' => $term !== '' && $p->barcode === $term,
-        ]);
+        $products = $query->orderBy('name')->limit(15)->get()->map(function ($p) use ($branchId, $term) {
+            $stock = $p->stockFor($branchId);
+
+            return [
+                'id' => $p->id,
+                'sku' => $p->sku,
+                'barcode' => $p->barcode,
+                'name' => $p->name,
+                'unit' => $p->unit?->abbreviation,
+                'base_unit_label' => $p->base_unit_label ?: 'unidad',
+                'container_label' => $p->container_label,
+                'container_factor' => $p->container_factor ? (float) $p->container_factor : null,
+                'container_price' => ($p->container_factor && $p->sale_price)
+                    ? round((float) $p->sale_price * (float) $p->container_factor, 2)
+                    : null,
+                'sale_price' => (float) $p->sale_price,
+                'stock' => $stock,
+                'stock_formatted' => $p->formatStockMixed($stock),
+                'presentations' => $p->presentations->map(fn ($pr) => [
+                    'label' => $pr->label,
+                    'units_factor' => (float) $pr->units_factor,
+                    'price' => (float) $pr->price,
+                ])->values(),
+                'exact_barcode_match' => $term !== '' && $p->barcode === $term,
+            ];
+        });
 
         return response()->json($products);
     }

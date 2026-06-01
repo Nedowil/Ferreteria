@@ -198,19 +198,38 @@ class ProductController extends Controller
             'category_id' => ['nullable', 'exists:categories,id'],
             'brand_id' => ['nullable', 'exists:brands,id'],
             'unit_id' => ['nullable', 'exists:units,id'],
+            'base_unit_label' => ['nullable', 'string', 'max:30'],
+            'container_label' => ['nullable', 'string', 'max:30'],
+            'container_factor' => ['nullable', 'numeric', 'gt:0'],
             'purchase_price' => ['required', 'numeric', 'min:0'],
             'sale_price' => ['required', 'numeric', 'min:0'],
             'stock' => ['nullable', 'numeric', 'min:0'],
+            'stock_input_mode' => ['nullable', 'in:base,container'],
             'min_stock' => ['required', 'numeric', 'min:0'],
             'image' => ['nullable', 'image', 'max:2048'],
             'presentations' => ['nullable', 'array'],
             'presentations.*.label' => ['nullable', 'string', 'max:30'],
-            'presentations.*.units_factor' => ['nullable', 'numeric', 'min:0.001'],
+            'presentations.*.units_factor' => ['nullable', 'numeric', 'gt:0'],
             'presentations.*.price' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $data['active'] = $request->boolean('active');
         $data['stock'] = $data['stock'] ?? 0;
+        $data['base_unit_label'] = $data['base_unit_label'] ?: 'unidad';
+
+        // Si el usuario ingreso el stock inicial en cajas/rollos, lo convertimos a unidad base
+        $mode = $data['stock_input_mode'] ?? 'base';
+        if ($mode === 'container' && ! empty($data['container_factor'])) {
+            $data['stock'] = (float) $data['stock'] * (float) $data['container_factor'];
+        }
+        unset($data['stock_input_mode']);
+
+        // Empaque opcional: si falta etiqueta o factor, se limpia
+        if (empty($data['container_label']) || empty($data['container_factor'])) {
+            $data['container_label'] = null;
+            $data['container_factor'] = null;
+        }
+
         unset($data['image']);
 
         return $data;

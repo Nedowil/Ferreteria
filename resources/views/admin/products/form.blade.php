@@ -84,6 +84,50 @@
                         </div>
                     </div>
 
+                    <!-- UNIDAD BASE Y EMPAQUE -->
+                    <div class="border-l-4 border-sky-500 bg-sky-50 p-4 rounded">
+                        <h3 class="font-semibold text-slate-800 flex items-center gap-2">
+                            📏 Unidad base y empaque
+                        </h3>
+                        <p class="text-xs text-slate-600 mt-1">
+                            La <strong>unidad base</strong> es la mas pequena en la que se mide el stock
+                            (libra, onza, metro, unidad). El sistema descuenta el stock siempre en esa unidad.
+                            <br>
+                            El <strong>empaque</strong> es opcional: caja, rollo, fardo, bulto.
+                            Sirve para que cuando compres o vendas un contenedor el sistema haga la conversion solo.
+                        </p>
+                        <p class="text-xs text-slate-600 italic mt-1">
+                            Ej. Clavos: base = libra, empaque = caja de 50 libras.<br>
+                            Ej. Nylon: base = metro, empaque = rollo de 100 metros.<br>
+                            Ej. Tachuelas: base = onza, empaque = caja de 16 onzas.
+                        </p>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+                            <div>
+                                <x-input-label for="base_unit_label" value="Unidad base *" />
+                                <x-text-input id="base_unit_label" name="base_unit_label" type="text"
+                                              class="mt-1 block w-full"
+                                              placeholder="libra, onza, metro, unidad..."
+                                              :value="old('base_unit_label', $product->base_unit_label ?: 'unidad')" required />
+                            </div>
+                            <div>
+                                <x-input-label for="container_label" value="Empaque (opcional)" />
+                                <x-text-input id="container_label" name="container_label" type="text"
+                                              class="mt-1 block w-full"
+                                              placeholder="caja, rollo, fardo, bulto..."
+                                              :value="old('container_label', $product->container_label)" />
+                            </div>
+                            <div>
+                                <x-input-label for="container_factor" value="Unidades base por empaque" />
+                                <x-text-input id="container_factor" name="container_factor" type="text" inputmode="decimal"
+                                              class="mt-1 block w-full"
+                                              placeholder="50, 100, 16..."
+                                              :value="old('container_factor', $product->container_factor ? rtrim(rtrim(number_format($product->container_factor, 4, '.', ''),'0'),'.') : '')" />
+                                <p class="text-xs text-slate-500 mt-1">Ej. 50 libras por caja, 100 metros por rollo</p>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <x-input-label for="purchase_price" value="Precio de compra *" />
@@ -93,7 +137,7 @@
                             <x-input-error :messages="$errors->get('purchase_price')" class="mt-2" />
                         </div>
                         <div>
-                            <x-input-label for="sale_price" value="Precio de venta (unidad) *" />
+                            <x-input-label for="sale_price" value="Precio de venta (por unidad base) *" />
                             <x-text-input id="sale_price" name="sale_price" type="text" inputmode="decimal"
                                           class="mt-1 block w-full"
                                           :value="old('sale_price', $product->sale_price)" required />
@@ -182,23 +226,41 @@
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         @unless ($product->exists)
-                            <div>
+                            <div x-data="{
+                                qty: @js(old('stock', 0)),
+                                mode: @js(old('stock_input_mode', 'base')),
+                                get baseLabel(){ return document.getElementById('base_unit_label')?.value || 'unidad'; },
+                                get containerLabel(){ return document.getElementById('container_label')?.value || ''; },
+                                get factor(){ const v = parseFloat(document.getElementById('container_factor')?.value || 0); return isNaN(v)?0:v; },
+                                get totalBase(){ return this.mode === 'container' ? (parseFloat(this.qty)||0) * this.factor : (parseFloat(this.qty)||0); },
+                            }">
                                 <x-input-label for="stock" value="Stock inicial" />
-                                <x-text-input id="stock" name="stock" type="text" inputmode="decimal"
-                                              class="mt-1 block w-full"
-                                              :value="old('stock', $product->stock)" />
+                                <div class="flex gap-2 mt-1">
+                                    <input id="stock" name="stock" type="text" inputmode="decimal"
+                                           x-model="qty"
+                                           class="block w-full border-gray-300 rounded-md shadow-sm" />
+                                    <select name="stock_input_mode" x-model="mode"
+                                            class="border-gray-300 rounded-md shadow-sm text-sm">
+                                        <option value="base" x-text="baseLabel"></option>
+                                        <option value="container" x-show="containerLabel && factor > 0" x-text="containerLabel + (containerLabel.endsWith('s') ? '' : 's')"></option>
+                                    </select>
+                                </div>
+                                <p class="text-xs text-emerald-700 mt-1" x-show="mode === 'container' && factor > 0">
+                                    = <strong x-text="totalBase"></strong> <span x-text="baseLabel"></span> en stock
+                                </p>
                             </div>
                         @else
                             <div>
                                 <x-input-label value="Stock actual" />
                                 <div class="mt-2 text-lg font-semibold">
-                                    {{ rtrim(rtrim(number_format($product->stock, 2, '.', ''), '0'), '.') }}
+                                    {{ $product->formatStockMixed() }}
                                 </div>
+                                <p class="text-xs text-gray-500">{{ rtrim(rtrim(number_format($product->stock, 4, '.', ''), '0'), '.') }} {{ $product->base_unit_label ?: 'unidad' }} en total.</p>
                                 <p class="text-xs text-gray-500">Para modificar el stock usa <a class="underline" href="{{ route('admin.inventario.show', $product) }}">Movimientos de inventario</a>.</p>
                             </div>
                         @endunless
                         <div>
-                            <x-input-label for="min_stock" value="Stock minimo *" />
+                            <x-input-label for="min_stock" value="Stock minimo (en unidad base) *" />
                             <x-text-input id="min_stock" name="min_stock" type="text" inputmode="decimal"
                                           class="mt-1 block w-full"
                                           :value="old('min_stock', $product->min_stock)" required />

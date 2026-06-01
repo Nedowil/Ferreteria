@@ -53,29 +53,39 @@
                                 </thead>
                                 <tbody>
                                 <template x-for="p in results" :key="p.id">
-                                    <tr class="border-t hover:bg-indigo-50"
-                                        @click="if (!(p.presentations && p.presentations.length)) addItem(p, null)">
-                                        <td class="px-2 py-1 font-mono text-xs cursor-pointer" x-text="p.sku"></td>
-                                        <td class="px-2 py-1 cursor-pointer">
+                                    <tr class="border-t hover:bg-indigo-50">
+                                        <td class="px-2 py-1 font-mono text-xs" x-text="p.sku"></td>
+                                        <td class="px-2 py-1">
                                             <div x-text="p.name"></div>
+                                            <div class="text-xs text-slate-500" x-show="p.container_label">
+                                                📦 1 <span x-text="p.container_label"></span> = <span x-text="p.container_factor"></span> <span x-text="p.base_unit_label"></span>
+                                                <template x-if="p.container_price"><span> · Q<span x-text="p.container_price.toFixed(2)"></span>/<span x-text="p.container_label"></span></span></template>
+                                            </div>
                                             <template x-if="p.presentations && p.presentations.length">
-                                                <div class="text-xs text-amber-700 font-semibold flex flex-wrap gap-x-2">
+                                                <div class="text-xs text-amber-700 flex flex-wrap gap-x-2">
                                                     <template x-for="pr in p.presentations" :key="pr.label">
-                                                        <span>📦 <span x-text="pr.label"></span>: Q<span x-text="pr.price.toFixed(2)"></span> (<span x-text="pr.units_factor"></span> uds)</span>
+                                                        <span><span x-text="pr.label"></span>: Q<span x-text="pr.price.toFixed(2)"></span></span>
                                                     </template>
                                                 </div>
                                             </template>
                                         </td>
-                                        <td class="px-2 py-1 text-right cursor-pointer">Q<span x-text="p.sale_price.toFixed(2)"></span></td>
-                                        <td class="px-2 py-1 text-right cursor-pointer" :class="p.stock <= 0 ? 'text-red-600' : ''"
-                                            x-text="formatStock(p.stock) + ' ' + (p.unit || '')"></td>
+                                        <td class="px-2 py-1 text-right">Q<span x-text="p.sale_price.toFixed(2)"></span>/<span x-text="p.base_unit_label"></span></td>
+                                        <td class="px-2 py-1 text-right text-xs" :class="p.stock <= 0 ? 'text-red-600' : 'text-slate-700'"
+                                            x-text="p.stock_formatted"></td>
                                         <td class="px-2 py-1 text-right whitespace-nowrap">
                                             <div class="flex flex-wrap gap-1 justify-end">
                                                 <button type="button" :disabled="p.stock <= 0"
                                                         @click.stop="addItem(p, null)"
                                                         class="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs disabled:bg-gray-300">
-                                                    + Unidad
+                                                    + 1 <span x-text="p.base_unit_label"></span>
                                                 </button>
+                                                <template x-if="p.container_label && p.container_factor">
+                                                    <button type="button" :disabled="p.stock < p.container_factor"
+                                                            @click.stop="addItem(p, { label: p.container_label, units_factor: p.container_factor, price: p.container_price || (p.sale_price * p.container_factor) })"
+                                                            class="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs disabled:bg-gray-300">
+                                                        + <span x-text="p.container_label"></span>
+                                                    </button>
+                                                </template>
                                                 <template x-for="pr in (p.presentations || [])" :key="pr.label">
                                                     <button type="button" :disabled="p.stock < pr.units_factor"
                                                             @click.stop="addItem(p, pr)"
