@@ -104,11 +104,11 @@
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
                             <div>
-                                <x-input-label for="base_unit_label" value="Unidad base *" />
+                                <x-input-label for="base_unit_label" value="Unidad base" />
                                 <x-text-input id="base_unit_label" name="base_unit_label" type="text"
                                               class="mt-1 block w-full"
                                               placeholder="libra, onza, metro, unidad..."
-                                              :value="old('base_unit_label', $product->base_unit_label ?: 'unidad')" required />
+                                              :value="old('base_unit_label', $product->base_unit_label)" />
                                 <p class="text-xs text-slate-500 mt-1">El precio de venta y stock minimo se ingresan en esta unidad.</p>
                             </div>
                             <div>
