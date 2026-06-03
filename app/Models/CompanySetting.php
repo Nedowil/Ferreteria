@@ -34,6 +34,12 @@ class CompanySetting extends Model
         'printer_port',
         'printer_width',
         'printer_auto_cut',
+        'zebra_mode',
+        'zebra_ip',
+        'zebra_port',
+        'zebra_label_width',
+        'zebra_label_height',
+        'zebra_dpi',
     ];
 
     protected $casts = [

@@ -60,6 +60,7 @@ Route::middleware(['auth', 'verified'])
         Route::middleware('permission:productos.ver')->group(function () {
             Route::get('productos', [ProductController::class, 'index'])->name('productos.index');
             Route::get('productos/{producto}/etiqueta', [ProductController::class, 'label'])->name('productos.label');
+            Route::post('productos/{producto}/etiqueta-zpl', [ProductController::class, 'labelZpl'])->name('productos.label_zpl');
             Route::get('inventario/bajo-stock', [InventoryController::class, 'lowStock'])->name('inventario.low_stock');
             Route::get('inventario/{producto}', [InventoryController::class, 'show'])->name('inventario.show');
         });

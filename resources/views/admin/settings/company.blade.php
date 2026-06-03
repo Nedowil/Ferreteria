@@ -194,6 +194,79 @@
                         </div>
                     </div>
 
+                    <!-- IMPRESORA DE ETIQUETAS ZEBRA -->
+                    <div class="border-l-4 border-emerald-500 bg-emerald-50 p-4 rounded"
+                         x-data="{ zmode: @js(old('zebra_mode', $company->zebra_mode ?: 'system')) }">
+                        <h3 class="font-semibold text-slate-800 flex items-center gap-2">
+                            🦓 Impresora Zebra (etiquetas con codigo de barras)
+                        </h3>
+                        <p class="text-xs text-slate-600 mt-1">
+                            Configuracion independiente para tu impresora de etiquetas (ZD220, ZD230, ZD420, GK420t...).
+                            Usá <strong>Sistema</strong> si tu Zebra esta por USB con driver instalado.
+                            Usá <strong>Red</strong> si tu Zebra tiene Ethernet — el sistema le envia ZPL nativo (codigos mas nitidos).
+                        </p>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3">
+                            <label class="flex items-start gap-2 p-3 bg-white rounded border cursor-pointer"
+                                   :class="zmode === 'system' ? 'border-emerald-500 ring-2 ring-emerald-200' : 'border-slate-200'">
+                                <input type="radio" name="zebra_mode" value="system" x-model="zmode" class="mt-1" />
+                                <span>
+                                    <span class="font-semibold text-sm">🖥 Sistema (USB)</span>
+                                    <span class="block text-xs text-slate-500">Dialogo de impresion del navegador con el driver de Zebra.</span>
+                                </span>
+                            </label>
+                            <label class="flex items-start gap-2 p-3 bg-white rounded border cursor-pointer"
+                                   :class="zmode === 'network' ? 'border-emerald-500 ring-2 ring-emerald-200' : 'border-slate-200'">
+                                <input type="radio" name="zebra_mode" value="network" x-model="zmode" class="mt-1" />
+                                <span>
+                                    <span class="font-semibold text-sm">🌐 Red (RJ45) — ZPL nativo</span>
+                                    <span class="block text-xs text-slate-500">Codigos mas nitidos y rapidos. Requiere modelo con Ethernet.</span>
+                                </span>
+                            </label>
+                        </div>
+
+                        <div x-show="zmode === 'network'" x-cloak class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
+                            <div>
+                                <x-input-label for="zebra_ip" value="IP de la Zebra" />
+                                <x-text-input id="zebra_ip" name="zebra_ip" type="text"
+                                              :value="old('zebra_ip', $company->zebra_ip)"
+                                              placeholder="192.168.1.201" class="mt-1 block w-full" />
+                            </div>
+                            <div>
+                                <x-input-label for="zebra_port" value="Puerto" />
+                                <x-text-input id="zebra_port" name="zebra_port" type="text" inputmode="numeric"
+                                              :value="old('zebra_port', $company->zebra_port ?: 9100)"
+                                              placeholder="9100" class="mt-1 block w-full" />
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
+                            <div>
+                                <x-input-label for="zebra_label_width" value="Ancho etiqueta (mm)" />
+                                <x-text-input id="zebra_label_width" name="zebra_label_width" type="text" inputmode="numeric"
+                                              :value="old('zebra_label_width', $company->zebra_label_width ?: 50)"
+                                              class="mt-1 block w-full" />
+                            </div>
+                            <div>
+                                <x-input-label for="zebra_label_height" value="Alto etiqueta (mm)" />
+                                <x-text-input id="zebra_label_height" name="zebra_label_height" type="text" inputmode="numeric"
+                                              :value="old('zebra_label_height', $company->zebra_label_height ?: 25)"
+                                              class="mt-1 block w-full" />
+                            </div>
+                            <div>
+                                <x-input-label for="zebra_dpi" value="DPI" />
+                                <select id="zebra_dpi" name="zebra_dpi" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                    <option value="203" @selected(old('zebra_dpi', $company->zebra_dpi ?: 203) == 203)>203 dpi (estandar ZD220/ZD230)</option>
+                                    <option value="300" @selected(old('zebra_dpi', $company->zebra_dpi) == 300)>300 dpi (alta resolucion)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-2 italic">
+                            Tamaños comunes: 50×25mm (más usado en ferreteria), 50×30mm, 40×20mm. Para ver/imprimir en este formato:
+                            entra al producto, click en 🖨 Imprimir etiqueta y elegí "🦓 Zebra".
+                        </p>
+                    </div>
+
                     <div class="flex gap-3">
                         <x-primary-button>Guardar</x-primary-button>
                     </div>

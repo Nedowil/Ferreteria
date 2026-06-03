@@ -178,12 +178,40 @@ class ProductController extends Controller
     public function label(Request $request, Product $producto): View
     {
         $copias = max(1, min(60, (int) $request->input('copias', 1)));
+        $formato = $request->string('formato')->toString(); // '' (A4 grid) | 'zebra'
 
         return view('admin.products.label', [
             'product' => $producto,
             'company' => CompanySetting::current(),
             'copias' => $copias,
+            'formato' => $formato,
         ]);
+    }
+
+    public function labelZpl(
+        Request $request,
+        Product $producto,
+        \App\Services\Printer\ZplBuilder $zpl,
+        \App\Services\Printer\NetworkPrinter $printer,
+    ): \Illuminate\Http\JsonResponse {
+        $copias = max(1, min(60, (int) $request->input('copias', 1)));
+        $company = CompanySetting::current();
+
+        if (! $company->zebra_ip) {
+            return response()->json(['error' => 'No hay impresora Zebra de red configurada en Configuracion del emisor.'], 422);
+        }
+
+        try {
+            $printer->send(
+                $company->zebra_ip,
+                (int) ($company->zebra_port ?: 9100),
+                $zpl->buildLabel($producto, $company, $copias),
+            );
+        } catch (\Throwable $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+
+        return response()->json(['ok' => true]);
     }
 
     private function validated(Request $request, ?int $ignoreId = null): array

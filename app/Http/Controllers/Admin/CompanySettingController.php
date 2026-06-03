@@ -43,6 +43,12 @@ class CompanySettingController extends Controller
             'printer_port' => ['nullable', 'integer', 'min:1', 'max:65535'],
             'printer_width' => ['required', 'integer', 'in:58,80'],
             'printer_auto_cut' => ['nullable', 'boolean'],
+            'zebra_mode' => ['required', 'in:system,network'],
+            'zebra_ip' => ['nullable', 'ip'],
+            'zebra_port' => ['nullable', 'integer', 'min:1', 'max:65535'],
+            'zebra_label_width' => ['nullable', 'integer', 'min:20', 'max:200'],
+            'zebra_label_height' => ['nullable', 'integer', 'min:15', 'max:200'],
+            'zebra_dpi' => ['nullable', 'integer', 'in:203,300'],
         ]);
 
         if ($request->hasFile('logo')) {
@@ -56,6 +62,10 @@ class CompanySettingController extends Controller
         $data['prices_include_tax'] = $request->boolean('prices_include_tax');
         $data['printer_auto_cut'] = $request->boolean('printer_auto_cut');
         $data['printer_port'] = $data['printer_port'] ?? 9100;
+        $data['zebra_port'] = $data['zebra_port'] ?? 9100;
+        $data['zebra_label_width'] = $data['zebra_label_width'] ?? 50;
+        $data['zebra_label_height'] = $data['zebra_label_height'] ?? 25;
+        $data['zebra_dpi'] = $data['zebra_dpi'] ?? 203;
 
         $company->update($data);
 
