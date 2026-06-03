@@ -18,7 +18,7 @@
                 <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
 
                     <!-- Columna izquierda: buscador + resultados (3 de 5 = 60%) -->
-                    <div class="lg:col-span-3 bg-white shadow-sm rounded-lg p-4">
+                    <div class="lg:col-span-3 bg-white shadow-sm rounded-lg p-4 flex flex-col">
                         <div class="flex gap-2">
                             <input type="text" x-model="query"
                                    x-ref="search"
@@ -40,7 +40,7 @@
                             <strong>✓ Escaneado:</strong> <span x-text="lastScanned"></span>
                         </div>
 
-                        <div class="mt-3 max-h-96 overflow-y-auto border rounded">
+                        <div class="mt-3 flex-1 min-h-96 overflow-y-auto border rounded">
                             <table class="min-w-full divide-y divide-gray-200">
                                 <thead class="bg-gray-50 sticky top-0">
                                 <tr>
