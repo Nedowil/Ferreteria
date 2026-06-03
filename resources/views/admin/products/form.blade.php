@@ -269,10 +269,11 @@
                             </div>
                         @endunless
                         <div>
-                            <x-input-label for="min_stock" value="Stock minimo (en unidad base) *" />
+                            <x-input-label for="min_stock" value="Stock minimo (en unidad base)" />
                             <x-text-input id="min_stock" name="min_stock" type="text" inputmode="decimal"
                                           class="mt-1 block w-full"
-                                          :value="old('min_stock', $product->min_stock)" required />
+                                          placeholder="0.00"
+                                          :value="old('min_stock', (float) $product->min_stock > 0 ? rtrim(rtrim(number_format($product->min_stock, 2, '.', ''),'0'),'.') : '')" />
                             <x-input-error :messages="$errors->get('min_stock')" class="mt-2" />
                         </div>
                     </div>

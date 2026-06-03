@@ -206,7 +206,7 @@ class ProductController extends Controller
             'sale_price' => ['required', 'numeric', 'min:0'],
             'stock' => ['nullable', 'numeric', 'min:0'],
             'stock_input_mode' => ['nullable', 'in:base,container'],
-            'min_stock' => ['required', 'numeric', 'min:0'],
+            'min_stock' => ['nullable', 'numeric', 'min:0'],
             'image' => ['nullable', 'image', 'max:2048'],
             'presentations' => ['nullable', 'array'],
             'presentations.*.label' => ['nullable', 'string', 'max:30'],
@@ -216,6 +216,7 @@ class ProductController extends Controller
 
         $data['active'] = $request->boolean('active');
         $data['stock'] = $data['stock'] ?? 0;
+        $data['min_stock'] = $data['min_stock'] ?? 0;
         $data['base_unit_label'] = $data['base_unit_label'] ?: 'unidad';
 
         // Si el usuario ingreso el stock inicial en cajas/rollos, lo convertimos a unidad base
