@@ -127,11 +127,23 @@ class Product extends Model
         if (! $branchId) {
             return (float) $this->stock;
         }
+
         $row = $this->relationLoaded('stocks')
             ? $this->stocks->firstWhere('branch_id', $branchId)
             : $this->stocks()->where('branch_id', $branchId)->first();
 
-        return $row ? (float) $row->stock : 0.0;
+        if ($row) {
+            return (float) $row->stock;
+        }
+
+        // Fallback: si el producto NO tiene fila de stock en ninguna sucursal,
+        // aun no se ha distribuido (ej. recien registrado con stock inicial).
+        // Devolvemos el stock global para que aparezca en POS / inventario.
+        $hasAnyRow = $this->relationLoaded('stocks')
+            ? $this->stocks->isNotEmpty()
+            : $this->stocks()->exists();
+
+        return $hasAnyRow ? 0.0 : (float) $this->stock;
     }
 
     public function scopeLowStock(Builder $query): Builder

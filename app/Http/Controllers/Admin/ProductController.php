@@ -72,12 +72,20 @@ class ProductController extends Controller
         $product = Product::create($data);
         $this->syncPresentations($product, $presentations);
 
-        // Crea stock en la sucursal activa si se indico stock inicial
-        if (! empty($data['stock']) && $branchId = \App\Support\CurrentBranch::id()) {
-            \App\Models\ProductStock::firstOrCreate(
-                ['product_id' => $product->id, 'branch_id' => $branchId],
-                ['stock' => $data['stock'], 'min_stock' => $data['min_stock']],
-            );
+        // Crea fila de stock en la sucursal activa (o la primera disponible) si se indico stock inicial.
+        // Si no hay sucursales aun, no pasa nada: products.stock guarda el global y stockFor()
+        // hace fallback al global hasta que se cree alguna fila por sucursal.
+        if (! empty($data['stock'])) {
+            $branchId = \App\Support\CurrentBranch::id()
+                ?? \App\Models\Branch::where('active', true)->orderBy('id')->value('id')
+                ?? \App\Models\Branch::orderBy('id')->value('id');
+
+            if ($branchId) {
+                \App\Models\ProductStock::firstOrCreate(
+                    ['product_id' => $product->id, 'branch_id' => $branchId],
+                    ['stock' => $data['stock'], 'min_stock' => $data['min_stock']],
+                );
+            }
         }
 
         return redirect()->route('admin.productos.index')->with('status', 'Producto creado.');
@@ -155,12 +163,18 @@ class ProductController extends Controller
             'active' => true,
         ]);
 
-        // Crear stock por sucursal si se indico
-        if (! empty($data['stock']) && $branchId = \App\Support\CurrentBranch::id()) {
-            \App\Models\ProductStock::firstOrCreate(
-                ['product_id' => $product->id, 'branch_id' => $branchId],
-                ['stock' => $data['stock'], 'min_stock' => $data['min_stock'] ?? 0],
-            );
+        // Crear stock por sucursal (activa o primera disponible) si se indico
+        if (! empty($data['stock'])) {
+            $branchId = \App\Support\CurrentBranch::id()
+                ?? \App\Models\Branch::where('active', true)->orderBy('id')->value('id')
+                ?? \App\Models\Branch::orderBy('id')->value('id');
+
+            if ($branchId) {
+                \App\Models\ProductStock::firstOrCreate(
+                    ['product_id' => $product->id, 'branch_id' => $branchId],
+                    ['stock' => $data['stock'], 'min_stock' => $data['min_stock'] ?? 0],
+                );
+            }
         }
 
         return response()->json([

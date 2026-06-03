@@ -33,10 +33,18 @@ class InventoryService
             // Stock por sucursal (si aplica)
             $stockRow = null;
             if ($branchId) {
+                // Si el producto aun no tiene ninguna fila de stock por sucursal,
+                // hereda el stock global (products.stock) en esta sucursal —
+                // asi no se pierde el stock inicial ingresado al registrar el producto.
+                $hasAnyRow = ProductStock::where('product_id', $product->id)->exists();
+
                 $stockRow = ProductStock::lockForUpdate()
                     ->firstOrCreate(
                         ['product_id' => $product->id, 'branch_id' => $branchId],
-                        ['stock' => 0, 'min_stock' => $product->min_stock],
+                        [
+                            'stock' => $hasAnyRow ? 0 : (float) $product->stock,
+                            'min_stock' => $product->min_stock,
+                        ],
                     );
                 $previous = (float) $stockRow->stock;
             } else {
