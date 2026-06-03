@@ -37,7 +37,12 @@
                     </div>
                 </form>
 
-                <div class="flex justify-end mb-4">
+                <div class="flex justify-end gap-2 mb-4 flex-wrap">
+                    <a href="{{ route('admin.productos.export', request()->only('q','category_id','brand_id','low_stock')) }}"
+                       class="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 inline-flex items-center gap-2"
+                       title="Descargar catalogo completo en CSV (se abre en Excel)">
+                        📊 Exportar Excel
+                    </a>
                     @can('productos.crear')
                         <a href="{{ route('admin.productos.create') }}"
                            class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">+ Nuevo producto</a>

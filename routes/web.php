@@ -59,6 +59,7 @@ Route::middleware(['auth', 'verified'])
 
         Route::middleware('permission:productos.ver')->group(function () {
             Route::get('productos', [ProductController::class, 'index'])->name('productos.index');
+            Route::get('productos/exportar', [ProductController::class, 'export'])->name('productos.export');
             Route::get('productos/{producto}/etiqueta', [ProductController::class, 'label'])->name('productos.label');
             Route::post('productos/{producto}/etiqueta-zpl', [ProductController::class, 'labelZpl'])->name('productos.label_zpl');
             Route::get('inventario/bajo-stock', [InventoryController::class, 'lowStock'])->name('inventario.low_stock');
@@ -193,6 +194,7 @@ Route::middleware(['auth', 'verified'])
 
         Route::middleware('permission:cotizaciones.ver')->group(function () {
             Route::get('cotizaciones', [QuotationController::class, 'index'])->name('cotizaciones.index');
+            Route::get('cotizaciones/exportar', [QuotationController::class, 'export'])->name('cotizaciones.export');
             Route::get('cotizaciones/{cotizacion}/modal', [QuotationController::class, 'modal'])->name('cotizaciones.modal');
             Route::get('cotizaciones/{cotizacion}', [QuotationController::class, 'show'])->name('cotizaciones.show');
             Route::get('cotizaciones/{cotizacion}/pdf', [QuotationController::class, 'pdf'])->name('cotizaciones.pdf');

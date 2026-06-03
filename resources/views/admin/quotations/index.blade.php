@@ -20,7 +20,17 @@
                         @endforeach
                     </select>
                     <button class="px-4 py-2 bg-gray-700 text-white rounded">Filtrar</button>
-                    <div class="text-right">
+                    <div class="text-right flex gap-2 flex-wrap justify-end">
+                        <a href="{{ route('admin.cotizaciones.export', request()->only('q','status','from','to')) }}"
+                           class="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 inline-flex items-center gap-2"
+                           title="Una fila por cotizacion">
+                            📊 Exportar Excel
+                        </a>
+                        <a href="{{ route('admin.cotizaciones.export', array_merge(request()->only('q','status','from','to'), ['detalle' => 1])) }}"
+                           class="px-4 py-2 bg-emerald-700 text-white rounded hover:bg-emerald-800 inline-flex items-center gap-2"
+                           title="Una fila por producto cotizado">
+                            📊 Exportar con detalle
+                        </a>
                         @can('cotizaciones.crear')
                             <a href="{{ route('admin.cotizaciones.create') }}"
                                class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">+ Nueva cotizacion</a>

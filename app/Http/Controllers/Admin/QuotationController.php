@@ -9,6 +9,7 @@ use App\Models\Quotation;
 use App\Services\QuotationService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\View\View;
@@ -33,6 +34,98 @@ class QuotationController extends Controller
             ->withQueryString();
 
         return view('admin.quotations.index', compact('quotations', 'search', 'status'));
+    }
+
+    /**
+     * Exporta cotizaciones a CSV (Excel/LibreOffice). Modos:
+     *   - default: una fila por cotizacion con totales
+     *   - ?detalle=1: una fila por linea de producto cotizado
+     */
+    public function export(Request $request): StreamedResponse
+    {
+        $search = $request->string('q')->toString();
+        $status = $request->string('status')->toString();
+        $from = $request->date('from');
+        $to = $request->date('to');
+        $detalle = $request->boolean('detalle');
+
+        $query = Quotation::with(['customer', 'user'])
+            ->when($search, fn ($q) => $q->where('folio', 'like', "%{$search}%"))
+            ->when($status, fn ($q) => $q->where('status', $status))
+            ->when($from, fn ($q) => $q->where('date', '>=', $from->startOfDay()))
+            ->when($to, fn ($q) => $q->where('date', '<=', $to->endOfDay()))
+            ->orderByDesc('date')
+            ->orderByDesc('id');
+
+        if ($detalle) {
+            $query->with('items.product');
+        }
+
+        $filename = ($detalle ? 'cotizaciones_detalle_' : 'cotizaciones_') . now()->format('Y-m-d_His') . '.csv';
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            'Cache-Control' => 'no-store, no-cache',
+        ];
+
+        return response()->stream(function () use ($query, $detalle) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF");
+
+            if ($detalle) {
+                fputcsv($out, [
+                    'Folio', 'Fecha', 'Valida hasta', 'Cliente', 'NIT', 'Vendedor', 'Estado',
+                    'SKU', 'Producto', 'Cantidad', 'Precio unitario Q', 'Descuento Q', 'Subtotal linea Q',
+                ], ';');
+
+                $query->chunk(200, function ($rows) use ($out) {
+                    foreach ($rows as $q) {
+                        foreach ($q->items as $it) {
+                            fputcsv($out, [
+                                $q->folio,
+                                $q->date?->format('Y-m-d'),
+                                $q->valid_until?->format('Y-m-d'),
+                                $q->customer?->name ?: 'Publico en general',
+                                $q->customer?->tax_id ?: 'CF',
+                                $q->user?->name,
+                                ucfirst($q->status),
+                                $it->product?->sku,
+                                $it->product?->name,
+                                rtrim(rtrim(number_format((float) $it->quantity, 4, '.', ''), '0'), '.') ?: '0',
+                                number_format((float) $it->unit_price, 2, '.', ''),
+                                number_format((float) $it->discount, 2, '.', ''),
+                                number_format((float) $it->subtotal, 2, '.', ''),
+                            ], ';');
+                        }
+                    }
+                });
+            } else {
+                fputcsv($out, [
+                    'Folio', 'Fecha', 'Valida hasta', 'Cliente', 'NIT', 'Vendedor', 'Estado',
+                    'Subtotal Q', 'Descuento Q', 'IVA Q', 'Total Q',
+                ], ';');
+
+                $query->chunk(500, function ($rows) use ($out) {
+                    foreach ($rows as $q) {
+                        fputcsv($out, [
+                            $q->folio,
+                            $q->date?->format('Y-m-d'),
+                            $q->valid_until?->format('Y-m-d'),
+                            $q->customer?->name ?: 'Publico en general',
+                            $q->customer?->tax_id ?: 'CF',
+                            $q->user?->name,
+                            ucfirst($q->status),
+                            number_format((float) $q->subtotal, 2, '.', ''),
+                            number_format((float) $q->discount, 2, '.', ''),
+                            number_format((float) $q->tax, 2, '.', ''),
+                            number_format((float) $q->total, 2, '.', ''),
+                        ], ';');
+                    }
+                });
+            }
+
+            fclose($out);
+        }, 200, $headers);
     }
 
     public function create(): View

@@ -12,6 +12,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\View\View;
 
 class ProductController extends Controller
@@ -45,6 +46,74 @@ class ProductController extends Controller
             'brandId' => $brandId,
             'lowStock' => $lowStock,
         ]);
+    }
+
+    /**
+     * Descarga el catalogo de productos en CSV (Excel/LibreOffice). Respeta
+     * los filtros del listado: busqueda, categoria, marca, bajo stock.
+     */
+    public function export(Request $request): StreamedResponse
+    {
+        $search = $request->string('q')->toString();
+        $categoryId = $request->integer('category_id') ?: null;
+        $brandId = $request->integer('brand_id') ?: null;
+        $lowStock = $request->boolean('low_stock');
+
+        $query = Product::with(['category', 'brand'])
+            ->when($search, fn ($q) => $q->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('sku', 'like', "%{$search}%")
+                  ->orWhere('barcode', 'like', "%{$search}%");
+            }))
+            ->when($categoryId, fn ($q) => $q->where('category_id', $categoryId))
+            ->when($brandId, fn ($q) => $q->where('brand_id', $brandId))
+            ->when($lowStock, fn ($q) => $q->lowStock())
+            ->orderBy('name');
+
+        $filename = 'productos_' . now()->format('Y-m-d_His') . '.csv';
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            'Cache-Control' => 'no-store, no-cache',
+        ];
+
+        return response()->stream(function () use ($query) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF");
+
+            fputcsv($out, [
+                'SKU', 'Codigo barras', 'Nombre', 'Categoria', 'Marca',
+                'Unidad base', 'Empaque', 'Unidades por empaque', 'Precio por empaque Q',
+                'Precio compra Q', 'Precio venta Q',
+                'Stock actual', 'Stock formato', 'Stock minimo',
+                'Activo', 'Fecha registro',
+            ], ';');
+
+            $query->chunk(500, function ($rows) use ($out) {
+                foreach ($rows as $p) {
+                    fputcsv($out, [
+                        $p->sku,
+                        $p->barcode,
+                        $p->name,
+                        $p->category?->name,
+                        $p->brand?->name,
+                        $p->base_unit_label,
+                        $p->container_label,
+                        $p->container_factor ? rtrim(rtrim(number_format((float) $p->container_factor, 4, '.', ''), '0'), '.') : '',
+                        $p->container_price ? number_format((float) $p->container_price, 2, '.', '') : '',
+                        number_format((float) $p->purchase_price, 2, '.', ''),
+                        number_format((float) $p->sale_price, 2, '.', ''),
+                        rtrim(rtrim(number_format((float) $p->stock, 4, '.', ''), '0'), '.') ?: '0',
+                        $p->formatStockMixed(),
+                        rtrim(rtrim(number_format((float) $p->min_stock, 4, '.', ''), '0'), '.') ?: '0',
+                        $p->active ? 'Si' : 'No',
+                        $p->created_at?->format('Y-m-d H:i'),
+                    ], ';');
+                }
+            });
+
+            fclose($out);
+        }, 200, $headers);
     }
 
     public function create(): View
