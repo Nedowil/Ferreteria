@@ -236,26 +236,48 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         @unless ($product->exists)
                             <div x-data="{
-                                qty: @js(old('stock', 0)),
-                                mode: @js(old('stock_input_mode', 'base')),
-                                get baseLabel(){ return document.getElementById('base_unit_label')?.value || 'unidad'; },
-                                get containerLabel(){ return document.getElementById('container_label')?.value || ''; },
-                                get factor(){ const v = parseFloat(document.getElementById('container_factor')?.value || 0); return isNaN(v)?0:v; },
-                                get totalBase(){ return this.mode === 'container' ? (parseFloat(this.qty)||0) * this.factor : (parseFloat(this.qty)||0); },
-                            }">
+                                    qty: @js(old('stock', '')),
+                                    mode: @js(old('stock_input_mode', '')),
+                                    baseLabel: @js(old('base_unit_label', '') ?: 'unidad'),
+                                    containerLabel: @js(old('container_label', '')),
+                                    factor: parseFloat(@js(old('container_factor', '0'))) || 0,
+                                    pluralize(w){ if(!w) return ''; w = String(w); if (/s$/i.test(w)) return w; if (/(z|x)$/i.test(w)) return w+'es'; return w+'s'; },
+                                    get totalBase(){ return this.mode === 'container' ? (parseFloat(this.qty)||0) * this.factor : (parseFloat(this.qty)||0); },
+                                 }"
+                                 x-init="
+                                    const baseEl = document.getElementById('base_unit_label');
+                                    const contLabelEl = document.getElementById('container_label');
+                                    const contFactorEl = document.getElementById('container_factor');
+                                    const sync = () => {
+                                        baseLabel = (baseEl?.value || '').trim() || 'unidad';
+                                        containerLabel = (contLabelEl?.value || '').trim();
+                                        factor = parseFloat(contFactorEl?.value || 0) || 0;
+                                        // Si recien aparecio un empaque y el usuario no eligio modo, por defecto pasa a empaque
+                                        if (!mode) mode = (containerLabel && factor > 0) ? 'container' : 'base';
+                                        if (mode === 'container' && (!containerLabel || factor <= 0)) mode = 'base';
+                                    };
+                                    sync();
+                                    baseEl?.addEventListener('input', sync);
+                                    contLabelEl?.addEventListener('input', sync);
+                                    contFactorEl?.addEventListener('input', sync);
+                                 ">
                                 <x-input-label for="stock" value="Stock inicial" />
                                 <div class="flex gap-2 mt-1">
                                     <input id="stock" name="stock" type="text" inputmode="decimal"
                                            x-model="qty"
+                                           placeholder="0"
                                            class="block w-full border-gray-300 rounded-md shadow-sm" />
                                     <select name="stock_input_mode" x-model="mode"
-                                            class="border-gray-300 rounded-md shadow-sm text-sm">
-                                        <option value="base" x-text="baseLabel"></option>
-                                        <option value="container" x-show="containerLabel && factor > 0" x-text="containerLabel + (containerLabel.endsWith('s') ? '' : 's')"></option>
+                                            class="border-gray-300 rounded-md shadow-sm text-sm font-semibold">
+                                        <option value="base" x-text="pluralize(baseLabel)"></option>
+                                        <option value="container" x-show="containerLabel && factor > 0" x-text="pluralize(containerLabel)"></option>
                                     </select>
                                 </div>
                                 <p class="text-xs text-emerald-700 mt-1" x-show="mode === 'container' && factor > 0">
-                                    = <strong x-text="totalBase"></strong> <span x-text="baseLabel"></span> en stock
+                                    = <strong x-text="totalBase"></strong> <span x-text="pluralize(baseLabel)"></span> en stock
+                                </p>
+                                <p class="text-xs text-slate-500 mt-1" x-show="mode === 'base'">
+                                    Estas ingresando la cantidad directamente en <span x-text="pluralize(baseLabel)"></span>.
                                 </p>
                             </div>
                         @else
