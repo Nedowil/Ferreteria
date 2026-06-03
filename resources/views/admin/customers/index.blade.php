@@ -15,16 +15,23 @@
                     </div>
                 @endif
 
-                <div class="flex justify-between items-center mb-4 gap-3">
+                <div class="flex justify-between items-center mb-4 gap-3 flex-wrap">
                     <form method="GET" class="flex gap-2">
                         <input type="text" name="q" value="{{ $search }}" placeholder="Buscar por nombre, NIT, telefono o email"
                                class="border-gray-300 rounded-md shadow-sm w-96" />
                         <button class="px-4 py-2 bg-gray-700 text-white rounded">Buscar</button>
                     </form>
-                    @can('clientes.crear')
-                        <a href="{{ route('admin.clientes.create') }}"
-                           class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">+ Nuevo</a>
-                    @endcan
+                    <div class="flex gap-2">
+                        <a href="{{ route('admin.clientes.export', request()->only('q')) }}"
+                           class="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 inline-flex items-center gap-2"
+                           title="Descargar todos los clientes en CSV (se abre en Excel)">
+                            📊 Exportar Excel
+                        </a>
+                        @can('clientes.crear')
+                            <a href="{{ route('admin.clientes.create') }}"
+                               class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">+ Nuevo</a>
+                        @endcan
+                    </div>
                 </div>
 
                 <table class="min-w-full divide-y divide-gray-200">

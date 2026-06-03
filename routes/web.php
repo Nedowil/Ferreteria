@@ -110,6 +110,7 @@ Route::middleware(['auth', 'verified'])
         });
 
         Route::middleware('permission:clientes.ver')->group(function () {
+            Route::get('clientes/exportar', [CustomerController::class, 'export'])->name('clientes.export');
             Route::resource('clientes', CustomerController::class)
                 ->except('show')
                 ->parameters(['clientes' => 'cliente']);

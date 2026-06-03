@@ -7,6 +7,7 @@ use App\Models\Customer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\View\View;
 
 class CustomerController extends Controller
@@ -32,6 +33,66 @@ class CustomerController extends Controller
     public function create(): View
     {
         return view('admin.customers.form', ['customer' => new Customer(['active' => true])]);
+    }
+
+    /**
+     * Descarga todos los clientes (respetando el filtro de busqueda) en CSV
+     * compatible con Excel. Incluye BOM UTF-8 para que las tildes y la N
+     * aparezcan bien en Excel/LibreOffice.
+     */
+    public function export(Request $request): StreamedResponse
+    {
+        $search = $request->string('q')->toString();
+
+        $query = Customer::query()
+            ->when($search, fn ($q) => $q->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('tax_id', 'like', "%{$search}%")
+                  ->orWhere('phone', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            }))
+            ->orderBy('name');
+
+        $filename = 'clientes_' . now()->format('Y-m-d_His') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            'Cache-Control' => 'no-store, no-cache',
+        ];
+
+        return response()->stream(function () use ($query) {
+            $out = fopen('php://output', 'w');
+            // BOM UTF-8 — Excel lo necesita para mostrar tildes/Ñ
+            fwrite($out, "\xEF\xBB\xBF");
+
+            // Separador ";" para que Excel en espanol no parta los telefonos largos
+            fputcsv($out, [
+                'Nombre', 'NIT/DPI', 'Telefono', 'Email', 'Direccion', 'Notas',
+                'Activo', 'Total ventas', 'Monto total Q', 'Fecha registro',
+            ], ';');
+
+            $query->withCount('sales')
+                ->withSum('sales as sales_total', 'total')
+                ->chunk(500, function ($rows) use ($out) {
+                    foreach ($rows as $c) {
+                        fputcsv($out, [
+                            $c->name,
+                            $c->tax_id,
+                            $c->phone,
+                            $c->email,
+                            $c->address,
+                            $c->notes,
+                            $c->active ? 'Si' : 'No',
+                            (int) $c->sales_count,
+                            number_format((float) $c->sales_total, 2, '.', ''),
+                            $c->created_at?->format('Y-m-d H:i'),
+                        ], ';');
+                    }
+                });
+
+            fclose($out);
+        }, 200, $headers);
     }
 
     public function store(Request $request): RedirectResponse
