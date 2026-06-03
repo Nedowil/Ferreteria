@@ -11,6 +11,7 @@ use App\Support\CurrentBranch;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\View\View;
 
 class SaleController extends Controller
@@ -42,6 +43,103 @@ class SaleController extends Controller
             'from' => $from?->toDateString(),
             'to' => $to?->toDateString(),
         ]);
+    }
+
+    /**
+     * Descarga las ventas en CSV (Excel/LibreOffice). Respeta los filtros del listado
+     * (folio, estado, fechas). Modos:
+     *   - default: una fila por venta con totales
+     *   - ?detalle=1: una fila por cada producto vendido dentro de cada venta
+     */
+    public function export(Request $request): StreamedResponse
+    {
+        $search = $request->string('q')->toString();
+        $status = $request->string('status')->toString();
+        $from = $request->date('from');
+        $to = $request->date('to');
+        $detalle = $request->boolean('detalle');
+
+        $query = Sale::with(['customer', 'user'])
+            ->when($search, fn ($q) => $q->where('folio', 'like', "%{$search}%"))
+            ->when($status, fn ($q) => $q->where('status', $status))
+            ->when($from, fn ($q) => $q->where('date', '>=', $from->startOfDay()))
+            ->when($to, fn ($q) => $q->where('date', '<=', $to->endOfDay()))
+            ->orderByDesc('date');
+
+        if ($detalle) {
+            $query->with('items.product');
+        }
+
+        $filename = ($detalle ? 'ventas_detalle_' : 'ventas_') . now()->format('Y-m-d_His') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            'Cache-Control' => 'no-store, no-cache',
+        ];
+
+        return response()->stream(function () use ($query, $detalle) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF");
+
+            if ($detalle) {
+                fputcsv($out, [
+                    'Folio', 'Fecha', 'Cliente', 'NIT', 'Vendedor', 'Pago', 'Estado',
+                    'SKU', 'Producto', 'Unidad', 'Cantidad', 'Precio unitario Q',
+                    'Descuento Q', 'Subtotal linea Q',
+                ], ';');
+
+                $query->chunk(200, function ($rows) use ($out) {
+                    foreach ($rows as $s) {
+                        foreach ($s->items as $it) {
+                            fputcsv($out, [
+                                $s->folio,
+                                $s->date?->format('Y-m-d H:i'),
+                                $s->customer?->name ?: 'Publico en general',
+                                $s->customer?->tax_id ?: 'CF',
+                                $s->user?->name,
+                                ucfirst($s->payment_method),
+                                ucfirst($s->status),
+                                $it->product?->sku,
+                                $it->product?->name,
+                                $it->unit_label,
+                                rtrim(rtrim(number_format((float) $it->quantity, 4, '.', ''), '0'), '.') ?: '0',
+                                number_format((float) $it->unit_price, 2, '.', ''),
+                                number_format((float) $it->discount, 2, '.', ''),
+                                number_format((float) $it->subtotal, 2, '.', ''),
+                            ], ';');
+                        }
+                    }
+                });
+            } else {
+                fputcsv($out, [
+                    'Folio', 'Fecha', 'Cliente', 'NIT', 'Vendedor', 'Pago', 'Estado',
+                    'Subtotal Q', 'Descuento Q', 'IVA Q', 'Total Q', 'Pagado Q', 'Cambio Q',
+                ], ';');
+
+                $query->chunk(500, function ($rows) use ($out) {
+                    foreach ($rows as $s) {
+                        fputcsv($out, [
+                            $s->folio,
+                            $s->date?->format('Y-m-d H:i'),
+                            $s->customer?->name ?: 'Publico en general',
+                            $s->customer?->tax_id ?: 'CF',
+                            $s->user?->name,
+                            ucfirst($s->payment_method),
+                            ucfirst($s->status),
+                            number_format((float) $s->subtotal, 2, '.', ''),
+                            number_format((float) $s->discount, 2, '.', ''),
+                            number_format((float) $s->tax, 2, '.', ''),
+                            number_format((float) $s->total, 2, '.', ''),
+                            number_format((float) $s->paid_amount, 2, '.', ''),
+                            number_format((float) $s->change_amount, 2, '.', ''),
+                        ], ';');
+                    }
+                });
+            }
+
+            fclose($out);
+        }, 200, $headers);
     }
 
     public function pos(): View

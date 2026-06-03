@@ -24,7 +24,17 @@
                     <button class="px-4 py-2 bg-gray-700 text-white rounded">Filtrar</button>
                 </form>
 
-                <div class="flex justify-end mb-4">
+                <div class="flex justify-end gap-2 mb-4 flex-wrap">
+                    <a href="{{ route('admin.ventas.export', request()->only('q','status','from','to')) }}"
+                       class="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 inline-flex items-center gap-2"
+                       title="Una fila por venta (Folio, Cliente, Total, etc.)">
+                        📊 Exportar Excel
+                    </a>
+                    <a href="{{ route('admin.ventas.export', array_merge(request()->only('q','status','from','to'), ['detalle' => 1])) }}"
+                       class="px-4 py-2 bg-emerald-700 text-white rounded hover:bg-emerald-800 inline-flex items-center gap-2"
+                       title="Una fila por producto vendido (incluye SKU, cantidad, precio unitario)">
+                        📊 Exportar con detalle
+                    </a>
                     @can('ventas.crear')
                         <a href="{{ route('admin.ventas.pos') }}"
                            class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">+ Nueva venta (POS)</a>
