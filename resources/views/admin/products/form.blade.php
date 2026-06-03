@@ -182,7 +182,7 @@
                                     <code class="bg-white px-1 rounded">Caja → 1</code>.
                                 </p>
                             </div>
-                            <button type="button" @click="rows.push({ label: '', units_factor: 1, price: 0 })"
+                            <button type="button" @click="rows.push({ label: '', units_factor: '', price: '' })"
                                     class="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded text-sm font-semibold whitespace-nowrap">
                                 + Agregar
                             </button>
