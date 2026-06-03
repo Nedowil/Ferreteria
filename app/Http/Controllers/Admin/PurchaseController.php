@@ -10,12 +10,110 @@ use App\Services\PurchaseService;
 use App\Support\CurrentBranch;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\View\View;
 
 class PurchaseController extends Controller
 {
     public function __construct(private PurchaseService $service)
     {
+    }
+
+    /**
+     * Descarga las compras en CSV (Excel/LibreOffice). Respeta los filtros
+     * activos del listado (busqueda, estado, proveedor, fechas). Si pasas
+     * ?detalle=1 incluye una fila por cada producto de la compra; si no,
+     * una fila por compra con los totales.
+     */
+    public function export(Request $request): StreamedResponse
+    {
+        $search = $request->string('q')->toString();
+        $status = $request->string('status')->toString();
+        $supplierId = $request->integer('supplier_id') ?: null;
+        $from = $request->date('from');
+        $to = $request->date('to');
+        $detalle = $request->boolean('detalle');
+
+        $query = Purchase::with(['supplier', 'user'])
+            ->when($search, fn ($q) => $q->where(function ($q) use ($search) {
+                $q->where('folio', 'like', "%{$search}%")
+                  ->orWhere('invoice_number', 'like', "%{$search}%");
+            }))
+            ->when($status, fn ($q) => $q->where('status', $status))
+            ->when($supplierId, fn ($q) => $q->where('supplier_id', $supplierId))
+            ->when($from, fn ($q) => $q->where('date', '>=', $from->startOfDay()))
+            ->when($to, fn ($q) => $q->where('date', '<=', $to->endOfDay()))
+            ->orderByDesc('date')
+            ->orderByDesc('id');
+
+        if ($detalle) {
+            $query->with('items.product');
+        }
+
+        $filename = ($detalle ? 'compras_detalle_' : 'compras_') . now()->format('Y-m-d_His') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            'Cache-Control' => 'no-store, no-cache',
+        ];
+
+        return response()->stream(function () use ($query, $detalle) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF");
+
+            if ($detalle) {
+                fputcsv($out, [
+                    'Folio', 'Fecha', 'Proveedor', 'NIT', 'No. Factura', 'Estado',
+                    'SKU', 'Producto', 'Cantidad', 'Precio unitario Q', 'Subtotal linea Q',
+                ], ';');
+
+                $query->chunk(200, function ($rows) use ($out) {
+                    foreach ($rows as $p) {
+                        foreach ($p->items as $it) {
+                            fputcsv($out, [
+                                $p->folio,
+                                $p->date?->format('Y-m-d'),
+                                $p->supplier?->name,
+                                $p->supplier?->tax_id,
+                                $p->invoice_number,
+                                ucfirst($p->status),
+                                $it->product?->sku,
+                                $it->product?->name,
+                                rtrim(rtrim(number_format((float) $it->quantity, 4, '.', ''), '0'), '.') ?: '0',
+                                number_format((float) $it->unit_price, 2, '.', ''),
+                                number_format((float) $it->subtotal, 2, '.', ''),
+                            ], ';');
+                        }
+                    }
+                });
+            } else {
+                fputcsv($out, [
+                    'Folio', 'Fecha', 'Proveedor', 'NIT', 'No. Factura', 'Estado',
+                    'Subtotal Q', 'IVA Q', 'Total Q', 'Recibida el', 'Usuario',
+                ], ';');
+
+                $query->chunk(500, function ($rows) use ($out) {
+                    foreach ($rows as $p) {
+                        fputcsv($out, [
+                            $p->folio,
+                            $p->date?->format('Y-m-d'),
+                            $p->supplier?->name,
+                            $p->supplier?->tax_id,
+                            $p->invoice_number,
+                            ucfirst($p->status),
+                            number_format((float) $p->subtotal, 2, '.', ''),
+                            number_format((float) $p->tax, 2, '.', ''),
+                            number_format((float) $p->total, 2, '.', ''),
+                            $p->received_at?->format('Y-m-d H:i'),
+                            $p->user?->name,
+                        ], ';');
+                    }
+                });
+            }
+
+            fclose($out);
+        }, 200, $headers);
     }
 
     public function index(Request $request): View

@@ -92,6 +92,7 @@ Route::middleware(['auth', 'verified'])
 
         Route::middleware('permission:compras.ver')->group(function () {
             Route::get('compras', [PurchaseController::class, 'index'])->name('compras.index');
+            Route::get('compras/exportar', [PurchaseController::class, 'export'])->name('compras.export');
             Route::get('compras/{compra}/modal', [PurchaseController::class, 'modal'])->name('compras.modal');
             Route::get('compras/{compra}', [PurchaseController::class, 'show'])->name('compras.show');
         });

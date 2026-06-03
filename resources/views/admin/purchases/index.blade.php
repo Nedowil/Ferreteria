@@ -31,7 +31,17 @@
                     <button class="px-4 py-2 bg-gray-700 text-white rounded">Filtrar</button>
                 </form>
 
-                <div class="flex justify-end mb-4">
+                <div class="flex justify-end gap-2 mb-4">
+                    <a href="{{ route('admin.compras.export', request()->only('q','status','supplier_id','from','to')) }}"
+                       class="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 inline-flex items-center gap-2"
+                       title="Una fila por compra (Folio, Proveedor, Total, etc.)">
+                        📊 Exportar Excel
+                    </a>
+                    <a href="{{ route('admin.compras.export', array_merge(request()->only('q','status','supplier_id','from','to'), ['detalle' => 1])) }}"
+                       class="px-4 py-2 bg-emerald-700 text-white rounded hover:bg-emerald-800 inline-flex items-center gap-2"
+                       title="Una fila por producto comprado (incluye SKU, cantidad, precio unitario)">
+                        📊 Exportar con detalle
+                    </a>
                     @can('compras.crear')
                         <a href="{{ route('admin.compras.create') }}"
                            class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">+ Nueva compra</a>
