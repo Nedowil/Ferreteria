@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Supplier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\View\View;
 
 class SupplierController extends Controller
@@ -30,6 +31,64 @@ class SupplierController extends Controller
     public function create(): View
     {
         return view('admin.suppliers.form', ['supplier' => new Supplier(['active' => true])]);
+    }
+
+    /**
+     * Descarga todos los proveedores (respetando el filtro de busqueda) en CSV
+     * compatible con Excel/LibreOffice. BOM UTF-8 + separador ';' para que
+     * Excel en espanol abra el archivo limpio sin pasos extra.
+     */
+    public function export(Request $request): StreamedResponse
+    {
+        $search = $request->string('q')->toString();
+
+        $query = Supplier::query()
+            ->when($search, fn ($q) => $q->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('tax_id', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            }))
+            ->orderBy('name');
+
+        $filename = 'proveedores_' . now()->format('Y-m-d_His') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            'Cache-Control' => 'no-store, no-cache',
+        ];
+
+        return response()->stream(function () use ($query) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF");
+
+            fputcsv($out, [
+                'Nombre', 'NIT', 'Contacto', 'Telefono', 'Email', 'Direccion', 'Notas',
+                'Activo', 'Total compras', 'Monto comprado Q', 'Fecha registro',
+            ], ';');
+
+            $query->withCount('purchases')
+                ->withSum('purchases as purchases_total', 'total')
+                ->chunk(500, function ($rows) use ($out) {
+                    foreach ($rows as $s) {
+                        fputcsv($out, [
+                            $s->name,
+                            $s->tax_id,
+                            $s->contact_name,
+                            $s->phone,
+                            $s->email,
+                            $s->address,
+                            $s->notes,
+                            $s->active ? 'Si' : 'No',
+                            (int) $s->purchases_count,
+                            number_format((float) $s->purchases_total, 2, '.', ''),
+                            $s->created_at?->format('Y-m-d H:i'),
+                        ], ';');
+                    }
+                });
+
+            fclose($out);
+        }, 200, $headers);
     }
 
     public function store(Request $request): RedirectResponse

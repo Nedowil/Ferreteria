@@ -85,6 +85,7 @@ Route::middleware(['auth', 'verified'])
         });
 
         Route::middleware('permission:proveedores.ver')->group(function () {
+            Route::get('proveedores/exportar', [SupplierController::class, 'export'])->name('proveedores.export');
             Route::resource('proveedores', SupplierController::class)
                 ->except('show')
                 ->parameters(['proveedores' => 'proveedor']);
