@@ -202,7 +202,7 @@ class SaleController extends Controller
         return response()->json($products);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): RedirectResponse|JsonResponse
     {
         $data = $this->validateSale($request);
         $items = $this->validateItems($request);
@@ -210,7 +210,18 @@ class SaleController extends Controller
         try {
             $sale = $this->service->create($data, $items, auth()->id(), CurrentBranch::id());
         } catch (\DomainException $e) {
+            if ($request->expectsJson()) {
+                return response()->json(['error' => $e->getMessage()], 422);
+            }
             return back()->withErrors(['sale' => $e->getMessage()])->withInput();
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => true,
+                'sale_id' => $sale->id,
+                'folio' => $sale->folio,
+            ]);
         }
 
         return redirect()->route('admin.ventas.show', $sale)->with('status', 'Venta registrada.');

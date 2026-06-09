@@ -293,15 +293,113 @@
                             </button>
                         </div>
 
-                        <button type="submit" :disabled="items.length === 0 || change < 0"
+                        <div x-show="saleError" x-cloak class="mt-3 p-2 bg-red-100 text-red-800 rounded text-sm" x-text="saleError"></div>
+
+                        <button type="submit" :disabled="items.length === 0 || change < 0 || submitting"
                                 class="mt-5 w-full py-4 bg-green-600 text-white rounded-lg text-xl font-bold hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-lg transition">
-                            <span x-show="items.length === 0">Carrito vacio</span>
-                            <span x-show="items.length > 0 && change < 0">Falta pago</span>
-                            <span x-show="items.length > 0 && change >= 0">Cobrar Q<span x-text="total.toFixed(2)"></span></span>
+                            <span x-show="submitting">Procesando...</span>
+                            <span x-show="!submitting && items.length === 0">Carrito vacio</span>
+                            <span x-show="!submitting && items.length > 0 && change < 0">Falta pago</span>
+                            <span x-show="!submitting && items.length > 0 && change >= 0">Cobrar Q<span x-text="total.toFixed(2)"></span></span>
                         </button>
                     </div>
                 </div>
             </form>
+
+            <!-- Modal de venta completada -->
+            <div x-show="showSaleModal" x-cloak x-transition.opacity
+                 class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+                 @keydown.escape.window="showSaleModal && closeSaleModal()">
+                <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden"
+                     x-transition.scale @click.outside="closeSaleModal()">
+
+                    <!-- Header verde con check -->
+                    <div class="bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-5 text-white">
+                        <div class="flex items-center gap-4">
+                            <div class="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center text-4xl">✓</div>
+                            <div class="flex-1">
+                                <h3 class="font-bold text-xl">Venta registrada</h3>
+                                <p class="text-emerald-100 text-sm">Folio <span x-text="completedSale?.folio"></span> · <span x-text="completedSale?.date"></span></p>
+                            </div>
+                            <button type="button" @click="closeSaleModal()" class="text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center">✕</button>
+                        </div>
+                    </div>
+
+                    <!-- Contenido -->
+                    <template x-if="completedSale">
+                        <div class="p-6 space-y-4">
+                            <!-- Cliente + pago -->
+                            <div class="grid grid-cols-2 gap-3 text-sm">
+                                <div class="bg-slate-50 rounded p-3">
+                                    <div class="text-xs text-slate-500">Cliente</div>
+                                    <div class="font-semibold" x-text="completedSale.customer?.name || 'Consumidor Final'"></div>
+                                    <div class="text-xs text-slate-600" x-text="'NIT: ' + (completedSale.customer?.tax_id || 'CF')"></div>
+                                </div>
+                                <div class="bg-slate-50 rounded p-3">
+                                    <div class="text-xs text-slate-500">Pago</div>
+                                    <div class="font-semibold capitalize" x-text="completedSale.payment_method"></div>
+                                    <div class="text-xs text-slate-600">Vendedor: <span x-text="completedSale.user"></span></div>
+                                </div>
+                            </div>
+
+                            <!-- Items -->
+                            <div class="border rounded max-h-48 overflow-y-auto">
+                                <table class="min-w-full text-sm">
+                                    <thead class="bg-slate-100 sticky top-0">
+                                        <tr>
+                                            <th class="px-3 py-2 text-left text-xs uppercase">Producto</th>
+                                            <th class="px-3 py-2 text-right text-xs uppercase">Cant</th>
+                                            <th class="px-3 py-2 text-right text-xs uppercase">Precio</th>
+                                            <th class="px-3 py-2 text-right text-xs uppercase">Subt.</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template x-for="it in completedSale.items" :key="it.sku + it.unit">
+                                            <tr class="border-t">
+                                                <td class="px-3 py-1.5">
+                                                    <div x-text="it.name"></div>
+                                                    <div class="text-xs text-slate-500 font-mono" x-text="it.sku + ' · ' + it.unit"></div>
+                                                </td>
+                                                <td class="px-3 py-1.5 text-right" x-text="it.quantity"></td>
+                                                <td class="px-3 py-1.5 text-right" x-text="'Q' + it.unit_price.toFixed(2)"></td>
+                                                <td class="px-3 py-1.5 text-right font-semibold" x-text="'Q' + it.subtotal.toFixed(2)"></td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Totales -->
+                            <div class="bg-slate-50 rounded p-4 space-y-1 text-sm">
+                                <div class="flex justify-between text-slate-600"><span>Subtotal</span><span x-text="'Q' + completedSale.subtotal.toFixed(2)"></span></div>
+                                <div class="flex justify-between text-slate-600" x-show="completedSale.discount > 0"><span>Descuento</span><span x-text="'-Q' + completedSale.discount.toFixed(2)"></span></div>
+                                <div class="flex justify-between text-slate-600"><span>IVA</span><span x-text="'Q' + completedSale.tax.toFixed(2)"></span></div>
+                                <div class="flex justify-between text-2xl font-bold border-t pt-2 mt-2 text-slate-800">
+                                    <span>Total</span><span x-text="'Q' + completedSale.total.toFixed(2)"></span>
+                                </div>
+                                <div class="flex justify-between text-slate-700 pt-1"><span>Pagado</span><span x-text="'Q' + completedSale.paid_amount.toFixed(2)"></span></div>
+                                <div class="flex justify-between text-xl font-bold text-green-700"><span>Cambio</span><span x-text="'Q' + completedSale.change_amount.toFixed(2)"></span></div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Acciones -->
+                    <div class="bg-slate-50 px-6 py-4 flex flex-wrap justify-end gap-2 border-t">
+                        <button type="button" @click="viewSaleDetail()"
+                                class="px-4 py-2 bg-slate-200 text-slate-700 rounded hover:bg-slate-300 text-sm font-medium">
+                            Ver detalle
+                        </button>
+                        <button type="button" @click="printSaleTicket()"
+                                class="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 text-sm font-bold shadow inline-flex items-center gap-2">
+                            🖨 Imprimir ticket
+                        </button>
+                        <button type="button" @click="closeSaleModal()"
+                                class="px-5 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded hover:from-green-700 hover:to-emerald-700 text-sm font-bold shadow">
+                            ➕ Nueva venta
+                        </button>
+                    </div>
+                </div>
+            </div>
 
             <!-- Modal nuevo cliente -->
             <div x-show="showCustomerModal" x-cloak x-transition.opacity
@@ -507,6 +605,12 @@
                 savingProduct: false,
                 productError: '',
                 newProduct: { name: '', sale_price: '', purchase_price: '', stock: '', min_stock: '' },
+
+                // Modal de venta completada
+                showSaleModal: false,
+                completedSale: null,
+                submitting: false,
+                saleError: '',
 
                 // Deteccion de scanner: los lectores envian caracteres a alta velocidad
                 lastKeyTime: 0,
@@ -732,7 +836,7 @@
                     // Manten el foco en el buscador para que el scanner siempre funcione.
                     // EXCEPCION: si esta abierto el modal de cliente, no robar el foco.
                     setTimeout(() => {
-                        if (this.showCustomerModal || this.showProductModal) return;
+                        if (this.showCustomerModal || this.showProductModal || this.showSaleModal) return;
                         // Tampoco si el usuario tiene focus en otro input editable
                         const active = document.activeElement;
                         if (active && (active.tagName === 'INPUT' || active.tagName === 'SELECT' || active.tagName === 'TEXTAREA') && active !== this.$refs.search) {
@@ -817,9 +921,67 @@
                     }
                     this.change = this.parseAmount(this.paid_amount) - this.total;
                 },
-                onSubmit(e) {
-                    if (this.items.length === 0) { e.preventDefault(); return; }
-                    if (this.change < 0) { e.preventDefault(); alert('El monto pagado es menor al total.'); return; }
+                async onSubmit(e) {
+                    e.preventDefault();
+                    if (this.items.length === 0) return;
+                    if (this.change < 0) { alert('El monto pagado es menor al total.'); return; }
+                    if (this.submitting) return;
+
+                    this.submitting = true;
+                    this.saleError = '';
+                    try {
+                        const form = e.target;
+                        const formData = new FormData(form);
+                        const res = await fetch(form.action, {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                            body: formData,
+                        });
+                        const data = await res.json();
+                        if (!res.ok) {
+                            const errs = data.errors ? Object.values(data.errors).flat().join(', ') : '';
+                            this.saleError = errs || data.error || data.message || 'Error al guardar la venta';
+                            return;
+                        }
+                        // Cargar el resumen completo de la venta para el modal
+                        const mres = await fetch(`/admin/ventas/${data.sale_id}/modal`, {
+                            headers: { 'Accept': 'application/json' },
+                        });
+                        this.completedSale = await mres.json();
+                        this.showSaleModal = true;
+                    } catch (err) {
+                        this.saleError = 'Error de red: ' + err.message;
+                    } finally {
+                        this.submitting = false;
+                    }
+                },
+
+                closeSaleModal() {
+                    this.showSaleModal = false;
+                    this.completedSale = null;
+                    // Resetear el POS para la siguiente venta
+                    this.items = [];
+                    this.customer_id = '';
+                    this.customerSearch = '';
+                    this.paid_amount = '';
+                    this.discount = '';
+                    this.payment_method = 'efectivo';
+                    this.query = '';
+                    this.recalc();
+                    setTimeout(() => this.$refs.search?.focus(), 100);
+                },
+
+                printSaleTicket() {
+                    if (! this.completedSale?.urls?.ticket) return;
+                    window.open(this.completedSale.urls.ticket, '_blank');
+                },
+
+                viewSaleDetail() {
+                    if (! this.completedSale?.urls?.show) return;
+                    window.location.href = this.completedSale.urls.show;
                 },
             };
         }
