@@ -4,7 +4,7 @@
     </x-slot>
 
     <div class="py-8">
-        <div class="max-w-7xl mx-auto sm:px-4 lg:px-8" x-data="posApp()" x-init="init()">
+        <div class="max-w-7xl mx-auto sm:px-4 lg:px-8" x-data="posApp()">
 
             @if ($errors->any())
                 <div class="mb-4 p-3 bg-red-100 text-red-800 rounded">
@@ -775,6 +775,12 @@
                 lastScanCodeTime: 0,
 
                 init() {
+                    // Guard: si init() ya corrio, no volver a registrar el listener.
+                    // Esto evita duplicacion del scanner si Alpine llama init() mas de una vez
+                    // (lo que producia que cada caracter se acumulara dos veces en el buffer)
+                    if (this._initialized) return;
+                    this._initialized = true;
+
                     this.search();
                     setInterval(() => {
                         if (this.lastScanned && Date.now() - this.lastScanTime > 1500) {
