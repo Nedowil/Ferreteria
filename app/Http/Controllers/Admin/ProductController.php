@@ -301,6 +301,20 @@ class ProductController extends Controller
     {
         $unique = 'unique:products,sku' . ($ignoreId ? ",{$ignoreId}" : '');
 
+        // Convertir fracciones (ej '1/16', '1/2') a decimales antes de validar
+        if ($request->has('presentations')) {
+            $presentations = $request->input('presentations');
+            foreach ($presentations as $i => $row) {
+                if (isset($row['units_factor'])) {
+                    $presentations[$i]['units_factor'] = $this->parseFraction($row['units_factor']);
+                }
+            }
+            $request->merge(['presentations' => $presentations]);
+        }
+        if ($request->filled('container_factor')) {
+            $request->merge(['container_factor' => $this->parseFraction($request->input('container_factor'))]);
+        }
+
         $data = $request->validate([
             'sku' => ['nullable', 'string', 'max:60', $unique],
             'barcode' => ['nullable', 'string', 'max:60'],
@@ -347,6 +361,24 @@ class ProductController extends Controller
         unset($data['image']);
 
         return $data;
+    }
+
+    /**
+     * Acepta '0.5', '1/16', '1 / 8', '0,5' y devuelve el decimal.
+     * Si no logra parsear, devuelve el valor original (para que la validacion
+     * 'numeric' lo rechace y muestre el error al usuario).
+     */
+    private function parseFraction($value): mixed
+    {
+        if ($value === null || $value === '') return $value;
+        $s = trim(str_replace([' ', ','], ['', '.'], (string) $value));
+        if (str_contains($s, '/')) {
+            [$num, $den] = array_pad(explode('/', $s, 2), 2, null);
+            if (is_numeric($num) && is_numeric($den) && (float) $den != 0) {
+                return (float) $num / (float) $den;
+            }
+        }
+        return is_numeric($s) ? (float) $s : $value;
     }
 
     /**

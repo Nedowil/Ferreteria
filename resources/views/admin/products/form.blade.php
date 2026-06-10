@@ -163,7 +163,32 @@
                         ])->toArray() : [];
                     @endphp
                     <div class="border-l-4 border-amber-400 bg-amber-50 p-4 rounded"
-                         x-data="{ rows: @js($existingPresentations), parseNum(v){ const n = parseFloat(String(v).replace(',','.')); return isNaN(n)?0:n; } }">
+                         x-data="{
+                            rows: @js($existingPresentations),
+                            // Acepta '0.5', '1/16', '1/4', '1 / 8', '0,5' (coma latina)
+                            parseNum(v){
+                                if (v === '' || v === null || v === undefined) return 0;
+                                const s = String(v).replace(/\s/g,'').replace(',','.');
+                                if (s.includes('/')) {
+                                    const [a, b] = s.split('/');
+                                    const num = parseFloat(a), den = parseFloat(b);
+                                    if (!isNaN(num) && !isNaN(den) && den !== 0) return num / den;
+                                    return 0;
+                                }
+                                const n = parseFloat(s);
+                                return isNaN(n) ? 0 : n;
+                            },
+                            // Aplica una fraccion comun a la fila
+                            apply(idx, value){ this.rows[idx].units_factor = value; },
+                            // Modo inverso: 'cuantas X hay en 1 base' (ej. 16 onzas → 1/16)
+                            invQty: {},
+                            applyInverse(idx){
+                                const q = parseFloat(this.invQty[idx]);
+                                if (!isNaN(q) && q > 0) {
+                                    this.rows[idx].units_factor = '1/' + q;
+                                }
+                            },
+                         }">
                         <div class="flex justify-between items-start mb-2">
                             <div>
                                 <h3 class="font-semibold text-slate-800 flex items-center gap-2">
@@ -171,18 +196,12 @@
                                 </h3>
                                 <p class="text-xs text-slate-600 mt-1">
                                     Si este producto se vende tambien por <strong>libra, media libra, caja, rollo, yarda, fardo, etc</strong>,
-                                    agrega cada presentacion. El campo <strong>"Factor de stock"</strong> es <strong>cuanto se descuenta del stock</strong>
-                                    cuando vendes <strong>1</strong> de esa presentacion. El stock se guarda siempre en la <strong>unidad base</strong> que usaste al registrar el producto.
-                                </p>
-                                <p class="text-xs text-slate-600 mt-1">
-                                    Ejemplo: si registraste stock <strong>en cajas</strong> y una caja contiene 2 libras (4 medias libras, 32 onzas),
-                                    entonces: <code class="bg-white px-1 rounded">Libra → 0.5</code>,
-                                    <code class="bg-white px-1 rounded">Media libra → 0.25</code>,
-                                    <code class="bg-white px-1 rounded">Onza → 0.03125</code>,
-                                    <code class="bg-white px-1 rounded">Caja → 1</code>.
+                                    agrega cada presentacion. Podés escribir el factor como decimal (<code class="bg-white px-1 rounded">0.5</code>) o como
+                                    <strong>fraccion</strong> (<code class="bg-white px-1 rounded">1/2</code>, <code class="bg-white px-1 rounded">1/16</code>),
+                                    o usar los botones rapidos abajo de cada fila.
                                 </p>
                             </div>
-                            <button type="button" @click="rows.push({ label: '', units_factor: '', price: '' })"
+                            <button type="button" @click="rows.push({ label: '', units_factor: '', price: '' }); invQty[rows.length-1] = ''"
                                     class="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded text-sm font-semibold whitespace-nowrap">
                                 + Agregar
                             </button>
@@ -194,18 +213,18 @@
 
                         <div class="space-y-2">
                             <template x-for="(row, idx) in rows" :key="idx">
-                                <div class="bg-white p-2 rounded border border-amber-200">
+                                <div class="bg-white p-3 rounded border border-amber-200">
                                     <div class="grid grid-cols-12 gap-2 items-end">
                                         <div class="col-span-12 md:col-span-4">
                                             <label class="text-xs font-medium text-slate-700">Etiqueta</label>
                                             <input type="text" :name="`presentations[${idx}][label]`" x-model="row.label"
-                                                   placeholder="Ej. Libra, Media libra, Caja"
+                                                   placeholder="Ej. Libra, Media libra, Onza"
                                                    class="mt-1 block w-full border-slate-300 rounded-md shadow-sm text-sm focus:border-orange-500 focus:ring-orange-500" />
                                         </div>
                                         <div class="col-span-6 md:col-span-3">
                                             <label class="text-xs font-medium text-slate-700">Factor de stock</label>
                                             <input type="text" inputmode="decimal" :name="`presentations[${idx}][units_factor]`" x-model="row.units_factor"
-                                                   placeholder="Ej. 1, 0.5, 0.25, 100"
+                                                   placeholder="Ej. 0.5  o  1/16"
                                                    class="mt-1 block w-full text-right border-slate-300 rounded-md shadow-sm text-sm focus:border-orange-500 focus:ring-orange-500" />
                                         </div>
                                         <div class="col-span-5 md:col-span-3">
@@ -220,13 +239,50 @@
                                                     class="px-2 py-2 bg-red-500 hover:bg-red-600 text-white rounded text-sm">✕</button>
                                         </div>
                                     </div>
-                                    <div class="text-xs mt-1 px-1"
-                                         :class="parseNum(row.units_factor) > 0 ? 'text-emerald-700' : 'text-red-600'"
-                                         x-show="row.label">
-                                        ⓘ Al vender <strong>1 <span x-text="row.label || 'presentacion'"></span></strong>
-                                        se descontaran <strong x-text="parseNum(row.units_factor).toFixed(4).replace(/0+$/,'').replace(/\.$/,'')"></strong>
-                                        del stock.
-                                        <span x-show="parseNum(row.units_factor) <= 0">⚠ Factor invalido</span>
+
+                                    <!-- Botones rapidos de fracciones comunes -->
+                                    <div class="mt-2 flex flex-wrap gap-1 items-center">
+                                        <span class="text-xs text-slate-500 mr-1">📐 Equivalencias rapidas:</span>
+                                        <button type="button" @click="apply(idx, '0.5')"
+                                                class="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 rounded text-xs">Media (½)</button>
+                                        <button type="button" @click="apply(idx, '0.25')"
+                                                class="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 rounded text-xs">Cuarto (¼)</button>
+                                        <button type="button" @click="apply(idx, '1/8')"
+                                                class="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 rounded text-xs">Octavo (⅛)</button>
+                                        <button type="button" @click="apply(idx, '1/16')"
+                                                class="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 rounded text-xs">Onza si base es libra (1/16)</button>
+                                        <button type="button" @click="apply(idx, '1/100')"
+                                                class="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 rounded text-xs">Centímetro si base es metro (1/100)</button>
+                                    </div>
+
+                                    <!-- Calculadora inversa: 'cuantas X hay en 1 base' -->
+                                    <div class="mt-2 flex flex-wrap gap-2 items-center">
+                                        <span class="text-xs text-slate-500">🧮 O calculá al revés:</span>
+                                        <span class="text-xs text-slate-600">En <strong>1</strong> unidad base hay</span>
+                                        <input type="number" min="1" step="0.01" x-model="invQty[idx]"
+                                               placeholder="16"
+                                               class="w-20 border-slate-300 rounded text-xs py-0.5 px-1" />
+                                        <span class="text-xs text-slate-600"><strong x-text="row.label || 'presentaciones'"></strong></span>
+                                        <button type="button" @click="applyInverse(idx)"
+                                                class="px-2 py-0.5 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-semibold">
+                                            → Calcular
+                                        </button>
+                                    </div>
+
+                                    <!-- Preview en vivo -->
+                                    <div class="text-xs mt-2 px-1 py-1 rounded"
+                                         :class="parseNum(row.units_factor) > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'"
+                                         x-show="row.label || row.units_factor">
+                                        <template x-if="parseNum(row.units_factor) > 0">
+                                            <span>
+                                                ✓ Al vender <strong>1 <span x-text="row.label || 'presentacion'"></span></strong>
+                                                se descontaran <strong x-text="parseNum(row.units_factor).toFixed(6).replace(/0+$/,'').replace(/\.$/,'')"></strong>
+                                                del stock.
+                                            </span>
+                                        </template>
+                                        <template x-if="parseNum(row.units_factor) <= 0">
+                                            <span>⚠ Falta el factor (escribilo como decimal <code class="bg-white px-1 rounded">0.5</code> o como fraccion <code class="bg-white px-1 rounded">1/16</code>)</span>
+                                        </template>
                                     </div>
                                 </div>
                             </template>
