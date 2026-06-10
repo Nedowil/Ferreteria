@@ -619,6 +619,12 @@
                 searchTimer: null,
                 debounceMs: 300,
 
+                // Buffer global del scanner (funciona en cualquier parte del POS,
+                // incluso cuando el cursor esta en otro input como cantidad o pagado)
+                scanBuffer: '',
+                scanTimings: [],
+                scanLastTime: 0,
+
                 init() {
                     this.search();
                     setInterval(() => {
@@ -626,6 +632,62 @@
                             this.lastScanned = '';
                         }
                     }, 500);
+
+                    // Listener global: captura el escaneo aunque el cursor este en otro campo.
+                    // Se usa capture:true para interceptar el evento antes que llegue al input.
+                    document.addEventListener('keydown', (e) => this.onGlobalScannerKey(e), true);
+                },
+
+                onGlobalScannerKey(e) {
+                    // No interferir si hay un modal abierto (cliente, producto o venta)
+                    if (this.showCustomerModal || this.showProductModal || this.showSaleModal) return;
+                    // No interferir con atajos de teclado del navegador
+                    if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+                    const now = Date.now();
+
+                    if (e.key === 'Enter') {
+                        // Si el buffer tiene varios chars Y la velocidad promedio fue de scanner,
+                        // procesamos como codigo de barras
+                        const avgGap = this.scanTimings.length
+                            ? this.scanTimings.reduce((a, b) => a + b, 0) / this.scanTimings.length
+                            : 999;
+                        if (this.scanBuffer.length >= 6 && avgGap < this.scannerThresholdMs * 1.5) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const code = this.scanBuffer;
+                            // Si el input activo NO es la barra de busqueda, los caracteres
+                            // del scan se metieron alli — los quitamos.
+                            const active = document.activeElement;
+                            if (active && active !== this.$refs.search &&
+                                (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') &&
+                                active.value.endsWith(code)) {
+                                active.value = active.value.slice(0, active.value.length - code.length);
+                                active.dispatchEvent(new Event('input', { bubbles: true }));
+                            }
+                            this.query = code;
+                            this.tryExactBarcodeMatch();
+                        }
+                        this.scanBuffer = '';
+                        this.scanTimings = [];
+                        return;
+                    }
+
+                    // Solo nos interesan teclas imprimibles de un caracter
+                    if (e.key.length !== 1) return;
+
+                    const gap = now - this.scanLastTime;
+                    this.scanLastTime = now;
+
+                    if (gap < this.scannerThresholdMs * 3) {
+                        // Velocidad de scanner: acumular en buffer
+                        this.scanBuffer += e.key;
+                        this.scanTimings.push(gap);
+                    } else {
+                        // Pausa larga: empezar buffer nuevo con esta tecla
+                        this.scanBuffer = e.key;
+                        this.scanTimings = [];
+                    }
                 },
 
                 selectCustomer(c) {
