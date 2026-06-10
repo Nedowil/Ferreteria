@@ -306,6 +306,99 @@
                 </div>
             </form>
 
+            <!-- Selector de presentacion al escanear -->
+            <div x-show="showScanChoice" x-cloak x-transition.opacity
+                 class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+                 @keydown.escape.window="showScanChoice && closeScanChoice()">
+                <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden"
+                     x-transition.scale @click.outside="closeScanChoice()">
+
+                    <!-- Header -->
+                    <div class="bg-gradient-to-r from-indigo-500 to-purple-600 px-5 py-4 text-white flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-2xl">🔍</div>
+                            <div>
+                                <h3 class="font-bold text-lg" x-text="scanChoiceProduct?.name"></h3>
+                                <p class="text-indigo-100 text-xs font-mono" x-text="scanChoiceProduct?.sku"></p>
+                            </div>
+                        </div>
+                        <button type="button" @click="closeScanChoice()" class="text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center">✕</button>
+                    </div>
+
+                    <template x-if="scanChoiceProduct">
+                        <div class="p-5">
+                            <p class="text-sm text-slate-600 mb-3">
+                                Stock disponible: <strong x-text="scanChoiceProduct.stock_formatted"></strong>
+                            </p>
+                            <p class="text-sm font-semibold text-slate-700 mb-2">¿En qué presentación se vende?</p>
+
+                            <div class="grid grid-cols-1 gap-2">
+                                <!-- Boton de unidad base (siempre visible) -->
+                                <button type="button"
+                                        x-ref="scanChoiceFirstBtn"
+                                        :disabled="scanChoiceProduct.stock <= 0"
+                                        @click="pickScanChoice(null)"
+                                        @keydown.enter.prevent="pickScanChoice(null)"
+                                        class="flex items-center justify-between p-3 bg-indigo-50 hover:bg-indigo-100 disabled:bg-slate-100 disabled:cursor-not-allowed border-2 border-indigo-300 rounded-lg transition focus:ring-2 focus:ring-indigo-400 focus:outline-none">
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-2xl">📏</span>
+                                        <div class="text-left">
+                                            <div class="font-bold text-indigo-700">+ 1 <span x-text="scanChoiceProduct.base_unit_label"></span></div>
+                                            <div class="text-xs text-slate-500">Unidad base</div>
+                                        </div>
+                                    </div>
+                                    <div class="text-xl font-bold text-indigo-600">Q<span x-text="scanChoiceProduct.sale_price.toFixed(2)"></span></div>
+                                </button>
+
+                                <!-- Boton de empaque (caja/rollo) si esta configurado -->
+                                <template x-if="scanChoiceProduct.container_label && scanChoiceProduct.container_factor">
+                                    <button type="button"
+                                            :disabled="scanChoiceProduct.stock < scanChoiceProduct.container_factor"
+                                            @click="pickScanChoice({ label: scanChoiceProduct.container_label, units_factor: scanChoiceProduct.container_factor, price: scanChoiceProduct.container_price || (scanChoiceProduct.sale_price * scanChoiceProduct.container_factor) })"
+                                            class="flex items-center justify-between p-3 bg-emerald-50 hover:bg-emerald-100 disabled:bg-slate-100 disabled:cursor-not-allowed border-2 border-emerald-300 rounded-lg transition">
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-2xl">📦</span>
+                                            <div class="text-left">
+                                                <div class="font-bold text-emerald-700">+ 1 <span x-text="scanChoiceProduct.container_label"></span></div>
+                                                <div class="text-xs text-slate-500">
+                                                    Trae <span x-text="scanChoiceProduct.container_factor"></span> <span x-text="scanChoiceProduct.base_unit_label"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="text-xl font-bold text-emerald-600">
+                                            Q<span x-text="(scanChoiceProduct.container_price || scanChoiceProduct.sale_price * scanChoiceProduct.container_factor).toFixed(2)"></span>
+                                        </div>
+                                    </button>
+                                </template>
+
+                                <!-- Cada presentacion adicional (media libra, onza, etc) -->
+                                <template x-for="pr in (scanChoiceProduct.presentations || [])" :key="pr.label">
+                                    <button type="button"
+                                            :disabled="scanChoiceProduct.stock < pr.units_factor"
+                                            @click="pickScanChoice(pr)"
+                                            class="flex items-center justify-between p-3 bg-amber-50 hover:bg-amber-100 disabled:bg-slate-100 disabled:cursor-not-allowed border-2 border-amber-300 rounded-lg transition">
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-2xl">🏷</span>
+                                            <div class="text-left">
+                                                <div class="font-bold text-amber-700">+ 1 <span x-text="pr.label"></span></div>
+                                                <div class="text-xs text-slate-500">
+                                                    = <span x-text="pr.units_factor"></span> <span x-text="scanChoiceProduct.base_unit_label"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="text-xl font-bold text-amber-600">Q<span x-text="pr.price.toFixed(2)"></span></div>
+                                    </button>
+                                </template>
+                            </div>
+
+                            <p class="text-xs text-slate-500 mt-3 text-center">
+                                💡 Tip: presiona <kbd class="px-1 bg-slate-200 rounded">Enter</kbd> para elegir la unidad base, o <kbd class="px-1 bg-slate-200 rounded">Esc</kbd> para cancelar.
+                            </p>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
             <!-- Modal de venta completada -->
             <div x-show="showSaleModal" x-cloak x-transition.opacity
                  class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
@@ -612,6 +705,10 @@
                 submitting: false,
                 saleError: '',
 
+                // Selector de presentacion al escanear
+                showScanChoice: false,
+                scanChoiceProduct: null,
+
                 // Deteccion de scanner: los lectores envian caracteres a alta velocidad
                 lastKeyTime: 0,
                 lastScanned: '',
@@ -640,7 +737,7 @@
 
                 onGlobalScannerKey(e) {
                     // No interferir si hay un modal abierto (cliente, producto o venta)
-                    if (this.showCustomerModal || this.showProductModal || this.showSaleModal) return;
+                    if (this.showCustomerModal || this.showProductModal || this.showSaleModal || this.showScanChoice) return;
                     // No interferir con atajos de teclado del navegador
                     if (e.ctrlKey || e.metaKey || e.altKey) return;
 
@@ -880,15 +977,39 @@
                     const term = this.query;
                     const products = await this.search();
                     const exact = products.find(p => p.barcode === term);
-                    if (exact) {
-                        this.addItem(exact);
-                        this.lastScanned = `${exact.sku} — ${exact.name}`;
-                        this.lastScanTime = Date.now();
-                        this.query = '';
-                    } else if (products.length > 0 && products[0].stock > 0) {
-                        this.addItem(products[0]);
-                        this.query = '';
+                    const target = exact || (products.length > 0 && products[0].stock > 0 ? products[0] : null);
+                    if (! target) return;
+
+                    this.lastScanned = `${target.sku} — ${target.name}`;
+                    this.lastScanTime = Date.now();
+                    this.query = '';
+
+                    // Si tiene mas de una opcion de venta (unidad base + empaque y/o presentaciones)
+                    // abrimos el selector. Si es producto simple, agregamos directo.
+                    const hasContainer = target.container_label && target.container_factor;
+                    const hasPresentations = target.presentations && target.presentations.length > 0;
+                    if (hasContainer || hasPresentations) {
+                        this.openScanChoice(target);
+                    } else {
+                        this.addItem(target, null);
                     }
+                },
+
+                openScanChoice(product) {
+                    this.scanChoiceProduct = product;
+                    this.showScanChoice = true;
+                    // Foco al primer boton para que Enter agregue 1 unidad base rapido
+                    setTimeout(() => this.$refs.scanChoiceFirstBtn?.focus(), 80);
+                },
+                closeScanChoice() {
+                    this.showScanChoice = false;
+                    this.scanChoiceProduct = null;
+                    setTimeout(() => this.$refs.search?.focus(), 50);
+                },
+                pickScanChoice(presentation) {
+                    if (! this.scanChoiceProduct) return;
+                    this.addItem(this.scanChoiceProduct, presentation);
+                    this.closeScanChoice();
                 },
                 scheduleBarcodeMatch() {
                     clearTimeout(this.barcodeTimer);
@@ -898,7 +1019,7 @@
                     // Manten el foco en el buscador para que el scanner siempre funcione.
                     // EXCEPCION: si esta abierto el modal de cliente, no robar el foco.
                     setTimeout(() => {
-                        if (this.showCustomerModal || this.showProductModal || this.showSaleModal) return;
+                        if (this.showCustomerModal || this.showProductModal || this.showSaleModal || this.showScanChoice) return;
                         // Tampoco si el usuario tiene focus en otro input editable
                         const active = document.activeElement;
                         if (active && (active.tagName === 'INPUT' || active.tagName === 'SELECT' || active.tagName === 'TEXTAREA') && active !== this.$refs.search) {
