@@ -88,7 +88,7 @@
         @if ($zebraNetworkConfigured && $isZebra)
             <button class="zpl" onclick="printZpl()">🦓 Enviar ZPL a {{ $company->zebra_ip }}</button>
         @endif
-        <a class="cancel" href="{{ route('admin.productos.edit', $product) }}">← Volver</a>
+        <a class="cancel" href="{{ route('admin.productos.index') }}">← Volver</a>
     </span>
     <div class="status" id="zplStatus" style="margin-top:8px; font-size:12px;"></div>
 </div>
