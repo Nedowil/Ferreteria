@@ -155,6 +155,20 @@ class SaleController extends Controller
         $term = trim((string) $request->input('q'));
         $branchId = CurrentBranch::id();
 
+        // Si vino un termino largo (mas de 13 chars) y solo digitos, intentamos
+        // extraer un EAN-13 valido. Cubre el caso del scanner que duplica la
+        // lectura o agrega prefijos/sufijos.
+        $candidates = [$term];
+        if ($term !== '' && ctype_digit($term) && strlen($term) > 13) {
+            $candidates[] = substr($term, 0, 13);
+            $candidates[] = substr($term, -13);
+            // Buscar substrings que empiecen con prefijo interno '200' (los que genera el sistema)
+            if (preg_match('/200\d{10}/', $term, $m)) {
+                $candidates[] = $m[0];
+            }
+        }
+        $candidates = array_values(array_unique(array_filter($candidates)));
+
         $query = Product::with([
                 'unit',
                 'presentations',
@@ -165,14 +179,23 @@ class SaleController extends Controller
         // tambien productos inactivos para que el cajero vea que existen y
         // pueda activarlos. Si es busqueda parcial, solo activos.
         if ($term !== '') {
-            $exactExists = Product::where('barcode', $term)->orWhere('sku', $term)->exists();
+            $exactExists = Product::where(function ($q) use ($candidates) {
+                foreach ($candidates as $c) {
+                    $q->orWhere('barcode', $c)->orWhere('sku', $c);
+                }
+            })->exists();
             if (! $exactExists) {
                 $query->where('active', true);
             }
-            $query->where(function ($q) use ($term) {
+            $query->where(function ($q) use ($term, $candidates) {
                 $q->where('sku', 'like', "%{$term}%")
                   ->orWhere('barcode', 'like', "%{$term}%")
                   ->orWhere('name', 'like', "%{$term}%");
+                foreach ($candidates as $c) {
+                    if ($c !== $term) {
+                        $q->orWhere('barcode', $c)->orWhere('sku', $c);
+                    }
+                }
             });
         } else {
             $query->where('active', true);

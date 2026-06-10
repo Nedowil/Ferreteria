@@ -769,6 +769,10 @@
                 scanBuffer: '',
                 scanTimings: [],
                 scanLastTime: 0,
+                // Filtro anti-duplicado: si el scanner dispara dos veces el mismo
+                // codigo en menos de 1.2 segundos, ignoramos el segundo
+                lastScanCode: '',
+                lastScanCodeTime: 0,
 
                 init() {
                     this.search();
@@ -801,6 +805,18 @@
                             e.preventDefault();
                             e.stopPropagation();
                             const code = this.scanBuffer;
+
+                            // Filtro anti-duplicado: el mismo codigo dos veces seguidas en < 1.2s
+                            // se ignora (cubre scanners que disparan dos veces al apretar)
+                            const nowTs = Date.now();
+                            if (code === this.lastScanCode && (nowTs - this.lastScanCodeTime) < 1200) {
+                                this.scanBuffer = '';
+                                this.scanTimings = [];
+                                return;
+                            }
+                            this.lastScanCode = code;
+                            this.lastScanCodeTime = nowTs;
+
                             // Si el input activo NO es la barra de busqueda, los caracteres
                             // del scan se metieron alli — los quitamos.
                             const active = document.activeElement;
@@ -1024,7 +1040,18 @@
                     if (!this.query) return;
                     const term = this.query;
                     const products = await this.search();
-                    const exact = products.find(p => p.barcode === term || p.sku === term);
+                    // Compara con el termino completo, y tambien con substrings (13 chars al inicio/final)
+                    // por si el scanner agrego prefijos/sufijos o duplico la lectura
+                    const candidates = [term];
+                    if (/^\d+$/.test(term) && term.length > 13) {
+                        candidates.push(term.slice(0, 13));
+                        candidates.push(term.slice(-13));
+                        const m = term.match(/200\d{10}/);
+                        if (m) candidates.push(m[0]);
+                    }
+                    const exact = products.find(p =>
+                        candidates.includes(p.barcode) || candidates.includes(p.sku)
+                    );
                     const target = exact || (products.length > 0 && products[0].stock > 0 ? products[0] : null);
 
                     if (! target) {
