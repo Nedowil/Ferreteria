@@ -93,13 +93,26 @@
     <div class="status" id="zplStatus" style="margin-top:8px; font-size:12px;"></div>
 </div>
 
+@php
+    // Mostrar el precio de la unidad mas alta: caja/rollo si esta configurado,
+    // si no la unidad base. Asi el cliente que pasa por el estante ve el
+    // precio mayorista directo.
+    if ($product->container_label && ($product->container_price || $product->container_factor)) {
+        $labelPrice = (float) ($product->container_price ?: $product->sale_price * $product->container_factor);
+        $labelUnit = $product->container_label;
+    } else {
+        $labelPrice = (float) $product->sale_price;
+        $labelUnit = $product->base_unit_label ?: 'unidad';
+    }
+@endphp
+
 @if ($isZebra)
     @for ($i = 0; $i < $copias; $i++)
         <div class="zebra-label">
             <div class="company">{{ $company->commercial_name }}</div>
             <div class="name">{{ $product->name }}</div>
             <svg class="barcode" data-value="{{ $product->barcode ?: $product->sku }}"></svg>
-            <div class="price">Q{{ number_format($product->sale_price, 2) }}</div>
+            <div class="price">Q{{ number_format($labelPrice, 2) }} / {{ $labelUnit }}</div>
             <div class="sku">{{ $product->sku }}</div>
         </div>
     @endfor
@@ -109,7 +122,7 @@
             <div class="label">
                 <div class="company">{{ $company->commercial_name }}</div>
                 <div class="name">{{ $product->name }}</div>
-                <div class="price">Q{{ number_format($product->sale_price, 2) }}</div>
+                <div class="price">Q{{ number_format($labelPrice, 2) }} / {{ $labelUnit }}</div>
                 <svg class="barcode" data-value="{{ $product->barcode ?: $product->sku }}"></svg>
                 <div class="sku">{{ $product->sku }}</div>
             </div>

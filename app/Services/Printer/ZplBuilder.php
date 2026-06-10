@@ -37,7 +37,15 @@ class ZplBuilder
         $company_name = $this->ascii(strtoupper($company->commercial_name ?: 'FERRETERIA'));
         $company_name = mb_substr($company_name, 0, $widthMm > 40 ? 30 : 20);
 
-        $price = 'Q' . number_format((float) $product->sale_price, 2);
+        // Precio de la unidad mas alta disponible (caja/rollo si existe, si no unidad base)
+        if ($product->container_label && ($product->container_price || $product->container_factor)) {
+            $priceValue = (float) ($product->container_price ?: $product->sale_price * $product->container_factor);
+            $priceUnit = $product->container_label;
+        } else {
+            $priceValue = (float) $product->sale_price;
+            $priceUnit = $product->base_unit_label ?: 'unidad';
+        }
+        $price = 'Q' . number_format($priceValue, 2) . '/' . $this->ascii($priceUnit);
         $sku = $this->ascii($product->sku);
 
         // Coordenadas (en dots) calculadas relativas al ancho del label
