@@ -40,6 +40,50 @@
                             <strong>✓ Escaneado:</strong> <span x-text="lastScanned"></span>
                         </div>
 
+                        <!-- Banner: codigo escaneado pero no existe el producto -->
+                        <div x-show="scanNotFound" x-transition x-cloak
+                             class="mt-2 p-3 bg-red-50 border border-red-300 rounded text-sm flex items-start justify-between gap-3">
+                            <div class="flex-1">
+                                <div class="font-bold text-red-700">⚠ Producto no encontrado</div>
+                                <div class="text-red-600 mt-1">No hay ningun producto con el codigo <code class="bg-white px-1 rounded font-mono" x-text="scanNotFound"></code> en el sistema.</div>
+                                <div class="text-xs text-red-500 mt-1">
+                                    Posibles causas: 1) El producto no esta registrado todavia.
+                                    2) El codigo del producto se guardo distinto al impreso en la etiqueta.
+                                </div>
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                @can('productos.crear')
+                                    <button type="button" @click="newProduct.name = ''; openProductModal()"
+                                            class="px-2 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded text-xs font-semibold whitespace-nowrap">
+                                        + Registrar
+                                    </button>
+                                @endcan
+                                <button type="button" @click="scanNotFound = ''"
+                                        class="px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-xs">
+                                    Cerrar
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Banner: producto encontrado pero esta inactivo -->
+                        <div x-show="scanInactive" x-transition x-cloak
+                             class="mt-2 p-3 bg-amber-50 border border-amber-300 rounded text-sm flex items-start justify-between gap-3">
+                            <div class="flex-1">
+                                <div class="font-bold text-amber-800">⚠ Producto inactivo</div>
+                                <div class="text-amber-700 mt-1">
+                                    <strong x-text="scanInactive?.name"></strong> (<span class="font-mono" x-text="scanInactive?.sku"></span>)
+                                    existe pero esta marcado como inactivo y no se puede vender.
+                                </div>
+                                <div class="text-xs text-amber-600 mt-1">
+                                    Activalo desde <strong>Productos → Editar → Activo ✓</strong>
+                                </div>
+                            </div>
+                            <button type="button" @click="scanInactive = null"
+                                    class="px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-xs h-fit">
+                                Cerrar
+                            </button>
+                        </div>
+
                         <div class="mt-3 flex-1 min-h-96 overflow-y-auto border rounded">
                             <table class="min-w-full divide-y divide-gray-200">
                                 <thead class="bg-gray-50 sticky top-0">
@@ -709,6 +753,10 @@
                 showScanChoice: false,
                 scanChoiceProduct: null,
 
+                // Feedback de errores al escanear
+                scanNotFound: '',
+                scanInactive: null,
+
                 // Deteccion de scanner: los lectores envian caracteres a alta velocidad
                 lastKeyTime: 0,
                 lastScanned: '',
@@ -976,12 +1024,28 @@
                     if (!this.query) return;
                     const term = this.query;
                     const products = await this.search();
-                    const exact = products.find(p => p.barcode === term);
+                    const exact = products.find(p => p.barcode === term || p.sku === term);
                     const target = exact || (products.length > 0 && products[0].stock > 0 ? products[0] : null);
-                    if (! target) return;
+
+                    if (! target) {
+                        // No se encontro ningun producto con ese codigo
+                        this.scanNotFound = term;
+                        this.lastScanned = '';
+                        setTimeout(() => { if (this.scanNotFound === term) this.scanNotFound = ''; }, 6000);
+                        return;
+                    }
+
+                    // Producto inactivo: alertar y NO agregar
+                    if (target.active === false) {
+                        this.scanInactive = target;
+                        this.lastScanned = '';
+                        this.query = '';
+                        return;
+                    }
 
                     this.lastScanned = `${target.sku} — ${target.name}`;
                     this.lastScanTime = Date.now();
+                    this.scanNotFound = '';
                     this.query = '';
 
                     // Si tiene mas de una opcion de venta (unidad base + empaque y/o presentaciones)

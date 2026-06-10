@@ -159,15 +159,23 @@ class SaleController extends Controller
                 'unit',
                 'presentations',
                 'stocks' => fn ($q) => $branchId ? $q->where('branch_id', $branchId) : $q,
-            ])
-            ->where('active', true);
+            ]);
 
+        // Si el termino existe y coincide EXACTO con un barcode o SKU, traemos
+        // tambien productos inactivos para que el cajero vea que existen y
+        // pueda activarlos. Si es busqueda parcial, solo activos.
         if ($term !== '') {
+            $exactExists = Product::where('barcode', $term)->orWhere('sku', $term)->exists();
+            if (! $exactExists) {
+                $query->where('active', true);
+            }
             $query->where(function ($q) use ($term) {
                 $q->where('sku', 'like', "%{$term}%")
                   ->orWhere('barcode', 'like', "%{$term}%")
                   ->orWhere('name', 'like', "%{$term}%");
             });
+        } else {
+            $query->where('active', true);
         }
 
         $products = $query->orderBy('name')->limit(15)->get()->map(function ($p) use ($branchId, $term) {
@@ -178,6 +186,7 @@ class SaleController extends Controller
                 'sku' => $p->sku,
                 'barcode' => $p->barcode,
                 'name' => $p->name,
+                'active' => (bool) $p->active,
                 'unit' => $p->unit?->abbreviation,
                 'base_unit_label' => $p->base_unit_label ?: 'unidad',
                 'container_label' => $p->container_label,
