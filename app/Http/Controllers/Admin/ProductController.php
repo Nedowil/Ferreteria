@@ -23,6 +23,9 @@ class ProductController extends Controller
         $categoryId = $request->integer('category_id') ?: null;
         $brandId = $request->integer('brand_id') ?: null;
         $lowStock = $request->boolean('low_stock');
+        $from = $request->date('from');
+        $to = $request->date('to');
+        $createdBy = $request->integer('created_by') ?: null;
 
         $products = Product::with(['category', 'brand', 'unit'])
             ->when($search, fn ($q) => $q->where(function ($q) use ($search) {
@@ -33,7 +36,9 @@ class ProductController extends Controller
             ->when($categoryId, fn ($q) => $q->where('category_id', $categoryId))
             ->when($brandId, fn ($q) => $q->where('brand_id', $brandId))
             ->when($lowStock, fn ($q) => $q->lowStock())
-            ->orderBy('name')
+            ->when($from, fn ($q) => $q->where('created_at', '>=', $from->startOfDay()))
+            ->when($to, fn ($q) => $q->where('created_at', '<=', $to->endOfDay()))
+            ->orderByDesc('created_at')
             ->paginate(15)
             ->withQueryString();
 
@@ -45,12 +50,15 @@ class ProductController extends Controller
             'categoryId' => $categoryId,
             'brandId' => $brandId,
             'lowStock' => $lowStock,
+            'from' => $from?->toDateString(),
+            'to' => $to?->toDateString(),
         ]);
     }
 
     /**
      * Descarga el catalogo de productos en CSV (Excel/LibreOffice). Respeta
-     * los filtros del listado: busqueda, categoria, marca, bajo stock.
+     * los filtros del listado: busqueda, categoria, marca, bajo stock,
+     * rango de fechas de registro.
      */
     public function export(Request $request): StreamedResponse
     {
@@ -58,6 +66,8 @@ class ProductController extends Controller
         $categoryId = $request->integer('category_id') ?: null;
         $brandId = $request->integer('brand_id') ?: null;
         $lowStock = $request->boolean('low_stock');
+        $from = $request->date('from');
+        $to = $request->date('to');
 
         $query = Product::with(['category', 'brand'])
             ->when($search, fn ($q) => $q->where(function ($q) use ($search) {
@@ -68,7 +78,9 @@ class ProductController extends Controller
             ->when($categoryId, fn ($q) => $q->where('category_id', $categoryId))
             ->when($brandId, fn ($q) => $q->where('brand_id', $brandId))
             ->when($lowStock, fn ($q) => $q->lowStock())
-            ->orderBy('name');
+            ->when($from, fn ($q) => $q->where('created_at', '>=', $from->startOfDay()))
+            ->when($to, fn ($q) => $q->where('created_at', '<=', $to->endOfDay()))
+            ->orderByDesc('created_at');
 
         $filename = 'productos_' . now()->format('Y-m-d_His') . '.csv';
         $headers = [
