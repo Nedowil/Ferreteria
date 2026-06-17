@@ -41,6 +41,15 @@
                         </label>
                     </div>
 
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <select name="created_by" class="border-gray-300 rounded-md shadow-sm text-sm">
+                            <option value="">👤 Registrado por: cualquier usuario</option>
+                            @foreach ($users as $u)
+                                <option value="{{ $u->id }}" @selected($createdBy === $u->id)>{{ $u->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
                     <!-- Filtros de fecha de registro -->
                     <div class="bg-slate-50 border border-slate-200 rounded-md p-3 flex flex-wrap gap-3 items-end">
                         <div>
@@ -86,17 +95,24 @@
                 </form>
 
                 <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
-                    @if ($from || $to)
+                    @if ($from || $to || $createdBy)
                         <div class="text-sm text-slate-600">
-                            Mostrando productos registrados
-                            @if ($from && $to && $from === $to)
-                                el <strong>{{ \Carbon\Carbon::parse($from)->format('d/m/Y') }}</strong>
-                            @elseif ($from && $to)
-                                entre <strong>{{ \Carbon\Carbon::parse($from)->format('d/m/Y') }}</strong> y <strong>{{ \Carbon\Carbon::parse($to)->format('d/m/Y') }}</strong>
-                            @elseif ($from)
-                                desde <strong>{{ \Carbon\Carbon::parse($from)->format('d/m/Y') }}</strong>
-                            @else
-                                hasta <strong>{{ \Carbon\Carbon::parse($to)->format('d/m/Y') }}</strong>
+                            Mostrando productos
+                            @if ($from || $to)
+                                registrados
+                                @if ($from && $to && $from === $to)
+                                    el <strong>{{ \Carbon\Carbon::parse($from)->format('d/m/Y') }}</strong>
+                                @elseif ($from && $to)
+                                    entre <strong>{{ \Carbon\Carbon::parse($from)->format('d/m/Y') }}</strong> y <strong>{{ \Carbon\Carbon::parse($to)->format('d/m/Y') }}</strong>
+                                @elseif ($from)
+                                    desde <strong>{{ \Carbon\Carbon::parse($from)->format('d/m/Y') }}</strong>
+                                @else
+                                    hasta <strong>{{ \Carbon\Carbon::parse($to)->format('d/m/Y') }}</strong>
+                                @endif
+                            @endif
+                            @if ($createdBy)
+                                @php $u = $users->firstWhere('id', $createdBy); @endphp
+                                @if ($u) por <strong>{{ $u->name }}</strong> @endif
                             @endif
                             · Total: <strong>{{ $products->total() }}</strong>
                         </div>
@@ -104,7 +120,7 @@
                         <div></div>
                     @endif
                     <div class="flex gap-2 flex-wrap">
-                        <a href="{{ route('admin.productos.export', request()->only('q','category_id','brand_id','low_stock','from','to')) }}"
+                        <a href="{{ route('admin.productos.export', request()->only('q','category_id','brand_id','low_stock','from','to','created_by')) }}"
                            class="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 inline-flex items-center gap-2"
                            title="Descargar el listado filtrado en CSV (se abre en Excel)">
                             📊 Exportar Excel
@@ -126,6 +142,7 @@
                             <th class="px-3 py-2 text-left text-xs uppercase">Marca</th>
                             <th class="px-3 py-2 text-right text-xs uppercase">P. Venta</th>
                             <th class="px-3 py-2 text-right text-xs uppercase">Stock</th>
+                            <th class="px-3 py-2 text-left text-xs uppercase">Registrado por</th>
                             <th class="px-3 py-2 text-right text-xs uppercase">Acciones</th>
                         </tr>
                         </thead>
@@ -145,6 +162,10 @@
                                 <td class="px-3 py-2 text-right text-xs">
                                     {{ $p->formatStockMixed() }}
                                 </td>
+                                <td class="px-3 py-2 text-xs">
+                                    <div class="text-gray-700">{{ $p->createdBy?->name ?? '—' }}</div>
+                                    <div class="text-gray-400">{{ $p->created_at?->format('d/m/Y H:i') }}</div>
+                                </td>
                                 <td class="px-3 py-2 text-right space-x-2 whitespace-nowrap">
                                     <a href="{{ route('admin.productos.label', $p) }}" target="_blank" class="text-orange-600" title="Imprimir etiqueta">🖨</a>
                                     <a href="{{ route('admin.inventario.show', $p) }}" class="text-gray-700">Inventario</a>
@@ -161,7 +182,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="7" class="px-4 py-6 text-center text-gray-500">Sin productos.</td></tr>
+                            <tr><td colspan="8" class="px-4 py-6 text-center text-gray-500">Sin productos.</td></tr>
                         @endforelse
                         </tbody>
                     </table>

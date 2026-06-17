@@ -27,7 +27,7 @@ class ProductController extends Controller
         $to = $request->date('to');
         $createdBy = $request->integer('created_by') ?: null;
 
-        $products = Product::with(['category', 'brand', 'unit'])
+        $products = Product::with(['category', 'brand', 'unit', 'createdBy'])
             ->when($search, fn ($q) => $q->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                   ->orWhere('sku', 'like', "%{$search}%")
@@ -38,6 +38,7 @@ class ProductController extends Controller
             ->when($lowStock, fn ($q) => $q->lowStock())
             ->when($from, fn ($q) => $q->where('created_at', '>=', $from->startOfDay()))
             ->when($to, fn ($q) => $q->where('created_at', '<=', $to->endOfDay()))
+            ->when($createdBy, fn ($q) => $q->where('created_by_user_id', $createdBy))
             ->orderByDesc('created_at')
             ->paginate(15)
             ->withQueryString();
@@ -47,11 +48,13 @@ class ProductController extends Controller
             'search' => $search,
             'categories' => Category::orderBy('name')->get(),
             'brands' => Brand::orderBy('name')->get(),
+            'users' => \App\Models\User::orderBy('name')->get(['id', 'name']),
             'categoryId' => $categoryId,
             'brandId' => $brandId,
             'lowStock' => $lowStock,
             'from' => $from?->toDateString(),
             'to' => $to?->toDateString(),
+            'createdBy' => $createdBy,
         ]);
     }
 
@@ -68,8 +71,9 @@ class ProductController extends Controller
         $lowStock = $request->boolean('low_stock');
         $from = $request->date('from');
         $to = $request->date('to');
+        $createdBy = $request->integer('created_by') ?: null;
 
-        $query = Product::with(['category', 'brand'])
+        $query = Product::with(['category', 'brand', 'createdBy'])
             ->when($search, fn ($q) => $q->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                   ->orWhere('sku', 'like', "%{$search}%")
@@ -80,6 +84,7 @@ class ProductController extends Controller
             ->when($lowStock, fn ($q) => $q->lowStock())
             ->when($from, fn ($q) => $q->where('created_at', '>=', $from->startOfDay()))
             ->when($to, fn ($q) => $q->where('created_at', '<=', $to->endOfDay()))
+            ->when($createdBy, fn ($q) => $q->where('created_by_user_id', $createdBy))
             ->orderByDesc('created_at');
 
         $filename = 'productos_' . now()->format('Y-m-d_His') . '.csv';
@@ -98,7 +103,7 @@ class ProductController extends Controller
                 'Unidad base', 'Empaque', 'Unidades por empaque', 'Precio por empaque Q',
                 'Precio compra Q', 'Precio venta Q',
                 'Stock actual', 'Stock formato', 'Stock minimo',
-                'Activo', 'Fecha registro',
+                'Activo', 'Fecha registro', 'Registrado por',
             ], ';');
 
             $query->chunk(500, function ($rows) use ($out) {
@@ -120,6 +125,7 @@ class ProductController extends Controller
                         rtrim(rtrim(number_format((float) $p->min_stock, 4, '.', ''), '0'), '.') ?: '0',
                         $p->active ? 'Si' : 'No',
                         $p->created_at?->format('Y-m-d H:i'),
+                        $p->createdBy?->name,
                     ], ';');
                 }
             });
@@ -149,6 +155,7 @@ class ProductController extends Controller
 
         $presentations = $data['presentations'] ?? [];
         unset($data['presentations']);
+        $data['created_by_user_id'] = auth()->id();
 
         $product = Product::create($data);
         $this->syncPresentations($product, $presentations);
@@ -242,6 +249,7 @@ class ProductController extends Controller
             'stock' => $data['stock'] ?? 0,
             'min_stock' => $data['min_stock'] ?? 0,
             'active' => true,
+            'created_by_user_id' => auth()->id(),
         ]);
 
         // Crear stock por sucursal (activa o primera disponible) si se indico

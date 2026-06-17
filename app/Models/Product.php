@@ -31,6 +31,7 @@ class Product extends Model
         'min_stock',
         'image_path',
         'active',
+        'created_by_user_id',
     ];
 
     protected $casts = [
@@ -105,6 +106,11 @@ class Product extends Model
     public function unit(): BelongsTo
     {
         return $this->belongsTo(Unit::class);
+    }
+
+    public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class, 'created_by_user_id');
     }
 
     public function movements(): HasMany
