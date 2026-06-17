@@ -28,15 +28,29 @@ class InventoryController extends Controller
             'type' => ['required', 'in:entrada,salida,ajuste'],
             'quantity' => ['required', 'numeric', 'min:0.01'],
             'reason' => ['nullable', 'string', 'max:255'],
+            'input_mode' => ['nullable', 'in:base,container'],
         ]);
+
+        // Si el usuario ingreso la cantidad en empaque (ej. 10 cajas), convertir a unidad base
+        $qty = (float) $data['quantity'];
+        $mode = $data['input_mode'] ?? 'base';
+        $reasonSuffix = '';
+        if ($mode === 'container' && $producto->container_label && (float) $producto->container_factor > 0) {
+            $qtyBase = $qty * (float) $producto->container_factor;
+            $reasonSuffix = " ({$qty} {$producto->container_label} = {$qtyBase} {$producto->base_unit_label})";
+            $qty = $qtyBase;
+        }
+
+        $reason = trim(($data['reason'] ?? '') . $reasonSuffix);
 
         try {
             $service->applyMovement(
                 product: $producto,
                 type: $data['type'],
-                quantity: (float) $data['quantity'],
-                reason: $data['reason'] ?? null,
+                quantity: $qty,
+                reason: $reason ?: null,
                 userId: auth()->id(),
+                branchId: \App\Support\CurrentBranch::id(),
             );
         } catch (\DomainException $e) {
             return back()->withErrors(['quantity' => $e->getMessage()])->withInput();
