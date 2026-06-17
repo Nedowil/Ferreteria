@@ -66,11 +66,16 @@
 
                     <div>
                         <h3 class="font-semibold mb-2">Partidas</h3>
+                        <p class="text-xs text-slate-600 mb-2">
+                            💡 Para productos con empaque (caja, rollo), elegí <strong>cajas/rollos</strong> en el dropdown
+                            de unidad y poné el precio del empaque completo. El sistema convierte solo a la unidad base
+                            (libras, metros, onzas).
+                        </p>
                         <table class="min-w-full divide-y divide-gray-200 border">
                             <thead class="bg-gray-50">
                             <tr>
                                 <th class="px-2 py-2 text-left text-xs uppercase">Producto</th>
-                                <th class="px-2 py-2 text-right text-xs uppercase w-32">Cantidad</th>
+                                <th class="px-2 py-2 text-right text-xs uppercase w-44">Cantidad / Unidad</th>
                                 <th class="px-2 py-2 text-right text-xs uppercase w-32">Costo unitario</th>
                                 <th class="px-2 py-2 text-right text-xs uppercase w-32">Subtotal</th>
                                 <th class="px-2 py-2 w-12"></th>
@@ -106,16 +111,34 @@
                                         </div>
                                     </td>
                                     <td class="px-2 py-1">
-                                        <input type="text" inputmode="decimal" required
-                                               :name="`items[${idx}][quantity]`" x-model="item.quantity"
-                                               @input="recalc()"
-                                               class="block w-full text-right border-gray-300 rounded-md shadow-sm" />
+                                        <input type="hidden" :name="`items[${idx}][input_mode]`" :value="item.input_mode" />
+                                        <input type="hidden" :name="`items[${idx}][container_factor]`" :value="item.container_factor || ''" />
+                                        <div class="flex gap-1">
+                                            <input type="text" inputmode="decimal" required
+                                                   :name="`items[${idx}][quantity]`" x-model="item.quantity"
+                                                   @input="recalc()"
+                                                   class="block w-full text-right border-gray-300 rounded-md shadow-sm" />
+                                            <select x-model="item.input_mode" @change="onModeChange(idx)"
+                                                    class="border-gray-300 rounded-md shadow-sm text-xs font-semibold">
+                                                <option value="base" x-text="item.base_label || 'unidad'"></option>
+                                                <template x-if="item.container_label && item.container_factor">
+                                                    <option value="container" x-text="item.container_label + 's'"></option>
+                                                </template>
+                                            </select>
+                                        </div>
+                                        <template x-if="item.input_mode === 'container' && item.container_factor">
+                                            <div class="text-xs text-emerald-700 mt-0.5">
+                                                = <span x-text="((parseFloat(item.quantity)||0) * item.container_factor).toFixed(2)"></span>
+                                                <span x-text="item.base_label || 'unidad'"></span>
+                                            </div>
+                                        </template>
                                     </td>
                                     <td class="px-2 py-1">
                                         <input type="text" inputmode="decimal" required
                                                :name="`items[${idx}][unit_cost]`" x-model="item.unit_cost"
                                                @input="recalc()"
                                                class="block w-full text-right border-gray-300 rounded-md shadow-sm" />
+                                        <div class="text-xs text-slate-500 mt-0.5" x-text="item.input_mode === 'container' ? 'Precio por '+item.container_label : 'Precio por '+(item.base_label||'unidad')"></div>
                                     </td>
                                     <td class="px-2 py-1 text-right">Q<span x-text="((item.quantity||0) * (item.unit_cost||0)).toFixed(2)"></span></td>
                                     <td class="px-2 py-1 text-center">
@@ -170,7 +193,7 @@
                 supplier_id: '',
                 supplierSearch: '',
                 supplierOpen: false,
-                items: [{ product_id: '', search: '', quantity: 1, unit_cost: 0 }],
+                items: [{ product_id: '', search: '', quantity: 1, unit_cost: 0, input_mode: 'base', container_label: '', container_factor: 0, container_price: 0, base_label: 'unidad', base_purchase_price: 0 }],
                 tax: 0,
                 subtotal: 0,
                 total: 0,
@@ -197,13 +220,36 @@
                     this.supplier_id = ''; this.supplierSearch = ''; this.supplierOpen = false;
                 },
                 selectProduct(idx, p) {
-                    this.items[idx].product_id = p.id;
-                    this.items[idx].search = `${p.sku} — ${p.name}`;
-                    this.items[idx].unit_cost = parseFloat(p.purchase_price) || 0;
+                    const item = this.items[idx];
+                    item.product_id = p.id;
+                    item.search = `${p.sku} — ${p.name}`;
+                    item.base_label = p.base_unit_label || 'unidad';
+                    item.container_label = p.container_label || '';
+                    item.container_factor = p.container_factor ? parseFloat(p.container_factor) : 0;
+                    item.container_price = p.container_price ? parseFloat(p.container_price) : 0;
+                    item.base_purchase_price = parseFloat(p.purchase_price) || 0;
+                    // Si tiene empaque, por defecto compra en empaques con precio de empaque
+                    if (item.container_label && item.container_factor > 0) {
+                        item.input_mode = 'container';
+                        item.unit_cost = item.container_price || (item.base_purchase_price * item.container_factor);
+                    } else {
+                        item.input_mode = 'base';
+                        item.unit_cost = item.base_purchase_price;
+                    }
+                    this.recalc();
+                },
+                onModeChange(idx) {
+                    const item = this.items[idx];
+                    // Auto-actualizar el precio segun el modo
+                    if (item.input_mode === 'container') {
+                        item.unit_cost = item.container_price || (item.base_purchase_price * (item.container_factor || 1));
+                    } else {
+                        item.unit_cost = item.base_purchase_price;
+                    }
                     this.recalc();
                 },
                 init() { this.recalc(); },
-                addItem() { this.items.push({ product_id: '', search: '', quantity: 1, unit_cost: 0 }); },
+                addItem() { this.items.push({ product_id: '', search: '', quantity: 1, unit_cost: 0, input_mode: 'base', container_label: '', container_factor: 0, container_price: 0, base_label: 'unidad', base_purchase_price: 0 }); },
                 removeItem(idx) {
                     this.items.splice(idx, 1);
                     if (this.items.length === 0) this.addItem();

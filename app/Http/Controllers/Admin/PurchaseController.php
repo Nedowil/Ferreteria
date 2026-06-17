@@ -147,7 +147,10 @@ class PurchaseController extends Controller
     {
         return view('admin.purchases.create', [
             'suppliers' => Supplier::where('active', true)->orderBy('name')->get(),
-            'products' => Product::where('active', true)->orderBy('name')->get(['id', 'sku', 'name', 'purchase_price']),
+            'products' => Product::where('active', true)->orderBy('name')->get([
+                'id', 'sku', 'name', 'purchase_price', 'base_unit_label',
+                'container_label', 'container_factor', 'container_price',
+            ]),
         ]);
     }
 
@@ -248,7 +251,24 @@ class PurchaseController extends Controller
             'items.*.product_id' => ['required', 'exists:products,id'],
             'items.*.quantity' => ['required', 'numeric', 'min:0.01'],
             'items.*.unit_cost' => ['required', 'numeric', 'min:0'],
+            'items.*.input_mode' => ['nullable', 'in:base,container'],
+            'items.*.container_factor' => ['nullable', 'numeric', 'gt:0'],
         ]);
+
+        // Si el item se ingreso en empaque (cajas/rollos), convertir a unidad base
+        // y guardar el costo por unidad base correctamente
+        foreach ($validated['items'] as $i => $row) {
+            $mode = $row['input_mode'] ?? 'base';
+            $factor = (float) ($row['container_factor'] ?? 0);
+            if ($mode === 'container' && $factor > 0) {
+                // Cantidad: 10 cajas × 50 = 500 libras
+                $validated['items'][$i]['quantity'] = (float) $row['quantity'] * $factor;
+                // Precio unitario: si el usuario puso "precio por caja", lo dividimos
+                // para que el cost por unidad base quede correcto
+                $validated['items'][$i]['unit_cost'] = (float) $row['unit_cost'] / $factor;
+            }
+            unset($validated['items'][$i]['input_mode'], $validated['items'][$i]['container_factor']);
+        }
 
         return $validated['items'];
     }
