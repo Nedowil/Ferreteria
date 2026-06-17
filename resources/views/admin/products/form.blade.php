@@ -130,8 +130,8 @@
                                 <x-input-label for="container_price" value="Precio por empaque (Q)" />
                                 <x-text-input id="container_price" name="container_price" type="text" inputmode="decimal"
                                               class="mt-1 block w-full"
-                                              placeholder="700.00"
-                                              :value="old('container_price', $product->container_price)" />
+                                              placeholder="0.00"
+                                              :value="old('container_price', (float) $product->container_price > 0 ? number_format($product->container_price, 2, '.', '') : '')" />
                                 <p class="text-xs text-slate-500 mt-1">Precio especial cuando se vende un empaque completo (suele ser menor que precio base x factor).</p>
                             </div>
                         </div>
@@ -142,14 +142,16 @@
                             <x-input-label for="purchase_price" value="Precio de compra *" />
                             <x-text-input id="purchase_price" name="purchase_price" type="text" inputmode="decimal"
                                           class="mt-1 block w-full"
-                                          :value="old('purchase_price', $product->purchase_price)" required />
+                                          placeholder="0.00"
+                                          :value="old('purchase_price', (float) $product->purchase_price > 0 ? number_format($product->purchase_price, 2, '.', '') : '')" required />
                             <x-input-error :messages="$errors->get('purchase_price')" class="mt-2" />
                         </div>
                         <div>
                             <x-input-label for="sale_price" value="Precio de venta (por unidad base) *" />
                             <x-text-input id="sale_price" name="sale_price" type="text" inputmode="decimal"
                                           class="mt-1 block w-full"
-                                          :value="old('sale_price', $product->sale_price)" required />
+                                          placeholder="0.00"
+                                          :value="old('sale_price', (float) $product->sale_price > 0 ? number_format($product->sale_price, 2, '.', '') : '')" required />
                             <x-input-error :messages="$errors->get('sale_price')" class="mt-2" />
                         </div>
                     </div>
