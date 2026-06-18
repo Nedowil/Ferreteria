@@ -149,7 +149,7 @@ class PurchaseController extends Controller
             'suppliers' => Supplier::where('active', true)->orderBy('name')->get(),
             'products' => Product::where('active', true)->orderBy('name')->get([
                 'id', 'sku', 'name', 'purchase_price', 'base_unit_label',
-                'container_label', 'container_factor', 'container_price',
+                'container_label', 'container_factor', 'container_price', 'tax_type',
             ]),
         ]);
     }
@@ -253,6 +253,7 @@ class PurchaseController extends Controller
             'items.*.unit_cost' => ['required', 'numeric', 'min:0'],
             'items.*.input_mode' => ['nullable', 'in:base,container'],
             'items.*.container_factor' => ['nullable', 'numeric', 'gt:0'],
+            'items.*.tax_type' => ['nullable', 'in:iva,exento'],
         ]);
 
         // Si el item se ingreso en empaque (cajas/rollos), convertir a unidad base

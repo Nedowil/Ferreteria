@@ -62,21 +62,39 @@ class PurchaseService
             $purchase->items()->delete();
 
             $subtotal = 0.0;
+            $subtotalGravado = 0.0;
+            $subtotalExento = 0.0;
             foreach ($items as $item) {
+                $product = Product::find($item['product_id']);
                 $itemSubtotal = (float) $item['quantity'] * (float) $item['unit_cost'];
+                $taxType = $item['tax_type'] ?? ($product?->tax_type ?: Product::TAX_IVA);
+
                 $subtotal += $itemSubtotal;
+                if ($taxType === Product::TAX_EXENTO) {
+                    $subtotalExento += $itemSubtotal;
+                } else {
+                    $subtotalGravado += $itemSubtotal;
+                }
+
                 $purchase->items()->create([
                     'product_id' => $item['product_id'],
                     'quantity' => $item['quantity'],
                     'unit_cost' => $item['unit_cost'],
                     'subtotal' => $itemSubtotal,
+                    'tax_type' => $taxType,
                 ]);
             }
 
+            // Si el usuario no paso un IVA manual, lo calculamos automaticamente
+            // solo sobre la parte GRAVADA. Si lo paso manualmente, respetamos su valor.
+            $company = \App\Models\CompanySetting::current();
+            $taxRate = (float) $company->default_tax_rate;
+            $finalTax = $tax > 0 ? $tax : ($taxRate > 0 ? round($subtotalGravado * $taxRate / 100, 2) : 0);
+
             $purchase->update([
                 'subtotal' => $subtotal,
-                'tax' => $tax,
-                'total' => $subtotal + $tax,
+                'tax' => $finalTax,
+                'total' => $subtotal + $finalTax,
             ]);
         });
     }

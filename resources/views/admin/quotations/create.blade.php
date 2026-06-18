@@ -85,6 +85,7 @@
                                 <tr class="border-t">
                                     <td class="px-2 py-1">
                                         <input type="hidden" :name="`items[${idx}][product_id]`" :value="item.product_id" />
+                                        <input type="hidden" :name="`items[${idx}][tax_type]`" :value="item.tax_type || 'iva'" />
                                         <div class="relative" x-data="{ open: false }" @click.outside="open = false">
                                             <input type="text" x-model="item.search"
                                                    @focus="open = true" @input="open = true"
@@ -165,7 +166,7 @@
                 customer_id: '',
                 customerSearch: '',
                 customerOpen: false,
-                items: [{ product_id: '', search: '', quantity: 1, unit_price: 0, discount: 0 }],
+                items: [{ product_id: '', search: '', quantity: 1, unit_price: 0, discount: 0, tax_type: 'iva' }],
                 taxRate: {{ (float) $company->default_tax_rate }},
                 pricesIncludeTax: {{ $company->prices_include_tax ? 'true' : 'false' }},
                 tax: 0,
@@ -199,10 +200,11 @@
                     this.items[idx].product_id = p.id;
                     this.items[idx].search = `${p.sku} — ${p.name}`;
                     this.items[idx].unit_price = parseFloat(p.sale_price) || 0;
+                    this.items[idx].tax_type = p.tax_type || 'iva';
                     this.recalc();
                 },
                 init() { this.recalc(); },
-                addItem() { this.items.push({ product_id: '', search: '', quantity: 1, unit_price: 0, discount: 0 }); },
+                addItem() { this.items.push({ product_id: '', search: '', quantity: 1, unit_price: 0, discount: 0, tax_type: 'iva' }); },
                 removeItem(idx) { this.items.splice(idx, 1); if (this.items.length === 0) this.addItem(); this.recalc(); },
                 recalc() {
                     const num = (v) => { const n = parseFloat(String(v ?? '').replace(',', '.')); return isNaN(n) ? 0 : n; };

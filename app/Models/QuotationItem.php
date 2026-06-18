@@ -14,6 +14,7 @@ class QuotationItem extends Model
         'unit_price',
         'discount',
         'subtotal',
+        'tax_type',
     ];
 
     protected $casts = [

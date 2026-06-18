@@ -112,6 +112,7 @@
                                     </td>
                                     <td class="px-2 py-1">
                                         <input type="hidden" :name="`items[${idx}][input_mode]`" :value="item.input_mode" />
+                                        <input type="hidden" :name="`items[${idx}][tax_type]`" :value="item.tax_type || 'iva'" />
                                         <input type="hidden" :name="`items[${idx}][container_factor]`" :value="item.container_factor || ''" />
                                         <div class="flex gap-1">
                                             <input type="text" inputmode="decimal" required
@@ -193,7 +194,7 @@
                 supplier_id: '',
                 supplierSearch: '',
                 supplierOpen: false,
-                items: [{ product_id: '', search: '', quantity: 1, unit_cost: 0, input_mode: 'base', container_label: '', container_factor: 0, container_price: 0, base_label: 'unidad', base_purchase_price: 0 }],
+                items: [{ product_id: '', search: '', quantity: 1, unit_cost: 0, input_mode: 'base', container_label: '', container_factor: 0, container_price: 0, base_label: 'unidad', base_purchase_price: 0, tax_type: 'iva' }],
                 tax: 0,
                 subtotal: 0,
                 total: 0,
@@ -228,6 +229,7 @@
                     item.container_factor = p.container_factor ? parseFloat(p.container_factor) : 0;
                     item.container_price = p.container_price ? parseFloat(p.container_price) : 0;
                     item.base_purchase_price = parseFloat(p.purchase_price) || 0;
+                    item.tax_type = p.tax_type || 'iva';
                     // Si tiene empaque, por defecto compra en empaques con precio de empaque
                     if (item.container_label && item.container_factor > 0) {
                         item.input_mode = 'container';
@@ -249,7 +251,7 @@
                     this.recalc();
                 },
                 init() { this.recalc(); },
-                addItem() { this.items.push({ product_id: '', search: '', quantity: 1, unit_cost: 0, input_mode: 'base', container_label: '', container_factor: 0, container_price: 0, base_label: 'unidad', base_purchase_price: 0 }); },
+                addItem() { this.items.push({ product_id: '', search: '', quantity: 1, unit_cost: 0, input_mode: 'base', container_label: '', container_factor: 0, container_price: 0, base_label: 'unidad', base_purchase_price: 0, tax_type: 'iva' }); },
                 removeItem(idx) {
                     this.items.splice(idx, 1);
                     if (this.items.length === 0) this.addItem();

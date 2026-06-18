@@ -13,6 +13,7 @@ class PurchaseItem extends Model
         'quantity',
         'unit_cost',
         'subtotal',
+        'tax_type',
     ];
 
     protected $casts = [

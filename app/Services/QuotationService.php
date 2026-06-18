@@ -62,14 +62,24 @@ class QuotationService
             $quotation->items()->delete();
 
             $subtotal = 0.0;
+            $subtotalGravado = 0.0;
+            $subtotalExento = 0.0;
             $totalDiscount = 0.0;
             foreach ($items as $item) {
+                $product = Product::find($item['product_id']);
                 $qty = (float) $item['quantity'];
                 $price = (float) $item['unit_price'];
                 $disc = (float) ($item['discount'] ?? 0);
+                $taxType = $item['tax_type'] ?? ($product?->tax_type ?: Product::TAX_IVA);
                 $line = ($qty * $price) - $disc;
+                $lineTotal = $qty * $price;
 
-                $subtotal += $qty * $price;
+                $subtotal += $lineTotal;
+                if ($taxType === Product::TAX_EXENTO) {
+                    $subtotalExento += $lineTotal;
+                } else {
+                    $subtotalGravado += $lineTotal;
+                }
                 $totalDiscount += $disc;
 
                 $quotation->items()->create([
@@ -78,21 +88,25 @@ class QuotationService
                     'unit_price' => $price,
                     'discount' => $disc,
                     'subtotal' => $line,
+                    'tax_type' => $taxType,
                 ]);
             }
 
-            // Calcular IVA y total segun la configuracion del emisor para
-            // mantener consistencia con el POS y los PDFs
+            // El IVA solo aplica a la porcion gravada
             $company = \App\Models\CompanySetting::current();
             $taxRate = (float) $company->default_tax_rate;
-            $baseAmount = $subtotal - $totalDiscount;
+
+            $discGravado = $subtotal > 0 ? $totalDiscount * ($subtotalGravado / $subtotal) : 0;
+            $discExento = $totalDiscount - $discGravado;
+            $baseGravado = $subtotalGravado - $discGravado;
+            $baseExento = $subtotalExento - $discExento;
 
             if ($company->prices_include_tax) {
-                $finalTax = $taxRate > 0 ? round($baseAmount - ($baseAmount / (1 + $taxRate / 100)), 2) : 0;
-                $total = $baseAmount;
+                $finalTax = $taxRate > 0 ? round($baseGravado - ($baseGravado / (1 + $taxRate / 100)), 2) : 0;
+                $total = $baseGravado + $baseExento;
             } else {
-                $finalTax = round($baseAmount * $taxRate / 100, 2);
-                $total = $baseAmount + $finalTax;
+                $finalTax = round($baseGravado * $taxRate / 100, 2);
+                $total = $baseGravado + $finalTax + $baseExento;
             }
 
             $quotation->update([
@@ -118,6 +132,7 @@ class QuotationService
                 'quantity' => (float) $i->quantity,
                 'unit_price' => (float) $i->unit_price,
                 'discount' => (float) $i->discount,
+                'tax_type' => $i->tax_type ?: Product::TAX_IVA,
             ])->toArray();
 
             $sale = $this->sales->create(

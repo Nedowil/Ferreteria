@@ -132,7 +132,7 @@ class QuotationController extends Controller
     {
         return view('admin.quotations.create', [
             'customers' => Customer::where('active', true)->orderBy('name')->get(['id', 'name', 'tax_id']),
-            'products' => Product::where('active', true)->orderBy('name')->get(['id', 'sku', 'name', 'sale_price']),
+            'products' => Product::where('active', true)->orderBy('name')->get(['id', 'sku', 'name', 'sale_price', 'tax_type']),
             'company' => \App\Models\CompanySetting::current(),
         ]);
     }
@@ -261,6 +261,7 @@ class QuotationController extends Controller
             'items.*.quantity' => ['required', 'numeric', 'min:0.01'],
             'items.*.unit_price' => ['required', 'numeric', 'min:0'],
             'items.*.discount' => ['nullable', 'numeric', 'min:0'],
+            'items.*.tax_type' => ['nullable', 'in:iva,exento'],
         ]);
 
         return $validated['items'];
