@@ -38,6 +38,8 @@ class SaleService
             }
 
             $subtotal = 0.0;
+            $subtotalGravado = 0.0;
+            $subtotalExento = 0.0;
             $totalDiscount = 0.0;
             $normalized = [];
 
@@ -49,7 +51,9 @@ class SaleService
                 $discount = (float) ($item['discount'] ?? 0);
                 $factor = (float) ($item['units_factor'] ?? 1);
                 $unitLabel = $item['unit_label'] ?? 'Unidad';
-                $stockNeeded = $qty * $factor; // unidades reales descontadas
+                // El tax_type viene del front. Si no, lo tomamos del producto (seguro)
+                $taxType = $item['tax_type'] ?? ($product->tax_type ?: Product::TAX_IVA);
+                $stockNeeded = $qty * $factor;
                 $lineSubtotal = ($qty * $price) - $discount;
 
                 if ($lineSubtotal < 0) {
@@ -61,7 +65,13 @@ class SaleService
                     throw new \DomainException("Stock insuficiente para {$product->name}. Disponible: {$available} unidades, requeridas: {$stockNeeded}.");
                 }
 
-                $subtotal += $qty * $price;
+                $lineTotal = $qty * $price;
+                $subtotal += $lineTotal;
+                if ($taxType === Product::TAX_EXENTO) {
+                    $subtotalExento += $lineTotal;
+                } else {
+                    $subtotalGravado += $lineTotal;
+                }
                 $totalDiscount += $discount;
                 $normalized[] = [
                     'product' => $product,
@@ -71,29 +81,34 @@ class SaleService
                     'subtotal' => $lineSubtotal,
                     'units_factor' => $factor,
                     'unit_label' => $unitLabel,
+                    'tax_type' => $taxType,
                     'stock_qty' => $stockNeeded,
                 ];
             }
 
-            // Calcular total e IVA segun configuracion del emisor para evitar
-            // doble suma cuando los precios ya incluyen IVA
+            // Calcular total e IVA segun configuracion del emisor.
+            // El IVA solo se aplica a la porcion GRAVADA del subtotal.
             $company = \App\Models\CompanySetting::current();
             $taxRate = (float) $company->default_tax_rate;
 
-            // Descuento global (campo "discount") o suma de descuentos por linea
             $globalDiscount = (float) ($data['discount'] ?? 0);
             $totalDiscount = max($totalDiscount, $globalDiscount);
             if ($totalDiscount > $subtotal) $totalDiscount = $subtotal;
-            $baseAmount = $subtotal - $totalDiscount;
+
+            // Repartimos el descuento proporcionalmente entre gravado y exento
+            $discGravado = $subtotal > 0 ? $totalDiscount * ($subtotalGravado / $subtotal) : 0;
+            $discExento = $totalDiscount - $discGravado;
+            $baseGravado = $subtotalGravado - $discGravado;
+            $baseExento = $subtotalExento - $discExento;
 
             if ($company->prices_include_tax) {
-                // Precios incluyen IVA: el IVA esta dentro del subtotal
-                $total = $baseAmount;
-                $tax = $taxRate > 0 ? round($baseAmount - ($baseAmount / (1 + $taxRate / 100)), 2) : 0;
+                // El precio gravado YA incluye IVA: lo extraemos. El exento NO se toca.
+                $tax = $taxRate > 0 ? round($baseGravado - ($baseGravado / (1 + $taxRate / 100)), 2) : 0;
+                $total = $baseGravado + $baseExento;
             } else {
-                // Precios sin IVA: agregar IVA al subtotal
-                $tax = round($baseAmount * $taxRate / 100, 2);
-                $total = $baseAmount + $tax;
+                // Precios sin IVA: agregar IVA solo al gravado
+                $tax = round($baseGravado * $taxRate / 100, 2);
+                $total = $baseGravado + $tax + $baseExento;
             }
 
             $paid = (float) ($data['paid_amount'] ?? $total);
@@ -128,6 +143,7 @@ class SaleService
                     'subtotal' => $n['subtotal'],
                     'unit_label' => $n['unit_label'],
                     'units_factor' => $n['units_factor'],
+                    'tax_type' => $n['tax_type'],
                 ]);
 
                 $reason = "Venta {$sale->folio}";

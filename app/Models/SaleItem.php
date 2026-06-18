@@ -16,6 +16,7 @@ class SaleItem extends Model
         'subtotal',
         'unit_label',
         'units_factor',
+        'tax_type',
     ];
 
     protected $casts = [

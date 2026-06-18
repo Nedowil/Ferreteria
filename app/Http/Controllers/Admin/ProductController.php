@@ -347,6 +347,7 @@ class ProductController extends Controller
             'container_label' => ['nullable', 'string', 'max:30'],
             'container_factor' => ['nullable', 'numeric', 'gt:0'],
             'container_price' => ['nullable', 'numeric', 'min:0'],
+            'tax_type' => ['nullable', 'in:iva,exento'],
             'purchase_price' => ['required', 'numeric', 'min:0'],
             'sale_price' => ['required', 'numeric', 'min:0'],
             'stock' => ['nullable', 'numeric', 'min:0'],
@@ -363,6 +364,7 @@ class ProductController extends Controller
         $data['stock'] = $data['stock'] ?? 0;
         $data['min_stock'] = $data['min_stock'] ?? 0;
         $data['base_unit_label'] = $data['base_unit_label'] ?: 'unidad';
+        $data['tax_type'] = $data['tax_type'] ?? 'iva';
 
         // Si el usuario ingreso el stock inicial en cajas/rollos, lo convertimos a unidad base
         $mode = $data['stock_input_mode'] ?? 'base';

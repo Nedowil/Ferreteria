@@ -13,6 +13,9 @@ class Product extends Model
 {
     use SoftDeletes, Auditable;
 
+    public const TAX_IVA = 'iva';
+    public const TAX_EXENTO = 'exento';
+
     protected $fillable = [
         'sku',
         'barcode',
@@ -25,6 +28,7 @@ class Product extends Model
         'container_label',
         'container_factor',
         'container_price',
+        'tax_type',
         'purchase_price',
         'sale_price',
         'stock',

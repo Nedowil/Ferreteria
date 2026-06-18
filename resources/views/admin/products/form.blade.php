@@ -137,6 +137,45 @@
                         </div>
                     </div>
 
+                    <!-- IMPUESTO (TAX TYPE) -->
+                    @php
+                        $taxRate = (int) (\App\Models\CompanySetting::current()->default_tax_rate ?: 12);
+                    @endphp
+                    <div class="border-l-4 border-purple-500 bg-purple-50 p-4 rounded"
+                         x-data="{ taxType: @js(old('tax_type', $product->tax_type ?: 'iva')) }">
+                        <h3 class="font-semibold text-slate-800 flex items-center gap-2">
+                            🧾 Tipo de impuesto
+                        </h3>
+                        <p class="text-xs text-slate-600 mt-1">
+                            Define como se cobra el IVA en este producto. Algunos productos basicos
+                            (medicinas, libros, ciertos alimentos) estan <strong>exentos</strong> por ley.
+                            La mayoria llevan IVA del {{ $taxRate }}%.
+                        </p>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3">
+                            <label class="flex items-start gap-2 p-3 bg-white rounded border cursor-pointer transition"
+                                   :class="taxType === 'iva' ? 'border-purple-500 ring-2 ring-purple-200' : 'border-slate-200'">
+                                <input type="radio" name="tax_type" value="iva" x-model="taxType" class="mt-1" />
+                                <span>
+                                    <span class="font-semibold text-sm">🧾 IVA {{ $taxRate }}%</span>
+                                    <span class="block text-xs text-slate-500">
+                                        Regimen normal — se cobra IVA al cliente segun la tasa configurada en SAT.
+                                    </span>
+                                </span>
+                            </label>
+                            <label class="flex items-start gap-2 p-3 bg-white rounded border cursor-pointer transition"
+                                   :class="taxType === 'exento' ? 'border-purple-500 ring-2 ring-purple-200' : 'border-slate-200'">
+                                <input type="radio" name="tax_type" value="exento" x-model="taxType" class="mt-1" />
+                                <span>
+                                    <span class="font-semibold text-sm">🚫 Exento de IVA</span>
+                                    <span class="block text-xs text-slate-500">
+                                        No se cobra impuesto. Aplica para productos exentos por ley.
+                                    </span>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <x-input-label for="purchase_price" value="Precio de compra *" />

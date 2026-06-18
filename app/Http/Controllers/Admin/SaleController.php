@@ -210,6 +210,7 @@ class SaleController extends Controller
                 'barcode' => $p->barcode,
                 'name' => $p->name,
                 'active' => (bool) $p->active,
+                'tax_type' => $p->tax_type ?: 'iva',
                 'unit' => $p->unit?->abbreviation,
                 'base_unit_label' => $p->base_unit_label ?: 'unidad',
                 'container_label' => $p->container_label,
@@ -394,6 +395,7 @@ class SaleController extends Controller
             'items.*.unit_price' => ['required', 'numeric', 'min:0'],
             'items.*.discount' => ['nullable', 'numeric', 'min:0'],
             'items.*.unit_label' => ['nullable', 'string', 'max:30'],
+            'items.*.tax_type' => ['nullable', 'in:iva,exento'],
             'items.*.units_factor' => ['nullable', 'numeric', 'min:0.01'],
         ]);
 

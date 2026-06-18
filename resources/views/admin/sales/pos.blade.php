@@ -234,9 +234,13 @@
                                                 <span class="ml-1 px-1 rounded text-xs"
                                                       :class="item.units_factor > 1 ? 'bg-amber-200 text-amber-900' : 'bg-slate-200 text-slate-700'"
                                                       x-text="item.unit_label"></span>
+                                                <template x-if="item.tax_type === 'exento'">
+                                                    <span class="ml-1 px-1 rounded text-xs bg-purple-200 text-purple-900 font-bold">EXE</span>
+                                                </template>
                                             </div>
                                             <input type="hidden" :name="`items[${idx}][product_id]`" :value="item.product.id" />
                                             <input type="hidden" :name="`items[${idx}][unit_label]`" :value="item.unit_label" />
+                                            <input type="hidden" :name="`items[${idx}][tax_type]`" :value="item.tax_type" />
                                             <input type="hidden" :name="`items[${idx}][units_factor]`" :value="item.units_factor" />
                                         </td>
                                         <td class="px-2 py-1">
@@ -277,6 +281,9 @@
                                        class="w-28 text-right border border-orange-200 rounded text-sm py-1 px-2 focus:border-orange-500 focus:ring-orange-500" />
                             </div>
 
+                            <div class="flex justify-between text-sm text-slate-500" x-show="subtotalExento > 0">
+                                <span class="text-purple-700">Subtotal exento</span><span class="text-purple-700">Q<span x-text="subtotalExento.toFixed(2)"></span></span>
+                            </div>
                             <div class="flex justify-between text-sm text-slate-500">
                                 <span>Monto gravable</span><span>Q<span x-text="taxableAmount.toFixed(2)"></span></span>
                             </div>
@@ -725,6 +732,8 @@
                 tax: 0,
                 taxableAmount: 0,
                 subtotal: 0,
+                subtotalGravado: 0,
+                subtotalExento: 0,
                 total: 0,
                 change: 0,
 
@@ -1130,6 +1139,7 @@
                     const price = presentation ? presentation.price : p.sale_price;
                     const factor = presentation ? presentation.units_factor : 1;
                     const unitLabel = presentation ? presentation.label : (p.unit || 'Unidad');
+                    const taxType = p.tax_type || 'iva';
 
                     if (p.stock < factor) return;
 
@@ -1146,6 +1156,7 @@
                             unit_price: String(price),
                             unit_label: unitLabel,
                             units_factor: factor,
+                            tax_type: taxType,
                         });
                     }
                     this.query = '';
@@ -1175,28 +1186,42 @@
                     return isNaN(n) ? 0 : n;
                 },
                 recalc() {
-                    this.subtotal = this.items.reduce((s, i) => s + this.parseAmount(i.quantity) * this.parseAmount(i.unit_price), 0);
+                    // Subtotal separado por gravados (con IVA) y exentos
+                    let subGravado = 0, subExento = 0;
+                    this.items.forEach(i => {
+                        const lineTotal = this.parseAmount(i.quantity) * this.parseAmount(i.unit_price);
+                        if ((i.tax_type || 'iva') === 'exento') {
+                            subExento += lineTotal;
+                        } else {
+                            subGravado += lineTotal;
+                        }
+                    });
+                    this.subtotal = subGravado + subExento;
+                    this.subtotalGravado = subGravado;
+                    this.subtotalExento = subExento;
 
-                    // Aplica descuento manual sobre el subtotal
+                    // Descuento manual: lo aplicamos proporcionalmente al gravado
                     let discountAmount = this.parseAmount(this.discount);
                     if (discountAmount > this.subtotal) discountAmount = this.subtotal;
-                    const baseAmount = this.subtotal - discountAmount;
+                    const discGravado = this.subtotal > 0 ? discountAmount * (subGravado / this.subtotal) : 0;
+                    const discExento = discountAmount - discGravado;
+                    const baseGravado = subGravado - discGravado;
+                    const baseExento = subExento - discExento;
 
-                    // Calculo del IVA segun configuracion del emisor
+                    // Calculo del IVA solo sobre la parte gravada, segun configuracion del emisor
                     if (this.pricesIncludeTax) {
-                        // Precios ya incluyen IVA: extraerlo del base con descuento aplicado
-                        this.taxableAmount = baseAmount / (1 + this.taxRate / 100);
-                        this.tax = baseAmount - this.taxableAmount;
-                        this.total = baseAmount;
+                        // Precios gravados ya incluyen IVA: lo extraemos
+                        this.taxableAmount = baseGravado / (1 + this.taxRate / 100);
+                        this.tax = baseGravado - this.taxableAmount;
+                        this.total = baseGravado + baseExento;
                     } else {
-                        // Precios sin IVA: agregar IVA al base con descuento aplicado
-                        this.taxableAmount = baseAmount;
-                        this.tax = baseAmount * this.taxRate / 100;
-                        this.total = baseAmount + this.tax;
+                        // Precios sin IVA: lo agregamos al gravado
+                        this.taxableAmount = baseGravado;
+                        this.tax = baseGravado * this.taxRate / 100;
+                        this.total = baseGravado + this.tax + baseExento;
                     }
 
                     if (this.payment_method !== 'efectivo') {
-                        // Tarjeta/transferencia: el monto pagado es siempre el total
                         this.paid_amount = this.total.toFixed(2);
                     }
                     this.change = this.parseAmount(this.paid_amount) - this.total;
