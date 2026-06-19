@@ -36,7 +36,7 @@
                     <h3 class="font-semibold mb-3">Registrar movimiento</h3>
                     <div class="mb-4 p-3 bg-slate-50 border border-slate-200 rounded text-xs text-slate-700 space-y-1">
                         <div><strong class="text-emerald-700">➕ Entrada</strong> — Usá cuando aparece más stock del que el sistema sabe (encontraste cajas guardadas, conteo físico, devolución informal). <strong>No registra compra.</strong></div>
-                        <div><strong class="text-red-700">➖ Salida</strong> — Usá cuando falta stock por causas distintas a una venta (merma, robo, dañado, regalo).</div>
+                        <div><strong class="text-red-700">➖ Salida</strong> — Usá cuando falta stock por causas distintas a una venta (vencido, dañado, robo, regalo).</div>
                         <div><strong class="text-blue-700">⚖ Ajuste</strong> — Reemplaza el total. Solo para conteo físico anual donde querés decir "el stock real es X".</div>
                         <div class="text-slate-500 pt-1 border-t">
                             💡 Si lo que pasó es una <strong>compra real con factura</strong>, mejor andá a <a href="{{ route('admin.compras.create') }}" class="text-orange-600 underline">Compras → Nueva compra</a>. Eso queda en historial fiscal.
@@ -135,9 +135,9 @@
                                             class="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-800 rounded text-xs">
                                         💔 Dañado / defectuoso
                                     </button>
-                                    <button type="button" @click="$refs.reason.value='Merma o producto vencido'; $refs.reason.dispatchEvent(new Event('input'))"
+                                    <button type="button" @click="$refs.reason.value='Producto vencido'; $refs.reason.dispatchEvent(new Event('input'))"
                                             class="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-800 rounded text-xs">
-                                        🔥 Merma / vencido
+                                        🗓 Vencido
                                     </button>
                                     <button type="button" @click="$refs.reason.value='Conteo físico — faltó stock registrado'; $refs.reason.dispatchEvent(new Event('input'))"
                                             class="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-800 rounded text-xs">
