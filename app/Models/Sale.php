@@ -69,6 +69,21 @@ class Sale extends Model
         return $this->hasMany(SaleItem::class);
     }
 
+    public function returns(): HasMany
+    {
+        return $this->hasMany(SaleReturn::class)->where('status', SaleReturn::STATUS_PROCESADA);
+    }
+
+    /**
+     * Cantidad ya devuelta para un item especifico (suma todas las devoluciones procesadas).
+     */
+    public function returnedQuantityFor(int $saleItemId): float
+    {
+        return (float) SaleReturnItem::whereHas('return', fn ($q) =>
+            $q->where('sale_id', $this->id)->where('status', SaleReturn::STATUS_PROCESADA)
+        )->where('sale_item_id', $saleItemId)->sum('quantity');
+    }
+
     public function electronicInvoice()
     {
         return $this->hasOne(ElectronicInvoice::class);

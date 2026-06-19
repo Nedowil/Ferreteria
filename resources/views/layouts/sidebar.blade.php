@@ -168,6 +168,14 @@
                 <span x-show="!sidebarCollapsed" x-cloak class="text-sm font-medium">Ventas</span>
                 <span x-show="sidebarCollapsed" x-cloak class="absolute left-full ml-2 px-2 py-1 bg-slate-800 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition">Ventas</span>
             </a>
+            <a href="{{ route('admin.devoluciones.index') }}"
+               class="flex items-center gap-3 px-3 py-2 rounded-lg transition group relative
+                      {{ request()->routeIs('admin.devoluciones.*') ? 'bg-orange-600 text-white shadow-lg' : 'hover:bg-slate-800' }}"
+               :class="sidebarCollapsed ? 'justify-center' : ''">
+                <span class="text-xl flex-shrink-0">↩</span>
+                <span x-show="!sidebarCollapsed" x-cloak class="text-sm font-medium">Devoluciones</span>
+                <span x-show="sidebarCollapsed" x-cloak class="absolute left-full ml-2 px-2 py-1 bg-slate-800 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition">Devoluciones</span>
+            </a>
         @endcan
 
         @can('cotizaciones.ver')

@@ -124,8 +124,14 @@
                         @endif
 
                         @can('ventas.cancelar')
+                            @if ($sale->isCompletada())
+                                <a href="{{ route('admin.devoluciones.create', ['sale' => $sale->id]) }}"
+                                   class="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700">
+                                    ↩ Devolver productos
+                                </a>
+                            @endif
                             <form method="POST" action="{{ route('admin.ventas.cancel', $sale) }}"
-                                  onsubmit="return confirm('Cancelar venta? Se restituira el stock.');">
+                                  onsubmit="return confirm('Cancelar venta? Se restituira TODO el stock. Para devolver solo unos productos, usa Devolver productos.');">
                                 @csrf
                                 <button class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">
                                     Cancelar venta

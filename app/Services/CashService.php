@@ -93,6 +93,51 @@ class CashService
         return $movement;
     }
 
+    public function registerReturn(\App\Models\SaleReturn $return): ?CashMovement
+    {
+        // Busca la sesion de caja abierta del usuario que procesa la devolucion
+        $session = $this->currentSessionFor((int) (auth()->id() ?? $return->user_id));
+        if (! $session) return null;
+
+        $movement = CashMovement::create([
+            'cash_session_id' => $session->id,
+            'user_id' => auth()->id() ?? $return->user_id,
+            'sale_id' => $return->sale_id,
+            'type' => CashMovement::TYPE_DEVOLUCION,
+            'payment_method' => 'efectivo',
+            'amount' => $return->total,
+            'description' => "Devolucion {$return->folio} de venta {$return->sale?->folio}",
+        ]);
+
+        if ($session->isAbierta()) {
+            $this->recomputeExpected($session);
+        }
+
+        return $movement;
+    }
+
+    public function registerReturnCancellation(\App\Models\SaleReturn $return): ?CashMovement
+    {
+        $session = $this->currentSessionFor((int) (auth()->id() ?? $return->user_id));
+        if (! $session) return null;
+
+        $movement = CashMovement::create([
+            'cash_session_id' => $session->id,
+            'user_id' => auth()->id() ?? $return->user_id,
+            'sale_id' => $return->sale_id,
+            'type' => CashMovement::TYPE_INGRESO,
+            'payment_method' => 'efectivo',
+            'amount' => $return->total,
+            'description' => "Cancelacion devolucion {$return->folio}",
+        ]);
+
+        if ($session->isAbierta()) {
+            $this->recomputeExpected($session);
+        }
+
+        return $movement;
+    }
+
     public function registerMovement(
         CashSession $session,
         string $type,
