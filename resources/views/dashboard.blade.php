@@ -1,13 +1,23 @@
 @php
     use App\Models\Product;
     use App\Models\Sale;
-    $productsCount = Product::count();
-    $lowStockCount = Product::lowStock()->count();
-    $lowStockProducts = Product::lowStock()->orderBy('name')->limit(5)->get();
-    $todaySalesCount = Sale::whereDate('date', today())->where('status', Sale::STATUS_COMPLETADA)->count();
-    $todaySalesTotal = Sale::whereDate('date', today())->where('status', Sale::STATUS_COMPLETADA)->sum('total');
-    $monthSalesTotal = Sale::whereYear('date', now()->year)->whereMonth('date', now()->month)->where('status', Sale::STATUS_COMPLETADA)->sum('total');
-    $activeSessions = \App\Models\CashSession::where('status', 'abierta')->count();
+    $user = Auth::user();
+    // Cargamos solo lo que el usuario puede ver para no hacer queries inutiles
+    $productsCount = $user->can('dashboard.productos_total') ? Product::count() : null;
+    $lowStockCount = $user->can('dashboard.stock_bajo') ? Product::lowStock()->count() : null;
+    $lowStockProducts = $user->can('dashboard.productos_reponer') ? Product::lowStock()->orderBy('name')->limit(5)->get() : collect();
+    $todaySalesCount = $user->can('dashboard.ventas_hoy') ? Sale::whereDate('date', today())->where('status', Sale::STATUS_COMPLETADA)->count() : null;
+    $todaySalesTotal = $user->can('dashboard.ventas_hoy') ? Sale::whereDate('date', today())->where('status', Sale::STATUS_COMPLETADA)->sum('total') : null;
+    $monthSalesTotal = $user->can('dashboard.ventas_mes') ? Sale::whereYear('date', now()->year)->whereMonth('date', now()->month)->where('status', Sale::STATUS_COMPLETADA)->sum('total') : null;
+    $activeSessions = $user->can('dashboard.cajas_abiertas') ? \App\Models\CashSession::where('status', 'abierta')->count() : null;
+
+    // Contamos cuantas tarjetas KPI veran para ajustar el grid
+    $kpiCount = collect([
+        $user->can('dashboard.ventas_hoy'),
+        $user->can('dashboard.ventas_mes'),
+        $user->can('dashboard.productos_total'),
+        $user->can('dashboard.stock_bajo'),
+    ])->filter()->count();
 @endphp
 
 <x-app-layout>
@@ -19,55 +29,66 @@
         <div class="max-w-7xl mx-auto space-y-6">
 
             <!-- KPIs principales con colores -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            @if ($kpiCount > 0)
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-{{ min($kpiCount, 4) }} gap-4">
 
-                <div class="bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition transform hover:-translate-y-1">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <div class="text-green-100 text-sm font-medium">Ventas hoy</div>
-                            <div class="text-3xl font-bold mt-1">{{ $todaySalesCount }}</div>
-                            <div class="text-green-100 text-sm mt-1">Q{{ number_format($todaySalesTotal, 2) }}</div>
+                    @can('dashboard.ventas_hoy')
+                        <div class="bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition transform hover:-translate-y-1">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="text-green-100 text-sm font-medium">Ventas hoy</div>
+                                    <div class="text-3xl font-bold mt-1">{{ $todaySalesCount }}</div>
+                                    <div class="text-green-100 text-sm mt-1">Q{{ number_format($todaySalesTotal, 2) }}</div>
+                                </div>
+                                <div class="text-5xl opacity-50">💵</div>
+                            </div>
                         </div>
-                        <div class="text-5xl opacity-50">💵</div>
-                    </div>
+                    @endcan
+
+                    @can('dashboard.ventas_mes')
+                        <div class="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition transform hover:-translate-y-1">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="text-blue-100 text-sm font-medium">Ventas del mes</div>
+                                    <div class="text-3xl font-bold mt-1">Q{{ number_format($monthSalesTotal, 2) }}</div>
+                                    <div class="text-blue-100 text-xs mt-1">{{ now()->translatedFormat('F Y') }}</div>
+                                </div>
+                                <div class="text-5xl opacity-50">📅</div>
+                            </div>
+                        </div>
+                    @endcan
+
+                    @can('dashboard.productos_total')
+                        <div class="bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition transform hover:-translate-y-1">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="text-orange-100 text-sm font-medium">Productos registrados</div>
+                                    <div class="text-3xl font-bold mt-1">{{ $productsCount }}</div>
+                                    <div class="text-orange-100 text-xs mt-1">en catalogo</div>
+                                </div>
+                                <div class="text-5xl opacity-50">📦</div>
+                            </div>
+                        </div>
+                    @endcan
+
+                    @can('dashboard.stock_bajo')
+                        <a href="{{ $lowStockCount > 0 ? route('admin.inventario.low_stock') : '#' }}"
+                           class="bg-gradient-to-br {{ $lowStockCount > 0 ? 'from-red-500 to-rose-600' : 'from-slate-500 to-slate-600' }} rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition transform hover:-translate-y-1">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="text-red-100 text-sm font-medium">Stock bajo</div>
+                                    <div class="text-3xl font-bold mt-1">{{ $lowStockCount }}</div>
+                                    <div class="text-red-100 text-xs mt-1">{{ $lowStockCount > 0 ? 'Reponer urgente' : 'Todo en orden' }}</div>
+                                </div>
+                                <div class="text-5xl opacity-50">⚠️</div>
+                            </div>
+                        </a>
+                    @endcan
                 </div>
-
-                <div class="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition transform hover:-translate-y-1">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <div class="text-blue-100 text-sm font-medium">Ventas del mes</div>
-                            <div class="text-3xl font-bold mt-1">Q{{ number_format($monthSalesTotal, 2) }}</div>
-                            <div class="text-blue-100 text-xs mt-1">{{ now()->translatedFormat('F Y') }}</div>
-                        </div>
-                        <div class="text-5xl opacity-50">📅</div>
-                    </div>
-                </div>
-
-                <div class="bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition transform hover:-translate-y-1">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <div class="text-orange-100 text-sm font-medium">Productos registrados</div>
-                            <div class="text-3xl font-bold mt-1">{{ $productsCount }}</div>
-                            <div class="text-orange-100 text-xs mt-1">en catalogo</div>
-                        </div>
-                        <div class="text-5xl opacity-50">📦</div>
-                    </div>
-                </div>
-
-                <a href="{{ $lowStockCount > 0 ? route('admin.inventario.low_stock') : '#' }}"
-                   class="bg-gradient-to-br {{ $lowStockCount > 0 ? 'from-red-500 to-rose-600' : 'from-slate-500 to-slate-600' }} rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition transform hover:-translate-y-1">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <div class="text-red-100 text-sm font-medium">Stock bajo</div>
-                            <div class="text-3xl font-bold mt-1">{{ $lowStockCount }}</div>
-                            <div class="text-red-100 text-xs mt-1">{{ $lowStockCount > 0 ? 'Reponer urgente' : 'Todo en orden' }}</div>
-                        </div>
-                        <div class="text-5xl opacity-50">⚠️</div>
-                    </div>
-                </a>
-            </div>
+            @endif
 
             <!-- Accesos rapidos -->
+            @can('dashboard.accesos_rapidos')
             <div>
                 <h3 class="text-lg font-bold text-slate-700 mb-3">Accesos rapidos</h3>
                 <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -109,8 +130,10 @@
                     @endcan
                 </div>
             </div>
+            @endcan
 
-            @if ($lowStockCount > 0)
+            @can('dashboard.productos_reponer')
+            @if ($lowStockProducts->isNotEmpty())
                 <div class="bg-white shadow rounded-xl overflow-hidden">
                     <div class="bg-gradient-to-r from-red-500 to-rose-600 px-6 py-3 text-white">
                         <h3 class="font-bold flex items-center gap-2">⚠️ Productos por reponer</h3>
@@ -133,6 +156,7 @@
                     </ul>
                 </div>
             @endif
+            @endcan
 
             <!-- Info usuario y sesion -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -153,16 +177,18 @@
                     </div>
                 </div>
 
-                @can('caja.ver')
+                @can('dashboard.cajas_abiertas')
                     <div class="bg-white rounded-xl shadow p-6 border-t-4 border-green-500">
                         <div class="flex items-center justify-between">
                             <div>
                                 <div class="text-sm text-slate-500">Cajas abiertas</div>
                                 <div class="text-3xl font-bold text-green-600">{{ $activeSessions }}</div>
                             </div>
-                            <a href="{{ route('admin.caja.index') }}" class="text-orange-600 hover:text-orange-700 text-sm font-semibold">
-                                Ver cajas →
-                            </a>
+                            @can('caja.ver')
+                                <a href="{{ route('admin.caja.index') }}" class="text-orange-600 hover:text-orange-700 text-sm font-semibold">
+                                    Ver cajas →
+                                </a>
+                            @endcan
                         </div>
                     </div>
                 @endcan

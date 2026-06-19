@@ -72,6 +72,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'auditoria.ver',
             'backup.gestionar',
             'imports.gestionar',
+            // Dashboard widgets (controlan que ve cada usuario en el panel principal)
+            'dashboard.ventas_hoy',
+            'dashboard.ventas_mes',
+            'dashboard.productos_total',
+            'dashboard.stock_bajo',
+            'dashboard.productos_reponer',
+            'dashboard.accesos_rapidos',
+            'dashboard.cajas_abiertas',
         ];
 
         foreach ($permissions as $permission) {
@@ -97,6 +105,11 @@ class RolesAndPermissionsSeeder extends Seeder
             'compras.crear',
             'compras.recibir',
             'compras.cancelar',
+            // Dashboard: solo widgets de stock/productos, no ve ventas
+            'dashboard.productos_total',
+            'dashboard.stock_bajo',
+            'dashboard.productos_reponer',
+            'dashboard.accesos_rapidos',
         ]);
 
         $vendedor = Role::firstOrCreate(['name' => 'vendedor', 'guard_name' => 'web']);
@@ -117,6 +130,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'cotizaciones.cancelar',
             'facturas.ver',
             'facturas.emitir',
+            // Dashboard: ve sus ventas pero NO el total del mes ni stock bajo
+            'dashboard.ventas_hoy',
+            'dashboard.cajas_abiertas',
+            'dashboard.accesos_rapidos',
         ]);
     }
 }
