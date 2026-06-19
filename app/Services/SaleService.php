@@ -119,9 +119,17 @@ class SaleService
             }
 
             $paid = (float) ($data['paid_amount'] ?? $total);
+            $paymentStatus = $data['payment_status'] ?? 'pagada';
 
-            if ($paid < $total) {
-                throw new \DomainException('El monto pagado es menor al total.');
+            // En credito, paid_amount puede ser 0 (o cualquier abono inicial)
+            if ($paymentStatus === 'al_credito') {
+                if (! ($data['customer_id'] ?? null)) {
+                    throw new \DomainException('Para venta al crédito hay que seleccionar un cliente registrado.');
+                }
+            } else {
+                if ($paid < $total) {
+                    throw new \DomainException('El monto pagado es menor al total.');
+                }
             }
 
             $sale = Sale::create([
@@ -136,9 +144,11 @@ class SaleService
                 'total' => $total,
                 'payment_method' => $data['payment_method'] ?? 'efectivo',
                 'paid_amount' => $paid,
-                'change_amount' => $paid - $total,
+                'change_amount' => max(0, $paid - $total),
                 'status' => Sale::STATUS_COMPLETADA,
                 'notes' => $data['notes'] ?? null,
+                'payment_status' => $paymentStatus,
+                'due_date' => $data['due_date'] ?? null,
             ]);
 
             foreach ($normalized as $n) {

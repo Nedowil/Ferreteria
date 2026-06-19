@@ -20,7 +20,17 @@ class Customer extends Model
         'active',
         'customer_type',
         'wholesale_discount_percent',
+        'credit_limit',
+        'credit_enabled',
     ];
+
+    public function credit_balance(): float
+    {
+        return (float) $this->sales()
+            ->where('payment_status', '!=', 'pagada')
+            ->where('status', 'completada')
+            ->sum(\DB::raw('total - paid_amount'));
+    }
 
     public const TYPE_RETAIL = 'retail';
     public const TYPE_WHOLESALE = 'wholesale';

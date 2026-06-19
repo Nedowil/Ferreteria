@@ -31,10 +31,13 @@ class Sale extends Model
         'status',
         'cancelled_at',
         'notes',
+        'payment_status',
+        'due_date',
     ];
 
     protected $casts = [
         'date' => 'datetime',
+        'due_date' => 'date',
         'cancelled_at' => 'datetime',
         'subtotal' => 'decimal:2',
         'discount' => 'decimal:2',
@@ -43,6 +46,16 @@ class Sale extends Model
         'paid_amount' => 'decimal:2',
         'change_amount' => 'decimal:2',
     ];
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(SalePayment::class);
+    }
+
+    public function balance(): float
+    {
+        return max(0, (float) $this->total - (float) $this->paid_amount);
+    }
 
     public function customer(): BelongsTo
     {

@@ -93,6 +93,12 @@ Route::middleware(['auth', 'verified'])
             Route::post('cuentas-pagar/{compra}/pagar', [\App\Http\Controllers\Admin\AccountsPayableController::class, 'pay'])->name('cuentas_pagar.pay');
         });
 
+        // Cuentas por cobrar a clientes (creditos)
+        Route::middleware('permission:ventas.ver')->group(function () {
+            Route::get('cuentas-cobrar', [\App\Http\Controllers\Admin\AccountsReceivableController::class, 'index'])->name('cuentas_cobrar.index');
+            Route::post('cuentas-cobrar/{venta}/cobrar', [\App\Http\Controllers\Admin\AccountsReceivableController::class, 'receive'])->name('cuentas_cobrar.receive');
+        });
+
         // Pedidos pendientes
         Route::middleware('permission:ventas.ver')->group(function () {
             Route::get('pedidos', [\App\Http\Controllers\Admin\PendingOrderController::class, 'index'])->name('pedidos.index');

@@ -377,14 +377,24 @@ class SaleController extends Controller
     {
         $data = $request->validate([
             'customer_id' => ['nullable', 'exists:customers,id'],
-            'payment_method' => ['required', 'in:efectivo,tarjeta,transferencia'],
+            'payment_method' => ['required', 'in:efectivo,tarjeta,transferencia,credito'],
             'paid_amount' => ['required', 'numeric', 'min:0'],
             'tax' => ['nullable', 'numeric', 'min:0'],
             'discount' => ['nullable', 'numeric', 'min:0'],
             'notes' => ['nullable', 'string'],
+            'payment_status' => ['nullable', 'in:pagada,al_credito,parcial'],
+            'due_date' => ['nullable', 'date'],
         ]);
         $data['tax'] = (float) $request->input('tax', 0);
         $data['discount'] = (float) $request->input('discount', 0);
+
+        // Si es credito, marcamos status y due_date
+        if (($data['payment_method'] ?? '') === 'credito') {
+            $data['payment_status'] = 'al_credito';
+            $data['due_date'] = $data['due_date'] ?? now()->addDays(30)->toDateString();
+        } else {
+            $data['payment_status'] = 'pagada';
+        }
 
         return $data;
     }

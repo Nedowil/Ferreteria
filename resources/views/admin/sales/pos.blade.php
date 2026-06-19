@@ -319,7 +319,9 @@
                         <div class="mt-3 text-sm">
                             <label class="block text-xs mb-1">Metodo de pago</label>
                             <input type="hidden" name="payment_method" :value="payment_method" />
-                            <div class="grid grid-cols-3 gap-2">
+                            <input type="hidden" name="payment_status" :value="payment_method === 'credito' ? 'al_credito' : 'pagada'" />
+                            <input type="hidden" name="due_date" :value="dueDate" />
+                            <div class="grid grid-cols-4 gap-2">
                                 <button type="button" @click="payment_method = 'efectivo'; onPaymentChange()"
                                         :class="payment_method === 'efectivo' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'"
                                         class="px-2 py-2 rounded-md border text-xs font-semibold transition flex flex-col items-center gap-1">
@@ -338,6 +340,23 @@
                                     <span class="text-xl">🏦</span>
                                     Transferencia
                                 </button>
+                                <button type="button" @click="payment_method = 'credito'; paid_amount = '0'; recalc()"
+                                        :class="payment_method === 'credito' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'"
+                                        :disabled="!customer_id"
+                                        class="px-2 py-2 rounded-md border text-xs font-semibold transition flex flex-col items-center gap-1 disabled:opacity-40">
+                                    <span class="text-xl">📝</span>
+                                    Crédito
+                                </button>
+                            </div>
+                            <div x-show="payment_method === 'credito'" x-cloak class="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs">
+                                <p class="font-semibold text-amber-800 mb-1">📝 Venta al crédito</p>
+                                <p>Esta venta queda como cuenta por cobrar. Cuando el cliente abone, lo registrás en <strong>Cuentas por cobrar</strong>.</p>
+                                <div class="mt-2">
+                                    <label class="text-xs">Fecha de pago acordada:</label>
+                                    <input type="date" x-model="dueDate" :min="new Date().toISOString().split('T')[0]"
+                                           class="block w-full border-gray-300 rounded-md text-xs mt-1" />
+                                </div>
+                            </div>
                             </div>
                         </div>
 
@@ -787,6 +806,7 @@
                     return this.customers.filter(c => c.label.toLowerCase().includes(term)).slice(0, 50);
                 },
                 payment_method: 'efectivo',
+                dueDate: new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0],
                 paid_amount: '',
                 discount: '',
                 // Configuracion fiscal del emisor (desde CompanySetting)
