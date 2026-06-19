@@ -28,10 +28,25 @@ class Purchase extends Model
         'status',
         'received_at',
         'notes',
+        'payment_status',
+        'amount_paid',
+        'due_date',
     ];
+
+    public function payments(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(PurchasePayment::class);
+    }
+
+    public function balance(): float
+    {
+        return (float) $this->total - (float) $this->amount_paid;
+    }
 
     protected $casts = [
         'date' => 'date',
+        'due_date' => 'date',
+        'amount_paid' => 'decimal:2',
         'received_at' => 'datetime',
         'subtotal' => 'decimal:2',
         'tax' => 'decimal:2',

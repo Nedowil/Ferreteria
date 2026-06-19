@@ -176,6 +176,36 @@
                 <span x-show="!sidebarCollapsed" x-cloak class="text-sm font-medium">Devoluciones</span>
                 <span x-show="sidebarCollapsed" x-cloak class="absolute left-full ml-2 px-2 py-1 bg-slate-800 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition">Devoluciones</span>
             </a>
+            <a href="{{ route('admin.pedidos.index') }}"
+               class="flex items-center gap-3 px-3 py-2 rounded-lg transition group relative
+                      {{ request()->routeIs('admin.pedidos.*') ? 'bg-orange-600 text-white shadow-lg' : 'hover:bg-slate-800' }}"
+               :class="sidebarCollapsed ? 'justify-center' : ''">
+                <span class="text-xl flex-shrink-0">📋</span>
+                <span x-show="!sidebarCollapsed" x-cloak class="text-sm font-medium">Pedidos pendientes</span>
+                <span x-show="sidebarCollapsed" x-cloak class="absolute left-full ml-2 px-2 py-1 bg-slate-800 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition">Pedidos pendientes</span>
+            </a>
+        @endcan
+
+        @can('compras.ver')
+            <a href="{{ route('admin.cuentas_pagar.index') }}"
+               class="flex items-center gap-3 px-3 py-2 rounded-lg transition group relative
+                      {{ request()->routeIs('admin.cuentas_pagar.*') ? 'bg-orange-600 text-white shadow-lg' : 'hover:bg-slate-800' }}"
+               :class="sidebarCollapsed ? 'justify-center' : ''">
+                <span class="text-xl flex-shrink-0">💸</span>
+                <span x-show="!sidebarCollapsed" x-cloak class="text-sm font-medium">Cuentas por pagar</span>
+                <span x-show="sidebarCollapsed" x-cloak class="absolute left-full ml-2 px-2 py-1 bg-slate-800 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition">Cuentas por pagar</span>
+            </a>
+        @endcan
+
+        @can('inventario.ajustar')
+            <a href="{{ route('admin.conteo.create') }}"
+               class="flex items-center gap-3 px-3 py-2 rounded-lg transition group relative
+                      {{ request()->routeIs('admin.conteo.*') ? 'bg-orange-600 text-white shadow-lg' : 'hover:bg-slate-800' }}"
+               :class="sidebarCollapsed ? 'justify-center' : ''">
+                <span class="text-xl flex-shrink-0">📋</span>
+                <span x-show="!sidebarCollapsed" x-cloak class="text-sm font-medium">Conteo físico</span>
+                <span x-show="sidebarCollapsed" x-cloak class="absolute left-full ml-2 px-2 py-1 bg-slate-800 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition">Conteo físico</span>
+            </a>
         @endcan
 
         @can('cotizaciones.ver')

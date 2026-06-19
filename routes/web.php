@@ -87,6 +87,22 @@ Route::middleware(['auth', 'verified'])
             Route::post('conteo-fisico', [\App\Http\Controllers\Admin\StockCountController::class, 'store'])->name('conteo.store');
         });
 
+        // Cuentas por pagar a proveedores
+        Route::middleware('permission:compras.ver')->group(function () {
+            Route::get('cuentas-pagar', [\App\Http\Controllers\Admin\AccountsPayableController::class, 'index'])->name('cuentas_pagar.index');
+            Route::post('cuentas-pagar/{compra}/pagar', [\App\Http\Controllers\Admin\AccountsPayableController::class, 'pay'])->name('cuentas_pagar.pay');
+        });
+
+        // Pedidos pendientes
+        Route::middleware('permission:ventas.ver')->group(function () {
+            Route::get('pedidos', [\App\Http\Controllers\Admin\PendingOrderController::class, 'index'])->name('pedidos.index');
+            Route::get('pedidos/nuevo', [\App\Http\Controllers\Admin\PendingOrderController::class, 'create'])->name('pedidos.create');
+            Route::post('pedidos', [\App\Http\Controllers\Admin\PendingOrderController::class, 'store'])->name('pedidos.store');
+            Route::post('pedidos/{pedido}/notificar', [\App\Http\Controllers\Admin\PendingOrderController::class, 'markNotified'])->name('pedidos.notify');
+            Route::post('pedidos/{pedido}/entregado', [\App\Http\Controllers\Admin\PendingOrderController::class, 'markDelivered'])->name('pedidos.deliver');
+            Route::post('pedidos/{pedido}/cancelar', [\App\Http\Controllers\Admin\PendingOrderController::class, 'cancel'])->name('pedidos.cancel');
+        });
+
         Route::middleware('permission:proveedores.ver')->group(function () {
             Route::get('proveedores/exportar', [SupplierController::class, 'export'])->name('proveedores.export');
             Route::resource('proveedores', SupplierController::class)
