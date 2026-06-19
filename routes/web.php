@@ -210,6 +210,7 @@ Route::middleware(['auth', 'verified'])
         Route::post('sucursal/cambiar', [BranchSwitcherController::class, 'switch'])->name('sucursal.switch');
 
         Route::middleware('permission:auditoria.ver')->group(function () {
+            Route::get('auditoria/exportar', [AuditLogController::class, 'export'])->name('auditoria.export');
             Route::get('auditoria', [AuditLogController::class, 'index'])->name('auditoria.index');
         });
 
