@@ -1,6 +1,6 @@
 <x-guest-layout>
-    <h2 class="text-2xl font-bold text-slate-800 mb-1">Restablecer contrasena</h2>
-    <p class="text-sm text-slate-500 mb-6">Elige una nueva contrasena para tu cuenta</p>
+    <h2 class="text-2xl font-bold text-slate-800 mb-1">Restablecer contraseña</h2>
+    <p class="text-sm text-slate-500 mb-6">Elige una nueva contraseña para tu cuenta</p>
 
     <form method="POST" action="{{ route('password.store') }}" class="space-y-4">
         @csrf
@@ -13,20 +13,20 @@
         </div>
 
         <div>
-            <x-input-label for="password" value="Nueva contrasena" />
+            <x-input-label for="password" value="Nueva contraseña" />
             <x-text-input id="password" class="block mt-1 w-full" type="password" name="password" required autocomplete="new-password" />
             <x-input-error :messages="$errors->get('password')" class="mt-2" />
         </div>
 
         <div>
-            <x-input-label for="password_confirmation" value="Confirmar contrasena" />
+            <x-input-label for="password_confirmation" value="Confirmar contraseña" />
             <x-text-input id="password_confirmation" class="block mt-1 w-full" type="password" name="password_confirmation" required autocomplete="new-password" />
             <x-input-error :messages="$errors->get('password_confirmation')" class="mt-2" />
         </div>
 
         <div class="flex items-center justify-end pt-2">
             <x-primary-button>
-                Restablecer contrasena
+                Restablecer contraseña
             </x-primary-button>
         </div>
     </form>

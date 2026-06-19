@@ -1,6 +1,6 @@
 <x-guest-layout>
-    <h2 class="text-2xl font-bold text-slate-800 mb-1">Recuperar contrasena</h2>
-    <p class="text-sm text-slate-500 mb-6">Olvidaste tu contrasena? No hay problema. Ingresa tu email y te enviaremos un enlace para restablecerla.</p>
+    <h2 class="text-2xl font-bold text-slate-800 mb-1">Recuperar contraseña</h2>
+    <p class="text-sm text-slate-500 mb-6">Olvidaste tu contraseña? No hay problema. Ingresa tu email y te enviaremos un enlace para restablecerla.</p>
 
     <x-auth-session-status class="mb-4" :status="session('status')" />
 

@@ -44,7 +44,7 @@ class FerreteriaInstall extends Command
         $this->line('  Abre en navegador:      <fg=cyan>http://127.0.0.1:8000</>');
         $this->line('  Credenciales por defecto:');
         $this->line('    Email:      <fg=yellow>admin@ferreteria.test</>');
-        $this->line('    Contrasena: <fg=yellow>password</>');
+        $this->line('    Contraseña: <fg=yellow>password</>');
         $this->newLine();
 
         return self::SUCCESS;

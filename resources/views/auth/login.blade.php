@@ -14,7 +14,7 @@
         </div>
 
         <div>
-            <x-input-label for="password" value="Contrasena" />
+            <x-input-label for="password" value="Contraseña" />
             <x-text-input id="password" class="block mt-1 w-full" type="password" name="password" required autocomplete="current-password" />
             <x-input-error :messages="$errors->get('password')" class="mt-2" />
         </div>
@@ -27,7 +27,7 @@
 
             @if (Route::has('password.request'))
                 <a class="text-sm text-orange-600 hover:text-orange-700 hover:underline" href="{{ route('password.request') }}">
-                    Olvidaste tu contrasena?
+                    Olvidaste tu contraseña?
                 </a>
             @endif
         </div>

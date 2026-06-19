@@ -16,7 +16,7 @@
     </div>
 
     <div>
-        <x-input-label for="password" value="Contrasena" />
+        <x-input-label for="password" value="Contraseña" />
         <x-text-input id="password" name="password" type="password" class="mt-1 block w-full"
                       :required="! isset($user)" autocomplete="new-password" />
         @isset($user)
@@ -26,7 +26,7 @@
     </div>
 
     <div>
-        <x-input-label for="password_confirmation" value="Confirmar contrasena" />
+        <x-input-label for="password_confirmation" value="Confirmar contraseña" />
         <x-text-input id="password_confirmation" name="password_confirmation" type="password"
                       class="mt-1 block w-full" autocomplete="new-password" />
     </div>

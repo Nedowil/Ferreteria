@@ -22,13 +22,13 @@
             </h2>
 
             <p class="mt-1 text-sm text-slate-600">
-                Una vez eliminada, todos sus datos seran borrados permanentemente. Ingresa tu contrasena para confirmar.
+                Una vez eliminada, todos sus datos seran borrados permanentemente. Ingresa tu contraseña para confirmar.
             </p>
 
             <div class="mt-6">
-                <x-input-label for="password" value="Contrasena" class="sr-only" />
+                <x-input-label for="password" value="Contraseña" class="sr-only" />
                 <x-text-input id="password" name="password" type="password"
-                              class="mt-1 block w-3/4" placeholder="Contrasena" />
+                              class="mt-1 block w-3/4" placeholder="Contraseña" />
                 <x-input-error :messages="$errors->userDeletion->get('password')" class="mt-2" />
             </div>
 
