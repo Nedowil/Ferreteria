@@ -69,6 +69,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'facturas.anular',
             // Multi-sucursal / Admin operacional
             'sucursales.gestionar',
+            'transferencias.gestionar',
             'auditoria.ver',
             'backup.gestionar',
             'imports.gestionar',

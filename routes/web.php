@@ -99,6 +99,17 @@ Route::middleware(['auth', 'verified'])
             Route::post('cuentas-cobrar/{venta}/cobrar', [\App\Http\Controllers\Admin\AccountsReceivableController::class, 'receive'])->name('cuentas_cobrar.receive');
         });
 
+        // Transferencias entre sucursales
+        Route::middleware('permission:transferencias.gestionar')->group(function () {
+            Route::get('transferencias', [\App\Http\Controllers\Admin\BranchTransferController::class, 'index'])->name('transferencias.index');
+            Route::get('transferencias/nueva', [\App\Http\Controllers\Admin\BranchTransferController::class, 'create'])->name('transferencias.create');
+            Route::post('transferencias', [\App\Http\Controllers\Admin\BranchTransferController::class, 'store'])->name('transferencias.store');
+            Route::get('transferencias/{transferencia}', [\App\Http\Controllers\Admin\BranchTransferController::class, 'show'])->name('transferencias.show');
+            Route::post('transferencias/{transferencia}/enviar', [\App\Http\Controllers\Admin\BranchTransferController::class, 'send'])->name('transferencias.send');
+            Route::post('transferencias/{transferencia}/recibir', [\App\Http\Controllers\Admin\BranchTransferController::class, 'receive'])->name('transferencias.receive');
+            Route::post('transferencias/{transferencia}/cancelar', [\App\Http\Controllers\Admin\BranchTransferController::class, 'cancel'])->name('transferencias.cancel');
+        });
+
         // Pedidos pendientes
         Route::middleware('permission:ventas.ver')->group(function () {
             Route::get('pedidos', [\App\Http\Controllers\Admin\PendingOrderController::class, 'index'])->name('pedidos.index');

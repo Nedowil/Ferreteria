@@ -106,6 +106,7 @@ class RoleController extends Controller
                 'reportes.ver' => 'Ver reportes',
                 'configuracion.gestionar' => 'Gestionar configuración del emisor (logo, FEL, impresoras)',
                 'sucursales.gestionar' => 'Gestionar sucursales',
+                'transferencias.gestionar' => 'Crear y gestionar transferencias entre sucursales',
                 'auditoria.ver' => 'Ver log de auditoría (quién hizo qué)',
                 'backup.gestionar' => 'Gestionar backups',
                 'imports.gestionar' => 'Importar datos masivos desde CSV',
