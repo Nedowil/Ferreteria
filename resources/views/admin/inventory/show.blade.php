@@ -34,6 +34,14 @@
                 @endphp
                 <div class="bg-white shadow-sm sm:rounded-lg p-6">
                     <h3 class="font-semibold mb-3">Registrar movimiento</h3>
+                    <div class="mb-4 p-3 bg-slate-50 border border-slate-200 rounded text-xs text-slate-700 space-y-1">
+                        <div><strong class="text-emerald-700">➕ Entrada</strong> — Usá cuando aparece más stock del que el sistema sabe (encontraste cajas guardadas, conteo físico, devolución informal). <strong>No registra compra.</strong></div>
+                        <div><strong class="text-red-700">➖ Salida</strong> — Usá cuando falta stock por causas distintas a una venta (merma, robo, dañado, regalo).</div>
+                        <div><strong class="text-blue-700">⚖ Ajuste</strong> — Reemplaza el total. Solo para conteo físico anual donde querés decir "el stock real es X".</div>
+                        <div class="text-slate-500 pt-1 border-t">
+                            💡 Si lo que pasó es una <strong>compra real con factura</strong>, mejor andá a <a href="{{ route('admin.compras.create') }}" class="text-orange-600 underline">Compras → Nueva compra</a>. Eso queda en historial fiscal.
+                        </div>
+                    </div>
                     @if ($errors->any())
                         <div class="mb-3 p-3 bg-red-100 text-red-800 rounded">
                             @foreach ($errors->all() as $error) <div>{{ $error }}</div> @endforeach
@@ -87,14 +95,90 @@
 
                             <div class="md:col-span-2">
                                 <x-input-label for="reason" value="Motivo" />
-                                <x-text-input id="reason" name="reason" type="text" class="mt-1 block w-full"
-                                              :value="old('reason')" placeholder="Ej. Compra adicional, merma, conteo fisico" />
+                                <x-text-input id="reason" name="reason" x-ref="reason" type="text" class="mt-1 block w-full"
+                                              :value="old('reason')" placeholder="Ej. Encontrado en otra bodega, conteo físico, merma..." />
+                            </div>
+
+                            <!-- Motivos rapidos: rellenan el campo Motivo con un click -->
+                            <div class="md:col-span-4 -mt-2">
+                                <div class="text-xs text-slate-500 mb-1">⚡ Motivos rápidos:</div>
+                                <!-- Entrada -->
+                                <div x-show="type === 'entrada'" class="flex flex-wrap gap-1">
+                                    <button type="button" @click="$refs.reason.value='Encontrado en otra bodega/ubicación'; $refs.reason.dispatchEvent(new Event('input'))"
+                                            class="px-2 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded text-xs">
+                                        🔍 Encontrado en otra ubicación
+                                    </button>
+                                    <button type="button" @click="$refs.reason.value='Conteo físico — apareció más stock del registrado'; $refs.reason.dispatchEvent(new Event('input'))"
+                                            class="px-2 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded text-xs">
+                                        ⚖️ Conteo físico (sobra)
+                                    </button>
+                                    <button type="button" @click="$refs.reason.value='Devolución de cliente sin documento'; $refs.reason.dispatchEvent(new Event('input'))"
+                                            class="px-2 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded text-xs">
+                                        ↩ Devolución informal
+                                    </button>
+                                    <button type="button" @click="$refs.reason.value='Reposición sin factura del proveedor'; $refs.reason.dispatchEvent(new Event('input'))"
+                                            class="px-2 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded text-xs">
+                                        📦 Reposición sin factura
+                                    </button>
+                                    <button type="button" @click="$refs.reason.value='Donación o regalo recibido'; $refs.reason.dispatchEvent(new Event('input'))"
+                                            class="px-2 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded text-xs">
+                                        🎁 Donación recibida
+                                    </button>
+                                    <button type="button" @click="$refs.reason.value='Corrección de error de captura'; $refs.reason.dispatchEvent(new Event('input'))"
+                                            class="px-2 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded text-xs">
+                                        ✏ Corrección de error
+                                    </button>
+                                </div>
+                                <!-- Salida -->
+                                <div x-show="type === 'salida'" class="flex flex-wrap gap-1">
+                                    <button type="button" @click="$refs.reason.value='Producto dañado o defectuoso'; $refs.reason.dispatchEvent(new Event('input'))"
+                                            class="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-800 rounded text-xs">
+                                        💔 Dañado / defectuoso
+                                    </button>
+                                    <button type="button" @click="$refs.reason.value='Merma o producto vencido'; $refs.reason.dispatchEvent(new Event('input'))"
+                                            class="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-800 rounded text-xs">
+                                        🔥 Merma / vencido
+                                    </button>
+                                    <button type="button" @click="$refs.reason.value='Conteo físico — faltó stock registrado'; $refs.reason.dispatchEvent(new Event('input'))"
+                                            class="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-800 rounded text-xs">
+                                        ⚖️ Conteo físico (falta)
+                                    </button>
+                                    <button type="button" @click="$refs.reason.value='Robo / pérdida'; $refs.reason.dispatchEvent(new Event('input'))"
+                                            class="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-800 rounded text-xs">
+                                        🚪 Robo / pérdida
+                                    </button>
+                                    <button type="button" @click="$refs.reason.value='Muestra o regalo a cliente'; $refs.reason.dispatchEvent(new Event('input'))"
+                                            class="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-800 rounded text-xs">
+                                        🎁 Muestra / regalo
+                                    </button>
+                                    <button type="button" @click="$refs.reason.value='Uso interno (ferretería propia)'; $refs.reason.dispatchEvent(new Event('input'))"
+                                            class="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-800 rounded text-xs">
+                                        🔧 Uso interno
+                                    </button>
+                                </div>
+                                <!-- Ajuste -->
+                                <div x-show="type === 'ajuste'" class="flex flex-wrap gap-1">
+                                    <button type="button" @click="$refs.reason.value='Conteo físico anual'; $refs.reason.dispatchEvent(new Event('input'))"
+                                            class="px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded text-xs">
+                                        📋 Conteo físico anual
+                                    </button>
+                                    <button type="button" @click="$refs.reason.value='Corrección de stock — saldo erróneo'; $refs.reason.dispatchEvent(new Event('input'))"
+                                            class="px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded text-xs">
+                                        ✏ Corrección de saldo
+                                    </button>
+                                </div>
                             </div>
 
                             <div class="md:col-span-4 flex items-center gap-3">
                                 <x-primary-button>Aplicar movimiento</x-primary-button>
                                 <span class="text-xs text-slate-500" x-show="type === 'ajuste'">
-                                    ⚠ Ajuste reemplaza el stock total. Si quieres SUMAR, usa "Entrada".
+                                    ⚠ Ajuste reemplaza el stock total. Si querés SUMAR, usá "Entrada".
+                                </span>
+                                <span class="text-xs text-emerald-700" x-show="type === 'entrada'">
+                                    ➕ Suma al stock actual sin afectar caja ni reportes de compras.
+                                </span>
+                                <span class="text-xs text-red-700" x-show="type === 'salida'">
+                                    ➖ Resta del stock actual sin afectar caja ni reportes de ventas.
                                 </span>
                             </div>
                         </div>
