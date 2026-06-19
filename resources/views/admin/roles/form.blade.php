@@ -62,25 +62,41 @@
 
                             <div class="space-y-4">
                                 @foreach ($groups as $groupName => $permissions)
-                                    @php $names = array_keys($permissions); @endphp
-                                    <div class="border border-slate-200 rounded-lg overflow-hidden">
-                                        <div class="bg-slate-50 px-4 py-2 flex justify-between items-center">
-                                            <h4 class="font-semibold text-slate-700">{{ $groupName }}</h4>
-                                            <label class="text-xs text-slate-600 cursor-pointer hover:text-orange-600">
-                                                <input type="checkbox"
-                                                       @change="toggleGroup(@js($names), $event.target.checked)"
-                                                       :checked="groupAllChecked(@js($names))"
-                                                       class="rounded text-orange-600 focus:ring-orange-500" />
-                                                Seleccionar todos
-                                            </label>
+                                    @php
+                                        $icon = $permissions['_icon'] ?? '🔹';
+                                        $color = $permissions['_color'] ?? 'slate';
+                                        $description = $permissions['_description'] ?? '';
+                                        $realPerms = collect($permissions)->filter(fn($v, $k) => ! str_starts_with($k, '_'))->all();
+                                        $names = array_keys($realPerms);
+                                    @endphp
+                                    <div class="border border-{{ $color }}-200 rounded-lg overflow-hidden">
+                                        <div class="bg-{{ $color }}-50 px-4 py-3 border-b border-{{ $color }}-200">
+                                            <div class="flex justify-between items-start gap-2">
+                                                <div class="flex items-center gap-2">
+                                                    <span class="text-2xl">{{ $icon }}</span>
+                                                    <div>
+                                                        <h4 class="font-bold text-slate-800">{{ $groupName }}</h4>
+                                                        @if ($description)
+                                                            <p class="text-xs text-slate-600">{{ $description }}</p>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                                <label class="text-xs text-slate-700 cursor-pointer hover:text-{{ $color }}-700 whitespace-nowrap inline-flex items-center gap-1 bg-white px-2 py-1 rounded border border-{{ $color }}-200">
+                                                    <input type="checkbox"
+                                                           @change="toggleGroup(@js($names), $event.target.checked)"
+                                                           :checked="groupAllChecked(@js($names))"
+                                                           class="rounded text-{{ $color }}-600 focus:ring-{{ $color }}-500" />
+                                                    Todos
+                                                </label>
+                                            </div>
                                         </div>
                                         <div class="grid grid-cols-1 md:grid-cols-2 gap-2 p-4">
-                                            @foreach ($permissions as $permName => $permLabel)
-                                                <label class="flex items-start gap-2 cursor-pointer hover:bg-orange-50 p-2 rounded">
+                                            @foreach ($realPerms as $permName => $permLabel)
+                                                <label class="flex items-start gap-2 cursor-pointer hover:bg-{{ $color }}-50 p-2 rounded">
                                                     <input type="checkbox" name="permissions[]" value="{{ $permName }}"
                                                            :checked="has('{{ $permName }}')"
                                                            @change="toggle('{{ $permName }}')"
-                                                           class="mt-1 rounded text-orange-600 focus:ring-orange-500" />
+                                                           class="mt-1 rounded text-{{ $color }}-600 focus:ring-{{ $color }}-500" />
                                                     <span class="text-sm text-slate-700">
                                                         {{ $permLabel }}
                                                         <span class="block text-xs text-slate-400 font-mono">{{ $permName }}</span>
@@ -92,8 +108,12 @@
                                 @endforeach
 
                                 @php
+                                    // Ignorar las claves de metadata (_icon, _color, _description)
+                                    $allGroupedPerms = collect($groups)->flatMap(fn($g) =>
+                                        collect($g)->filter(fn($v, $k) => ! str_starts_with($k, '_'))->keys()
+                                    )->all();
                                     $otherPerms = collect($allPermissionNames)->reject(fn($p) =>
-                                        collect($groups)->some(fn($g) => array_key_exists($p, $g))
+                                        in_array($p, $allGroupedPerms, true)
                                     );
                                 @endphp
                                 @if ($otherPerms->isNotEmpty())
