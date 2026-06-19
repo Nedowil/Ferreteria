@@ -566,6 +566,39 @@
                 </div>
             </div>
 
+            <!-- Boton flotante de atajos -->
+            <button type="button" @click="showShortcutsHelp = !showShortcutsHelp"
+                    class="fixed bottom-4 right-4 z-30 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-full shadow-lg text-xs font-bold"
+                    title="Atajos de teclado (F1)">
+                ⌨ F1
+            </button>
+
+            <!-- Modal de atajos -->
+            <div x-show="showShortcutsHelp" x-cloak x-transition.opacity
+                 class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+                 @keydown.escape.window="showShortcutsHelp = false">
+                <div @click.outside="showShortcutsHelp = false"
+                     class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+                    <div class="bg-slate-800 text-white px-6 py-3 flex justify-between items-center">
+                        <h3 class="font-bold">⌨ Atajos de teclado del POS</h3>
+                        <button @click="showShortcutsHelp = false" class="hover:bg-white/20 rounded-full w-7 h-7">✕</button>
+                    </div>
+                    <div class="p-6 space-y-2 text-sm">
+                        <div class="flex justify-between"><span>Mostrar/ocultar esta ayuda</span><kbd class="px-2 py-1 bg-slate-100 rounded font-mono text-xs">F1</kbd></div>
+                        <div class="flex justify-between"><span>Foco en buscador de productos</span><kbd class="px-2 py-1 bg-slate-100 rounded font-mono text-xs">F2</kbd></div>
+                        <div class="flex justify-between"><span>Foco en buscador de cliente</span><kbd class="px-2 py-1 bg-slate-100 rounded font-mono text-xs">F3</kbd></div>
+                        <div class="flex justify-between"><span>Cobrar (si carrito listo)</span><kbd class="px-2 py-1 bg-green-100 text-green-800 rounded font-mono text-xs">F4</kbd></div>
+                        <div class="flex justify-between"><span>Auto-completar pago exacto</span><kbd class="px-2 py-1 bg-slate-100 rounded font-mono text-xs">F8</kbd></div>
+                        <div class="flex justify-between"><span>Método pago: Efectivo</span><kbd class="px-2 py-1 bg-slate-100 rounded font-mono text-xs">F9</kbd></div>
+                        <div class="flex justify-between"><span>Método pago: Tarjeta</span><kbd class="px-2 py-1 bg-slate-100 rounded font-mono text-xs">F10</kbd></div>
+                        <div class="flex justify-between"><span>Método pago: Transferencia</span><kbd class="px-2 py-1 bg-slate-100 rounded font-mono text-xs">F11</kbd></div>
+                        <div class="pt-3 border-t text-xs text-slate-500">
+                            💡 La pistola lectora de código de barras funciona en cualquier parte de la pantalla, no hace falta tener foco en el buscador.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Modal nuevo cliente -->
             <div x-show="showCustomerModal" x-cloak x-transition.opacity
                  class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
@@ -813,10 +846,9 @@
                 lastScanCode: '',
                 lastScanCodeTime: 0,
 
+                showShortcutsHelp: false,
+
                 init() {
-                    // Guard: si init() ya corrio, no volver a registrar el listener.
-                    // Esto evita duplicacion del scanner si Alpine llama init() mas de una vez
-                    // (lo que producia que cada caracter se acumulara dos veces en el buffer)
                     if (this._initialized) return;
                     this._initialized = true;
 
@@ -827,9 +859,34 @@
                         }
                     }, 500);
 
-                    // Listener global: captura el escaneo aunque el cursor este en otro campo.
-                    // Se usa capture:true para interceptar el evento antes que llegue al input.
                     document.addEventListener('keydown', (e) => this.onGlobalScannerKey(e), true);
+                    document.addEventListener('keydown', (e) => this.onKeyboardShortcut(e));
+                },
+
+                onKeyboardShortcut(e) {
+                    // No actuar dentro de inputs editables (excepto Esc y F-keys)
+                    const active = document.activeElement;
+                    const inInput = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT');
+                    const isFKey = e.key.startsWith('F') && e.key.length <= 3;
+
+                    if (e.key === 'F1') {
+                        e.preventDefault();
+                        this.showShortcutsHelp = !this.showShortcutsHelp;
+                        return;
+                    }
+                    if (e.key === 'Escape' && this.showShortcutsHelp) {
+                        this.showShortcutsHelp = false;
+                        return;
+                    }
+                    if (inInput && !isFKey) return;
+
+                    if (e.key === 'F2') { e.preventDefault(); this.$refs.search?.focus(); return; }
+                    if (e.key === 'F3') { e.preventDefault(); document.querySelector('input[type="text"][name*="customerSearch"], input[type="text"][x-model="customerSearch"]')?.focus(); return; }
+                    if (e.key === 'F4') { e.preventDefault(); if (this.items.length > 0 && this.change >= 0) document.querySelector('form button[type="submit"]')?.click(); return; }
+                    if (e.key === 'F8') { e.preventDefault(); if (this.items.length > 0) this.paid_amount = this.total.toFixed(2); this.recalc(); return; }
+                    if (e.key === 'F9') { e.preventDefault(); this.payment_method = 'efectivo'; this.onPaymentChange(); return; }
+                    if (e.key === 'F10') { e.preventDefault(); this.payment_method = 'tarjeta'; this.onPaymentChange(); return; }
+                    if (e.key === 'F11') { e.preventDefault(); this.payment_method = 'transferencia'; this.onPaymentChange(); return; }
                 },
 
                 onGlobalScannerKey(e) {

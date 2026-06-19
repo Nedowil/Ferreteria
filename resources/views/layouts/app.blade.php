@@ -7,10 +7,50 @@
 
         <title>Ferreteria Central</title>
 
+        <!-- PWA: instalable como app movil -->
+        <link rel="manifest" href="/manifest.webmanifest">
+        <meta name="theme-color" content="#ea580c">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="apple-mobile-web-app-title" content="Ferretería">
+        <link rel="apple-touch-icon" href="/icon-192.png">
+
+        <!-- Dark mode init (debe ir antes del render para evitar flash) -->
+        <script>
+            (function() {
+                const t = localStorage.getItem('theme');
+                if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    document.documentElement.classList.add('dark');
+                }
+            })();
+        </script>
+
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700&display=swap" rel="stylesheet" />
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+        <script>
+            // Registrar Service Worker para PWA (instalable)
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('/sw.js').catch(() => {});
+                });
+            }
+            // Toggle de modo oscuro disponible globalmente
+            function toggleDarkMode() {
+                const isDark = document.documentElement.classList.toggle('dark');
+                localStorage.setItem('theme', isDark ? 'dark' : 'light');
+                const label = document.getElementById('themeLabel');
+                if (label) label.textContent = isDark ? '☀️ Modo claro' : '🌙 Modo oscuro';
+            }
+            // Set inicial del label
+            window.addEventListener('DOMContentLoaded', () => {
+                const label = document.getElementById('themeLabel');
+                if (label) label.textContent = document.documentElement.classList.contains('dark')
+                    ? '☀️ Modo claro' : '🌙 Modo oscuro';
+            });
+        </script>
     </head>
     <body class="font-sans antialiased bg-slate-100"
           x-data="{
@@ -89,11 +129,15 @@
                                     </x-slot>
                                     <x-slot name="content">
                                         <x-dropdown-link :href="route('profile.edit')">Mi perfil</x-dropdown-link>
+                                        <button type="button" onclick="toggleDarkMode()"
+                                                class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700">
+                                            <span id="themeLabel">🌙 Modo oscuro</span>
+                                        </button>
                                         <form method="POST" action="{{ route('logout') }}">
                                             @csrf
                                             <x-dropdown-link :href="route('logout')"
                                                 onclick="event.preventDefault(); this.closest('form').submit();">
-                                                Cerrar sesion
+                                                Cerrar sesión
                                             </x-dropdown-link>
                                         </form>
                                     </x-slot>

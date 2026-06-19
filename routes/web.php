@@ -83,6 +83,8 @@ Route::middleware(['auth', 'verified'])
 
         Route::middleware('permission:inventario.ajustar')->group(function () {
             Route::post('inventario/{producto}/movimientos', [InventoryController::class, 'store'])->name('inventario.movimientos.store');
+            Route::get('conteo-fisico', [\App\Http\Controllers\Admin\StockCountController::class, 'create'])->name('conteo.create');
+            Route::post('conteo-fisico', [\App\Http\Controllers\Admin\StockCountController::class, 'store'])->name('conteo.store');
         });
 
         Route::middleware('permission:proveedores.ver')->group(function () {
