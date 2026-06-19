@@ -145,7 +145,7 @@ class SaleController extends Controller
     public function pos(): View
     {
         return view('admin.sales.pos', [
-            'customers' => Customer::where('active', true)->orderBy('name')->get(['id', 'name', 'tax_id']),
+            'customers' => Customer::where('active', true)->orderBy('name')->get(['id', 'name', 'tax_id', 'customer_type', 'wholesale_discount_percent']),
             'company' => \App\Models\CompanySetting::current(),
         ]);
     }
@@ -220,6 +220,9 @@ class SaleController extends Controller
                     : (($p->container_factor && $p->sale_price)
                         ? round((float) $p->sale_price * (float) $p->container_factor, 2)
                         : null),
+                'wholesale_price' => $p->wholesale_price ? (float) $p->wholesale_price : null,
+                'wholesale_min_quantity' => $p->wholesale_min_quantity ? (float) $p->wholesale_min_quantity : null,
+                'container_wholesale_price' => $p->container_wholesale_price ? (float) $p->container_wholesale_price : null,
                 'sale_price' => (float) $p->sale_price,
                 'stock' => $stock,
                 'stock_formatted' => $p->formatStockMixed($stock),

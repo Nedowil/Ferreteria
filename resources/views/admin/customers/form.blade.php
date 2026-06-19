@@ -84,6 +84,54 @@
                                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">{{ old('notes', $customer->notes) }}</textarea>
                     </div>
 
+                    <!-- TIPO DE CLIENTE -->
+                    <div class="border-l-4 border-pink-500 bg-pink-50 p-4 rounded"
+                         x-data="{ type: @js(old('customer_type', $customer->customer_type ?: 'retail')) }">
+                        <h3 class="font-semibold text-slate-800 flex items-center gap-2">
+                            🏷 Tipo de cliente
+                        </h3>
+                        <p class="text-xs text-slate-600 mt-1">
+                            Define si este cliente compra al detalle (consumidor final) o como mayorista
+                            (revendedores, constructores, talleres). Los mayoristas reciben el precio
+                            mayorista de cada producto automáticamente en el POS.
+                        </p>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3">
+                            <label class="flex items-start gap-2 p-3 bg-white rounded border cursor-pointer transition"
+                                   :class="type === 'retail' ? 'border-pink-500 ring-2 ring-pink-200' : 'border-slate-200'">
+                                <input type="radio" name="customer_type" value="retail" x-model="type" class="mt-1" />
+                                <span>
+                                    <span class="font-semibold text-sm">🛒 Minorista (consumidor final)</span>
+                                    <span class="block text-xs text-slate-500">
+                                        Compra al detalle. Recibe precio normal del producto.
+                                    </span>
+                                </span>
+                            </label>
+                            <label class="flex items-start gap-2 p-3 bg-white rounded border cursor-pointer transition"
+                                   :class="type === 'wholesale' ? 'border-pink-500 ring-2 ring-pink-200' : 'border-slate-200'">
+                                <input type="radio" name="customer_type" value="wholesale" x-model="type" class="mt-1" />
+                                <span>
+                                    <span class="font-semibold text-sm">🏗 Mayorista (revendedor / constructor)</span>
+                                    <span class="block text-xs text-slate-500">
+                                        Recibe precio mayorista automáticamente en POS si el producto lo tiene configurado.
+                                    </span>
+                                </span>
+                            </label>
+                        </div>
+
+                        <div x-show="type === 'wholesale'" x-cloak class="mt-3">
+                            <x-input-label for="wholesale_discount_percent" value="Descuento adicional mayorista (%)" />
+                            <x-text-input id="wholesale_discount_percent" name="wholesale_discount_percent" type="text" inputmode="decimal"
+                                          class="mt-1 block w-full md:w-1/3"
+                                          placeholder="0.00"
+                                          :value="old('wholesale_discount_percent', (float) $customer->wholesale_discount_percent > 0 ? number_format($customer->wholesale_discount_percent, 2, '.', '') : '')" />
+                            <p class="text-xs text-slate-500 mt-1">
+                                Opcional. Si este cliente mayorista tiene descuento adicional sobre el precio mayorista
+                                (ej. 5% extra por volumen), ponlo acá. Dejá en 0 si no aplica.
+                            </p>
+                        </div>
+                    </div>
+
                     <label class="inline-flex items-center gap-2">
                         <input type="checkbox" name="active" value="1"
                                @checked(old('active', $customer->active)) class="rounded" />

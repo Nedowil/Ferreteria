@@ -213,6 +213,27 @@
                             </div>
                         </div>
 
+                        <!-- Toggle modo mayorista -->
+                        <div class="mb-3 p-2 rounded border flex items-center justify-between gap-2"
+                             :class="wholesaleMode ? 'bg-pink-50 border-pink-300' : 'bg-slate-50 border-slate-200'">
+                            <label class="flex items-center gap-2 cursor-pointer flex-1">
+                                <input type="checkbox" x-model="wholesaleMode" @change="recalcPricesForWholesale()" class="rounded" />
+                                <div>
+                                    <div class="font-semibold text-sm">🏗 Vender a precio mayorista</div>
+                                    <div class="text-xs text-slate-500" x-show="!wholesaleMode">Aplica precios mayoristas a todos los productos que lo tengan configurado.</div>
+                                    <div class="text-xs text-pink-700" x-show="wholesaleMode">
+                                        Precios mayoristas activos
+                                        <template x-if="customerWholesaleDiscount > 0">
+                                            <span> · descuento adicional <span x-text="customerWholesaleDiscount"></span>%</span>
+                                        </template>
+                                    </div>
+                                </div>
+                            </label>
+                            <template x-if="customerIsWholesale">
+                                <span class="px-2 py-1 bg-pink-100 text-pink-700 rounded text-xs font-bold">🏗 Cliente mayorista</span>
+                            </template>
+                        </div>
+
                         <div class="flex-1 max-h-80 overflow-y-auto border rounded">
                             <table class="min-w-full text-sm">
                                 <thead class="bg-gray-50 sticky top-0">
@@ -714,8 +735,17 @@
                 query: '',
                 results: [],
                 items: [],
-                customers: @json($customers->map(fn($c) => ['id' => $c->id, 'label' => $c->name . ($c->tax_id ? " ($c->tax_id)" : '')])),
+                customers: @json($customers->map(fn($c) => [
+                    'id' => $c->id,
+                    'label' => $c->name . ($c->tax_id ? " ($c->tax_id)" : '') . ($c->customer_type === 'wholesale' ? ' 🏗' : ''),
+                    'customer_type' => $c->customer_type,
+                    'wholesale_discount_percent' => (float) $c->wholesale_discount_percent,
+                ])),
                 customer_id: '',
+                customerIsWholesale: false,
+                customerWholesaleDiscount: 0,
+                // Toggle manual mayorista (cuando el cliente es minorista pero queres venderle al mayorista)
+                wholesaleMode: false,
                 customerSearch: '',
                 customerSearchOpen: false,
                 get filteredCustomers() {
@@ -870,10 +900,56 @@
                     this.customer_id = c.id ? String(c.id) : '';
                     this.customerSearch = c.id ? c.label : '';
                     this.customerSearchOpen = false;
+                    // Si es mayorista activamos precios mayoristas automaticamente
+                    this.customerIsWholesale = (c.customer_type === 'wholesale');
+                    this.customerWholesaleDiscount = parseFloat(c.wholesale_discount_percent) || 0;
+                    // El modo mayorista del POS sigue al cliente; el usuario puede toggle despues
+                    if (this.customerIsWholesale) {
+                        this.wholesaleMode = true;
+                    }
+                    // Recalcular precios de items que ya estan en el carrito
+                    this.recalcPricesForWholesale();
+                },
+                /**
+                 * Recalcula los precios unitarios de cada item segun el modo
+                 * (mayorista o normal) y el descuento del cliente mayorista.
+                 */
+                recalcPricesForWholesale() {
+                    this.items.forEach(it => {
+                        const p = it.product;
+                        const isContainer = it.units_factor > 1 && it.units_factor === p.container_factor;
+                        let newPrice;
+                        if (this.wholesaleMode) {
+                            if (isContainer && p.container_wholesale_price) {
+                                newPrice = p.container_wholesale_price;
+                            } else if (p.wholesale_price) {
+                                newPrice = p.wholesale_price * it.units_factor;
+                            } else {
+                                return; // no hay precio mayorista, dejamos el actual
+                            }
+                            // Descuento adicional del cliente mayorista
+                            if (this.customerWholesaleDiscount > 0) {
+                                newPrice = newPrice * (1 - this.customerWholesaleDiscount / 100);
+                            }
+                        } else {
+                            // Volver al precio normal
+                            if (isContainer) {
+                                newPrice = p.container_price || (p.sale_price * p.container_factor);
+                            } else {
+                                newPrice = p.sale_price * it.units_factor;
+                            }
+                        }
+                        it.unit_price = String(newPrice.toFixed(2));
+                    });
+                    this.recalc();
                 },
                 clearCustomer() {
                     this.customer_id = '';
                     this.customerSearch = '';
+                    this.customerIsWholesale = false;
+                    this.customerWholesaleDiscount = 0;
+                    this.wholesaleMode = false;
+                    this.recalcPricesForWholesale();
                     this.customerSearchOpen = false;
                 },
                 openCustomerModal() {
@@ -1136,10 +1212,27 @@
                 },
                 addItem(p, presentation) {
                     // presentation null/undefined = venta por unidad simple
-                    const price = presentation ? presentation.price : p.sale_price;
                     const factor = presentation ? presentation.units_factor : 1;
                     const unitLabel = presentation ? presentation.label : (p.unit || 'Unidad');
                     const taxType = p.tax_type || 'iva';
+                    const isContainerPresentation = presentation && p.container_label && presentation.label === p.container_label;
+
+                    // Decide el precio a usar segun modo mayorista y disponibilidad
+                    let price;
+                    if (this.wholesaleMode) {
+                        if (isContainerPresentation && p.container_wholesale_price) {
+                            price = p.container_wholesale_price;
+                        } else if (p.wholesale_price) {
+                            price = p.wholesale_price * factor;
+                        } else {
+                            price = presentation ? presentation.price : p.sale_price;
+                        }
+                        if (this.customerWholesaleDiscount > 0) {
+                            price = price * (1 - this.customerWholesaleDiscount / 100);
+                        }
+                    } else {
+                        price = presentation ? presentation.price : p.sale_price;
+                    }
 
                     if (p.stock < factor) return;
 

@@ -195,6 +195,44 @@
                         </div>
                     </div>
 
+                    <!-- PRECIO MAYORISTA (opcional) -->
+                    <div class="border-l-4 border-pink-500 bg-pink-50 p-4 rounded">
+                        <h3 class="font-semibold text-slate-800 flex items-center gap-2">
+                            🏷 Precio mayorista (opcional)
+                        </h3>
+                        <p class="text-xs text-slate-600 mt-1">
+                            Si vendés este producto a constructores, revendedores o clientes mayoristas a un
+                            precio especial, configúralo aquí. Se aplica automáticamente cuando el cliente
+                            está marcado como <strong>"Mayorista"</strong> o cuando se vende una cantidad
+                            mayor al mínimo configurado. <strong>Dejá en blanco si no aplica.</strong>
+                        </p>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+                            <div>
+                                <x-input-label for="wholesale_price" value="Precio mayorista (por unidad base)" />
+                                <x-text-input id="wholesale_price" name="wholesale_price" type="text" inputmode="decimal"
+                                              class="mt-1 block w-full"
+                                              placeholder="0.00"
+                                              :value="old('wholesale_price', (float) $product->wholesale_price > 0 ? number_format($product->wholesale_price, 2, '.', '') : '')" />
+                            </div>
+                            <div>
+                                <x-input-label for="wholesale_min_quantity" value="Cantidad mínima para mayoreo" />
+                                <x-text-input id="wholesale_min_quantity" name="wholesale_min_quantity" type="text" inputmode="decimal"
+                                              class="mt-1 block w-full"
+                                              placeholder="0"
+                                              :value="old('wholesale_min_quantity', (float) $product->wholesale_min_quantity > 0 ? rtrim(rtrim(number_format($product->wholesale_min_quantity, 2, '.', ''),'0'),'.') : '')" />
+                                <p class="text-xs text-slate-500 mt-1">A partir de esta cantidad se sugiere precio mayorista. Dejá 0 si solo se aplica con cliente mayorista.</p>
+                            </div>
+                            <div>
+                                <x-input-label for="container_wholesale_price" value="Precio mayorista por empaque (Q)" />
+                                <x-text-input id="container_wholesale_price" name="container_wholesale_price" type="text" inputmode="decimal"
+                                              class="mt-1 block w-full"
+                                              placeholder="0.00"
+                                              :value="old('container_wholesale_price', (float) $product->container_wholesale_price > 0 ? number_format($product->container_wholesale_price, 2, '.', '') : '')" />
+                                <p class="text-xs text-slate-500 mt-1">Para cuando vendés caja/rollo entero a precio mayorista.</p>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Presentaciones adicionales (libra, media libra, caja, rollo, yarda, fardo...) -->
                     @php
                         $existingPresentations = $product->exists ? $product->presentations->map(fn($p) => [
