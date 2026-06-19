@@ -4,6 +4,7 @@ namespace App\Services\Fel;
 
 use App\Models\ElectronicInvoice;
 use App\Models\Sale;
+use App\Models\SaleReturn;
 use Illuminate\Support\Facades\DB;
 
 class FelService
@@ -58,6 +59,54 @@ class FelService
             ]);
 
             return $invoice->refresh();
+        });
+    }
+
+    /**
+     * Emite una Nota de Credito Electronica (NCRE) para una devolucion,
+     * referenciando el UUID de la factura original.
+     */
+    public function emitReturn(SaleReturn $return): ElectronicInvoice
+    {
+        if (! $return->sale?->electronicInvoice?->isCertificada()) {
+            throw new \DomainException('La venta original no tiene factura electronica certificada. No se puede emitir nota de credito.');
+        }
+
+        return DB::transaction(function () use ($return) {
+            $xml = $this->xmlBuilder->buildForReturn($return);
+
+            // Para NCRE no usamos sale_id (esa columna es unique) sino una nueva fila
+            // ligada a la venta original pero con document_type=NCRE.
+            // Por simplicidad guardamos el XML/UUID en una columna nueva del return
+            // (o si quieres trazabilidad completa, una tabla de electronic_invoices polimorfica).
+            // Por ahora retornamos un objeto temporal con el resultado.
+
+            $result = $this->certificador->certify($xml);
+
+            if (! ($result['success'] ?? false)) {
+                throw new \DomainException('Error al emitir nota de credito: ' . ($result['error'] ?? 'Sin detalle'));
+            }
+
+            // Guardamos en el modelo SaleReturn los datos FEL via attributes JSON / campos sueltos
+            $return->update([
+                'notes' => trim(($return->notes ?? '') . "\nNCRE certificada UUID: " . ($result['uuid'] ?? '')),
+            ]);
+
+            // Devolvemos un EI temporal (no persistido) con los datos para que el caller los muestre
+            $tmp = new ElectronicInvoice([
+                'document_type' => 'NCRE',
+                'certificador' => $this->certificador->getName(),
+                'environment' => $this->certificador->getEnvironment(),
+                'uuid' => $result['uuid'] ?? null,
+                'serie' => $result['serie'] ?? null,
+                'numero' => $result['numero'] ?? null,
+                'fecha_certificacion' => $result['fecha_certificacion'] ?? now(),
+                'xml_generated' => $xml,
+                'xml_signed' => $result['xml_signed'] ?? $xml,
+                'response_payload' => $result['raw'] ?? null,
+                'status' => ElectronicInvoice::STATUS_CERTIFICADA,
+            ]);
+            return $tmp;
         });
     }
 

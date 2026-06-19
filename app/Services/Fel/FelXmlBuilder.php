@@ -3,16 +3,21 @@
 namespace App\Services\Fel;
 
 use App\Models\CompanySetting;
+use App\Models\Product;
 use App\Models\Sale;
+use App\Models\SaleReturn;
 
 /**
  * Constructor de XML DTE (Documento Tributario Electronico) segun el estandar
- * de SAT Guatemala. Genera un XML con namespaces dte:GTDocumento basado en los
- * datos de la venta y la configuracion del emisor.
+ * de SAT Guatemala (esquema FEL 0.2.0). Soporta:
  *
- * Nota: el certificador es quien firma criptograficamente el XML; este builder
- * arma el cuerpo sin firma. El certificador lo recibe, lo firma y devuelve el
- * XML firmado + numero de autorizacion (UUID).
+ * - FACT: Factura regimen General
+ * - FPEQ: Factura Pequeno Contribuyente (sin IVA detallado)
+ * - NCRE: Nota de Credito (para devoluciones, referencia UUID original)
+ *
+ * Cada item lleva su propio tipo de impuesto (IVA o Exento) basado en el campo
+ * tax_type del producto/sale_item. El certificador (Infile) firma este XML
+ * con la firma electronica del emisor y devuelve el numero de autorizacion SAT.
  */
 class FelXmlBuilder
 {
@@ -21,10 +26,80 @@ class FelXmlBuilder
         $sale->loadMissing(['items.product', 'customer']);
         $emisor = CompanySetting::current();
 
-        $taxRate = (float) $emisor->default_tax_rate; // 12 por defecto
-        $pricesIncludeTax = $emisor->prices_include_tax;
-        $currency = $emisor->currency_code;
+        // Si el emisor es Pequeno Contribuyente y no se especifico tipo, usar FPEQ
+        if ($documentType === 'FACT' && $emisor->tax_regime === CompanySetting::REGIMEN_PEQUENO) {
+            $documentType = 'FPEQ';
+        }
+
+        return $this->buildDte(
+            documentType: $documentType,
+            emisor: $emisor,
+            customer: $sale->customer,
+            issuedAt: $sale->date,
+            items: $sale->items->map(fn ($it) => [
+                'product' => $it->product,
+                'quantity' => (float) $it->quantity,
+                'unit_label' => $it->unit_label,
+                'unit_price' => (float) $it->unit_price,
+                'discount' => (float) $it->discount,
+                'subtotal' => (float) $it->subtotal,
+                'tax_type' => $it->tax_type ?: Product::TAX_IVA,
+            ])->all(),
+        );
+    }
+
+    /**
+     * Construye una Nota de Credito Electronica (NCRE) para una devolucion,
+     * con referencia al UUID de la factura original.
+     */
+    public function buildForReturn(SaleReturn $return): string
+    {
+        $return->loadMissing(['items.product', 'sale.electronicInvoice', 'customer']);
+        $emisor = CompanySetting::current();
+
+        $original = $return->sale?->electronicInvoice;
+
+        return $this->buildDte(
+            documentType: 'NCRE',
+            emisor: $emisor,
+            customer: $return->customer ?? $return->sale?->customer,
+            issuedAt: $return->date,
+            items: $return->items->map(fn ($it) => [
+                'product' => $it->product,
+                'quantity' => (float) $it->quantity,
+                'unit_label' => $it->unit_label,
+                'unit_price' => (float) $it->unit_price,
+                'discount' => (float) $it->discount,
+                'subtotal' => (float) $it->subtotal,
+                'tax_type' => $it->tax_type ?: Product::TAX_IVA,
+            ])->all(),
+            complemento: $original?->uuid ? [
+                'tipo' => 'NCRE',
+                'uuid_referencia' => $original->uuid,
+                'fecha_emision_doc_origen' => $return->sale?->date?->toDateString(),
+                'serie_doc_origen' => $original->serie,
+                'numero_doc_origen' => $original->numero,
+                'motivo' => $return->reasonLabel(),
+            ] : null,
+        );
+    }
+
+    /**
+     * @param  array<int,array{product:?\App\Models\Product,quantity:float,unit_label:?string,unit_price:float,discount:float,subtotal:float,tax_type:string}>  $items
+     */
+    private function buildDte(
+        string $documentType,
+        CompanySetting $emisor,
+        ?\App\Models\Customer $customer,
+        \DateTimeInterface $issuedAt,
+        array $items,
+        ?array $complemento = null,
+    ): string {
+        $taxRate = (float) $emisor->default_tax_rate;
+        $pricesIncludeTax = (bool) $emisor->prices_include_tax;
+        $currency = $emisor->currency_code ?: 'GTQ';
         $environment = config('fel.environment', 'PRUEBAS');
+        $isPequenoContrib = $documentType === 'FPEQ';
 
         $xml = new \XMLWriter();
         $xml->openMemory();
@@ -32,28 +107,25 @@ class FelXmlBuilder
         $xml->startDocument('1.0', 'UTF-8');
 
         $xml->startElementNs('dte', 'GTDocumento', 'http://www.sat.gob.gt/dte/fel/0.2.0');
+        $xml->writeAttribute('xmlns:xsi', 'http://www.w3.org/2001/XMLSchema-instance');
         $xml->writeAttribute('Version', '0.1');
 
         $xml->startElementNs('dte', 'SAT', null);
         $xml->writeAttribute('ClaseDocumento', 'dte');
-
-        // ------------------ DTE ------------------
         $xml->startElementNs('dte', 'DTE', null);
         $xml->writeAttribute('ID', 'DatosCertificados');
-
-        // DatosEmision
         $xml->startElementNs('dte', 'DatosEmision', null);
         $xml->writeAttribute('ID', 'DatosEmision');
 
         // DatosGenerales
         $xml->startElementNs('dte', 'DatosGenerales', null);
         $xml->writeAttribute('CodigoMoneda', $currency);
-        $xml->writeAttribute('FechaHoraEmision', $sale->date->toIso8601String());
+        $xml->writeAttribute('FechaHoraEmision', $issuedAt->format('Y-m-d\TH:i:s'));
         $xml->writeAttribute('Tipo', $documentType);
         if ($environment === 'PRUEBAS') {
             $xml->writeAttribute('Exp', 'PRUEBAS');
         }
-        $xml->endElement(); // DatosGenerales
+        $xml->endElement();
 
         // Emisor
         $xml->startElementNs('dte', 'Emisor', null);
@@ -68,11 +140,10 @@ class FelXmlBuilder
         $xml->writeElementNs('dte', 'Municipio', null, $emisor->municipality ?: 'Guatemala');
         $xml->writeElementNs('dte', 'Departamento', null, $emisor->department ?: 'Guatemala');
         $xml->writeElementNs('dte', 'Pais', null, $emisor->country_code ?: 'GT');
-        $xml->endElement(); // DireccionEmisor
-        $xml->endElement(); // Emisor
+        $xml->endElement();
+        $xml->endElement();
 
         // Receptor
-        $customer = $sale->customer;
         $receptorNit = $customer?->tax_id ?: 'CF';
         $receptorNombre = $customer?->name ?: 'Consumidor Final';
         $xml->startElementNs('dte', 'Receptor', null);
@@ -87,17 +158,17 @@ class FelXmlBuilder
         $xml->writeElementNs('dte', 'Municipio', null, 'Guatemala');
         $xml->writeElementNs('dte', 'Departamento', null, 'Guatemala');
         $xml->writeElementNs('dte', 'Pais', null, 'GT');
-        $xml->endElement(); // DireccionReceptor
-        $xml->endElement(); // Receptor
+        $xml->endElement();
+        $xml->endElement();
 
-        // Frases (catalogo en config/fel.php)
+        // Frases SAT
         $phrases = $emisor->phrases ?: config('fel.phrases_catalog', []);
         if (! empty($phrases)) {
             $xml->startElementNs('dte', 'Frases', null);
             foreach ($phrases as $phrase) {
                 $xml->startElementNs('dte', 'Frase', null);
-                $xml->writeAttribute('TipoFrase', (string) ($phrase['type'] ?? $phrase['scenario'] ?? '1'));
-                $xml->writeAttribute('CodigoEscenario', (string) ($phrase['scenario'] ?? $phrase['code'] ?? '1'));
+                $xml->writeAttribute('TipoFrase', (string) ($phrase['type'] ?? '1'));
+                $xml->writeAttribute('CodigoEscenario', (string) ($phrase['scenario'] ?? '1'));
                 $xml->endElement();
             }
             $xml->endElement();
@@ -106,72 +177,88 @@ class FelXmlBuilder
         // Items
         $xml->startElementNs('dte', 'Items', null);
         $line = 1;
-        foreach ($sale->items as $item) {
-            $qty = (float) $item->quantity;
-            $unitPrice = (float) $item->unit_price;
-            $itemSubtotal = (float) $item->subtotal; // ya con descuento
+        $totalImpuesto = 0.0;
+        foreach ($items as $item) {
+            $qty = (float) $item['quantity'];
+            $unitPrice = (float) $item['unit_price'];
+            $itemSubtotal = (float) $item['subtotal'];
+            $taxType = $item['tax_type'] ?? Product::TAX_IVA;
 
-            // En GT con IVA del 12%, si el precio incluye IVA: monto_gravable = total / 1.12
-            // y IVA = monto_gravable * 0.12. Si no incluye, IVA = subtotal * 0.12.
-            if ($pricesIncludeTax) {
-                $montoGravable = $itemSubtotal / (1 + $taxRate / 100);
-            } else {
+            if ($isPequenoContrib || $taxType === Product::TAX_EXENTO) {
                 $montoGravable = $itemSubtotal;
+                $ivaItem = 0.0;
+            } else {
+                $montoGravable = $pricesIncludeTax ? $itemSubtotal / (1 + $taxRate / 100) : $itemSubtotal;
+                $ivaItem = round($montoGravable * $taxRate / 100, 2);
+                $totalImpuesto += $ivaItem;
             }
-            $ivaItem = round($montoGravable * $taxRate / 100, 2);
 
             $xml->startElementNs('dte', 'Item', null);
             $xml->writeAttribute('NumeroLinea', (string) $line++);
             $xml->writeAttribute('BienOServicio', 'B');
-
             $xml->writeElementNs('dte', 'Cantidad', null, number_format($qty, 6, '.', ''));
-            $xml->writeElementNs('dte', 'UnidadMedida', null, strtoupper($item->product?->unit?->abbreviation ?: 'UND'));
-            $xml->writeElementNs('dte', 'Descripcion', null, $item->product?->name ?: 'Producto');
+            $xml->writeElementNs('dte', 'UnidadMedida', null, strtoupper($item['unit_label'] ?: 'UND'));
+            $xml->writeElementNs('dte', 'Descripcion', null, $item['product']?->name ?: 'Producto');
             $xml->writeElementNs('dte', 'PrecioUnitario', null, number_format($unitPrice, 6, '.', ''));
             $xml->writeElementNs('dte', 'Precio', null, number_format($qty * $unitPrice, 2, '.', ''));
-            $xml->writeElementNs('dte', 'Descuento', null, number_format((float) $item->discount, 2, '.', ''));
+            $xml->writeElementNs('dte', 'Descuento', null, number_format((float) $item['discount'], 2, '.', ''));
 
             $xml->startElementNs('dte', 'Impuestos', null);
             $xml->startElementNs('dte', 'Impuesto', null);
-            $xml->writeElementNs('dte', 'NombreCorto', null, 'IVA');
+            $xml->writeElementNs('dte', 'NombreCorto', null, $isPequenoContrib ? 'PEQUENO CONTRIBUYENTE' : 'IVA');
             $xml->writeElementNs('dte', 'CodigoUnidadGravable', null, '1');
             $xml->writeElementNs('dte', 'MontoGravable', null, number_format(round($montoGravable, 2), 2, '.', ''));
             $xml->writeElementNs('dte', 'MontoImpuesto', null, number_format($ivaItem, 2, '.', ''));
-            $xml->endElement(); // Impuesto
-            $xml->endElement(); // Impuestos
+            $xml->endElement();
+            $xml->endElement();
 
             $xml->writeElementNs('dte', 'Total', null, number_format($itemSubtotal, 2, '.', ''));
-            $xml->endElement(); // Item
+            $xml->endElement();
         }
-        $xml->endElement(); // Items
+        $xml->endElement();
 
         // Totales
-        $ivaTotal = 0.0;
-        $gravableTotal = 0.0;
-        foreach ($sale->items as $item) {
-            $sub = (float) $item->subtotal;
-            $g = $pricesIncludeTax ? $sub / (1 + $taxRate / 100) : $sub;
-            $gravableTotal += $g;
-            $ivaTotal += $g * $taxRate / 100;
-        }
-
+        $granTotal = array_sum(array_column($items, 'subtotal'));
         $xml->startElementNs('dte', 'Totales', null);
         $xml->startElementNs('dte', 'TotalImpuestos', null);
         $xml->startElementNs('dte', 'TotalImpuesto', null);
-        $xml->writeAttribute('NombreCorto', 'IVA');
-        $xml->writeAttribute('TotalMontoImpuesto', number_format(round($ivaTotal, 2), 2, '.', ''));
-        $xml->endElement(); // TotalImpuesto
-        $xml->endElement(); // TotalImpuestos
-        $xml->writeElementNs('dte', 'GranTotal', null, number_format((float) $sale->total, 2, '.', ''));
-        $xml->endElement(); // Totales
+        $xml->writeAttribute('NombreCorto', $isPequenoContrib ? 'PEQUENO CONTRIBUYENTE' : 'IVA');
+        $xml->writeAttribute('TotalMontoImpuesto', number_format(round($totalImpuesto, 2), 2, '.', ''));
+        $xml->endElement();
+        $xml->endElement();
+        $xml->writeElementNs('dte', 'GranTotal', null, number_format($granTotal, 2, '.', ''));
+        $xml->endElement();
 
         $xml->endElement(); // DatosEmision
         $xml->endElement(); // DTE
+
+        // Complemento NCRE (referencia a factura original)
+        if ($complemento && $complemento['tipo'] === 'NCRE' && ! empty($complemento['uuid_referencia'])) {
+            $xml->startElementNs('dte', 'Complementos', null);
+            $xml->startElementNs('dte', 'Complemento', null);
+            $xml->writeAttribute('IDComplemento', 'ReferenciasNota');
+            $xml->writeAttribute('NombreComplemento', 'ReferenciasNota');
+            $xml->writeAttribute('URIComplemento', 'http://www.sat.gob.gt/face2/ComplementoReferenciaNota/0.1.0');
+            $xml->startElementNs('cno', 'ReferenciasNota', 'http://www.sat.gob.gt/face2/ComplementoReferenciaNota/0.1.0');
+            $xml->writeAttribute('Version', '0.0');
+            $xml->writeAttribute('FechaEmisionDocumentoOrigen', $complemento['fecha_emision_doc_origen'] ?? '');
+            $xml->writeAttribute('MotivoAjuste', $complemento['motivo'] ?? 'Devolucion');
+            $xml->writeAttribute('NumeroAutorizacionDocumentoOrigen', $complemento['uuid_referencia']);
+            if (! empty($complemento['serie_doc_origen'])) {
+                $xml->writeAttribute('SerieDocumentoOrigen', $complemento['serie_doc_origen']);
+            }
+            if (! empty($complemento['numero_doc_origen'])) {
+                $xml->writeAttribute('NumeroDocumentoOrigen', $complemento['numero_doc_origen']);
+            }
+            $xml->endElement();
+            $xml->endElement();
+            $xml->endElement();
+        }
+
         $xml->endElement(); // SAT
         $xml->endElement(); // GTDocumento
 
         $xml->endDocument();
-
         return $xml->outputMemory();
     }
 }

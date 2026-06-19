@@ -48,17 +48,25 @@ class FelController extends Controller
             return back()->withErrors(['emit' => 'Solo se pueden facturar electronicamente ventas completadas.']);
         }
 
-        $documentType = $venta->customer && $venta->customer->tax_id && $venta->customer->tax_id !== 'CF'
-            ? ElectronicInvoice::TYPE_FACT
-            : ElectronicInvoice::TYPE_FACT; // tambien aplica FACT con CF; FPEQ si emisor es pequeno
-
+        // El XmlBuilder elige FPEQ automaticamente segun el regimen del emisor
         try {
-            $invoice = $this->felService->emit($venta, $documentType);
+            $invoice = $this->felService->emit($venta, ElectronicInvoice::TYPE_FACT);
         } catch (\DomainException $e) {
             return back()->withErrors(['emit' => $e->getMessage()]);
         }
 
         return redirect()->route('admin.fel.show', $invoice)->with('status', "Factura electronica generada. UUID: {$invoice->uuid}");
+    }
+
+    public function emitReturn(\App\Models\SaleReturn $devolucion): RedirectResponse
+    {
+        try {
+            $invoice = $this->felService->emitReturn($devolucion);
+        } catch (\DomainException $e) {
+            return back()->withErrors(['emit' => $e->getMessage()]);
+        }
+
+        return back()->with('status', "Nota de credito electronica certificada. UUID: {$invoice->uuid}");
     }
 
     public function annul(Request $request, ElectronicInvoice $factura): RedirectResponse

@@ -231,6 +231,14 @@ Route::middleware(['auth', 'verified'])
 
         Route::middleware('permission:facturas.emitir')->group(function () {
             Route::post('ventas/{venta}/fel', [FelController::class, 'emit'])->name('fel.emit');
+            Route::post('devoluciones/{devolucion}/fel', [FelController::class, 'emitReturn'])->name('fel.emit_return');
+        });
+
+        // Configuracion del certificador FEL (credenciales Infile/Megaprint/etc)
+        Route::middleware('permission:configuracion.gestionar')->group(function () {
+            Route::get('fel/configuracion', [\App\Http\Controllers\Admin\FelConfigController::class, 'edit'])->name('fel.config.edit');
+            Route::put('fel/configuracion', [\App\Http\Controllers\Admin\FelConfigController::class, 'update'])->name('fel.config.update');
+            Route::post('fel/configuracion/test', [\App\Http\Controllers\Admin\FelConfigController::class, 'test'])->name('fel.config.test');
         });
 
         Route::middleware('permission:facturas.ver')->group(function () {

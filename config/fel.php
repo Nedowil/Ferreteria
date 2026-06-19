@@ -15,22 +15,30 @@
  */
 
 return [
+    // 'stub' = simula respuestas (modo demo)
+    // 'infile' = Infile S.A. (REST API + token)
+    // 'soap' = adapter generico SOAP (Megaprint y otros)
     'driver' => env('FEL_DRIVER', 'stub'),
     'environment' => env('FEL_ENVIRONMENT', 'PRUEBAS'),
     'certificador' => env('FEL_CERTIFICADOR', ''),
 
     'credentials' => [
+        // Comunes
         'username' => env('FEL_API_USERNAME'),
         'password' => env('FEL_API_PASSWORD'),
         'token' => env('FEL_API_TOKEN'),
         'requestor_nit' => env('FEL_REQUESTOR_NIT'),
         'emisor_nit' => env('FEL_NIT_EMISOR'),
+        // Infile especificos
+        'signer_token' => env('FEL_SIGNER_TOKEN'), // LlaveFirma
+        'api_key' => env('FEL_API_KEY'),           // LlaveApi
     ],
 
     'endpoints' => [
-        'certification' => env('FEL_CERTIFICATION_URL'),
-        'cancellation' => env('FEL_CANCELLATION_URL'),
-        'lookup' => env('FEL_LOOKUP_URL'),
+        // Infile defaults — overridear con .env si cambian
+        'certification' => env('FEL_CERTIFICATION_URL', 'https://certificador.feel.com.gt/fel/procesounificado/transaccion/v2/xml'),
+        'cancellation' => env('FEL_CANCELLATION_URL', 'https://certificador.feel.com.gt/fel/procesounificado/transaccion/v2/xml'),
+        'lookup' => env('FEL_LOOKUP_URL', 'https://consultareceptor.feel.com.gt/rest/action'),
     ],
 
     'timeout' => (int) env('FEL_TIMEOUT', 30),
