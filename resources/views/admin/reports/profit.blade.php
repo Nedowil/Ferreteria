@@ -238,8 +238,9 @@
                         (ej. si vendiste 1 caja de 50 libras, el capital se calcula sobre 50 × precio_compra).</li>
                     <li><strong>Ganancia neta</strong> = Vendido − Capital. <em>No incluye</em> gastos fijos (alquiler, luz, salarios).</li>
                     <li><strong>Margen %</strong> = Ganancia / Vendido. Cuanto más alto, mejor.</li>
-                    <li>El precio de compra usado es el <strong>actual</strong> del producto. Si lo modificás, los reportes históricos
-                        reflejan el costo nuevo, no el del momento de cada venta.</li>
+                    <li>El costo se guarda <strong>al momento de cada venta</strong> en <code>sale_items.unit_cost</code>.
+                        Aunque después cambies el precio de compra del producto, los reportes históricos siguen siendo
+                        100% precisos. Las ventas hechas antes de habilitar esta función usan el precio actual como fallback.</li>
                 </ul>
             </div>
         </div>

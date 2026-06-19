@@ -95,11 +95,18 @@ class SaleReturnService
                 }
                 $totalDiscount += $lineDiscount;
 
+                // Heredamos el unit_cost del sale_item original para que el reporte
+                // de ganancias considere correctamente el costo de lo devuelto
+                $unitCost = $saleItem->unit_cost !== null
+                    ? (float) $saleItem->unit_cost
+                    : (float) ($saleItem->product?->purchase_price ?? 0) * $factor;
+
                 $normalized[] = [
                     'sale_item' => $saleItem,
                     'product_id' => $saleItem->product_id,
                     'quantity' => $qtyReturn,
                     'unit_price' => $unitPrice,
+                    'unit_cost' => $unitCost,
                     'discount' => $lineDiscount,
                     'subtotal' => $lineSubtotal,
                     'unit_label' => $saleItem->unit_label,
@@ -155,6 +162,7 @@ class SaleReturnService
                     'unit_label' => $n['unit_label'],
                     'units_factor' => $n['units_factor'],
                     'tax_type' => $n['tax_type'],
+                    'unit_cost' => $n['unit_cost'],
                 ]);
 
                 $reason = "Devolucion {$return->folio} (venta {$sale->folio})";

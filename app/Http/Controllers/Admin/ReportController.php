@@ -98,10 +98,10 @@ class ReportController extends Controller
     {
         [$from, $to] = $this->resolveRange($request, days: 30);
 
-        // CAPITAL (costo): purchase_price es por unidad BASE.
-        // cantidad real en unidad base = sale_items.quantity * units_factor
-        // Asi 1 caja x 50 lb con purchase_price 9 = 1 * 50 * 9 = Q450 de capital
-        $costExpr = 'sale_items.quantity * COALESCE(sale_items.units_factor, 1) * products.purchase_price';
+        // CAPITAL (costo): preferentemente usamos el unit_cost capturado AL MOMENTO
+        // de la venta (preciso historicamente). Para ventas viejas sin ese dato,
+        // caemos al precio de compra actual del producto * units_factor.
+        $costExpr = 'sale_items.quantity * COALESCE(sale_items.unit_cost, products.purchase_price * COALESCE(sale_items.units_factor, 1))';
         $revenueExpr = 'sale_items.subtotal'; // ya tiene descuento aplicado
 
         // Desglose por producto

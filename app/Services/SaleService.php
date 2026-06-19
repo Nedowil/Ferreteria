@@ -73,10 +73,17 @@ class SaleService
                     $subtotalGravado += $lineTotal;
                 }
                 $totalDiscount += $discount;
+                // Costo unitario AL MOMENTO de la venta (incluye units_factor).
+                // Ej: 1 caja (factor 50) con purchase_price Q9/lb -> unit_cost = Q450
+                // Asi los reportes historicos no se distorsionan si despues cambiamos
+                // el precio de compra del producto.
+                $unitCost = (float) $product->purchase_price * $factor;
+
                 $normalized[] = [
                     'product' => $product,
                     'quantity' => $qty,
                     'unit_price' => $price,
+                    'unit_cost' => $unitCost,
                     'discount' => $discount,
                     'subtotal' => $lineSubtotal,
                     'units_factor' => $factor,
@@ -144,6 +151,7 @@ class SaleService
                     'unit_label' => $n['unit_label'],
                     'units_factor' => $n['units_factor'],
                     'tax_type' => $n['tax_type'],
+                    'unit_cost' => $n['unit_cost'],
                 ]);
 
                 $reason = "Venta {$sale->folio}";
