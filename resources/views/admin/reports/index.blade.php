@@ -19,10 +19,10 @@
                     <div class="text-sm text-gray-500">Mas vendidos por monto y cantidad</div>
                 </a>
 
-                <a href="{{ route('admin.reportes.profit') }}" class="bg-white shadow-sm rounded-lg p-6 hover:ring-2 hover:ring-indigo-300">
-                    <div class="text-3xl">💵</div>
-                    <div class="font-semibold mt-2">Utilidad bruta</div>
-                    <div class="text-sm text-gray-500">Margen por producto</div>
+                <a href="{{ route('admin.reportes.profit') }}" class="bg-white shadow-sm rounded-lg p-6 hover:ring-2 hover:ring-green-300">
+                    <div class="text-3xl">💰</div>
+                    <div class="font-semibold mt-2">Ganancias y márgenes</div>
+                    <div class="text-sm text-gray-500">Capital vs ganancia real, por día y por producto</div>
                 </a>
 
                 <a href="{{ route('admin.reportes.top_customers') }}" class="bg-white shadow-sm rounded-lg p-6 hover:ring-2 hover:ring-indigo-300">

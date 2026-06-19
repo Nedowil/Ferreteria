@@ -98,22 +98,45 @@ class ReportController extends Controller
     {
         [$from, $to] = $this->resolveRange($request, days: 30);
 
+        // CAPITAL (costo): purchase_price es por unidad BASE.
+        // cantidad real en unidad base = sale_items.quantity * units_factor
+        // Asi 1 caja x 50 lb con purchase_price 9 = 1 * 50 * 9 = Q450 de capital
+        $costExpr = 'sale_items.quantity * COALESCE(sale_items.units_factor, 1) * products.purchase_price';
+        $revenueExpr = 'sale_items.subtotal'; // ya tiene descuento aplicado
+
+        // Desglose por producto
         $rows = SaleItem::query()
             ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
             ->join('products', 'products.id', '=', 'sale_items.product_id')
             ->where('sales.status', Sale::STATUS_COMPLETADA)
             ->whereBetween('sales.date', [$from, $to])
             ->groupBy('products.id', 'products.sku', 'products.name', 'products.purchase_price')
-            ->orderByDesc(DB::raw('SUM((sale_items.unit_price - products.purchase_price) * sale_items.quantity) - SUM(sale_items.discount)'))
+            ->orderByDesc(DB::raw("SUM({$revenueExpr}) - SUM({$costExpr})"))
             ->get([
                 'products.id',
                 'products.sku',
                 'products.name',
                 'products.purchase_price',
                 DB::raw('SUM(sale_items.quantity) as total_quantity'),
-                DB::raw('SUM(sale_items.subtotal) as total_revenue'),
-                DB::raw('SUM(sale_items.quantity * products.purchase_price) as total_cost'),
-                DB::raw('SUM(sale_items.subtotal) - SUM(sale_items.quantity * products.purchase_price) as gross_profit'),
+                DB::raw("SUM({$revenueExpr}) as total_revenue"),
+                DB::raw("SUM({$costExpr}) as total_cost"),
+                DB::raw("SUM({$revenueExpr}) - SUM({$costExpr}) as gross_profit"),
+            ]);
+
+        // Desglose por dia
+        $byDay = SaleItem::query()
+            ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
+            ->join('products', 'products.id', '=', 'sale_items.product_id')
+            ->where('sales.status', Sale::STATUS_COMPLETADA)
+            ->whereBetween('sales.date', [$from, $to])
+            ->groupBy(DB::raw('DATE(sales.date)'))
+            ->orderBy(DB::raw('DATE(sales.date)'), 'desc')
+            ->get([
+                DB::raw('DATE(sales.date) as day'),
+                DB::raw("SUM({$revenueExpr}) as revenue"),
+                DB::raw("SUM({$costExpr}) as cost"),
+                DB::raw("SUM({$revenueExpr}) - SUM({$costExpr}) as profit"),
+                DB::raw('COUNT(DISTINCT sales.id) as sales_count'),
             ]);
 
         $totalRevenue = (float) $rows->sum('total_revenue');
@@ -121,14 +144,21 @@ class ReportController extends Controller
         $totalProfit = $totalRevenue - $totalCost;
         $marginPct = $totalRevenue > 0 ? ($totalProfit / $totalRevenue) * 100 : 0;
 
+        // Top 5 mas y menos rentables
+        $topProfit = $rows->sortByDesc('gross_profit')->take(5)->values();
+        $lowProfit = $rows->sortBy('gross_profit')->take(5)->values();
+
         return view('admin.reports.profit', [
             'from' => $from,
             'to' => $to,
             'rows' => $rows,
+            'byDay' => $byDay,
             'totalRevenue' => $totalRevenue,
             'totalCost' => $totalCost,
             'totalProfit' => $totalProfit,
             'marginPct' => $marginPct,
+            'topProfit' => $topProfit,
+            'lowProfit' => $lowProfit,
         ]);
     }
 
