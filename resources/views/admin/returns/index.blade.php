@@ -52,7 +52,7 @@
                                         {{ $r->sale?->folio }}
                                     </a>
                                 </td>
-                                <td class="px-3 py-2 text-sm">{{ $r->customer?->name ?? 'Público en general' }}</td>
+                                <td class="px-3 py-2 text-sm">{{ $r->customer?->name ?? 'Consumidor Final' }}</td>
                                 <td class="px-3 py-2 text-xs">{{ $r->reasonLabel() }}</td>
                                 <td class="px-3 py-2 text-xs capitalize">{{ str_replace('_', ' ', $r->refund_method) }}</td>
                                 <td class="px-3 py-2 text-right font-semibold">Q{{ number_format($r->total, 2) }}</td>

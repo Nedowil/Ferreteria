@@ -18,7 +18,7 @@
                 <div class="flex justify-between items-start mb-4">
                     <div>
                         <div class="text-sm text-gray-500">Cliente</div>
-                        <div class="text-lg font-semibold">{{ $quotation->customer?->name ?? 'Publico en general' }}</div>
+                        <div class="text-lg font-semibold">{{ $quotation->customer?->name ?? 'Consumidor Final' }}</div>
                         <div class="text-sm text-gray-500 mt-2">Fecha: {{ $quotation->date->format('Y-m-d') }}</div>
                         <div class="text-sm text-gray-500">Vigente hasta: {{ $quotation->valid_until?->format('Y-m-d') ?? '—' }}</div>
                         <div class="text-sm text-gray-500">Vendedor: {{ $quotation->user?->name }}</div>

@@ -95,7 +95,7 @@ class SaleController extends Controller
                             fputcsv($out, [
                                 $s->folio,
                                 $s->date?->format('Y-m-d H:i'),
-                                $s->customer?->name ?: 'Publico en general',
+                                $s->customer?->name ?: 'Consumidor Final',
                                 $s->customer?->tax_id ?: 'CF',
                                 $s->user?->name,
                                 ucfirst($s->payment_method),
@@ -122,7 +122,7 @@ class SaleController extends Controller
                         fputcsv($out, [
                             $s->folio,
                             $s->date?->format('Y-m-d H:i'),
-                            $s->customer?->name ?: 'Publico en general',
+                            $s->customer?->name ?: 'Consumidor Final',
                             $s->customer?->tax_id ?: 'CF',
                             $s->user?->name,
                             ucfirst($s->payment_method),

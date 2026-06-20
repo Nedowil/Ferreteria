@@ -60,7 +60,7 @@
                             <tr>
                                 <td class="px-3 py-2 font-mono text-xs">{{ $s->folio }}</td>
                                 <td class="px-3 py-2 text-sm">{{ $s->date->format('Y-m-d H:i') }}</td>
-                                <td class="px-3 py-2">{{ $s->customer?->name ?? 'Publico en general' }}</td>
+                                <td class="px-3 py-2">{{ $s->customer?->name ?? 'Consumidor Final' }}</td>
                                 <td class="px-3 py-2">{{ $s->user?->name }}</td>
                                 <td class="px-3 py-2 text-sm">{{ ucfirst($s->payment_method) }}</td>
                                 <td class="px-3 py-2 text-right">Q{{ number_format($s->total, 2) }}</td>
@@ -139,7 +139,7 @@
                     <!-- Cliente -->
                     <div class="bg-slate-50 border border-slate-200 rounded p-3 text-sm">
                         <div class="text-xs text-slate-500 mb-1">Cliente</div>
-                        <div class="font-semibold" x-text="sale?.customer?.name || 'Publico en general'"></div>
+                        <div class="font-semibold" x-text="sale?.customer?.name || 'Consumidor Final'"></div>
                         <div class="text-xs text-slate-600">
                             NIT: <span x-text="sale?.customer?.tax_id || 'CF'"></span>
                             <template x-if="sale?.customer?.phone"> · Tel: <span x-text="sale.customer.phone"></span></template>

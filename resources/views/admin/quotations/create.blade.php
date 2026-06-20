@@ -34,9 +34,9 @@
 
                                 <div x-show="customerOpen" x-cloak x-transition
                                      class="absolute z-30 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                                    <div @click="selectCustomer({ id: '', label: 'Publico en general' })"
+                                    <div @click="selectCustomer({ id: '', label: 'Consumidor Final' })"
                                          class="px-3 py-2 hover:bg-orange-50 cursor-pointer text-sm flex items-center gap-2 border-b">
-                                        <span>👥</span><span class="font-medium">Publico en general</span>
+                                        <span>👥</span><span class="font-medium">Consumidor Final</span>
                                     </div>
                                     <template x-for="c in filteredCustomers" :key="c.id">
                                         <div @click="selectCustomer(c)"

@@ -31,7 +31,7 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm bg-slate-50 rounded p-3 mb-4">
-                    <div><span class="text-slate-500">Cliente:</span> <strong>{{ $return->customer?->name ?? 'Público en general' }}</strong></div>
+                    <div><span class="text-slate-500">Cliente:</span> <strong>{{ $return->customer?->name ?? 'Consumidor Final' }}</strong></div>
                     <div><span class="text-slate-500">NIT:</span> {{ $return->customer?->tax_id ?? 'CF' }}</div>
                     <div><span class="text-slate-500">Procesado por:</span> {{ $return->user?->name }}</div>
                     <div><span class="text-slate-500">Reembolso:</span> <span class="capitalize">{{ str_replace('_', ' ', $return->refund_method) }}</span></div>

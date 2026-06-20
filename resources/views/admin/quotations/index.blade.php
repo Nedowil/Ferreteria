@@ -57,7 +57,7 @@
                             <td class="px-3 py-2 font-mono text-xs">{{ $q->folio }}</td>
                             <td class="px-3 py-2 text-sm">{{ $q->date->format('Y-m-d') }}</td>
                             <td class="px-3 py-2 text-sm">{{ $q->valid_until?->format('Y-m-d') ?? '—' }}</td>
-                            <td class="px-3 py-2">{{ $q->customer?->name ?? 'Publico en general' }}</td>
+                            <td class="px-3 py-2">{{ $q->customer?->name ?? 'Consumidor Final' }}</td>
                             <td class="px-3 py-2">{{ $q->user?->name }}</td>
                             <td class="px-3 py-2 text-right">Q{{ number_format($q->total, 2) }}</td>
                             <td class="px-3 py-2">
@@ -119,7 +119,7 @@
 
                     <div class="bg-slate-50 border border-slate-200 rounded p-3 text-sm">
                         <div class="text-xs text-slate-500 mb-1">Cliente</div>
-                        <div class="font-semibold" x-text="data?.customer?.name || 'Publico en general'"></div>
+                        <div class="font-semibold" x-text="data?.customer?.name || 'Consumidor Final'"></div>
                         <div class="text-xs text-slate-600">NIT: <span x-text="data?.customer?.tax_id || 'CF'"></span></div>
                     </div>
 

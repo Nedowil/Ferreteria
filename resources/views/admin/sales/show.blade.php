@@ -20,7 +20,7 @@
                 <div class="flex flex-col md:flex-row md:justify-between gap-4 mb-4">
                     <div>
                         <div class="text-sm text-gray-500">Cliente</div>
-                        <div class="text-lg font-semibold">{{ $sale->customer?->name ?? 'Publico en general' }}</div>
+                        <div class="text-lg font-semibold">{{ $sale->customer?->name ?? 'Consumidor Final' }}</div>
 
                         <div class="text-sm text-gray-500 mt-2">Fecha</div>
                         <div>{{ $sale->date->format('Y-m-d H:i') }}</div>

@@ -71,7 +71,7 @@
                                 <td class="px-3 py-2 font-mono text-xs">
                                     <a href="{{ route('admin.ventas.show', $s) }}" class="text-indigo-600">{{ $s->folio }}</a>
                                 </td>
-                                <td class="px-3 py-2">{{ $s->customer?->name ?? 'Público en general' }}</td>
+                                <td class="px-3 py-2">{{ $s->customer?->name ?? 'Consumidor Final' }}</td>
                                 <td class="px-3 py-2 text-xs">{{ $s->date->format('d/m/Y') }}</td>
                                 <td class="px-3 py-2 text-xs @if($overdue) text-red-700 font-bold @endif">
                                     {{ $s->due_date?->format('d/m/Y') ?? '—' }}

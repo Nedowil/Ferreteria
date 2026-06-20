@@ -44,7 +44,7 @@
 
     <div class="box">
         <strong>Cliente:</strong>
-        {{ $quotation->customer?->name ?? 'Publico en general' }}
+        {{ $quotation->customer?->name ?? 'Consumidor Final' }}
         @if ($quotation->customer?->tax_id) — NIT: {{ $quotation->customer->tax_id }} @endif<br>
         @if ($quotation->customer?->address) {{ $quotation->customer->address }} <br> @endif
         @if ($quotation->customer?->phone) Tel: {{ $quotation->customer->phone }} @endif

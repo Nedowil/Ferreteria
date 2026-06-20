@@ -155,13 +155,22 @@
                             <label class="text-sm font-medium text-gray-700">Cliente</label>
                             <input type="hidden" name="customer_id" :value="customer_id" />
 
+                            <!-- Badge: Consumidor Final cuando no hay cliente seleccionado -->
+                            <div x-show="!customer_id" x-cloak class="mt-1 p-2 bg-slate-100 border border-slate-300 rounded text-xs flex items-center gap-2">
+                                <span class="text-base">👥</span>
+                                <div>
+                                    <div class="font-semibold text-slate-700">Venta a Consumidor Final</div>
+                                    <div class="text-slate-500">NIT: <strong>CF</strong> · Si querés a un cliente específico, buscalo abajo.</div>
+                                </div>
+                            </div>
+
                             <div class="flex gap-2 mt-1">
                                 <div class="relative flex-1">
                                     <input type="text" x-model="customerSearch"
                                            @focus="customerSearchOpen = true"
                                            @input="customerSearchOpen = true"
                                            @keydown.escape="customerSearchOpen = false"
-                                           placeholder="Buscar cliente por nombre o NIT..."
+                                           placeholder="Buscar cliente registrado por nombre o NIT (opcional)..."
                                            autocomplete="off"
                                            class="w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-orange-500 focus:ring-orange-500 pr-8" />
 
@@ -176,11 +185,14 @@
                                     <div x-show="customerSearchOpen" x-cloak x-transition
                                          class="absolute z-30 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-64 overflow-y-auto">
 
-                                        <!-- Opcion: Publico en general -->
-                                        <div @click="selectCustomer({ id: '', label: 'Publico en general' })"
+                                        <!-- Opcion: Consumidor Final -->
+                                        <div @click="selectCustomer({ id: '', label: '' })"
                                              class="px-3 py-2 hover:bg-orange-50 cursor-pointer text-sm flex items-center gap-2 border-b">
                                             <span class="text-lg">👥</span>
-                                            <span class="font-medium text-slate-700">Publico en general</span>
+                                            <span>
+                                                <span class="font-medium text-slate-700">Consumidor Final</span>
+                                                <span class="text-xs text-slate-500 block">NIT: CF (sin cliente registrado)</span>
+                                            </span>
                                         </div>
 
                                         <template x-for="c in filteredCustomers" :key="c.id">

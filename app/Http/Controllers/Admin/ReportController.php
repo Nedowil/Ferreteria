@@ -175,7 +175,7 @@ class ReportController extends Controller
             ->limit(50)
             ->get([
                 'customers.id',
-                DB::raw("COALESCE(customers.name, 'Publico en general') as name"),
+                DB::raw("COALESCE(customers.name, 'Consumidor Final') as name"),
                 DB::raw('COUNT(sales.id) as total_sales'),
                 DB::raw('SUM(sales.total) as total_revenue'),
             ]);
