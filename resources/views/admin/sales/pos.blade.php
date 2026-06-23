@@ -288,7 +288,16 @@
                                                    x-model="item.unit_price" @input="recalc()"
                                                    class="w-full text-right border-gray-300 rounded text-sm py-1 px-2 focus:border-orange-500 focus:ring-orange-500" />
                                         </td>
-                                        <td class="px-2 py-1 text-right">Q<span x-text="(parseAmount(item.quantity) * parseAmount(item.unit_price)).toFixed(2)"></span></td>
+                                        <td class="px-2 py-1 text-right">
+                                            <input type="hidden" :name="`items[${idx}][discount]`" :value="parseAmount(item.discount || 0).toFixed(2)" />
+                                            <div class="font-semibold" x-text="'Q' + lineSubtotal(item).toFixed(2)"></div>
+                                            <template x-if="parseAmount(item.discount) > 0">
+                                                <div class="text-xs text-emerald-700">−Q<span x-text="parseAmount(item.discount).toFixed(2)"></span> dto</div>
+                                            </template>
+                                            <button type="button" @click="openItemDiscount(idx)"
+                                                    class="text-xs text-orange-600 hover:underline"
+                                                    x-text="parseAmount(item.discount) > 0 ? 'Editar dto' : '% Dto'"></button>
+                                        </td>
                                         <td class="px-2 py-1 text-center">
                                             <button type="button" @click="removeItem(idx)" class="text-red-600">✕</button>
                                         </td>
@@ -405,6 +414,20 @@
                             <span x-show="!submitting && items.length > 0 && change < 0">Falta pago</span>
                             <span x-show="!submitting && items.length > 0 && change >= 0">Cobrar Q<span x-text="total.toFixed(2)"></span></span>
                         </button>
+
+                        <div class="mt-2 grid grid-cols-2 gap-2">
+                            <button type="button" @click="holdCurrentSale()" :disabled="items.length === 0"
+                                    class="py-2 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-md text-sm font-semibold border border-amber-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1">
+                                ⏸️ Pausar venta
+                            </button>
+                            <button type="button" @click="showHeldSalesPanel = true"
+                                    class="py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-sm font-semibold border border-slate-300 flex items-center justify-center gap-1 relative">
+                                📋 En espera
+                                <span x-show="heldSales.length > 0"
+                                      class="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center"
+                                      x-text="heldSales.length"></span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </form>
@@ -790,6 +813,149 @@
                 </div>
             </div>
 
+            <!-- Modal descuento por item -->
+            <div x-show="showItemDiscountModal" x-cloak x-transition.opacity
+                 class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+                 @keydown.escape.window="showItemDiscountModal = false">
+                <div @click.outside="showItemDiscountModal = false"
+                     class="bg-white rounded-xl shadow-2xl max-w-sm w-full overflow-hidden"
+                     x-transition.scale>
+
+                    <div class="bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-4 flex justify-between items-center">
+                        <h3 class="text-white font-bold text-lg flex items-center gap-2">
+                            <span class="text-2xl">🏷️</span> Descuento del producto
+                        </h3>
+                        <button type="button" @click="showItemDiscountModal = false" class="text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center">
+                            ✕
+                        </button>
+                    </div>
+
+                    <div class="p-6 space-y-4">
+                        <template x-if="discountItemIdx !== null && items[discountItemIdx]">
+                            <div class="text-sm text-slate-600">
+                                <div class="font-semibold text-slate-800" x-text="items[discountItemIdx].product?.name"></div>
+                                <div class="text-xs">
+                                    Precio:
+                                    <span x-text="'Q' + parseAmount(items[discountItemIdx].unit_price).toFixed(2)"></span>
+                                    × <span x-text="parseAmount(items[discountItemIdx].quantity)"></span>
+                                    =
+                                    <span class="font-semibold" x-text="'Q' + (parseAmount(items[discountItemIdx].quantity) * parseAmount(items[discountItemIdx].unit_price)).toFixed(2)"></span>
+                                </div>
+                            </div>
+                        </template>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Aplicar como</label>
+                            <div class="inline-flex rounded-md shadow-sm" role="group">
+                                <button type="button" @click="discountModalMode = 'Q'"
+                                        :class="discountModalMode === 'Q' ? 'bg-orange-500 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'"
+                                        class="px-4 py-2 text-sm font-medium border border-slate-300 rounded-l-md">
+                                    Q (quetzales)
+                                </button>
+                                <button type="button" @click="discountModalMode = '%'"
+                                        :class="discountModalMode === '%' ? 'bg-orange-500 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'"
+                                        class="px-4 py-2 text-sm font-medium border border-slate-300 rounded-r-md -ml-px">
+                                    % (porcentaje)
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700">
+                                <span x-show="discountModalMode === 'Q'">Monto a descontar (Q)</span>
+                                <span x-show="discountModalMode === '%'">Porcentaje a descontar (%)</span>
+                            </label>
+                            <input type="text" inputmode="decimal" x-model="discountModalValue"
+                                   @keydown.enter.prevent="applyItemDiscount()"
+                                   x-ref="discountInput"
+                                   x-init="$watch('showItemDiscountModal', v => v && $nextTick(() => $refs.discountInput?.focus()))"
+                                   class="mt-1 block w-full border-slate-300 rounded-md shadow-sm focus:border-orange-500 focus:ring-orange-500 text-lg font-semibold" />
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-50 px-6 py-3 flex justify-between gap-2 border-t">
+                        <button type="button" @click="clearItemDiscount()"
+                                class="px-3 py-2 text-sm text-red-600 hover:text-red-800 font-medium">
+                            Quitar descuento
+                        </button>
+                        <div class="flex gap-2">
+                            <button type="button" @click="showItemDiscountModal = false"
+                                    class="px-4 py-2 bg-slate-200 text-slate-700 rounded-md hover:bg-slate-300 text-sm font-medium">
+                                Cancelar
+                            </button>
+                            <button type="button" @click="applyItemDiscount()"
+                                    class="px-5 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-md hover:from-orange-600 hover:to-orange-700 text-sm font-bold shadow">
+                                Aplicar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel ventas en espera -->
+            <div x-show="showHeldSalesPanel" x-cloak x-transition.opacity
+                 class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+                 @keydown.escape.window="showHeldSalesPanel = false">
+                <div @click.outside="showHeldSalesPanel = false"
+                     class="bg-white rounded-xl shadow-2xl max-w-2xl w-full overflow-hidden max-h-[80vh] flex flex-col"
+                     x-transition.scale>
+
+                    <div class="bg-gradient-to-r from-amber-500 to-amber-600 px-6 py-4 flex justify-between items-center">
+                        <h3 class="text-white font-bold text-lg flex items-center gap-2">
+                            <span class="text-2xl">⏸️</span> Ventas en espera
+                            <span class="text-sm font-normal opacity-90">(<span x-text="heldSales.length"></span>)</span>
+                        </h3>
+                        <button type="button" @click="showHeldSalesPanel = false" class="text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center">
+                            ✕
+                        </button>
+                    </div>
+
+                    <div class="p-6 overflow-y-auto flex-1">
+                        <template x-if="heldSales.length === 0">
+                            <div class="text-center text-slate-500 py-8">
+                                <div class="text-4xl mb-2">📭</div>
+                                <div>No hay ventas en espera.</div>
+                                <div class="text-xs mt-1">Usá el botón <strong>Pausar venta</strong> para guardar el carrito y atender otro cliente.</div>
+                            </div>
+                        </template>
+                        <template x-if="heldSales.length > 0">
+                            <div class="space-y-2">
+                                <template x-for="sale in heldSales" :key="sale.id">
+                                    <div class="border border-slate-200 rounded-lg p-3 flex items-center justify-between gap-3 hover:bg-amber-50">
+                                        <div class="flex-1 min-w-0">
+                                            <div class="font-semibold text-slate-800" x-text="sale.name"></div>
+                                            <div class="text-xs text-slate-500">
+                                                <span x-text="sale.items_count"></span> producto(s) ·
+                                                <span x-text="'Q' + parseAmount(sale.total).toFixed(2)"></span> ·
+                                                <span x-text="new Date(sale.created_at).toLocaleString()"></span>
+                                            </div>
+                                        </div>
+                                        <div class="flex gap-1 shrink-0">
+                                            <button type="button" @click="resumeHeldSale(sale.id)"
+                                                    class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-md text-sm font-semibold">
+                                                ▶ Reanudar
+                                            </button>
+                                            <button type="button" @click="deleteHeldSale(sale.id)"
+                                                    class="px-2 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-md text-sm"
+                                                    title="Eliminar">
+                                                🗑
+                                            </button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div class="bg-slate-50 px-6 py-3 flex justify-end gap-2 border-t">
+                        <button type="button" @click="showHeldSalesPanel = false"
+                                class="px-4 py-2 bg-slate-200 text-slate-700 rounded-md hover:bg-slate-300 text-sm font-medium">
+                            Cerrar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -831,6 +997,16 @@
                 subtotalExento: 0,
                 total: 0,
                 change: 0,
+
+                // Descuento por item (modal popup)
+                showItemDiscountModal: false,
+                discountItemIdx: null,
+                discountModalValue: '',
+                discountModalMode: 'Q', // 'Q' o '%'
+
+                // Ventas en espera (hold) — persisten en localStorage
+                heldSales: [],
+                showHeldSalesPanel: false,
 
                 // Modal de cliente
                 showCustomerModal: false,
@@ -885,6 +1061,7 @@
                     this._initialized = true;
 
                     this.search();
+                    this.loadHeldSales();
                     setInterval(() => {
                         if (this.lastScanned && Date.now() - this.lastScanTime > 1500) {
                             this.lastScanned = '';
@@ -1339,6 +1516,7 @@
                             unit_label: unitLabel,
                             units_factor: factor,
                             tax_type: taxType,
+                            discount: '0',
                         });
                     }
                     this.query = '';
@@ -1349,6 +1527,121 @@
                     this.items.splice(idx, 1);
                     this.recalc();
                 },
+
+                /** Descuento por item: helpers */
+                lineSubtotal(item) {
+                    const total = this.parseAmount(item.quantity) * this.parseAmount(item.unit_price);
+                    return Math.max(0, total - this.parseAmount(item.discount || 0));
+                },
+                openItemDiscount(idx) {
+                    this.discountItemIdx = idx;
+                    const item = this.items[idx];
+                    this.discountModalValue = this.parseAmount(item.discount || 0).toFixed(2);
+                    this.discountModalMode = 'Q';
+                    this.showItemDiscountModal = true;
+                },
+                applyItemDiscount() {
+                    const idx = this.discountItemIdx;
+                    if (idx === null || !this.items[idx]) return;
+                    const item = this.items[idx];
+                    const total = this.parseAmount(item.quantity) * this.parseAmount(item.unit_price);
+                    let dto = this.parseAmount(this.discountModalValue);
+                    if (this.discountModalMode === '%') {
+                        dto = total * dto / 100;
+                    }
+                    if (dto < 0) dto = 0;
+                    if (dto > total) dto = total;
+                    item.discount = String(dto.toFixed(2));
+                    this.showItemDiscountModal = false;
+                    this.recalc();
+                },
+                clearItemDiscount() {
+                    const idx = this.discountItemIdx;
+                    if (idx !== null && this.items[idx]) {
+                        this.items[idx].discount = '0';
+                    }
+                    this.showItemDiscountModal = false;
+                    this.recalc();
+                },
+
+                /** Ventas en espera (hold): persisten en localStorage por sucursal */
+                holdStorageKey() {
+                    return 'pos_held_sales_v1';
+                },
+                loadHeldSales() {
+                    try {
+                        const raw = localStorage.getItem(this.holdStorageKey());
+                        this.heldSales = raw ? JSON.parse(raw) : [];
+                    } catch (e) {
+                        this.heldSales = [];
+                    }
+                },
+                saveHeldSales() {
+                    try {
+                        localStorage.setItem(this.holdStorageKey(), JSON.stringify(this.heldSales));
+                    } catch (e) {
+                        // localStorage lleno o deshabilitado, ignorar
+                    }
+                },
+                holdCurrentSale() {
+                    if (this.items.length === 0) {
+                        alert('No hay productos en el carrito para pausar.');
+                        return;
+                    }
+                    const name = prompt('Nombre o referencia de esta venta (ej. "Don Juan", "Tornillo rojo"):');
+                    if (!name) return;
+                    this.heldSales.push({
+                        id: Date.now(),
+                        name: name,
+                        created_at: new Date().toISOString(),
+                        cashier: '{{ Auth::user()?->name }}',
+                        items: JSON.parse(JSON.stringify(this.items)),
+                        customer_id: this.customer_id,
+                        customerSearch: this.customerSearch,
+                        customerIsWholesale: this.customerIsWholesale,
+                        customerWholesaleDiscount: this.customerWholesaleDiscount,
+                        wholesaleMode: this.wholesaleMode,
+                        discount: this.discount,
+                        items_count: this.items.length,
+                        total: this.total,
+                    });
+                    this.saveHeldSales();
+                    // Limpiar carrito actual
+                    this.items = [];
+                    this.customer_id = '';
+                    this.customerSearch = '';
+                    this.customerIsWholesale = false;
+                    this.customerWholesaleDiscount = 0;
+                    this.wholesaleMode = false;
+                    this.discount = '';
+                    this.paid_amount = '';
+                    this.recalc();
+                },
+                resumeHeldSale(id) {
+                    const sale = this.heldSales.find(s => s.id === id);
+                    if (!sale) return;
+                    if (this.items.length > 0) {
+                        if (!confirm('Tenés productos en el carrito actual. ¿Querés reemplazarlos por la venta en espera? (los actuales se pierden)')) return;
+                    }
+                    this.items = sale.items;
+                    this.customer_id = sale.customer_id;
+                    this.customerSearch = sale.customerSearch;
+                    this.customerIsWholesale = sale.customerIsWholesale || false;
+                    this.customerWholesaleDiscount = sale.customerWholesaleDiscount || 0;
+                    this.wholesaleMode = sale.wholesaleMode || false;
+                    this.discount = sale.discount || '';
+                    // Sacarla de la lista de espera
+                    this.heldSales = this.heldSales.filter(s => s.id !== id);
+                    this.saveHeldSales();
+                    this.showHeldSalesPanel = false;
+                    this.recalc();
+                },
+                deleteHeldSale(id) {
+                    if (!confirm('Eliminar esta venta en espera? No se puede recuperar.')) return;
+                    this.heldSales = this.heldSales.filter(s => s.id !== id);
+                    this.saveHeldSales();
+                },
+
                 onPaymentChange() {
                     if (this.payment_method !== 'efectivo') this.paid_amount = this.total;
                     this.recalc();
@@ -1368,10 +1661,11 @@
                     return isNaN(n) ? 0 : n;
                 },
                 recalc() {
-                    // Subtotal separado por gravados (con IVA) y exentos
+                    // Subtotal separado por gravados (con IVA) y exentos,
+                    // con el descuento POR ITEM ya aplicado a cada linea.
                     let subGravado = 0, subExento = 0;
                     this.items.forEach(i => {
-                        const lineTotal = this.parseAmount(i.quantity) * this.parseAmount(i.unit_price);
+                        const lineTotal = this.lineSubtotal(i);
                         if ((i.tax_type || 'iva') === 'exento') {
                             subExento += lineTotal;
                         } else {
@@ -1382,7 +1676,7 @@
                     this.subtotalGravado = subGravado;
                     this.subtotalExento = subExento;
 
-                    // Descuento manual: lo aplicamos proporcionalmente al gravado
+                    // Descuento GLOBAL adicional: se aplica proporcionalmente al gravado y exento
                     let discountAmount = this.parseAmount(this.discount);
                     if (discountAmount > this.subtotal) discountAmount = this.subtotal;
                     const discGravado = this.subtotal > 0 ? discountAmount * (subGravado / this.subtotal) : 0;
