@@ -100,7 +100,13 @@
                                     <tr class="border-t hover:bg-indigo-50">
                                         <td class="px-2 py-1 font-mono text-xs" x-text="p.sku"></td>
                                         <td class="px-2 py-1">
-                                            <div x-text="p.name"></div>
+                                            <button type="button" @click.stop="openProductDetail(p)"
+                                                    class="text-left font-medium text-indigo-700 hover:text-indigo-900 hover:underline flex items-center gap-2">
+                                                <template x-if="p.image_url">
+                                                    <img :src="p.image_url" class="w-8 h-8 object-cover rounded border" alt="" />
+                                                </template>
+                                                <span x-text="p.name"></span>
+                                            </button>
                                             <div class="text-xs text-slate-500" x-show="p.container_label">
                                                 📦 1 <span x-text="p.container_label"></span> = <span x-text="p.container_factor"></span> <span x-text="p.base_unit_label"></span>
                                                 <template x-if="p.container_price"><span> · Q<span x-text="p.container_price.toFixed(2)"></span>/<span x-text="p.container_label"></span></span></template>
@@ -118,6 +124,11 @@
                                             x-text="p.stock_formatted"></td>
                                         <td class="px-2 py-1 text-right whitespace-nowrap">
                                             <div class="flex flex-wrap gap-1 justify-end">
+                                                <button type="button" @click.stop="openProductDetail(p)"
+                                                        class="px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-xs"
+                                                        title="Ver medidas y foto">
+                                                    🛈 Detalles
+                                                </button>
                                                 <button type="button" :disabled="p.stock <= 0"
                                                         @click.stop="addItem(p, null)"
                                                         class="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs disabled:bg-gray-300">
@@ -892,6 +903,136 @@
                 </div>
             </div>
 
+            <!-- Modal detalle del producto: medidas + foto -->
+            <div x-show="showProductDetailModal" x-cloak x-transition.opacity
+                 class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+                 @keydown.escape.window="closeProductDetail()">
+                <div @click.outside="closeProductDetail()"
+                     class="bg-white rounded-xl shadow-2xl max-w-2xl w-full overflow-hidden max-h-[90vh] flex flex-col"
+                     x-transition.scale>
+
+                    <template x-if="detailProduct">
+                        <div class="flex flex-col h-full overflow-hidden">
+                            <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-4 flex justify-between items-start gap-3">
+                                <div class="text-white min-w-0">
+                                    <h3 class="font-bold text-lg flex items-center gap-2">
+                                        <span class="text-2xl">🛈</span>
+                                        <span x-text="detailProduct.name"></span>
+                                    </h3>
+                                    <div class="text-xs opacity-90 mt-1 font-mono" x-text="'SKU: ' + detailProduct.sku + (detailProduct.barcode ? ' · Codigo: ' + detailProduct.barcode : '')"></div>
+                                    <div class="text-xs mt-1"
+                                         :class="detailProduct.stock <= 0 ? 'text-red-200 font-semibold' : 'text-emerald-100'">
+                                        Stock: <span x-text="detailProduct.stock_formatted"></span>
+                                    </div>
+                                </div>
+                                <button type="button" @click="closeProductDetail()" class="text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center shrink-0">
+                                    ✕
+                                </button>
+                            </div>
+
+                            <div class="p-6 overflow-y-auto flex-1">
+                                <!-- Vista FOTO grande -->
+                                <template x-if="detailPhotoMode">
+                                    <div>
+                                        <button type="button" @click="detailPhotoMode = false"
+                                                class="mb-3 text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1">
+                                            ← Volver a medidas
+                                        </button>
+                                        <template x-if="detailProduct.image_url">
+                                            <img :src="detailProduct.image_url"
+                                                 :alt="detailProduct.name"
+                                                 class="w-full max-h-96 object-contain rounded-lg border border-slate-200 bg-slate-50" />
+                                        </template>
+                                        <template x-if="!detailProduct.image_url">
+                                            <div class="w-full h-64 bg-slate-100 rounded-lg border border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400">
+                                                <div class="text-5xl mb-2">📷</div>
+                                                <div class="text-sm">Sin foto registrada</div>
+                                                <div class="text-xs mt-1">Subila desde Productos → Editar</div>
+                                            </div>
+                                        </template>
+                                        <template x-if="detailProduct.description">
+                                            <div class="mt-3 text-sm text-slate-600 whitespace-pre-line" x-text="detailProduct.description"></div>
+                                        </template>
+                                    </div>
+                                </template>
+
+                                <!-- Vista MEDIDAS (default) -->
+                                <template x-if="!detailPhotoMode">
+                                    <div>
+                                        <div class="flex items-start gap-4 mb-4">
+                                            <template x-if="detailProduct.image_url">
+                                                <button type="button" @click="detailPhotoMode = true"
+                                                        class="shrink-0 group relative">
+                                                    <img :src="detailProduct.image_url"
+                                                         class="w-24 h-24 object-cover rounded-lg border-2 border-slate-200 group-hover:border-indigo-500" />
+                                                    <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 rounded-lg flex items-center justify-center text-white text-xs font-medium transition">
+                                                        🔍 Ampliar
+                                                    </div>
+                                                </button>
+                                            </template>
+                                            <div class="flex-1">
+                                                <button type="button" @click="detailPhotoMode = true"
+                                                        class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-sm font-medium flex items-center gap-1">
+                                                    📸 Ver foto
+                                                    <template x-if="!detailProduct.image_url">
+                                                        <span class="text-xs text-slate-500">(sin foto)</span>
+                                                    </template>
+                                                </button>
+                                                <template x-if="detailProduct.description">
+                                                    <div class="mt-2 text-xs text-slate-500 line-clamp-2" x-text="detailProduct.description"></div>
+                                                </template>
+                                            </div>
+                                        </div>
+
+                                        <div class="text-sm font-semibold text-slate-700 mb-2">
+                                            Medidas en las que se registró:
+                                        </div>
+                                        <div class="grid sm:grid-cols-2 gap-2">
+                                            <template x-for="pr in detailPresentations()" :key="pr.label + '|' + pr.units_factor">
+                                                <button type="button"
+                                                        :disabled="detailProduct.stock < pr.units_factor"
+                                                        @click="addFromDetail(pr.kind === 'base' ? null : pr)"
+                                                        :class="pr.kind === 'base' ? 'border-indigo-300 bg-indigo-50 hover:bg-indigo-100' : (pr.kind === 'container' ? 'border-emerald-300 bg-emerald-50 hover:bg-emerald-100' : 'border-amber-300 bg-amber-50 hover:bg-amber-100')"
+                                                        class="text-left px-4 py-3 rounded-lg border-2 hover:shadow disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none transition">
+                                                    <div class="flex justify-between items-start gap-2">
+                                                        <div>
+                                                            <div class="font-bold text-slate-800" x-text="pr.label"></div>
+                                                            <div class="text-xs text-slate-600 mt-0.5">
+                                                                <template x-if="pr.kind !== 'base'">
+                                                                    <span>= <span x-text="pr.units_factor"></span> <span x-text="detailProduct.base_unit_label"></span></span>
+                                                                </template>
+                                                                <template x-if="pr.kind === 'base'">
+                                                                    <span class="text-indigo-600 font-medium">Unidad mínima</span>
+                                                                </template>
+                                                            </div>
+                                                        </div>
+                                                        <div class="text-right">
+                                                            <div class="text-lg font-bold text-slate-800">Q<span x-text="pr.price.toFixed(2)"></span></div>
+                                                            <div class="text-xs text-slate-500" x-show="detailProduct.stock < pr.units_factor">Sin stock</div>
+                                                            <div class="text-xs text-emerald-600" x-show="detailProduct.stock >= pr.units_factor">+ agregar</div>
+                                                        </div>
+                                                    </div>
+                                                </button>
+                                            </template>
+                                        </div>
+
+                                        <template x-if="detailProduct.wholesale_price && detailProduct.wholesale_min_quantity">
+                                            <div class="mt-4 p-3 bg-purple-50 border border-purple-200 rounded text-xs text-purple-800">
+                                                <strong>💼 Precio mayoreo:</strong>
+                                                Q<span x-text="detailProduct.wholesale_price.toFixed(2)"></span>
+                                                desde <span x-text="detailProduct.wholesale_min_quantity"></span>
+                                                <span x-text="detailProduct.base_unit_label"></span>
+                                                (se aplica automáticamente).
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
             <!-- Panel ventas en espera -->
             <div x-show="showHeldSalesPanel" x-cloak x-transition.opacity
                  class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
@@ -1008,6 +1149,11 @@
                 heldSales: [],
                 showHeldSalesPanel: false,
 
+                // Detalle del producto (medidas + foto)
+                showProductDetailModal: false,
+                detailProduct: null,
+                detailPhotoMode: false,
+
                 // Modal de cliente
                 showCustomerModal: false,
                 savingCustomer: false,
@@ -1100,7 +1246,7 @@
 
                 onGlobalScannerKey(e) {
                     // No interferir si hay un modal abierto (cliente, producto o venta)
-                    if (this.showCustomerModal || this.showProductModal || this.showSaleModal || this.showScanChoice) return;
+                    if (this.showCustomerModal || this.showProductModal || this.showSaleModal || this.showScanChoice || this.showProductDetailModal || this.showItemDiscountModal || this.showHeldSalesPanel) return;
                     // No interferir con atajos de teclado del navegador
                     if (e.ctrlKey || e.metaKey || e.altKey) return;
 
@@ -1467,7 +1613,7 @@
                     // Manten el foco en el buscador para que el scanner siempre funcione.
                     // EXCEPCION: si esta abierto el modal de cliente, no robar el foco.
                     setTimeout(() => {
-                        if (this.showCustomerModal || this.showProductModal || this.showSaleModal || this.showScanChoice) return;
+                        if (this.showCustomerModal || this.showProductModal || this.showSaleModal || this.showScanChoice || this.showProductDetailModal || this.showItemDiscountModal || this.showHeldSalesPanel) return;
                         // Tampoco si el usuario tiene focus en otro input editable
                         const active = document.activeElement;
                         if (active && (active.tagName === 'INPUT' || active.tagName === 'SELECT' || active.tagName === 'TEXTAREA') && active !== this.$refs.search) {
@@ -1640,6 +1786,54 @@
                     if (!confirm('Eliminar esta venta en espera? No se puede recuperar.')) return;
                     this.heldSales = this.heldSales.filter(s => s.id !== id);
                     this.saveHeldSales();
+                },
+
+                /** Detalle del producto: medidas registradas + foto */
+                openProductDetail(p) {
+                    this.detailProduct = p;
+                    this.detailPhotoMode = false;
+                    this.showProductDetailModal = true;
+                },
+                closeProductDetail() {
+                    this.showProductDetailModal = false;
+                    this.detailPhotoMode = false;
+                    this.detailProduct = null;
+                },
+                addFromDetail(presentation) {
+                    if (!this.detailProduct) return;
+                    this.addItem(this.detailProduct, presentation);
+                    this.closeProductDetail();
+                },
+                /** Devuelve todas las medidas vendibles de un producto, ordenadas
+                 *  de la mas pequena (unidad base) a la mas grande (contenedor). */
+                detailPresentations() {
+                    const p = this.detailProduct;
+                    if (!p) return [];
+                    const out = [];
+                    // 1) Unidad base
+                    out.push({
+                        label: p.base_unit_label || 'unidad',
+                        units_factor: 1,
+                        price: p.sale_price,
+                        kind: 'base',
+                    });
+                    // 2) Presentaciones intermedias registradas
+                    (p.presentations || []).forEach(pr => out.push({
+                        label: pr.label,
+                        units_factor: pr.units_factor,
+                        price: pr.price,
+                        kind: 'presentation',
+                    }));
+                    // 3) Contenedor / empaque
+                    if (p.container_label && p.container_factor) {
+                        out.push({
+                            label: p.container_label,
+                            units_factor: p.container_factor,
+                            price: p.container_price || (p.sale_price * p.container_factor),
+                            kind: 'container',
+                        });
+                    }
+                    return out;
                 },
 
                 onPaymentChange() {

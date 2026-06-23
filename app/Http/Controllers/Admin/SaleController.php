@@ -209,6 +209,8 @@ class SaleController extends Controller
                 'sku' => $p->sku,
                 'barcode' => $p->barcode,
                 'name' => $p->name,
+                'description' => $p->description,
+                'image_url' => $p->image_path ? asset('storage/'.$p->image_path) : null,
                 'active' => (bool) $p->active,
                 'tax_type' => $p->tax_type ?: 'iva',
                 'unit' => $p->unit?->abbreviation,
