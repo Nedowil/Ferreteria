@@ -12,7 +12,7 @@
                 </div>
             @endif
 
-            <form method="POST" action="{{ route('admin.ventas.store') }}" @submit="onSubmit($event)">
+            <form method="POST" action="{{ route('admin.ventas.store') }}" x-ref="saleForm" @submit="onSubmit($event)">
                 @csrf
 
                 <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
@@ -178,6 +178,7 @@
                             <div class="flex gap-2 mt-1">
                                 <div class="relative flex-1">
                                     <input type="text" x-model="customerSearch"
+                                           x-ref="customerSearch"
                                            @focus="customerSearchOpen = true"
                                            @input="customerSearchOpen = true"
                                            @keydown.escape="customerSearchOpen = false"
@@ -329,6 +330,7 @@
                             <div class="flex justify-between items-center">
                                 <span class="text-slate-600">Descuento Q</span>
                                 <input type="text" inputmode="decimal" x-model="discount"
+                                       x-ref="discountGlobal"
                                        @input="recalc()" @focus="$event.target.select()"
                                        placeholder="0.00"
                                        class="w-28 text-right border border-orange-200 rounded text-sm py-1 px-2 focus:border-orange-500 focus:ring-orange-500" />
@@ -396,6 +398,7 @@
                             <label class="block text-xs mb-1">Pagado (Q)</label>
                             <input type="text" inputmode="decimal" name="paid_amount"
                                    :value="paid_amount"
+                                   x-ref="paidAmount"
                                    @input="paid_amount = $event.target.value; recalc()"
                                    placeholder="0.00"
                                    autocomplete="off"
@@ -634,31 +637,49 @@
             <!-- Boton flotante de atajos -->
             <button type="button" @click="showShortcutsHelp = !showShortcutsHelp"
                     class="fixed bottom-4 right-4 z-30 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-full shadow-lg text-xs font-bold"
-                    title="Atajos de teclado (F1)">
-                ⌨ F1
+                    title="Atajos de teclado (? o Shift+/)">
+                ⌨ Atajos (?)
             </button>
+
+            <!-- Toast efimero (feedback de atajos) -->
+            <div x-show="toastMessage" x-cloak x-transition
+                 class="fixed bottom-20 right-4 z-40 px-4 py-3 bg-slate-900 text-white rounded-lg shadow-2xl text-sm font-medium pointer-events-none">
+                <span x-text="toastMessage"></span>
+            </div>
 
             <!-- Modal de atajos -->
             <div x-show="showShortcutsHelp" x-cloak x-transition.opacity
                  class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
                  @keydown.escape.window="showShortcutsHelp = false">
                 <div @click.outside="showShortcutsHelp = false"
-                     class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+                     class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
                     <div class="bg-slate-800 text-white px-6 py-3 flex justify-between items-center">
                         <h3 class="font-bold">⌨ Atajos de teclado del POS</h3>
                         <button @click="showShortcutsHelp = false" class="hover:bg-white/20 rounded-full w-7 h-7">✕</button>
                     </div>
-                    <div class="p-6 space-y-2 text-sm">
-                        <div class="flex justify-between"><span>Mostrar/ocultar esta ayuda</span><kbd class="px-2 py-1 bg-slate-100 rounded font-mono text-xs">F1</kbd></div>
-                        <div class="flex justify-between"><span>Foco en buscador de productos</span><kbd class="px-2 py-1 bg-slate-100 rounded font-mono text-xs">F2</kbd></div>
-                        <div class="flex justify-between"><span>Foco en buscador de cliente</span><kbd class="px-2 py-1 bg-slate-100 rounded font-mono text-xs">F3</kbd></div>
-                        <div class="flex justify-between"><span>Cobrar (si carrito listo)</span><kbd class="px-2 py-1 bg-green-100 text-green-800 rounded font-mono text-xs">F4</kbd></div>
+                    <div class="p-6 space-y-1.5 text-sm">
+                        <div class="text-xs font-bold uppercase text-slate-500 mb-1">Foco / navegación</div>
+                        <div class="flex justify-between"><span>Foco en buscador de productos</span><kbd class="px-2 py-1 bg-slate-100 rounded font-mono text-xs">F1</kbd></div>
+                        <div class="flex justify-between"><span>Foco en buscador de cliente</span><kbd class="px-2 py-1 bg-slate-100 rounded font-mono text-xs">F2</kbd></div>
+                        <div class="flex justify-between"><span>Foco en descuento global</span><kbd class="px-2 py-1 bg-slate-100 rounded font-mono text-xs">F6</kbd></div>
+                        <div class="flex justify-between"><span>Soltar foco / cerrar modal</span><kbd class="px-2 py-1 bg-slate-100 rounded font-mono text-xs">Esc</kbd></div>
+
+                        <div class="text-xs font-bold uppercase text-slate-500 mt-3 mb-1">Acciones de venta</div>
+                        <div class="flex justify-between"><span>Activar/desactivar modo mayoreo</span><kbd class="px-2 py-1 bg-pink-100 text-pink-800 rounded font-mono text-xs">F3</kbd></div>
+                        <div class="flex justify-between"><span>Pausar venta actual (hold)</span><kbd class="px-2 py-1 bg-amber-100 text-amber-800 rounded font-mono text-xs">F4</kbd></div>
+                        <div class="flex justify-between"><span>Ver panel de ventas en espera</span><kbd class="px-2 py-1 bg-amber-100 text-amber-800 rounded font-mono text-xs">F7</kbd></div>
+                        <div class="flex justify-between font-semibold"><span>Cobrar (si todo está listo)</span><kbd class="px-2 py-1 bg-green-100 text-green-800 rounded font-mono text-xs">F5</kbd></div>
+
+                        <div class="text-xs font-bold uppercase text-slate-500 mt-3 mb-1">Pago</div>
                         <div class="flex justify-between"><span>Auto-completar pago exacto</span><kbd class="px-2 py-1 bg-slate-100 rounded font-mono text-xs">F8</kbd></div>
-                        <div class="flex justify-between"><span>Método pago: Efectivo</span><kbd class="px-2 py-1 bg-slate-100 rounded font-mono text-xs">F9</kbd></div>
-                        <div class="flex justify-between"><span>Método pago: Tarjeta</span><kbd class="px-2 py-1 bg-slate-100 rounded font-mono text-xs">F10</kbd></div>
-                        <div class="flex justify-between"><span>Método pago: Transferencia</span><kbd class="px-2 py-1 bg-slate-100 rounded font-mono text-xs">F11</kbd></div>
+                        <div class="flex justify-between"><span>Método: Efectivo</span><kbd class="px-2 py-1 bg-slate-100 rounded font-mono text-xs">F9</kbd></div>
+                        <div class="flex justify-between"><span>Método: Tarjeta</span><kbd class="px-2 py-1 bg-slate-100 rounded font-mono text-xs">F10</kbd></div>
+
+                        <div class="text-xs font-bold uppercase text-slate-500 mt-3 mb-1">Ayuda</div>
+                        <div class="flex justify-between"><span>Mostrar/ocultar esta ayuda</span><kbd class="px-2 py-1 bg-slate-100 rounded font-mono text-xs">?</kbd></div>
+
                         <div class="pt-3 border-t text-xs text-slate-500">
-                            💡 La pistola lectora de código de barras funciona en cualquier parte de la pantalla, no hace falta tener foco en el buscador.
+                            💡 La pistola lectora de código de barras funciona en cualquier parte de la pantalla, sin necesidad de foco en el buscador.
                         </div>
                     </div>
                 </div>
@@ -1154,6 +1175,10 @@
                 detailProduct: null,
                 detailPhotoMode: false,
 
+                // Toast efimero (feedback de atajos)
+                toastMessage: '',
+                _toastTimer: null,
+
                 // Modal de cliente
                 showCustomerModal: false,
                 savingCustomer: false,
@@ -1219,29 +1244,106 @@
                 },
 
                 onKeyboardShortcut(e) {
-                    // No actuar dentro de inputs editables (excepto Esc y F-keys)
+                    // Si hay otro modal abierto (cliente, producto, detalle, descuento, hold, venta), ignoramos.
+                    if (this.showCustomerModal || this.showProductModal || this.showSaleModal ||
+                        this.showProductDetailModal || this.showItemDiscountModal ||
+                        this.showHeldSalesPanel || this.showScanChoice) {
+                        // Excepto Esc, que cierra el primero
+                        return;
+                    }
+
                     const active = document.activeElement;
                     const inInput = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT');
-                    const isFKey = e.key.startsWith('F') && e.key.length <= 3;
+                    const isFKey = e.key.length >= 2 && e.key.length <= 3 && e.key.startsWith('F') && !isNaN(parseInt(e.key.slice(1), 10));
 
-                    if (e.key === 'F1') {
+                    // Ayuda: ? (Shift+/) — funciona aun fuera de inputs
+                    if (e.key === '?' && !inInput) {
                         e.preventDefault();
                         this.showShortcutsHelp = !this.showShortcutsHelp;
                         return;
                     }
-                    if (e.key === 'Escape' && this.showShortcutsHelp) {
-                        this.showShortcutsHelp = false;
-                        return;
+                    if (e.key === 'Escape') {
+                        if (this.showShortcutsHelp) { this.showShortcutsHelp = false; return; }
+                        // Si hay un input enfocado, blur para soltar el foco
+                        if (inInput) { active.blur(); return; }
                     }
+
+                    // Las F-keys funcionan aunque haya un input enfocado.
+                    // Otras teclas, no: dejarlas pasar para escribir normalmente.
                     if (inInput && !isFKey) return;
 
-                    if (e.key === 'F2') { e.preventDefault(); this.$refs.search?.focus(); return; }
-                    if (e.key === 'F3') { e.preventDefault(); document.querySelector('input[type="text"][name*="customerSearch"], input[type="text"][x-model="customerSearch"]')?.focus(); return; }
-                    if (e.key === 'F4') { e.preventDefault(); if (this.items.length > 0 && this.change >= 0) document.querySelector('form button[type="submit"]')?.click(); return; }
-                    if (e.key === 'F8') { e.preventDefault(); if (this.items.length > 0) this.paid_amount = this.total.toFixed(2); this.recalc(); return; }
-                    if (e.key === 'F9') { e.preventDefault(); this.payment_method = 'efectivo'; this.onPaymentChange(); return; }
-                    if (e.key === 'F10') { e.preventDefault(); this.payment_method = 'tarjeta'; this.onPaymentChange(); return; }
-                    if (e.key === 'F11') { e.preventDefault(); this.payment_method = 'transferencia'; this.onPaymentChange(); return; }
+                    switch (e.key) {
+                        case 'F1':
+                            e.preventDefault();
+                            this.$refs.search?.focus();
+                            this.$refs.search?.select?.();
+                            return;
+                        case 'F2':
+                            e.preventDefault();
+                            this.$refs.customerSearch?.focus();
+                            this.customerSearchOpen = true;
+                            return;
+                        case 'F3':
+                            e.preventDefault();
+                            this.wholesaleMode = !this.wholesaleMode;
+                            this.recalcPricesForWholesale();
+                            return;
+                        case 'F4':
+                            e.preventDefault();
+                            this.holdCurrentSale();
+                            return;
+                        case 'F5':
+                            e.preventDefault();
+                            if (this.items.length === 0) {
+                                this.shortcutToast('Carrito vacio — agrega productos antes de cobrar');
+                                return;
+                            }
+                            if (this.change < 0) {
+                                this.shortcutToast('Falta indicar el monto pagado');
+                                this.$refs.paidAmount?.focus();
+                                this.$refs.paidAmount?.select?.();
+                                return;
+                            }
+                            this.$refs.saleForm?.requestSubmit?.() ||
+                                this.$refs.saleForm?.querySelector('button[type="submit"]')?.click();
+                            return;
+                        case 'F6':
+                            e.preventDefault();
+                            this.$refs.discountGlobal?.focus();
+                            this.$refs.discountGlobal?.select?.();
+                            return;
+                        case 'F7':
+                            e.preventDefault();
+                            this.showHeldSalesPanel = true;
+                            return;
+                        case 'F8':
+                            e.preventDefault();
+                            if (this.items.length > 0) {
+                                this.paid_amount = this.total.toFixed(2);
+                                this.recalc();
+                                this.shortcutToast('Pago exacto Q' + this.total.toFixed(2));
+                            }
+                            return;
+                        case 'F9':
+                            e.preventDefault();
+                            this.payment_method = 'efectivo';
+                            this.onPaymentChange();
+                            this.shortcutToast('Pago: Efectivo');
+                            return;
+                        case 'F10':
+                            e.preventDefault();
+                            this.payment_method = 'tarjeta';
+                            this.onPaymentChange();
+                            this.shortcutToast('Pago: Tarjeta');
+                            return;
+                    }
+                },
+
+                /** Toast efimero para feedback de atajos. */
+                shortcutToast(msg) {
+                    this.toastMessage = msg;
+                    clearTimeout(this._toastTimer);
+                    this._toastTimer = setTimeout(() => { this.toastMessage = ''; }, 1800);
                 },
 
                 onGlobalScannerKey(e) {
