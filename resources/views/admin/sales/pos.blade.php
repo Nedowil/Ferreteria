@@ -362,6 +362,27 @@
                             </template>
                         </div>
 
+                        <!-- Aviso de stock insuficiente segun cache local -->
+                        <template x-if="offlineWarnings.length > 0">
+                            <div class="mb-3 p-2 rounded border border-amber-300 bg-amber-50">
+                                <div class="text-xs font-bold text-amber-900 flex items-center gap-1">
+                                    ⚠ Stock conocido insuficiente (<span x-text="offlineWarnings.length"></span>)
+                                </div>
+                                <ul class="mt-1 space-y-0.5 text-xs text-amber-800">
+                                    <template x-for="w in offlineWarnings" :key="w.sku">
+                                        <li>
+                                            <span class="font-semibold" x-text="w.name"></span>:
+                                            pediste <span x-text="w.wanted"></span> <span x-text="w.unit"></span> ·
+                                            hay <span x-text="w.available"></span> <span x-text="w.base_unit"></span>
+                                        </li>
+                                    </template>
+                                </ul>
+                                <div class="text-[10px] text-amber-700 mt-1" x-show="!isOnline">
+                                    Si guardás offline, podría fallar al sincronizar.
+                                </div>
+                            </div>
+                        </template>
+
                         <div class="flex-1 max-h-80 overflow-y-auto border rounded">
                             <table class="min-w-full text-sm">
                                 <thead class="bg-gray-50 sticky top-0">
@@ -747,6 +768,10 @@
                         <button type="button" @click="printSaleTicket()" x-show="!completedSale?.offline"
                                 class="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 text-sm font-bold shadow inline-flex items-center gap-2">
                             🖨 Imprimir ticket
+                        </button>
+                        <button type="button" @click="printProvisionalTicket()" x-show="completedSale?.offline"
+                                class="px-4 py-2 bg-amber-500 text-white rounded hover:bg-amber-600 text-sm font-bold shadow inline-flex items-center gap-2">
+                            🧾 Imprimir provisional
                         </button>
                         <button type="button" @click="closeSaleModal()"
                                 class="px-5 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded hover:from-green-700 hover:to-emerald-700 text-sm font-bold shadow">
@@ -1359,8 +1384,12 @@
                 offlineQueue: [],
                 offlineCatalog: [],
                 offlineCatalogStaleAt: null,
+                offlineCustomers: [],
                 showOfflineQueuePanel: false,
                 syncing: false,
+
+                // Avisos de validacion offline antes de cobrar
+                offlineWarnings: [],
 
                 init() {
                     if (this._initialized) return;
@@ -1369,6 +1398,15 @@
                     this.isOnline = navigator.onLine !== false;
                     this.loadOfflineQueue();
                     this.loadOfflineCatalog();
+                    this.loadOfflineCustomers();
+                    // Si la lista que llego del servidor tiene mas elementos, la usamos como fuente
+                    // de verdad y la persistimos para uso offline. Si estamos offline y no llego nada,
+                    // restauramos la del cache.
+                    if (this.customers.length > 0) {
+                        this.saveOfflineCustomers(this.customers);
+                    } else if (this.offlineCustomers.length > 0) {
+                        this.customers = this.offlineCustomers;
+                    }
                     // Refresca catálogo en background si hay red
                     if (this.isOnline) this.refreshOfflineCatalog();
                     window.addEventListener('online', () => this.onConnectionChange(true));
@@ -1760,8 +1798,9 @@
                         }
                         const data = await res.json();
                         // Agrega al selector y selecciona
-                        const newC = { id: data.id, label: data.label };
+                        const newC = { id: data.id, label: data.label, customer_type: 'retail', wholesale_discount_percent: 0 };
                         this.customers.push(newC);
+                        this.saveOfflineCustomers(this.customers);
                         this.selectCustomer(newC);
                         this.closeCustomerModal();
                     } catch (e) {
@@ -1939,6 +1978,33 @@
                 removeItem(idx) {
                     this.items.splice(idx, 1);
                     this.recalc();
+                },
+
+                /**
+                 * Compara las cantidades del carrito contra el stock conocido (cache local o
+                 * resultado de busqueda mas reciente) y devuelve la lista de items donde la
+                 * cantidad supera el stock disponible. Se ejecuta en cada recalc y en submit.
+                 */
+                validateOfflineStock() {
+                    const warnings = [];
+                    for (const it of this.items) {
+                        const cached = this.offlineCatalog.find(p => p.id === it.product.id) || it.product;
+                        const stock = parseFloat(cached?.stock);
+                        if (!isFinite(stock)) continue;
+                        const qtyBase = this.parseAmount(it.quantity) * (it.units_factor || 1);
+                        if (qtyBase > stock + 0.0001) {
+                            warnings.push({
+                                name: it.product.name,
+                                sku: it.product.sku,
+                                wanted: this.parseAmount(it.quantity),
+                                unit: it.unit_label,
+                                available: stock,
+                                base_unit: cached?.base_unit_label || 'unidad',
+                            });
+                        }
+                    }
+                    this.offlineWarnings = warnings;
+                    return warnings;
                 },
 
                 /** Productos por peso/medida: helpers de cantidad fraccionaria */
@@ -2194,6 +2260,7 @@
                         this.paid_amount = this.total.toFixed(2);
                     }
                     this.change = this.parseAmount(this.paid_amount) - this.total;
+                    this.validateOfflineStock();
                 },
                 async onSubmit(e) {
                     e.preventDefault();
@@ -2207,8 +2274,19 @@
                     const form = e.target;
                     const formData = new FormData(form);
 
-                    // Sin red: guardar localmente y salir
+                    // Sin red: validar stock contra el cache y guardar localmente
                     if (!this.isOnline) {
+                        const warnings = this.validateOfflineStock();
+                        if (warnings.length > 0) {
+                            const lines = warnings.map(w =>
+                                `• ${w.name} (${w.sku}): pediste ${w.wanted} ${w.unit}, hay ${w.available} ${w.base_unit} en stock`
+                            ).join('\n');
+                            const ok = confirm(
+                                'Estos productos exceden el stock conocido y podrían fallar al sincronizar:\n\n'
+                                + lines + '\n\n¿Guardar la venta offline de todas formas?'
+                            );
+                            if (!ok) { this.submitting = false; return; }
+                        }
                         this.queueOfflineSale(formData);
                         this.submitting = false;
                         return;
@@ -2259,6 +2337,19 @@
                 },
                 offlineCatalogKey() { return 'pos_offline_catalog_v1'; },
                 offlineQueueKey() { return 'pos_offline_queue_v1'; },
+                offlineCustomersKey() { return 'pos_offline_customers_v1'; },
+                loadOfflineCustomers() {
+                    try {
+                        const raw = localStorage.getItem(this.offlineCustomersKey());
+                        this.offlineCustomers = raw ? JSON.parse(raw) : [];
+                    } catch (e) { this.offlineCustomers = []; }
+                },
+                saveOfflineCustomers(list) {
+                    try {
+                        this.offlineCustomers = list;
+                        localStorage.setItem(this.offlineCustomersKey(), JSON.stringify(list));
+                    } catch (e) { /* lleno */ }
+                },
                 loadOfflineCatalog() {
                     try {
                         const raw = localStorage.getItem(this.offlineCatalogKey());
@@ -2427,6 +2518,87 @@
                 viewSaleDetail() {
                     if (! this.completedSale?.urls?.show) return;
                     window.location.href = this.completedSale.urls.show;
+                },
+
+                /**
+                 * Abre una ventana nueva con un ticket provisional (sin folio real, sin FEL).
+                 * Pensado para ventas offline para que el cliente se lleve un comprobante
+                 * mientras se sincroniza la venta real. Estilo 80mm, simple.
+                 */
+                printProvisionalTicket() {
+                    const s = this.completedSale;
+                    if (!s) return;
+                    const esc = (str) => String(str ?? '').replace(/[&<>"']/g, c => ({
+                        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+                    }[c]));
+                    const itemsRows = (s.items || []).map(it => `
+                        <tr>
+                            <td colspan="3">${esc(it.name)}<br><span class="muted">${esc(it.sku)} · ${esc(it.unit)}</span></td>
+                        </tr>
+                        <tr>
+                            <td>${it.quantity} x</td>
+                            <td class="right">Q${(+it.unit_price).toFixed(2)}</td>
+                            <td class="right">Q${(+it.subtotal).toFixed(2)}</td>
+                        </tr>
+                    `).join('');
+                    const company = @json($company->commercial_name ?? ($company->legal_name ?? 'Ferreteria'));
+                    const branch = @json(\App\Support\CurrentBranch::model()?->name ?? '');
+                    const cashier = @json(Auth::user()?->name ?? '');
+                    const customerLabel = (this.customerSearch || 'Consumidor Final');
+                    const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+<title>Ticket provisional ${esc(s.folio)}</title>
+<style>
+  @page { size: 80mm auto; margin: 4mm; }
+  body { font-family: 'Courier New', monospace; font-size: 11px; color: #000; width: 72mm; margin: 0 auto; }
+  .center { text-align: center; }
+  .right { text-align: right; }
+  .muted { color: #555; font-size: 10px; }
+  .watermark {
+    border: 2px dashed #d97706; background: #fef3c7; padding: 4px;
+    text-align: center; margin: 6px 0; font-weight: bold; color: #92400e;
+  }
+  h1 { font-size: 13px; margin: 2px 0; text-align: center; }
+  hr { border: none; border-top: 1px dashed #000; margin: 4px 0; }
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 1px 0; vertical-align: top; }
+  .total { font-size: 14px; font-weight: bold; }
+  .footer { text-align: center; margin-top: 8px; font-size: 9px; color: #555; }
+</style></head><body>
+  <h1>${esc(company)}</h1>
+  ${branch ? `<div class="center muted">${esc(branch)}</div>` : ''}
+  <div class="watermark">
+    *** TICKET PROVISIONAL ***<br>
+    PENDIENTE DE SINCRONIZAR
+  </div>
+  <table>
+    <tr><td>Folio temporal:</td><td class="right">${esc(s.folio)}</td></tr>
+    <tr><td>Fecha:</td><td class="right">${esc(s.date)}</td></tr>
+    <tr><td>Cliente:</td><td class="right">${esc(customerLabel)}</td></tr>
+    <tr><td>Cajero:</td><td class="right">${esc(cashier)}</td></tr>
+  </table>
+  <hr>
+  <table>${itemsRows}</table>
+  <hr>
+  <table>
+    <tr class="total"><td>TOTAL</td><td class="right">Q${(+s.total).toFixed(2)}</td></tr>
+    <tr><td>Pagado</td><td class="right">Q${(+s.paid_amount).toFixed(2)}</td></tr>
+    <tr><td>Cambio</td><td class="right">Q${(+s.change_amount).toFixed(2)}</td></tr>
+  </table>
+  <div class="footer">
+    Este comprobante NO reemplaza la factura.<br>
+    La venta se registrará formalmente al restablecerse la conexión.<br>
+    Folio definitivo asignado al sincronizar.
+  </div>
+  <script>window.onload = () => { window.print(); };</script>
+</body></html>`;
+                    const w = window.open('', '_blank', 'width=420,height=640');
+                    if (!w) {
+                        alert('El navegador bloqueó la ventana del ticket. Permití pop-ups y volvé a intentar.');
+                        return;
+                    }
+                    w.document.open();
+                    w.document.write(html);
+                    w.document.close();
                 },
             };
         }
