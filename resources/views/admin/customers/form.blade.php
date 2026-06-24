@@ -91,19 +91,19 @@
                             🏷 Tipo de cliente
                         </h3>
                         <p class="text-xs text-slate-600 mt-1">
-                            Define si este cliente compra al detalle (consumidor final) o como mayorista
-                            (revendedores, constructores, talleres). Los mayoristas reciben el precio
-                            mayorista de cada producto automáticamente en el POS.
+                            Define si este cliente compra al público (consumidor final), como mayorista
+                            (revendedores) o como contratista (obras, instaladores). El POS aplica
+                            automáticamente el precio correspondiente.
                         </p>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-2 mt-3">
                             <label class="flex items-start gap-2 p-3 bg-white rounded border cursor-pointer transition"
                                    :class="type === 'retail' ? 'border-pink-500 ring-2 ring-pink-200' : 'border-slate-200'">
                                 <input type="radio" name="customer_type" value="retail" x-model="type" class="mt-1" />
                                 <span>
-                                    <span class="font-semibold text-sm">🛒 Minorista (consumidor final)</span>
+                                    <span class="font-semibold text-sm">🛒 Público</span>
                                     <span class="block text-xs text-slate-500">
-                                        Compra al detalle. Recibe precio normal del producto.
+                                        Compra al detalle. Precio normal.
                                     </span>
                                 </span>
                             </label>
@@ -111,9 +111,19 @@
                                    :class="type === 'wholesale' ? 'border-pink-500 ring-2 ring-pink-200' : 'border-slate-200'">
                                 <input type="radio" name="customer_type" value="wholesale" x-model="type" class="mt-1" />
                                 <span>
-                                    <span class="font-semibold text-sm">🏗 Mayorista (revendedor / constructor)</span>
+                                    <span class="font-semibold text-sm">🏗 Mayorista</span>
                                     <span class="block text-xs text-slate-500">
-                                        Recibe precio mayorista automáticamente en POS si el producto lo tiene configurado.
+                                        Revendedor. Recibe precio mayorista.
+                                    </span>
+                                </span>
+                            </label>
+                            <label class="flex items-start gap-2 p-3 bg-white rounded border cursor-pointer transition"
+                                   :class="type === 'contractor' ? 'border-pink-500 ring-2 ring-pink-200' : 'border-slate-200'">
+                                <input type="radio" name="customer_type" value="contractor" x-model="type" class="mt-1" />
+                                <span>
+                                    <span class="font-semibold text-sm">👷 Contratista</span>
+                                    <span class="block text-xs text-slate-500">
+                                        Obras / instaladores. Precio contratista.
                                     </span>
                                 </span>
                             </label>

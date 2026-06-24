@@ -12,6 +12,84 @@
                 </div>
             @endif
 
+            <!-- Estado de conexión / cola offline -->
+            <div class="mb-3 flex flex-wrap items-center gap-2 text-sm">
+                <span class="px-2 py-1 rounded font-bold"
+                      :class="isOnline ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800 animate-pulse'">
+                    <span x-text="isOnline ? '🟢 En línea' : '🔴 Sin conexión'"></span>
+                </span>
+                <template x-if="offlineQueue.length > 0">
+                    <button type="button" @click="showOfflineQueuePanel = true"
+                            class="px-2 py-1 rounded bg-amber-100 text-amber-800 font-bold hover:bg-amber-200">
+                        ⏳ <span x-text="offlineQueue.length"></span> venta(s) pendientes
+                    </button>
+                </template>
+                <template x-if="offlineQueue.length > 0 && isOnline">
+                    <button type="button" @click="syncOfflineQueue()" :disabled="syncing"
+                            class="px-2 py-1 rounded bg-emerald-500 text-white font-bold hover:bg-emerald-600 disabled:opacity-50">
+                        <span x-show="!syncing">↻ Sincronizar</span>
+                        <span x-show="syncing">Sincronizando...</span>
+                    </button>
+                </template>
+                <template x-if="offlineCatalogStaleAt">
+                    <span class="text-xs text-slate-500">
+                        Catálogo offline: <span x-text="offlineCatalog.length"></span> productos
+                    </span>
+                </template>
+            </div>
+
+            <!-- Panel cola offline -->
+            <div x-show="showOfflineQueuePanel" x-cloak x-transition.opacity
+                 class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+                 @keydown.escape.window="showOfflineQueuePanel = false">
+                <div @click.outside="showOfflineQueuePanel = false"
+                     class="bg-white rounded-xl shadow-2xl max-w-2xl w-full overflow-hidden max-h-[80vh] flex flex-col">
+                    <div class="bg-gradient-to-r from-amber-500 to-amber-600 px-6 py-4 flex justify-between items-center">
+                        <h3 class="text-white font-bold text-lg">
+                            ⏳ Ventas pendientes de sincronizar (<span x-text="offlineQueue.length"></span>)
+                        </h3>
+                        <button type="button" @click="showOfflineQueuePanel = false"
+                                class="text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center">✕</button>
+                    </div>
+                    <div class="p-6 overflow-y-auto flex-1">
+                        <template x-if="offlineQueue.length === 0">
+                            <div class="text-center text-slate-500 py-8">
+                                <div class="text-4xl mb-2">✓</div>
+                                <div>Todas las ventas están sincronizadas.</div>
+                            </div>
+                        </template>
+                        <template x-for="sale in offlineQueue" :key="sale.local_id">
+                            <div class="border border-slate-200 rounded-lg p-3 mb-2 flex items-center justify-between gap-3"
+                                 :class="sale.status === 'failed' ? 'bg-red-50 border-red-300' : 'bg-amber-50 border-amber-300'">
+                                <div class="flex-1 min-w-0">
+                                    <div class="font-mono text-xs text-slate-600" x-text="sale.local_id"></div>
+                                    <div class="font-semibold text-slate-800" x-text="sale.customer_label"></div>
+                                    <div class="text-xs text-slate-500">
+                                        <span x-text="sale.items_count"></span> producto(s) ·
+                                        Q<span x-text="parseAmount(sale.total).toFixed(2)"></span> ·
+                                        <span x-text="new Date(sale.created_at).toLocaleString()"></span>
+                                    </div>
+                                    <template x-if="sale.last_error">
+                                        <div class="text-xs text-red-700 mt-1">⚠ <span x-text="sale.last_error"></span></div>
+                                    </template>
+                                </div>
+                                <button type="button" @click="deleteOfflineSale(sale.local_id)"
+                                        class="px-2 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-md text-sm" title="Eliminar">🗑</button>
+                            </div>
+                        </template>
+                    </div>
+                    <div class="bg-slate-50 px-6 py-3 flex justify-end gap-2 border-t">
+                        <button type="button" @click="syncOfflineQueue()" x-show="isOnline && offlineQueue.length > 0" :disabled="syncing"
+                                class="px-4 py-2 bg-emerald-500 text-white rounded-md hover:bg-emerald-600 text-sm font-medium disabled:opacity-50">
+                            <span x-show="!syncing">↻ Sincronizar ahora</span>
+                            <span x-show="syncing">Sincronizando...</span>
+                        </button>
+                        <button type="button" @click="showOfflineQueuePanel = false"
+                                class="px-4 py-2 bg-slate-200 text-slate-700 rounded-md hover:bg-slate-300 text-sm font-medium">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+
             <form method="POST" action="{{ route('admin.ventas.store') }}" x-ref="saleForm" @submit="onSubmit($event)">
                 @csrf
 
@@ -237,24 +315,50 @@
                             </div>
                         </div>
 
-                        <!-- Toggle modo mayorista -->
-                        <div class="mb-3 p-2 rounded border flex items-center justify-between gap-2"
-                             :class="wholesaleMode ? 'bg-pink-50 border-pink-300' : 'bg-slate-50 border-slate-200'">
-                            <label class="flex items-center gap-2 cursor-pointer flex-1">
-                                <input type="checkbox" x-model="wholesaleMode" @change="recalcPricesForWholesale()" class="rounded" />
-                                <div>
-                                    <div class="font-semibold text-sm">🏗 Vender a precio mayorista</div>
-                                    <div class="text-xs text-slate-500" x-show="!wholesaleMode">Aplica precios mayoristas a todos los productos que lo tengan configurado.</div>
-                                    <div class="text-xs text-pink-700" x-show="wholesaleMode">
+                        <!-- Selector de modo de precio (público / mayorista / contratista) -->
+                        <div class="mb-3 p-2 rounded border bg-slate-50 border-slate-200">
+                            <div class="text-xs font-semibold text-slate-600 mb-1.5">Modo de precio</div>
+                            <div class="grid grid-cols-3 gap-1.5">
+                                <button type="button" @click="setPriceMode('retail')"
+                                        :class="priceMode === 'retail' ? 'bg-orange-500 text-white shadow' : 'bg-white text-slate-700 border border-slate-300'"
+                                        class="px-2 py-1.5 rounded text-xs font-bold flex items-center justify-center gap-1">
+                                    🛒 Público
+                                </button>
+                                <button type="button" @click="setPriceMode('wholesale')"
+                                        :class="priceMode === 'wholesale' ? 'bg-pink-500 text-white shadow' : 'bg-white text-slate-700 border border-slate-300'"
+                                        class="px-2 py-1.5 rounded text-xs font-bold flex items-center justify-center gap-1">
+                                    🏗 Mayorista
+                                </button>
+                                <button type="button" @click="setPriceMode('contractor')"
+                                        :class="priceMode === 'contractor' ? 'bg-blue-500 text-white shadow' : 'bg-white text-slate-700 border border-slate-300'"
+                                        class="px-2 py-1.5 rounded text-xs font-bold flex items-center justify-center gap-1">
+                                    👷 Contratista
+                                </button>
+                            </div>
+                            <div class="text-xs mt-1.5"
+                                 :class="{
+                                    'text-pink-700': priceMode === 'wholesale',
+                                    'text-blue-700': priceMode === 'contractor',
+                                    'text-slate-500': priceMode === 'retail',
+                                 }">
+                                <template x-if="priceMode === 'retail'"><span>Precios al público.</span></template>
+                                <template x-if="priceMode === 'wholesale'">
+                                    <span>
                                         Precios mayoristas activos
                                         <template x-if="customerWholesaleDiscount > 0">
-                                            <span> · descuento adicional <span x-text="customerWholesaleDiscount"></span>%</span>
+                                            <span> · descuento extra <span x-text="customerWholesaleDiscount"></span>%</span>
                                         </template>
-                                    </div>
+                                    </span>
+                                </template>
+                                <template x-if="priceMode === 'contractor'"><span>Precios contratista activos.</span></template>
+                            </div>
+                            <template x-if="customerCustomerType && customerCustomerType !== 'retail'">
+                                <div class="mt-1 text-xs">
+                                    <span class="px-1.5 py-0.5 rounded font-bold"
+                                          :class="customerCustomerType === 'wholesale' ? 'bg-pink-100 text-pink-700' : 'bg-blue-100 text-blue-700'">
+                                        <span x-text="customerCustomerType === 'wholesale' ? '🏗 Cliente mayorista' : '👷 Cliente contratista'"></span>
+                                    </span>
                                 </div>
-                            </label>
-                            <template x-if="customerIsWholesale">
-                                <span class="px-2 py-1 bg-pink-100 text-pink-700 rounded text-xs font-bold">🏗 Cliente mayorista</span>
                             </template>
                         </div>
 
@@ -282,6 +386,9 @@
                                                 <template x-if="item.tax_type === 'exento'">
                                                     <span class="ml-1 px-1 rounded text-xs bg-purple-200 text-purple-900 font-bold">EXE</span>
                                                 </template>
+                                                <template x-if="item.product.sells_by_measure">
+                                                    <span class="ml-1 px-1 rounded text-xs bg-cyan-200 text-cyan-900 font-bold">📏 medida</span>
+                                                </template>
                                             </div>
                                             <input type="hidden" :name="`items[${idx}][product_id]`" :value="item.product.id" />
                                             <input type="hidden" :name="`items[${idx}][unit_label]`" :value="item.unit_label" />
@@ -291,8 +398,16 @@
                                         <td class="px-2 py-1">
                                             <input type="text" inputmode="decimal"
                                                    :name="`items[${idx}][quantity]`"
-                                                   x-model="item.quantity" @input="recalc()"
+                                                   x-model="item.quantity" @input="onQtyInput(idx)"
                                                    class="w-full text-right border-gray-300 rounded text-sm py-1 px-2 focus:border-orange-500 focus:ring-orange-500" />
+                                            <template x-if="item.product.sells_by_measure">
+                                                <div class="flex flex-wrap gap-0.5 mt-1 justify-end">
+                                                    <button type="button" @click="addQty(idx, 0.25)" class="px-1 py-0.5 text-[10px] bg-cyan-100 hover:bg-cyan-200 text-cyan-800 rounded">+¼</button>
+                                                    <button type="button" @click="addQty(idx, 0.5)" class="px-1 py-0.5 text-[10px] bg-cyan-100 hover:bg-cyan-200 text-cyan-800 rounded">+½</button>
+                                                    <button type="button" @click="addQty(idx, 1)" class="px-1 py-0.5 text-[10px] bg-cyan-100 hover:bg-cyan-200 text-cyan-800 rounded">+1</button>
+                                                    <button type="button" @click="setQty(idx, 0)" class="px-1 py-0.5 text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-700 rounded">×</button>
+                                                </div>
+                                            </template>
                                         </td>
                                         <td class="px-2 py-1">
                                             <input type="text" inputmode="decimal"
@@ -546,13 +661,20 @@
                 <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden"
                      x-transition.scale @click.outside="closeSaleModal()">
 
-                    <!-- Header verde con check -->
-                    <div class="bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-5 text-white">
+                    <!-- Header verde con check (o naranja si es offline) -->
+                    <div class="px-6 py-5 text-white"
+                         :class="completedSale?.offline ? 'bg-gradient-to-r from-amber-500 to-amber-600' : 'bg-gradient-to-r from-green-500 to-emerald-600'">
                         <div class="flex items-center gap-4">
-                            <div class="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center text-4xl">✓</div>
+                            <div class="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center text-4xl"
+                                 x-text="completedSale?.offline ? '⏳' : '✓'"></div>
                             <div class="flex-1">
-                                <h3 class="font-bold text-xl">Venta registrada</h3>
-                                <p class="text-emerald-100 text-sm">Folio <span x-text="completedSale?.folio"></span> · <span x-text="completedSale?.date"></span></p>
+                                <h3 class="font-bold text-xl" x-text="completedSale?.offline ? 'Venta guardada offline' : 'Venta registrada'"></h3>
+                                <p class="text-sm opacity-90">
+                                    Folio <span x-text="completedSale?.folio"></span> · <span x-text="completedSale?.date"></span>
+                                </p>
+                                <template x-if="completedSale?.offline">
+                                    <p class="text-xs mt-1 opacity-95">⚠ Se sincronizará automáticamente cuando vuelva la conexión.</p>
+                                </template>
                             </div>
                             <button type="button" @click="closeSaleModal()" class="text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center">✕</button>
                         </div>
@@ -562,7 +684,7 @@
                     <template x-if="completedSale">
                         <div class="p-6 space-y-4">
                             <!-- Cliente + pago -->
-                            <div class="grid grid-cols-2 gap-3 text-sm">
+                            <div class="grid grid-cols-2 gap-3 text-sm" x-show="!completedSale.offline">
                                 <div class="bg-slate-50 rounded p-3">
                                     <div class="text-xs text-slate-500">Cliente</div>
                                     <div class="font-semibold" x-text="completedSale.customer?.name || 'Consumidor Final'"></div>
@@ -604,25 +726,25 @@
 
                             <!-- Totales -->
                             <div class="bg-slate-50 rounded p-4 space-y-1 text-sm">
-                                <div class="flex justify-between text-slate-600"><span>Subtotal</span><span x-text="'Q' + completedSale.subtotal.toFixed(2)"></span></div>
-                                <div class="flex justify-between text-slate-600" x-show="completedSale.discount > 0"><span>Descuento</span><span x-text="'-Q' + completedSale.discount.toFixed(2)"></span></div>
-                                <div class="flex justify-between text-slate-600"><span>IVA</span><span x-text="'Q' + completedSale.tax.toFixed(2)"></span></div>
+                                <div x-show="!completedSale.offline" class="flex justify-between text-slate-600"><span>Subtotal</span><span x-text="'Q' + (completedSale.subtotal ?? 0).toFixed(2)"></span></div>
+                                <div class="flex justify-between text-slate-600" x-show="!completedSale.offline && completedSale.discount > 0"><span>Descuento</span><span x-text="'-Q' + completedSale.discount.toFixed(2)"></span></div>
+                                <div x-show="!completedSale.offline" class="flex justify-between text-slate-600"><span>IVA</span><span x-text="'Q' + (completedSale.tax ?? 0).toFixed(2)"></span></div>
                                 <div class="flex justify-between text-2xl font-bold border-t pt-2 mt-2 text-slate-800">
-                                    <span>Total</span><span x-text="'Q' + completedSale.total.toFixed(2)"></span>
+                                    <span>Total</span><span x-text="'Q' + (completedSale.total ?? 0).toFixed(2)"></span>
                                 </div>
-                                <div class="flex justify-between text-slate-700 pt-1"><span>Pagado</span><span x-text="'Q' + completedSale.paid_amount.toFixed(2)"></span></div>
-                                <div class="flex justify-between text-xl font-bold text-green-700"><span>Cambio</span><span x-text="'Q' + completedSale.change_amount.toFixed(2)"></span></div>
+                                <div class="flex justify-between text-slate-700 pt-1"><span>Pagado</span><span x-text="'Q' + (completedSale.paid_amount ?? 0).toFixed(2)"></span></div>
+                                <div class="flex justify-between text-xl font-bold text-green-700"><span>Cambio</span><span x-text="'Q' + (completedSale.change_amount ?? 0).toFixed(2)"></span></div>
                             </div>
                         </div>
                     </template>
 
                     <!-- Acciones -->
                     <div class="bg-slate-50 px-6 py-4 flex flex-wrap justify-end gap-2 border-t">
-                        <button type="button" @click="viewSaleDetail()"
+                        <button type="button" @click="viewSaleDetail()" x-show="!completedSale?.offline"
                                 class="px-4 py-2 bg-slate-200 text-slate-700 rounded hover:bg-slate-300 text-sm font-medium">
                             Ver detalle
                         </button>
-                        <button type="button" @click="printSaleTicket()"
+                        <button type="button" @click="printSaleTicket()" x-show="!completedSale?.offline"
                                 class="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 text-sm font-bold shadow inline-flex items-center gap-2">
                             🖨 Imprimir ticket
                         </button>
@@ -1129,15 +1251,20 @@
                 items: [],
                 customers: @json($customers->map(fn($c) => [
                     'id' => $c->id,
-                    'label' => $c->name . ($c->tax_id ? " ($c->tax_id)" : '') . ($c->customer_type === 'wholesale' ? ' 🏗' : ''),
+                    'label' => $c->name . ($c->tax_id ? " ($c->tax_id)" : '')
+                        . ($c->customer_type === 'wholesale' ? ' 🏗' : ($c->customer_type === 'contractor' ? ' 👷' : '')),
                     'customer_type' => $c->customer_type,
                     'wholesale_discount_percent' => (float) $c->wholesale_discount_percent,
                 ])),
                 customer_id: '',
                 customerIsWholesale: false,
+                customerCustomerType: 'retail',
                 customerWholesaleDiscount: 0,
-                // Toggle manual mayorista (cuando el cliente es minorista pero queres venderle al mayorista)
-                wholesaleMode: false,
+                // Modo de precio: 'retail' | 'wholesale' | 'contractor'
+                priceMode: 'retail',
+                // Compat: refleja priceMode === 'wholesale' para código existente
+                get wholesaleMode() { return this.priceMode === 'wholesale'; },
+                set wholesaleMode(v) { this.priceMode = v ? 'wholesale' : 'retail'; },
                 customerSearch: '',
                 customerSearchOpen: false,
                 get filteredCustomers() {
@@ -1227,9 +1354,25 @@
 
                 showShortcutsHelp: false,
 
+                // ====== Modo offline ======
+                isOnline: true,
+                offlineQueue: [],
+                offlineCatalog: [],
+                offlineCatalogStaleAt: null,
+                showOfflineQueuePanel: false,
+                syncing: false,
+
                 init() {
                     if (this._initialized) return;
                     this._initialized = true;
+
+                    this.isOnline = navigator.onLine !== false;
+                    this.loadOfflineQueue();
+                    this.loadOfflineCatalog();
+                    // Refresca catálogo en background si hay red
+                    if (this.isOnline) this.refreshOfflineCatalog();
+                    window.addEventListener('online', () => this.onConnectionChange(true));
+                    window.addEventListener('offline', () => this.onConnectionChange(false));
 
                     this.search();
                     this.loadHeldSales();
@@ -1285,8 +1428,10 @@
                             return;
                         case 'F3':
                             e.preventDefault();
-                            this.wholesaleMode = !this.wholesaleMode;
-                            this.recalcPricesForWholesale();
+                            // Cicla: retail → wholesale → contractor → retail
+                            const cycle = { retail: 'wholesale', wholesale: 'contractor', contractor: 'retail' };
+                            this.setPriceMode(cycle[this.priceMode] || 'retail');
+                            this.shortcutToast('Modo: ' + (this.priceMode === 'retail' ? '🛒 Público' : this.priceMode === 'wholesale' ? '🏗 Mayorista' : '👷 Contratista'));
                             return;
                         case 'F4':
                             e.preventDefault();
@@ -1414,56 +1559,68 @@
                     this.customer_id = c.id ? String(c.id) : '';
                     this.customerSearch = c.id ? c.label : '';
                     this.customerSearchOpen = false;
-                    // Si es mayorista activamos precios mayoristas automaticamente
+                    this.customerCustomerType = c.customer_type || 'retail';
                     this.customerIsWholesale = (c.customer_type === 'wholesale');
                     this.customerWholesaleDiscount = parseFloat(c.wholesale_discount_percent) || 0;
-                    // El modo mayorista del POS sigue al cliente; el usuario puede toggle despues
-                    if (this.customerIsWholesale) {
-                        this.wholesaleMode = true;
-                    }
-                    // Recalcular precios de items que ya estan en el carrito
-                    this.recalcPricesForWholesale();
+                    // El modo del POS sigue al cliente; el usuario puede cambiar manualmente.
+                    if (c.customer_type === 'wholesale') this.priceMode = 'wholesale';
+                    else if (c.customer_type === 'contractor') this.priceMode = 'contractor';
+                    else this.priceMode = 'retail';
+                    this.recalcPricesForMode();
+                },
+                setPriceMode(mode) {
+                    if (!['retail', 'wholesale', 'contractor'].includes(mode)) return;
+                    this.priceMode = mode;
+                    this.recalcPricesForMode();
                 },
                 /**
-                 * Recalcula los precios unitarios de cada item segun el modo
-                 * (mayorista o normal) y el descuento del cliente mayorista.
+                 * Devuelve el precio base (por unidad) de un item según el modo activo.
+                 * Devuelve null si el modo solicitado no tiene precio configurado y
+                 * hay que dejar el precio actual del item.
                  */
-                recalcPricesForWholesale() {
+                priceForItem(p, units_factor, isContainerPresentation) {
+                    if (this.priceMode === 'wholesale') {
+                        if (isContainerPresentation && p.container_wholesale_price) return p.container_wholesale_price;
+                        if (p.wholesale_price) {
+                            let price = p.wholesale_price * units_factor;
+                            if (this.customerWholesaleDiscount > 0) {
+                                price = price * (1 - this.customerWholesaleDiscount / 100);
+                            }
+                            return price;
+                        }
+                        return null;
+                    }
+                    if (this.priceMode === 'contractor') {
+                        if (isContainerPresentation && p.container_contractor_price) return p.container_contractor_price;
+                        if (p.contractor_price) return p.contractor_price * units_factor;
+                        return null;
+                    }
+                    // retail
+                    if (isContainerPresentation) {
+                        return p.container_price || (p.sale_price * p.container_factor);
+                    }
+                    return p.sale_price * units_factor;
+                },
+                recalcPricesForMode() {
                     this.items.forEach(it => {
                         const p = it.product;
                         const isContainer = it.units_factor > 1 && it.units_factor === p.container_factor;
-                        let newPrice;
-                        if (this.wholesaleMode) {
-                            if (isContainer && p.container_wholesale_price) {
-                                newPrice = p.container_wholesale_price;
-                            } else if (p.wholesale_price) {
-                                newPrice = p.wholesale_price * it.units_factor;
-                            } else {
-                                return; // no hay precio mayorista, dejamos el actual
-                            }
-                            // Descuento adicional del cliente mayorista
-                            if (this.customerWholesaleDiscount > 0) {
-                                newPrice = newPrice * (1 - this.customerWholesaleDiscount / 100);
-                            }
-                        } else {
-                            // Volver al precio normal
-                            if (isContainer) {
-                                newPrice = p.container_price || (p.sale_price * p.container_factor);
-                            } else {
-                                newPrice = p.sale_price * it.units_factor;
-                            }
-                        }
+                        const newPrice = this.priceForItem(p, it.units_factor, isContainer);
+                        if (newPrice === null) return; // no hay precio para ese modo, dejamos el actual
                         it.unit_price = String(newPrice.toFixed(2));
                     });
                     this.recalc();
                 },
+                // Alias retro-compat
+                recalcPricesForWholesale() { this.recalcPricesForMode(); },
                 clearCustomer() {
                     this.customer_id = '';
                     this.customerSearch = '';
                     this.customerIsWholesale = false;
+                    this.customerCustomerType = 'retail';
                     this.customerWholesaleDiscount = 0;
-                    this.wholesaleMode = false;
-                    this.recalcPricesForWholesale();
+                    this.priceMode = 'retail';
+                    this.recalcPricesForMode();
                     this.customerSearchOpen = false;
                 },
                 openCustomerModal() {
@@ -1614,10 +1771,24 @@
                     }
                 },
                 async search() {
+                    // Si estamos offline, buscamos en el cache local.
+                    if (!this.isOnline) {
+                        this.results = this.searchOfflineCatalog(this.query);
+                        return this.results;
+                    }
                     const url = new URL('{{ route('admin.ventas.search_products') }}', window.location.origin);
                     if (this.query) url.searchParams.set('q', this.query);
-                    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-                    this.results = await res.json();
+                    try {
+                        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                        if (!res.ok) throw new Error('HTTP ' + res.status);
+                        this.results = await res.json();
+                        // Aprovechamos para mantener fresco el cache con cada respuesta
+                        this.mergeIntoCatalog(this.results);
+                    } catch (err) {
+                        // Sin red real: cambiamos a offline y buscamos en cache
+                        this.onConnectionChange(false);
+                        this.results = this.searchOfflineCatalog(this.query);
+                    }
                     return this.results;
                 },
                 async onInput() {
@@ -1731,35 +1902,29 @@
                     const taxType = p.tax_type || 'iva';
                     const isContainerPresentation = presentation && p.container_label && presentation.label === p.container_label;
 
-                    // Decide el precio a usar segun modo mayorista y disponibilidad
-                    let price;
-                    if (this.wholesaleMode) {
-                        if (isContainerPresentation && p.container_wholesale_price) {
-                            price = p.container_wholesale_price;
-                        } else if (p.wholesale_price) {
-                            price = p.wholesale_price * factor;
-                        } else {
-                            price = presentation ? presentation.price : p.sale_price;
-                        }
-                        if (this.customerWholesaleDiscount > 0) {
-                            price = price * (1 - this.customerWholesaleDiscount / 100);
-                        }
-                    } else {
+                    // Decide el precio a usar según modo (público/mayorista/contratista)
+                    let price = this.priceForItem(p, factor, isContainerPresentation);
+                    if (price === null || price === undefined) {
                         price = presentation ? presentation.price : p.sale_price;
                     }
 
                     if (p.stock < factor) return;
 
+                    // Para productos vendidos por medida, el incremento inicial usa measure_step
+                    // si está definido, si no usa 1 (libre).
+                    const baseStep = (p.sells_by_measure && p.measure_step) ? p.measure_step : 1;
+
                     // Misma partida = mismo producto + misma etiqueta de presentacion
                     const existing = this.items.find(i => i.product.id === p.id && i.unit_label === unitLabel);
                     if (existing) {
                         const currentQty = this.parseAmount(existing.quantity);
-                        if ((currentQty + 1) * factor > p.stock) return;
-                        existing.quantity = String(currentQty + 1);
+                        const next = +(currentQty + baseStep).toFixed(4);
+                        if (next * factor > p.stock) return;
+                        existing.quantity = String(next);
                     } else {
                         this.items.push({
                             product: p,
-                            quantity: '1',
+                            quantity: String(baseStep),
                             unit_price: String(price),
                             unit_label: unitLabel,
                             units_factor: factor,
@@ -1773,6 +1938,35 @@
                 },
                 removeItem(idx) {
                     this.items.splice(idx, 1);
+                    this.recalc();
+                },
+
+                /** Productos por peso/medida: helpers de cantidad fraccionaria */
+                addQty(idx, delta) {
+                    const it = this.items[idx];
+                    if (!it) return;
+                    const current = this.parseAmount(it.quantity) || 0;
+                    let next = +(current + delta).toFixed(4);
+                    if (next < 0) next = 0;
+                    const max = (it.product.stock || 0) / (it.units_factor || 1);
+                    if (next > max) next = max;
+                    it.quantity = String(next);
+                    this.recalc();
+                },
+                setQty(idx, value) {
+                    const it = this.items[idx];
+                    if (!it) return;
+                    let next = +value;
+                    if (isNaN(next) || next < 0) next = 0;
+                    it.quantity = String(next);
+                    this.recalc();
+                },
+                onQtyInput(idx) {
+                    const it = this.items[idx];
+                    if (!it) { this.recalc(); return; }
+                    // Si el producto tiene un step definido, redondeamos al múltiplo más cercano
+                    // sólo al perder foco o al usar los botones; aquí dejamos pasar para no estorbar
+                    // mientras el cajero escribe.
                     this.recalc();
                 },
 
@@ -1847,8 +2041,9 @@
                         customer_id: this.customer_id,
                         customerSearch: this.customerSearch,
                         customerIsWholesale: this.customerIsWholesale,
+                        customerCustomerType: this.customerCustomerType,
                         customerWholesaleDiscount: this.customerWholesaleDiscount,
-                        wholesaleMode: this.wholesaleMode,
+                        priceMode: this.priceMode,
                         discount: this.discount,
                         items_count: this.items.length,
                         total: this.total,
@@ -1859,8 +2054,9 @@
                     this.customer_id = '';
                     this.customerSearch = '';
                     this.customerIsWholesale = false;
+                    this.customerCustomerType = 'retail';
                     this.customerWholesaleDiscount = 0;
-                    this.wholesaleMode = false;
+                    this.priceMode = 'retail';
                     this.discount = '';
                     this.paid_amount = '';
                     this.recalc();
@@ -1875,8 +2071,9 @@
                     this.customer_id = sale.customer_id;
                     this.customerSearch = sale.customerSearch;
                     this.customerIsWholesale = sale.customerIsWholesale || false;
+                    this.customerCustomerType = sale.customerCustomerType || 'retail';
                     this.customerWholesaleDiscount = sale.customerWholesaleDiscount || 0;
-                    this.wholesaleMode = sale.wholesaleMode || false;
+                    this.priceMode = sale.priceMode || (sale.wholesaleMode ? 'wholesale' : 'retail');
                     this.discount = sale.discount || '';
                     // Sacarla de la lista de espera
                     this.heldSales = this.heldSales.filter(s => s.id !== id);
@@ -2006,9 +2203,18 @@
 
                     this.submitting = true;
                     this.saleError = '';
+
+                    const form = e.target;
+                    const formData = new FormData(form);
+
+                    // Sin red: guardar localmente y salir
+                    if (!this.isOnline) {
+                        this.queueOfflineSale(formData);
+                        this.submitting = false;
+                        return;
+                    }
+
                     try {
-                        const form = e.target;
-                        const formData = new FormData(form);
                         const res = await fetch(form.action, {
                             method: 'POST',
                             headers: {
@@ -2030,10 +2236,172 @@
                         this.completedSale = await mres.json();
                         this.showSaleModal = true;
                     } catch (err) {
-                        this.saleError = 'Error de red: ' + err.message;
+                        // Red caída en medio: tratar como offline y encolar
+                        this.onConnectionChange(false);
+                        this.queueOfflineSale(formData);
                     } finally {
                         this.submitting = false;
                     }
+                },
+
+                // ====== Modo offline: catalogo, cola y sincronizacion ======
+                onConnectionChange(online) {
+                    const was = this.isOnline;
+                    this.isOnline = online;
+                    if (online && !was) {
+                        this.shortcutToast('🟢 Conexión restablecida');
+                        // Refresca catalogo y dispara sincronizacion automatica
+                        this.refreshOfflineCatalog();
+                        if (this.offlineQueue.length > 0) this.syncOfflineQueue();
+                    } else if (!online && was) {
+                        this.shortcutToast('🔴 Modo offline — las ventas se guardan localmente');
+                    }
+                },
+                offlineCatalogKey() { return 'pos_offline_catalog_v1'; },
+                offlineQueueKey() { return 'pos_offline_queue_v1'; },
+                loadOfflineCatalog() {
+                    try {
+                        const raw = localStorage.getItem(this.offlineCatalogKey());
+                        if (raw) {
+                            const parsed = JSON.parse(raw);
+                            this.offlineCatalog = parsed.items || [];
+                            this.offlineCatalogStaleAt = parsed.savedAt || null;
+                        }
+                    } catch (e) { this.offlineCatalog = []; }
+                },
+                saveOfflineCatalog() {
+                    try {
+                        localStorage.setItem(this.offlineCatalogKey(), JSON.stringify({
+                            items: this.offlineCatalog,
+                            savedAt: new Date().toISOString(),
+                        }));
+                        this.offlineCatalogStaleAt = new Date().toISOString();
+                    } catch (e) { /* lleno */ }
+                },
+                async refreshOfflineCatalog() {
+                    try {
+                        const url = new URL('{{ route('admin.ventas.search_products') }}', window.location.origin);
+                        url.searchParams.set('cache', '1');
+                        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                        if (!res.ok) return;
+                        const data = await res.json();
+                        if (Array.isArray(data) && data.length > 0) {
+                            this.offlineCatalog = data;
+                            this.saveOfflineCatalog();
+                        }
+                    } catch (e) { /* sin red */ }
+                },
+                mergeIntoCatalog(items) {
+                    if (!Array.isArray(items) || items.length === 0) return;
+                    const byId = new Map(this.offlineCatalog.map(p => [p.id, p]));
+                    for (const it of items) byId.set(it.id, it);
+                    this.offlineCatalog = Array.from(byId.values());
+                    this.saveOfflineCatalog();
+                },
+                searchOfflineCatalog(term) {
+                    const t = String(term || '').toLowerCase().trim();
+                    if (!t) return this.offlineCatalog.slice(0, 15);
+                    return this.offlineCatalog.filter(p =>
+                        (p.name || '').toLowerCase().includes(t) ||
+                        (p.sku || '').toLowerCase().includes(t) ||
+                        (p.barcode || '').toLowerCase().includes(t)
+                    ).slice(0, 15);
+                },
+                loadOfflineQueue() {
+                    try {
+                        const raw = localStorage.getItem(this.offlineQueueKey());
+                        this.offlineQueue = raw ? JSON.parse(raw) : [];
+                    } catch (e) { this.offlineQueue = []; }
+                },
+                saveOfflineQueue() {
+                    try {
+                        localStorage.setItem(this.offlineQueueKey(), JSON.stringify(this.offlineQueue));
+                    } catch (e) { /* lleno */ }
+                },
+                queueOfflineSale(formData) {
+                    // Serializa el FormData como pares clave-valor
+                    const entries = [];
+                    for (const [k, v] of formData.entries()) entries.push([k, v]);
+                    const localId = 'OFF-' + Date.now();
+                    this.offlineQueue.push({
+                        local_id: localId,
+                        created_at: new Date().toISOString(),
+                        total: this.total,
+                        items_count: this.items.length,
+                        customer_label: this.customerSearch || 'Consumidor Final',
+                        cashier: '{{ Auth::user()?->name }}',
+                        entries,
+                        status: 'pending',
+                        last_error: null,
+                    });
+                    this.saveOfflineQueue();
+                    // Mostrar modal "completado" con marca de offline
+                    this.completedSale = {
+                        folio: localId,
+                        date: new Date().toLocaleString(),
+                        offline: true,
+                        total: this.total,
+                        paid_amount: this.parseAmount(this.paid_amount),
+                        change_amount: this.change,
+                        items: this.items.map(it => ({
+                            sku: it.product.sku,
+                            name: it.product.name,
+                            unit: it.unit_label,
+                            quantity: this.parseAmount(it.quantity),
+                            unit_price: this.parseAmount(it.unit_price),
+                            discount: this.parseAmount(it.discount || 0),
+                            subtotal: this.lineSubtotal(it),
+                        })),
+                    };
+                    this.showSaleModal = true;
+                },
+                async syncOfflineQueue() {
+                    if (this.syncing) return;
+                    if (!this.isOnline) return;
+                    if (this.offlineQueue.length === 0) return;
+                    this.syncing = true;
+                    try {
+                        const pending = [...this.offlineQueue];
+                        for (const sale of pending) {
+                            const fd = new FormData();
+                            for (const [k, v] of sale.entries) fd.append(k, v);
+                            try {
+                                const res = await fetch('{{ route('admin.ventas.store') }}', {
+                                    method: 'POST',
+                                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                                    body: fd,
+                                });
+                                const data = await res.json().catch(() => ({}));
+                                if (res.ok) {
+                                    // Quitar de la cola
+                                    this.offlineQueue = this.offlineQueue.filter(s => s.local_id !== sale.local_id);
+                                    this.saveOfflineQueue();
+                                } else {
+                                    sale.last_error = data.error || data.message || ('HTTP ' + res.status);
+                                    sale.status = 'failed';
+                                    this.saveOfflineQueue();
+                                }
+                            } catch (err) {
+                                sale.last_error = 'Sin conexión';
+                                sale.status = 'failed';
+                                this.saveOfflineQueue();
+                                this.onConnectionChange(false);
+                                break;
+                            }
+                        }
+                        if (this.offlineQueue.length === 0) {
+                            this.shortcutToast('✓ Ventas sincronizadas');
+                        } else {
+                            this.shortcutToast(this.offlineQueue.length + ' venta(s) pendientes');
+                        }
+                    } finally {
+                        this.syncing = false;
+                    }
+                },
+                deleteOfflineSale(localId) {
+                    if (!confirm('Eliminar esta venta offline? No se podrá recuperar.')) return;
+                    this.offlineQueue = this.offlineQueue.filter(s => s.local_id !== localId);
+                    this.saveOfflineQueue();
                 },
 
                 closeSaleModal() {

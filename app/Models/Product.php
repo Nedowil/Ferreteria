@@ -33,9 +33,13 @@ class Product extends Model
         'sale_price',
         'wholesale_price',
         'wholesale_min_quantity',
+        'contractor_price',
         'container_wholesale_price',
+        'container_contractor_price',
         'stock',
         'min_stock',
+        'sells_by_measure',
+        'measure_step',
         'image_path',
         'active',
         'created_by_user_id',
@@ -48,6 +52,8 @@ class Product extends Model
         'min_stock' => 'decimal:2',
         'container_factor' => 'decimal:4',
         'container_price' => 'decimal:2',
+        'measure_step' => 'decimal:4',
+        'sells_by_measure' => 'boolean',
         'active' => 'boolean',
     ];
 

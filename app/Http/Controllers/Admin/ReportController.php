@@ -257,6 +257,92 @@ class ReportController extends Controller
         ]);
     }
 
+    public function bySeller(Request $request): View
+    {
+        [$from, $to] = $this->resolveRange($request, days: 30);
+
+        $rows = Sale::query()
+            ->leftJoin('users', 'users.id', '=', 'sales.user_id')
+            ->where('sales.status', Sale::STATUS_COMPLETADA)
+            ->whereBetween('sales.date', [$from, $to])
+            ->groupBy('users.id', 'users.name')
+            ->orderByDesc(DB::raw('SUM(sales.total)'))
+            ->get([
+                'users.id',
+                DB::raw("COALESCE(users.name, 'Sin asignar') as name"),
+                DB::raw('COUNT(sales.id) as sales_count'),
+                DB::raw('SUM(sales.total) as total_revenue'),
+                DB::raw('SUM(sales.discount) as total_discount'),
+                DB::raw('AVG(sales.total) as avg_ticket'),
+            ]);
+
+        // Detalle por dia + vendedor (top 10 por revenue)
+        $byDay = Sale::query()
+            ->leftJoin('users', 'users.id', '=', 'sales.user_id')
+            ->where('sales.status', Sale::STATUS_COMPLETADA)
+            ->whereBetween('sales.date', [$from, $to])
+            ->groupBy(DB::raw('DATE(sales.date)'), 'users.id', 'users.name')
+            ->orderBy(DB::raw('DATE(sales.date)'), 'desc')
+            ->get([
+                DB::raw('DATE(sales.date) as day'),
+                'users.id as user_id',
+                DB::raw("COALESCE(users.name, 'Sin asignar') as name"),
+                DB::raw('COUNT(sales.id) as sales_count'),
+                DB::raw('SUM(sales.total) as total_revenue'),
+            ]);
+
+        $totalRevenue = (float) $rows->sum('total_revenue');
+        $totalCount = (int) $rows->sum('sales_count');
+
+        return view('admin.reports.by_seller', [
+            'from' => $from,
+            'to' => $to,
+            'rows' => $rows,
+            'byDay' => $byDay,
+            'totalRevenue' => $totalRevenue,
+            'totalCount' => $totalCount,
+        ]);
+    }
+
+    public function byCategory(Request $request): View
+    {
+        [$from, $to] = $this->resolveRange($request, days: 30);
+
+        $costExpr = 'sale_items.quantity * COALESCE(sale_items.unit_cost, products.purchase_price * COALESCE(sale_items.units_factor, 1))';
+        $revenueExpr = 'sale_items.subtotal';
+
+        $rows = SaleItem::query()
+            ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
+            ->join('products', 'products.id', '=', 'sale_items.product_id')
+            ->leftJoin('categories', 'categories.id', '=', 'products.category_id')
+            ->where('sales.status', Sale::STATUS_COMPLETADA)
+            ->whereBetween('sales.date', [$from, $to])
+            ->groupBy('categories.id', 'categories.name')
+            ->orderByDesc(DB::raw("SUM({$revenueExpr})"))
+            ->get([
+                'categories.id',
+                DB::raw("COALESCE(categories.name, 'Sin categoria') as name"),
+                DB::raw('COUNT(DISTINCT sale_items.product_id) as products_count'),
+                DB::raw('SUM(sale_items.quantity) as total_quantity'),
+                DB::raw("SUM({$revenueExpr}) as total_revenue"),
+                DB::raw("SUM({$costExpr}) as total_cost"),
+                DB::raw("SUM({$revenueExpr}) - SUM({$costExpr}) as gross_profit"),
+            ]);
+
+        $totalRevenue = (float) $rows->sum('total_revenue');
+        $totalCost = (float) $rows->sum('total_cost');
+        $totalProfit = $totalRevenue - $totalCost;
+
+        return view('admin.reports.by_category', [
+            'from' => $from,
+            'to' => $to,
+            'rows' => $rows,
+            'totalRevenue' => $totalRevenue,
+            'totalCost' => $totalCost,
+            'totalProfit' => $totalProfit,
+        ]);
+    }
+
     public function inventoryValue(): View
     {
         $rows = Product::query()

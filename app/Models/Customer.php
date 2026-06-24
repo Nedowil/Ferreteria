@@ -34,6 +34,16 @@ class Customer extends Model
 
     public const TYPE_RETAIL = 'retail';
     public const TYPE_WHOLESALE = 'wholesale';
+    public const TYPE_CONTRACTOR = 'contractor';
+
+    public static function typeLabel(?string $type): string
+    {
+        return match ($type) {
+            self::TYPE_WHOLESALE => 'Mayorista',
+            self::TYPE_CONTRACTOR => 'Contratista',
+            default => 'Público',
+        };
+    }
 
     protected $casts = [
         'active' => 'boolean',
@@ -43,6 +53,11 @@ class Customer extends Model
     public function isWholesale(): bool
     {
         return $this->customer_type === self::TYPE_WHOLESALE;
+    }
+
+    public function isContractor(): bool
+    {
+        return $this->customer_type === self::TYPE_CONTRACTOR;
     }
 
     public function sales(): HasMany

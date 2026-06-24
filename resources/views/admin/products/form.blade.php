@@ -233,6 +233,65 @@
                         </div>
                     </div>
 
+                    <!-- Precio contratista (opcional) -->
+                    <div class="border-l-4 border-blue-500 bg-blue-50 p-4 rounded">
+                        <h3 class="font-semibold text-slate-800 flex items-center gap-2">
+                            👷 Precio contratista (opcional)
+                        </h3>
+                        <p class="text-xs text-slate-600 mt-1">
+                            Para obras, instaladores y proyectos. Se aplica automáticamente cuando el cliente
+                            está marcado como <strong>"Contratista"</strong>. <strong>Dejá en blanco si no aplica.</strong>
+                        </p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                            <div>
+                                <x-input-label for="contractor_price" value="Precio contratista (por unidad base)" />
+                                <x-text-input id="contractor_price" name="contractor_price" type="text" inputmode="decimal"
+                                              class="mt-1 block w-full"
+                                              placeholder="0.00"
+                                              :value="old('contractor_price', (float) $product->contractor_price > 0 ? number_format($product->contractor_price, 2, '.', '') : '')" />
+                            </div>
+                            <div>
+                                <x-input-label for="container_contractor_price" value="Precio contratista por empaque (Q)" />
+                                <x-text-input id="container_contractor_price" name="container_contractor_price" type="text" inputmode="decimal"
+                                              class="mt-1 block w-full"
+                                              placeholder="0.00"
+                                              :value="old('container_contractor_price', (float) $product->container_contractor_price > 0 ? number_format($product->container_contractor_price, 2, '.', '') : '')" />
+                                <p class="text-xs text-slate-500 mt-1">Para caja/rollo entero a contratista.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Venta por peso o medida -->
+                    <div class="border-l-4 border-cyan-500 bg-cyan-50 p-4 rounded"
+                         x-data="{ byMeasure: @js((bool) old('sells_by_measure', $product->sells_by_measure ?? false)) }">
+                        <h3 class="font-semibold text-slate-800 flex items-center gap-2">
+                            📏 Venta por peso o medida (opcional)
+                        </h3>
+                        <p class="text-xs text-slate-600 mt-1">
+                            Activá esta opción para productos que se venden por <strong>metro, libra, galón, kilo</strong>,
+                            etc. Permite cantidades decimales en el POS (ej. 2.5 metros de cable, 0.75 galones de pintura)
+                            y muestra atajos rápidos de fracciones.
+                        </p>
+                        <div class="mt-3 flex flex-wrap items-end gap-4">
+                            <label class="inline-flex items-center gap-2">
+                                <input type="hidden" name="sells_by_measure" value="0" />
+                                <input type="checkbox" name="sells_by_measure" value="1"
+                                       x-model="byMeasure" class="rounded" />
+                                <span class="font-semibold text-sm">Vender en cantidad fraccionaria</span>
+                            </label>
+                            <div x-show="byMeasure" x-cloak>
+                                <x-input-label for="measure_step" value="Incremento mínimo (paso)" />
+                                <x-text-input id="measure_step" name="measure_step" type="text" inputmode="decimal"
+                                              class="mt-1 block w-40"
+                                              placeholder="0.25"
+                                              :value="old('measure_step', (float) ($product->measure_step ?? 0) > 0 ? rtrim(rtrim(number_format($product->measure_step, 4, '.', ''),'0'),'.') : '')" />
+                                <p class="text-xs text-slate-500 mt-1">
+                                    Ej: 0.25 = cuartos, 0.5 = mitades, 0.1 = décimos. Dejá vacío para libre.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Presentaciones adicionales (libra, media libra, caja, rollo, yarda, fardo...) -->
                     @php
                         $existingPresentations = $product->exists ? $product->presentations->map(fn($p) => [

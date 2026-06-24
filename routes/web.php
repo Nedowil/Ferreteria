@@ -293,6 +293,8 @@ Route::middleware(['auth', 'verified'])
             ->group(function () {
                 Route::get('/', [ReportController::class, 'index'])->name('index');
                 Route::get('ventas', [ReportController::class, 'sales'])->name('sales');
+                Route::get('ventas-vendedor', [ReportController::class, 'bySeller'])->name('by_seller');
+                Route::get('ventas-categoria', [ReportController::class, 'byCategory'])->name('by_category');
                 Route::get('productos-top', [ReportController::class, 'topProducts'])->name('top_products');
                 Route::get('utilidad', [ReportController::class, 'profit'])->name('profit');
                 Route::get('clientes-top', [ReportController::class, 'topCustomers'])->name('top_customers');

@@ -175,7 +175,7 @@ class CustomerController extends Controller
             'phone' => ['nullable', 'string', 'max:30'],
             'address' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
-            'customer_type' => ['nullable', 'in:retail,wholesale'],
+            'customer_type' => ['nullable', 'in:retail,wholesale,contractor'],
             'wholesale_discount_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
         ]);
 

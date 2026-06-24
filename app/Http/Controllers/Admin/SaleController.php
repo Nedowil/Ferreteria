@@ -154,6 +154,7 @@ class SaleController extends Controller
     {
         $term = trim((string) $request->input('q'));
         $branchId = CurrentBranch::id();
+        $cacheMode = $request->boolean('cache');
 
         // Si vino un termino largo (mas de 13 chars) y solo digitos, intentamos
         // extraer un EAN-13 valido. Cubre el caso del scanner que duplica la
@@ -201,7 +202,12 @@ class SaleController extends Controller
             $query->where('active', true);
         }
 
-        $products = $query->orderBy('name')->limit(15)->get()->map(function ($p) use ($branchId, $term) {
+        if ($cacheMode) {
+            $query->where('active', true);
+        }
+
+        $limit = $cacheMode ? 500 : 15;
+        $products = $query->orderBy('name')->limit($limit)->get()->map(function ($p) use ($branchId, $term) {
             $stock = $p->stockFor($branchId);
 
             return [
@@ -225,6 +231,10 @@ class SaleController extends Controller
                 'wholesale_price' => $p->wholesale_price ? (float) $p->wholesale_price : null,
                 'wholesale_min_quantity' => $p->wholesale_min_quantity ? (float) $p->wholesale_min_quantity : null,
                 'container_wholesale_price' => $p->container_wholesale_price ? (float) $p->container_wholesale_price : null,
+                'contractor_price' => $p->contractor_price ? (float) $p->contractor_price : null,
+                'container_contractor_price' => $p->container_contractor_price ? (float) $p->container_contractor_price : null,
+                'sells_by_measure' => (bool) $p->sells_by_measure,
+                'measure_step' => $p->measure_step ? (float) $p->measure_step : null,
                 'sale_price' => (float) $p->sale_price,
                 'stock' => $stock,
                 'stock_formatted' => $p->formatStockMixed($stock),

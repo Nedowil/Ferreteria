@@ -352,10 +352,14 @@ class ProductController extends Controller
             'sale_price' => ['required', 'numeric', 'min:0'],
             'wholesale_price' => ['nullable', 'numeric', 'min:0'],
             'wholesale_min_quantity' => ['nullable', 'numeric', 'min:0'],
+            'contractor_price' => ['nullable', 'numeric', 'min:0'],
             'container_wholesale_price' => ['nullable', 'numeric', 'min:0'],
+            'container_contractor_price' => ['nullable', 'numeric', 'min:0'],
             'stock' => ['nullable', 'numeric', 'min:0'],
             'stock_input_mode' => ['nullable', 'in:base,container'],
             'min_stock' => ['nullable', 'numeric', 'min:0'],
+            'sells_by_measure' => ['nullable', 'boolean'],
+            'measure_step' => ['nullable', 'numeric', 'gt:0'],
             'image' => ['nullable', 'image', 'max:2048'],
             'presentations' => ['nullable', 'array'],
             'presentations.*.label' => ['nullable', 'string', 'max:30'],
@@ -368,6 +372,10 @@ class ProductController extends Controller
         $data['min_stock'] = $data['min_stock'] ?? 0;
         $data['base_unit_label'] = $data['base_unit_label'] ?: 'unidad';
         $data['tax_type'] = $data['tax_type'] ?? 'iva';
+        $data['sells_by_measure'] = $request->boolean('sells_by_measure');
+        if (! $data['sells_by_measure']) {
+            $data['measure_step'] = null;
+        }
 
         // Si el usuario ingreso el stock inicial en cajas/rollos, lo convertimos a unidad base
         $mode = $data['stock_input_mode'] ?? 'base';
