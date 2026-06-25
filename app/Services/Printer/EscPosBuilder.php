@@ -20,6 +20,19 @@ class EscPosBuilder
         $dotsWidth = ((int) $company->printer_width) === 58 ? 256 : 384;
         $out = '';
 
+        $fel = $sale->electronicInvoice;
+        $isCertificada = $fel && $fel->status === \App\Models\ElectronicInvoice::STATUS_CERTIFICADA;
+        $isPequeno = $company->tax_regime === CompanySetting::REGIMEN_PEQUENO;
+        $afiliacion = $isPequeno ? 'PEQ' : 'GEN';
+
+        $paymentLabels = [
+            'efectivo' => 'Contado',
+            'tarjeta' => 'Tarjeta',
+            'transferencia' => 'Transferencia',
+            'credito' => 'Credito',
+        ];
+        $paymentLabel = $paymentLabels[$sale->payment_method] ?? ucfirst($sale->payment_method);
+
         // Reset
         $out .= self::ESC . '@';
         // Codepage CP850 (latin)
@@ -41,72 +54,164 @@ class EscPosBuilder
         $out .= self::ESC . '!' . "\x00"; // normal
 
         if ($company->legal_name) {
+            $out .= self::ESC . '!' . "\x08"; // bold
             $out .= $this->ascii(strtoupper($company->legal_name)) . "\n";
+            $out .= self::ESC . '!' . "\x00";
         }
         $out .= 'NIT: ' . $this->ascii($company->tax_id ?? 'CF') . "\n";
-        if ($company->address) {
-            $addr = $company->address
-                . ($company->municipality ? ' ' . $company->municipality : '')
-                . ($company->department ? ' ' . $company->department : '');
-            $out .= $this->ascii($addr) . "\n";
-        }
         if ($company->phone) {
             $out .= 'Tel: ' . $this->ascii($company->phone) . "\n";
         }
+        if ($company->address) {
+            $addr = $company->address
+                . ($company->municipality ? '  ' . strtoupper($company->municipality) : '')
+                . ($company->department ? '  ' . strtoupper($company->department) : '');
+            $out .= $this->wrap($this->ascii($addr), $width) . "\n";
+        }
 
-        $out .= str_repeat('-', $width) . "\n";
-
-        $folioNum = (int) preg_replace('/[^0-9]/', '', $sale->folio);
-        $folioFmt = str_pad((string) $folioNum, 10, '0', STR_PAD_LEFT);
+        // Titulo del documento
+        $out .= "\n";
         $out .= self::ESC . '!' . "\x08"; // bold
-        $out .= 'FACTURA # ' . $folioFmt . "\n";
+        $out .= ($isCertificada ? 'Documento Tributario Electronico' : 'Comprobante de Venta') . "\n";
         $out .= self::ESC . '!' . "\x00";
 
-        // DATOS de la venta a la izquierda
-        $out .= self::ESC . 'a' . "\x00";
-        $out .= 'Fecha:   ' . $sale->date->format('d/m/Y H:i') . "\n";
-        $out .= 'Cliente: ' . $this->ascii($sale->customer?->name ?: 'Consumidor Final') . "\n";
-        $out .= 'NIT:     ' . $this->ascii($sale->customer?->tax_id ?: 'CF') . "\n";
-        $out .= 'Pago:    ' . $this->ascii(ucfirst($sale->payment_method)) . "\n";
+        // Bloque de datos del documento
+        $out .= self::ESC . 'a' . "\x00"; // align left
+        $folioNum = (int) preg_replace('/[^0-9]/', '', $sale->folio);
+        $folioFmt = str_pad((string) $folioNum, 8, '0', STR_PAD_LEFT);
+
+        $out .= self::ESC . '!' . "\x08";
+        $out .= ($isCertificada ? 'Fact. Electronica # ' : 'Ticket # ') . $folioFmt . "\n";
+        $out .= self::ESC . '!' . "\x00";
+
+        if ($isCertificada) {
+            if ($fel->serie) $out .= 'Serie:     ' . $this->ascii($fel->serie) . "\n";
+            if ($fel->numero) $out .= 'Numero:    ' . $this->ascii($fel->numero) . "\n";
+            $out .= 'Afiliacion: ' . $afiliacion . "\n";
+        }
+
         $out .= str_repeat('-', $width) . "\n";
 
-        // ITEMS
+        // Datos de venta + receptor
+        $out .= 'Forma Pago: ' . $this->ascii($paymentLabel) . "\n";
+        $out .= 'Receptor:   ' . $this->ascii(
+            ($sale->customer?->tax_id ?: 'CF') . ' - ' . ($sale->customer?->name ?: 'Consumidor Final')
+        ) . "\n";
+        if ($sale->customer?->address) {
+            $out .= $this->wrap($this->ascii('Direccion:  ' . $sale->customer->address), $width) . "\n";
+        }
+        $out .= 'Fecha: ' . $sale->date->format('d/m/Y') . '   Hora: ' . $sale->date->format('h:i A') . "\n";
+        if ($sale->user?->name) {
+            $out .= 'Vendedor: ' . $this->ascii($sale->user->name) . "\n";
+        }
+
+        $out .= str_repeat('-', $width) . "\n";
+
+        // ITEMS con encabezado
+        $out .= self::ESC . '!' . "\x08";
+        $out .= $this->cols('Cnt  Item', 'Precio  Total', $width) . "\n";
+        $out .= self::ESC . '!' . "\x00";
+        $out .= str_repeat('-', $width) . "\n";
+
         foreach ($sale->items as $it) {
             $name = strtoupper($it->product?->name ?: 'PRODUCTO');
+            $sku = $it->product?->sku;
+            $unit = $it->unit_label ?: '';
             $out .= $this->wrap($this->ascii($name), $width) . "\n";
-
-            $qty = rtrim(rtrim(number_format($it->quantity, 2, '.', ''), '0'), '.');
-            $left = "  {$qty} x " . number_format($it->unit_price, 2);
-            $right = number_format($it->subtotal, 2);
-            $out .= $this->cols($left, $right, $width) . "\n";
+            if ($sku) {
+                $out .= '  ' . $this->ascii($sku) . "\n";
+            }
+            $qty = rtrim(rtrim(number_format($it->quantity, 4, '.', ''), '0'), '.') ?: '0';
+            $qtyLabel = $qty . ($unit ? ' ' . $unit : '') . ' x Q' . number_format($it->unit_price, 2);
+            $right = 'Q' . number_format($it->subtotal, 2);
+            $out .= $this->cols('  ' . $this->ascii($qtyLabel), $right, $width) . "\n";
         }
 
         $out .= str_repeat('-', $width) . "\n";
 
-        // TOTALES
-        $out .= $this->cols('Subtotal:', 'Q ' . number_format($sale->subtotal, 2), $width) . "\n";
-        if ((float) $sale->discount > 0) {
-            $out .= $this->cols('Descuento:', '-Q ' . number_format($sale->discount, 2), $width) . "\n";
+        // TOTALES (desglose completo)
+        $totalBruto = (float) $sale->subtotal;
+        $descuento = (float) $sale->discount;
+        $totalIva = (float) $sale->tax;
+        $total = (float) $sale->total;
+        $subConDesc = max(0, $totalBruto - $descuento);
+        $montoGravable = max(0, $total - $totalIva);
+
+        $out .= $this->cols('Total Bruto:', 'Q ' . number_format($totalBruto, 2), $width) . "\n";
+        $out .= $this->cols('Descuentos:', 'Q ' . number_format($descuento, 2), $width) . "\n";
+        $out .= $this->cols('Sub Total:', 'Q ' . number_format($subConDesc, 2), $width) . "\n";
+        if (! $isPequeno) {
+            $out .= $this->cols('Monto Gravable:', 'Q ' . number_format($montoGravable, 2), $width) . "\n";
+            $out .= $this->cols('Total IVA:', 'Q ' . number_format($totalIva, 2), $width) . "\n";
         }
-        $out .= $this->cols('IVA:', 'Q ' . number_format($sale->tax, 2), $width) . "\n";
 
         $out .= self::ESC . '!' . "\x18"; // bold + double height
-        $out .= $this->cols('TOTAL:', 'Q ' . number_format($sale->total, 2), $width) . "\n";
+        $out .= $this->cols('TOTAL:', 'Q ' . number_format($total, 2), $width) . "\n";
         $out .= self::ESC . '!' . "\x00";
 
         $out .= str_repeat('-', $width) . "\n";
 
         // PAGO
-        $out .= $this->cols('Pagado:', 'Q ' . number_format($sale->paid_amount, 2), $width) . "\n";
-        if ($sale->payment_method === 'efectivo') {
+        $out .= $this->cols('Pagado (' . $this->ascii($paymentLabel) . '):', 'Q ' . number_format($sale->paid_amount, 2), $width) . "\n";
+        if ($sale->payment_method === 'efectivo' && $sale->change_amount > 0) {
+            $out .= self::ESC . '!' . "\x08";
             $out .= $this->cols('Vuelto:', 'Q ' . number_format($sale->change_amount, 2), $width) . "\n";
+            $out .= self::ESC . '!' . "\x00";
+        }
+        if ($sale->payment_method === 'credito') {
+            $saldo = max(0, $total - (float) $sale->paid_amount);
+            $out .= self::ESC . '!' . "\x08";
+            $out .= $this->cols('SALDO POR COBRAR:', 'Q ' . number_format($saldo, 2), $width) . "\n";
+            $out .= self::ESC . '!' . "\x00";
+            if ($sale->due_date) {
+                $out .= $this->cols('Vence:', \Carbon\Carbon::parse($sale->due_date)->format('d/m/Y'), $width) . "\n";
+            }
+        }
+
+        // FRASES SAT / LEYENDAS
+        $phrases = collect($company->phrases ?: [])
+            ->map(fn ($p) => is_array($p) ? ($p['description'] ?? null) : (string) $p)
+            ->filter()
+            ->values();
+        if ($phrases->isEmpty()) {
+            $phrases = collect([
+                $isPequeno
+                    ? '* Sujeto a pagos trimestrales · NO GENERA DERECHO A CREDITO FISCAL DE IVA'
+                    : '* Sujeto a Retencion del ISR - Sujeto a pagos trimestrales ISR - 1',
+            ]);
         }
 
         $out .= "\n";
         $out .= self::ESC . 'a' . "\x01"; // center
-        $out .= "Gracias por su compra\n";
-        if ($sale->electronicInvoice && $sale->electronicInvoice->uuid) {
-            $out .= "Autorizacion SAT:\n" . $sale->electronicInvoice->uuid . "\n";
+        foreach ($phrases as $line) {
+            $out .= $this->wrap($this->ascii($line), $width) . "\n";
+        }
+
+        // BLOQUE DE CERTIFICACION
+        if ($isCertificada) {
+            $out .= "\n";
+            $out .= str_repeat('-', $width) . "\n";
+            if ($fel->fecha_certificacion) {
+                $out .= 'Fecha Certif: ' . $fel->fecha_certificacion->format('Y-m-d H:i') . "\n";
+            }
+            if ($fel->serie || $fel->numero) {
+                $line = '';
+                if ($fel->serie) $line .= 'Serie: ' . $fel->serie;
+                if ($fel->numero) $line .= ($line ? '  ' : '') . 'No: ' . $fel->numero;
+                $out .= $this->wrap($this->ascii($line), $width) . "\n";
+            }
+            if ($fel->uuid) {
+                $out .= "Autorizacion:\n";
+                $out .= $this->ascii($fel->uuid) . "\n";
+            }
+            $out .= "\n";
+            $out .= $this->ascii('Representacion Impresa de la Factura Electronica') . "\n";
+            if ($fel->certificador) {
+                $out .= 'Certificador: ' . $this->ascii($fel->certificador) . "\n";
+            }
+        } else {
+            $out .= "\n";
+            $out .= 'Comprobante interno - No es Factura Electronica' . "\n";
         }
 
         // Avance de papel antes del corte
