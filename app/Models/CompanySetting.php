@@ -40,6 +40,9 @@ class CompanySetting extends Model
         'zebra_label_width',
         'zebra_label_height',
         'zebra_dpi',
+        'fel_yearly_quota',
+        'fel_cycle_month',
+        'fel_cycle_day',
     ];
 
     protected $casts = [
@@ -47,7 +50,31 @@ class CompanySetting extends Model
         'prices_include_tax' => 'boolean',
         'phrases' => 'array',
         'printer_auto_cut' => 'boolean',
+        'fel_yearly_quota' => 'integer',
+        'fel_cycle_month' => 'integer',
+        'fel_cycle_day' => 'integer',
     ];
+
+    /**
+     * Devuelve [inicio, fin] del ciclo anual del bolson FEL relativo a la
+     * fecha actual. Si el ciclo configurado es 1 de enero, simplemente da
+     * el año en curso. Si el ciclo arranca en otro mes/dia (ej. la fecha
+     * de contratacion con Infile), el "año" se cuenta desde ahi.
+     */
+    public function felCycleRange(?\Carbon\Carbon $reference = null): array
+    {
+        $ref = $reference ?? \Carbon\Carbon::now();
+        $month = max(1, min(12, (int) ($this->fel_cycle_month ?: 1)));
+        $day = max(1, min(28, (int) ($this->fel_cycle_day ?: 1)));
+
+        $start = \Carbon\Carbon::create($ref->year, $month, $day, 0, 0, 0);
+        if ($start->gt($ref)) {
+            $start->subYear();
+        }
+        $end = $start->copy()->addYear()->subSecond();
+
+        return [$start, $end];
+    }
 
     public static function current(): self
     {

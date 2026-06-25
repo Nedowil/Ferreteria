@@ -267,6 +267,42 @@
                         </p>
                     </div>
 
+                    <!-- Cupo FEL anual (bolson contratado al certificador) -->
+                    <div class="border-l-4 border-indigo-500 bg-indigo-50 p-4 rounded space-y-3">
+                        <h3 class="font-semibold text-slate-800 flex items-center gap-2">
+                            📑 Cupo FEL anual (bolsón de DTE)
+                        </h3>
+                        <p class="text-xs text-slate-600">
+                            Si contrataste un bolsón de DTEs con tu certificador (ej. Infile 250 DTE/año), poné
+                            la cantidad y la fecha de inicio del ciclo. El dashboard te avisará cuando te
+                            acerques al límite. Dejá en <strong>0</strong> si tu plan es ilimitado o pago por uso.
+                        </p>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div>
+                                <x-input-label for="fel_yearly_quota" value="DTEs contratados al año" />
+                                <x-text-input id="fel_yearly_quota" name="fel_yearly_quota" type="number" min="0" max="1000000"
+                                              class="mt-1 block w-full"
+                                              :value="old('fel_yearly_quota', $company->fel_yearly_quota ?: 0)" />
+                            </div>
+                            <div>
+                                <x-input-label for="fel_cycle_month" value="Mes de inicio del ciclo" />
+                                <select id="fel_cycle_month" name="fel_cycle_month"
+                                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                    @foreach (['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'] as $i => $m)
+                                        <option value="{{ $i + 1 }}" @selected(old('fel_cycle_month', $company->fel_cycle_month ?: 1) == $i + 1)>{{ $m }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div>
+                                <x-input-label for="fel_cycle_day" value="Día de inicio" />
+                                <x-text-input id="fel_cycle_day" name="fel_cycle_day" type="number" min="1" max="28"
+                                              class="mt-1 block w-full"
+                                              :value="old('fel_cycle_day', $company->fel_cycle_day ?: 1)" />
+                                <p class="text-xs text-slate-500 mt-1">Máximo 28 para evitar problemas con febrero.</p>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="flex gap-3">
                         <x-primary-button>Guardar</x-primary-button>
                     </div>

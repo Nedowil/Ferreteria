@@ -756,6 +756,22 @@
                                 <div class="flex justify-between text-slate-700 pt-1"><span>Pagado</span><span x-text="'Q' + (completedSale.paid_amount ?? 0).toFixed(2)"></span></div>
                                 <div class="flex justify-between text-xl font-bold text-green-700"><span>Cambio</span><span x-text="'Q' + (completedSale.change_amount ?? 0).toFixed(2)"></span></div>
                             </div>
+
+                            <!-- Aviso FEL: la venta NO fue facturada electronicamente automaticamente -->
+                            <template x-if="!completedSale.offline && completedSale.fel_eligible">
+                                <div class="border-l-4 border-indigo-500 bg-indigo-50 p-3 rounded text-sm">
+                                    <div class="font-semibold text-indigo-900">📑 Este cliente tiene NIT — ¿facturar electrónicamente?</div>
+                                    <div class="text-xs text-indigo-800 mt-1">
+                                        Podés emitir el DTE ahora (consume 1 del bolsón anual) o más tarde
+                                        desde <strong>Facturar después</strong> en el menú lateral.
+                                    </div>
+                                </div>
+                            </template>
+                            <template x-if="!completedSale.offline && !completedSale.fel_eligible && !completedSale.fel">
+                                <div class="text-xs text-slate-500 text-center">
+                                    Venta a Consumidor Final — no se generó factura electrónica.
+                                </div>
+                            </template>
                         </div>
                     </template>
 
@@ -773,6 +789,15 @@
                                 class="px-4 py-2 bg-amber-500 text-white rounded hover:bg-amber-600 text-sm font-bold shadow inline-flex items-center gap-2">
                             🧾 Imprimir provisional
                         </button>
+                        <form method="POST" :action="completedSale?.urls?.emit_fel || ''"
+                              x-show="!completedSale?.offline && completedSale?.fel_eligible" class="inline"
+                              onsubmit="return confirm('Emitir factura electrónica ahora? Consumirá 1 del bolsón anual.');">
+                            @csrf
+                            <button type="submit"
+                                    class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm font-bold shadow inline-flex items-center gap-2">
+                                📑 Emitir FEL ahora
+                            </button>
+                        </form>
                         <button type="button" @click="closeSaleModal()"
                                 class="px-5 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded hover:from-green-700 hover:to-emerald-700 text-sm font-bold shadow">
                             ➕ Nueva venta

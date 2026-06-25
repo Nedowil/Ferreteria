@@ -1,4 +1,6 @@
 @php
+    use App\Models\CompanySetting;
+    use App\Models\ElectronicInvoice;
     use App\Models\Product;
     use App\Models\Sale;
     $user = Auth::user();
@@ -10,6 +12,29 @@
     $todaySalesTotal = $user->can('dashboard.ventas_hoy') ? Sale::whereDate('date', today())->where('status', Sale::STATUS_COMPLETADA)->sum('total') : null;
     $monthSalesTotal = $user->can('dashboard.ventas_mes') ? Sale::whereYear('date', now()->year)->whereMonth('date', now()->month)->where('status', Sale::STATUS_COMPLETADA)->sum('total') : null;
     $activeSessions = $user->can('dashboard.cajas_abiertas') ? \App\Models\CashSession::where('status', 'abierta')->count() : null;
+
+    // Cupo FEL del año: cuenta DTEs certificados desde el inicio del ciclo
+    $felQuota = null;
+    if ($user->can('dashboard.fel_quota')) {
+        $company = CompanySetting::current();
+        if (($company->fel_yearly_quota ?? 0) > 0) {
+            [$cycleStart, $cycleEnd] = $company->felCycleRange();
+            $used = ElectronicInvoice::where('status', ElectronicInvoice::STATUS_CERTIFICADA)
+                ->whereBetween('fecha_certificacion', [$cycleStart, $cycleEnd])
+                ->count();
+            $quota = (int) $company->fel_yearly_quota;
+            $pct = $quota > 0 ? round(($used / $quota) * 100, 1) : 0;
+            $felQuota = [
+                'used' => $used,
+                'quota' => $quota,
+                'remaining' => max(0, $quota - $used),
+                'pct' => min(100, $pct),
+                'cycle_start' => $cycleStart,
+                'cycle_end' => $cycleEnd,
+                'level' => $pct >= 100 ? 'critical' : ($pct >= 80 ? 'warning' : 'ok'),
+            ];
+        }
+    }
 
     // Contamos cuantas tarjetas KPI veran para ajustar el grid
     $kpiCount = collect([
@@ -85,6 +110,41 @@
                         </a>
                     @endcan
                 </div>
+            @endif
+
+            <!-- Cupo FEL (bolson DTEs anuales) -->
+            @if ($felQuota)
+                @php
+                    $felColor = $felQuota['level'] === 'critical' ? 'red' : ($felQuota['level'] === 'warning' ? 'amber' : 'indigo');
+                    $felBgFrom = $felQuota['level'] === 'critical' ? 'from-red-500' : ($felQuota['level'] === 'warning' ? 'from-amber-500' : 'from-indigo-500');
+                    $felBgTo = $felQuota['level'] === 'critical' ? 'to-rose-600' : ($felQuota['level'] === 'warning' ? 'to-orange-600' : 'to-violet-600');
+                @endphp
+                <a href="{{ route('admin.fel.index') }}"
+                   class="block bg-gradient-to-r {{ $felBgFrom }} {{ $felBgTo }} rounded-xl p-5 text-white shadow-lg hover:shadow-xl transition">
+                    <div class="flex items-center gap-4">
+                        <div class="text-5xl opacity-70">📑</div>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2">
+                                <div class="text-sm font-medium opacity-90">Cupo FEL del ciclo</div>
+                                @if ($felQuota['level'] === 'critical')
+                                    <span class="px-2 py-0.5 bg-white/25 rounded text-xs font-bold">🚨 LÍMITE ALCANZADO</span>
+                                @elseif ($felQuota['level'] === 'warning')
+                                    <span class="px-2 py-0.5 bg-white/25 rounded text-xs font-bold">⚠ Cerca del límite</span>
+                                @endif
+                            </div>
+                            <div class="text-3xl font-bold mt-1">
+                                {{ number_format($felQuota['used']) }} <span class="opacity-70 text-xl">/ {{ number_format($felQuota['quota']) }} DTE</span>
+                            </div>
+                            <div class="text-xs opacity-90 mt-1">
+                                Quedan <strong>{{ number_format($felQuota['remaining']) }}</strong> ·
+                                Ciclo {{ $felQuota['cycle_start']->format('d/m/Y') }} → {{ $felQuota['cycle_end']->format('d/m/Y') }}
+                            </div>
+                            <div class="mt-2 w-full bg-white/20 rounded-full h-2 overflow-hidden">
+                                <div class="bg-white h-2 rounded-full transition-all" style="width: {{ $felQuota['pct'] }}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </a>
             @endif
 
             <!-- Accesos rapidos -->

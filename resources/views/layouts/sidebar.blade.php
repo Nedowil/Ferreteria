@@ -251,6 +251,17 @@
             </a>
         @endcan
 
+        @can('ventas.ver')
+            <a href="{{ route('admin.ventas.pending_fel') }}"
+               class="flex items-center gap-3 px-3 py-2 rounded-lg transition group relative
+                      {{ request()->routeIs('admin.ventas.pending_fel') ? 'bg-orange-600 text-white shadow-lg' : 'hover:bg-slate-800' }}"
+               :class="sidebarCollapsed ? 'justify-center' : ''">
+                <span class="text-xl flex-shrink-0">🧾</span>
+                <span x-show="!sidebarCollapsed" x-cloak class="text-sm font-medium">Facturar después</span>
+                <span x-show="sidebarCollapsed" x-cloak class="absolute left-full ml-2 px-2 py-1 bg-slate-800 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition">Facturar después</span>
+            </a>
+        @endcan
+
         @can('caja.ver')
             <a href="{{ route('admin.caja.index') }}"
                class="flex items-center gap-3 px-3 py-2 rounded-lg transition group relative

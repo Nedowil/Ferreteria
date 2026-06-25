@@ -160,6 +160,7 @@ Route::middleware(['auth', 'verified'])
         });
 
         Route::middleware('permission:ventas.ver')->group(function () {
+            Route::get('ventas/pendientes-fel', [SaleController::class, 'pendingFel'])->name('ventas.pending_fel');
             Route::get('ventas', [SaleController::class, 'index'])->name('ventas.index');
             Route::get('ventas/exportar', [SaleController::class, 'export'])->name('ventas.export');
             Route::get('ventas/{venta}/modal', [SaleController::class, 'modal'])->name('ventas.modal');

@@ -81,6 +81,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'dashboard.productos_reponer',
             'dashboard.accesos_rapidos',
             'dashboard.cajas_abiertas',
+            'dashboard.fel_quota',
         ];
 
         foreach ($permissions as $permission) {

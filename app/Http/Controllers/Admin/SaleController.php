@@ -20,6 +20,54 @@ class SaleController extends Controller
     {
     }
 
+    /**
+     * Listado de ventas completadas que aun NO tienen DTE/FEL emitido.
+     * Pensado para el flujo "facturar despues": el cajero registra la venta
+     * sin emitir FEL en el momento y desde aqui las certifica en lote.
+     * Filtra por defecto:
+     *   - solo ventas con NIT distinto a CF (las CF normalmente no necesitan FEL)
+     *   - ultimos 60 dias
+     */
+    public function pendingFel(Request $request): View
+    {
+        $days = max(1, (int) $request->input('days', 60));
+        $onlyNit = $request->boolean('only_nit', true);
+        $search = $request->string('q')->toString();
+
+        $query = Sale::with(['customer', 'user', 'electronicInvoice'])
+            ->where('status', Sale::STATUS_COMPLETADA)
+            ->where('date', '>=', now()->subDays($days))
+            ->whereDoesntHave('electronicInvoice', function ($q) {
+                $q->where('status', \App\Models\ElectronicInvoice::STATUS_CERTIFICADA);
+            });
+
+        if ($onlyNit) {
+            $query->whereHas('customer', function ($q) {
+                $q->whereNotNull('tax_id')
+                  ->where('tax_id', '!=', '')
+                  ->whereRaw("UPPER(REPLACE(tax_id, ' ', '')) != 'CF'");
+            });
+        }
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('folio', 'like', "%{$search}%")
+                  ->orWhereHas('customer', fn ($qq) => $qq
+                      ->where('name', 'like', "%{$search}%")
+                      ->orWhere('tax_id', 'like', "%{$search}%"));
+            });
+        }
+
+        $sales = $query->orderByDesc('date')->paginate(20)->withQueryString();
+
+        return view('admin.sales.pending_fel', [
+            'sales' => $sales,
+            'days' => $days,
+            'onlyNit' => $onlyNit,
+            'search' => $search,
+        ]);
+    }
+
     public function index(Request $request): View
     {
         $search = $request->string('q')->toString();
@@ -330,8 +378,18 @@ class SaleController extends Controller
                 'show' => route('admin.ventas.show', $venta),
                 'ticket' => route('admin.ventas.ticket', $venta),
                 'pdf' => route('admin.ventas.factura_pdf', $venta),
+                'emit_fel' => route('admin.fel.emit', $venta),
             ],
+            'fel_eligible' => $this->isFelEligible($venta),
         ]);
+    }
+
+    private function isFelEligible(Sale $sale): bool
+    {
+        if (! $sale->isCompletada()) return false;
+        if ($sale->electronicInvoice) return false;
+        $nit = strtoupper(str_replace(' ', '', (string) ($sale->customer?->tax_id ?? '')));
+        return $nit !== '' && $nit !== 'CF';
     }
 
     public function ticket(Sale $venta): View

@@ -49,6 +49,9 @@ class CompanySettingController extends Controller
             'zebra_label_width' => ['nullable', 'integer', 'min:20', 'max:200'],
             'zebra_label_height' => ['nullable', 'integer', 'min:15', 'max:200'],
             'zebra_dpi' => ['nullable', 'integer', 'in:203,300'],
+            'fel_yearly_quota' => ['nullable', 'integer', 'min:0', 'max:1000000'],
+            'fel_cycle_month' => ['nullable', 'integer', 'min:1', 'max:12'],
+            'fel_cycle_day' => ['nullable', 'integer', 'min:1', 'max:28'],
         ]);
 
         if ($request->hasFile('logo')) {
@@ -66,6 +69,9 @@ class CompanySettingController extends Controller
         $data['zebra_label_width'] = $data['zebra_label_width'] ?? 50;
         $data['zebra_label_height'] = $data['zebra_label_height'] ?? 25;
         $data['zebra_dpi'] = $data['zebra_dpi'] ?? 203;
+        $data['fel_yearly_quota'] = (int) ($data['fel_yearly_quota'] ?? 0);
+        $data['fel_cycle_month'] = (int) ($data['fel_cycle_month'] ?? 1);
+        $data['fel_cycle_day'] = (int) ($data['fel_cycle_day'] ?? 1);
 
         $company->update($data);
 
