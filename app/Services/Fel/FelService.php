@@ -15,14 +15,30 @@ class FelService
     ) {
     }
 
-    public function emit(Sale $sale, string $documentType = 'FACT'): ElectronicInvoice
+    public function emit(Sale $sale, string $documentType = 'FACT', ?\DateTimeInterface $issuedAt = null): ElectronicInvoice
     {
         if ($sale->electronicInvoice && $sale->electronicInvoice->isCertificada()) {
             throw new \DomainException('Esta venta ya tiene una factura electronica certificada.');
         }
 
-        return DB::transaction(function () use ($sale, $documentType) {
-            $xml = $this->xmlBuilder->buildForSale($sale, $documentType);
+        // SAT permite emitir el DTE hasta 5 dias despues del hecho generador y
+        // segun el certificador a veces tambien fechas futuras corridas. Validamos
+        // el rango aqui para evitar errores remotos.
+        if ($issuedAt) {
+            $today = new \DateTimeImmutable('today');
+            $min = $today->modify('-5 days');
+            $max = $today->modify('+5 days')->setTime(23, 59, 59);
+            if ($issuedAt < $min || $issuedAt > $max) {
+                throw new \DomainException(
+                    'La fecha de emisión debe estar entre ' .
+                    $min->format('d/m/Y') . ' y ' . $max->format('d/m/Y') .
+                    ' (rango permitido por SAT: ±5 días).'
+                );
+            }
+        }
+
+        return DB::transaction(function () use ($sale, $documentType, $issuedAt) {
+            $xml = $this->xmlBuilder->buildForSale($sale, $documentType, $issuedAt);
 
             $invoice = ElectronicInvoice::updateOrCreate(
                 ['sale_id' => $sale->id],

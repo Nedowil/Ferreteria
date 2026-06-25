@@ -42,15 +42,32 @@ class FelController extends Controller
         return view('admin.fel.show', ['invoice' => $factura]);
     }
 
-    public function emit(Sale $venta): RedirectResponse
+    public function emit(Request $request, Sale $venta): RedirectResponse
     {
         if (! $venta->isCompletada()) {
             return back()->withErrors(['emit' => 'Solo se pueden facturar electronicamente ventas completadas.']);
         }
 
-        // El XmlBuilder elige FPEQ automaticamente segun el regimen del emisor
+        // Fecha de emision opcional. Si el cajero la deja en blanco usamos la fecha
+        // original de la venta. SAT permite +/- 5 dias respecto a hoy.
+        $data = $request->validate([
+            'issued_at' => ['nullable', 'date'],
+        ]);
+
+        $issuedAt = null;
+        if (! empty($data['issued_at'])) {
+            // Combinamos la fecha elegida con la hora original de la venta para no
+            // perder el orden cronologico cuando se factura el mismo dia.
+            $time = $venta->date?->format('H:i:s') ?? '12:00:00';
+            try {
+                $issuedAt = new \DateTimeImmutable($data['issued_at'] . ' ' . $time);
+            } catch (\Throwable $e) {
+                return back()->withErrors(['emit' => 'Fecha de emisión inválida.']);
+            }
+        }
+
         try {
-            $invoice = $this->felService->emit($venta, ElectronicInvoice::TYPE_FACT);
+            $invoice = $this->felService->emit($venta, ElectronicInvoice::TYPE_FACT, $issuedAt);
         } catch (\DomainException $e) {
             return back()->withErrors(['emit' => $e->getMessage()]);
         }

@@ -790,9 +790,16 @@
                             🧾 Imprimir provisional
                         </button>
                         <form method="POST" :action="completedSale?.urls?.emit_fel || ''"
-                              x-show="!completedSale?.offline && completedSale?.fel_eligible" class="inline"
-                              onsubmit="return confirm('Emitir factura electrónica ahora? Consumirá 1 del bolsón anual.');">
+                              x-show="!completedSale?.offline && completedSale?.fel_eligible"
+                              class="inline-flex items-center gap-1"
+                              onsubmit="return confirm('Emitir factura electrónica con fecha ' + this.issued_at.value + '? Consumirá 1 del bolsón anual.');">
                             @csrf
+                            <input type="date" name="issued_at"
+                                   :value="(new Date()).toISOString().slice(0,10)"
+                                   :min="new Date(Date.now() - 5*86400000).toISOString().slice(0,10)"
+                                   :max="new Date(Date.now() + 5*86400000).toISOString().slice(0,10)"
+                                   title="Fecha del DTE (±5 días que permite SAT)"
+                                   class="text-xs border-slate-300 rounded px-2 py-1.5" />
                             <button type="submit"
                                     class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm font-bold shadow inline-flex items-center gap-2">
                                 📑 Emitir FEL ahora

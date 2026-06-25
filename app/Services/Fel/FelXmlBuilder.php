@@ -21,7 +21,7 @@ use App\Models\SaleReturn;
  */
 class FelXmlBuilder
 {
-    public function buildForSale(Sale $sale, string $documentType = 'FACT'): string
+    public function buildForSale(Sale $sale, string $documentType = 'FACT', ?\DateTimeInterface $issuedAtOverride = null): string
     {
         $sale->loadMissing(['items.product', 'customer']);
         $emisor = CompanySetting::current();
@@ -35,7 +35,7 @@ class FelXmlBuilder
             documentType: $documentType,
             emisor: $emisor,
             customer: $sale->customer,
-            issuedAt: $sale->date,
+            issuedAt: $issuedAtOverride ?? $sale->date,
             items: $sale->items->map(fn ($it) => [
                 'product' => $it->product,
                 'quantity' => (float) $it->quantity,

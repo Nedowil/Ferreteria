@@ -113,9 +113,21 @@
                             </a>
                         @else
                             @can('facturas.emitir')
+                                @php
+                                    $felMin = now()->subDays(5)->toDateString();
+                                    $felMax = now()->addDays(5)->toDateString();
+                                    $felDefault = max($sale->date->toDateString(), $felMin);
+                                    $felDefault = min($felDefault, $felMax);
+                                @endphp
                                 <form method="POST" action="{{ route('admin.fel.emit', $sale) }}"
-                                      onsubmit="return confirm('Generar factura electronica?');">
+                                      class="inline-flex items-center gap-2"
+                                      onsubmit="return confirm('Generar factura electrónica con fecha ' + this.issued_at.value + '? Consumirá 1 del bolsón anual.');">
                                     @csrf
+                                    <label class="text-xs text-slate-600">Fecha DTE:</label>
+                                    <input type="date" name="issued_at" value="{{ $felDefault }}"
+                                           min="{{ $felMin }}" max="{{ $felMax }}"
+                                           title="SAT permite ±5 días desde hoy"
+                                           class="text-sm border-gray-300 rounded px-2 py-1.5" />
                                     <button class="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700">
                                         Emitir FEL
                                     </button>

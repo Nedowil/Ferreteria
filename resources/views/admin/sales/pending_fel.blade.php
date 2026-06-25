@@ -15,6 +15,12 @@
                     <strong>Emitir FEL</strong> de cada fila. Las ventas a <strong>Consumidor Final</strong> normalmente
                     no requieren FEL — usá el filtro para mostrarlas o esconderlas.
                 </p>
+                <p class="text-xs text-slate-600 mt-2">
+                    📅 <strong>Fecha del DTE</strong>: por defecto usa la fecha de la venta. SAT permite emitir con
+                    fecha entre <strong>{{ now()->subDays(5)->format('d/m/Y') }}</strong> y
+                    <strong>{{ now()->addDays(5)->format('d/m/Y') }}</strong> (±5 días desde hoy). Cambialo en cada
+                    fila si necesitás atrasar o adelantar.
+                </p>
             </div>
 
             <div class="bg-white shadow-sm rounded-lg p-4">
@@ -60,11 +66,17 @@
                     </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
+                    @php
+                        $minDate = now()->subDays(5)->toDateString();
+                        $maxDate = now()->addDays(5)->toDateString();
+                    @endphp
                     @forelse ($sales as $s)
                         @php
                             $nit = trim(strtoupper(str_replace(' ', '', (string) ($s->customer?->tax_id ?? ''))));
                             $isCf = $nit === '' || $nit === 'CF';
                             $invoice = $s->electronicInvoice;
+                            $defaultDate = max($s->date->toDateString(), $minDate);
+                            $defaultDate = min($defaultDate, $maxDate);
                         @endphp
                         <tr class="{{ $isCf ? 'bg-slate-50' : '' }}">
                             <td class="px-3 py-2 font-mono">{{ $s->folio }}</td>
@@ -83,15 +95,19 @@
                                 @endif
                             </td>
                             <td class="px-3 py-2 text-right">
-                                <div class="inline-flex gap-1">
+                                <div class="inline-flex gap-1 items-center">
                                     <a href="{{ route('admin.ventas.show', $s) }}"
                                        class="px-2 py-1 bg-slate-200 hover:bg-slate-300 rounded text-xs">Ver</a>
                                     @can('facturas.emitir')
-                                        <form method="POST" action="{{ route('admin.fel.emit', $s) }}" class="inline"
-                                              onsubmit="return confirm('Emitir DTE para folio {{ $s->folio }}? Consumirá 1 del bolsón anual.');">
+                                        <form method="POST" action="{{ route('admin.fel.emit', $s) }}" class="inline-flex gap-1 items-center"
+                                              onsubmit="return confirm('Emitir DTE para folio {{ $s->folio }} con fecha ' + this.issued_at.value + '? Consumirá 1 del bolsón anual.');">
                                             @csrf
+                                            <input type="date" name="issued_at" value="{{ $defaultDate }}"
+                                                   min="{{ $minDate }}" max="{{ $maxDate }}"
+                                                   title="Fecha del DTE (rango ±5 días que permite SAT)"
+                                                   class="text-xs border-gray-300 rounded px-1 py-0.5 w-32" />
                                             <button class="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold">
-                                                🧾 Emitir FEL
+                                                🧾 Emitir
                                             </button>
                                         </form>
                                     @endcan
