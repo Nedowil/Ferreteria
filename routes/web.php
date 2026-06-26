@@ -173,6 +173,7 @@ Route::middleware(['auth', 'verified'])
         Route::middleware('permission:ventas.crear')->group(function () {
             Route::get('pos', [SaleController::class, 'pos'])->name('ventas.pos');
             Route::get('pos/productos', [SaleController::class, 'searchProducts'])->name('ventas.search_products');
+            Route::get('pos/pantalla-cliente', [SaleController::class, 'customerDisplay'])->name('ventas.customer_display');
             Route::post('ventas', [SaleController::class, 'store'])->name('ventas.store');
         });
 

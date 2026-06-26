@@ -12,12 +12,17 @@
                 </div>
             @endif
 
-            <!-- Estado de conexión / cola offline -->
+            <!-- Estado de conexión / cola offline / pantalla cliente -->
             <div class="mb-3 flex flex-wrap items-center gap-2 text-sm">
                 <span class="px-2 py-1 rounded font-bold"
                       :class="isOnline ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800 animate-pulse'">
                     <span x-text="isOnline ? '🟢 En línea' : '🔴 Sin conexión'"></span>
                 </span>
+                <button type="button" @click="openCustomerDisplay()"
+                        class="px-2 py-1 rounded bg-indigo-100 text-indigo-800 font-bold hover:bg-indigo-200"
+                        title="Abrir pantalla del cliente (segunda pantalla)">
+                    📺 Pantalla cliente
+                </button>
                 <template x-if="offlineQueue.length > 0">
                     <button type="button" @click="showOfflineQueuePanel = true"
                             class="px-2 py-1 rounded bg-amber-100 text-amber-800 font-bold hover:bg-amber-200">
@@ -2012,6 +2017,67 @@
                     this.recalc();
                 },
 
+                // ====== Pantalla del cliente (segunda pantalla / tablet) ======
+                _customerChannel: null,
+                _customerWindow: null,
+                ensureCustomerChannel() {
+                    if (!this._customerChannel && 'BroadcastChannel' in window) {
+                        this._customerChannel = new BroadcastChannel('pos-customer-display');
+                    }
+                },
+                openCustomerDisplay() {
+                    const url = '{{ route('admin.ventas.customer_display') }}';
+                    // Si ya esta abierta y vigente, le hacemos focus en vez de abrir otra
+                    if (this._customerWindow && !this._customerWindow.closed) {
+                        this._customerWindow.focus();
+                        return;
+                    }
+                    this._customerWindow = window.open(url, 'pos-customer-display',
+                        'width=900,height=1200,menubar=no,toolbar=no,location=no');
+                    if (!this._customerWindow) {
+                        alert('El navegador bloqueó la ventana. Permití pop-ups para este sitio.');
+                        return;
+                    }
+                    // Una vez abierta, broadcast inmediato del estado actual
+                    setTimeout(() => this.broadcastToCustomerDisplay(), 800);
+                },
+                broadcastToCustomerDisplay() {
+                    this.ensureCustomerChannel();
+                    const payload = {
+                        type: 'state',
+                        items: this.items.map(it => ({
+                            name: it.product?.name || '',
+                            qty: it.quantity,
+                            unit: it.unit_label || '',
+                            price: this.parseAmount(it.unit_price),
+                            subtotal: this.lineSubtotal(it),
+                            discount: this.parseAmount(it.discount || 0),
+                        })),
+                        subtotal: this.subtotal,
+                        discount: this.parseAmount(this.discount || 0),
+                        tax: this.tax,
+                        total: this.total,
+                    };
+                    try {
+                        this._customerChannel?.postMessage(payload);
+                        // Fallback localStorage para pestañas que no soporten BroadcastChannel
+                        localStorage.setItem('pos_customer_display_state', JSON.stringify(payload));
+                    } catch (e) {}
+                },
+                broadcastSaleCompleted(total, paid, change) {
+                    this.ensureCustomerChannel();
+                    const payload = {
+                        type: 'completed',
+                        total: +total || 0,
+                        paid: +paid || 0,
+                        change: +change || 0,
+                    };
+                    try {
+                        this._customerChannel?.postMessage(payload);
+                        localStorage.setItem('pos_customer_display_state', JSON.stringify(payload));
+                    } catch (e) {}
+                },
+
                 /**
                  * Compara las cantidades del carrito contra el stock conocido (cache local o
                  * resultado de busqueda mas reciente) y devuelve la lista de items donde la
@@ -2293,6 +2359,7 @@
                     }
                     this.change = this.parseAmount(this.paid_amount) - this.total;
                     this.validateOfflineStock();
+                    this.broadcastToCustomerDisplay();
                 },
                 async onSubmit(e) {
                     e.preventDefault();
@@ -2345,6 +2412,7 @@
                         });
                         this.completedSale = await mres.json();
                         this.showSaleModal = true;
+                        this.broadcastSaleCompleted(this.completedSale.total, this.completedSale.paid_amount, this.completedSale.change_amount);
                     } catch (err) {
                         // Red caída en medio: tratar como offline y encolar
                         this.onConnectionChange(false);
@@ -2477,6 +2545,7 @@
                         })),
                     };
                     this.showSaleModal = true;
+                    this.broadcastSaleCompleted(this.total, this.parseAmount(this.paid_amount), this.change);
                 },
                 async syncOfflineQueue() {
                     if (this.syncing) return;

@@ -198,6 +198,19 @@ class SaleController extends Controller
         ]);
     }
 
+    /**
+     * Vista de "pantalla del cliente": pensada para mostrarse en una segunda
+     * pantalla / tablet frente al cliente mientras el cajero arma la venta.
+     * Recibe el estado por BroadcastChannel (misma origen, instantaneo, sin
+     * round-trip al servidor) desde la pestaña del POS.
+     */
+    public function customerDisplay(): View
+    {
+        return view('admin.sales.customer_display', [
+            'company' => \App\Models\CompanySetting::current(),
+        ]);
+    }
+
     public function searchProducts(Request $request): JsonResponse
     {
         $term = trim((string) $request->input('q'));
