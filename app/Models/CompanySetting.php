@@ -43,6 +43,11 @@ class CompanySetting extends Model
         'fel_yearly_quota',
         'fel_cycle_month',
         'fel_cycle_day',
+        'public_catalog_enabled',
+        'public_catalog_show_prices',
+        'public_catalog_title',
+        'public_catalog_intro',
+        'public_catalog_whatsapp',
     ];
 
     protected $casts = [
@@ -53,6 +58,8 @@ class CompanySetting extends Model
         'fel_yearly_quota' => 'integer',
         'fel_cycle_month' => 'integer',
         'fel_cycle_day' => 'integer',
+        'public_catalog_enabled' => 'boolean',
+        'public_catalog_show_prices' => 'boolean',
     ];
 
     /**

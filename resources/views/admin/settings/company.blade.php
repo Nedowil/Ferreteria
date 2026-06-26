@@ -303,6 +303,72 @@
                         </div>
                     </div>
 
+                    {{-- Catalogo publico (vitrina compartible) --}}
+                    <div class="border-l-4 border-emerald-500 bg-emerald-50 p-4 rounded space-y-3"
+                         x-data="{ enabled: @js((bool) old('public_catalog_enabled', $company->public_catalog_enabled)) }">
+                        <h3 class="font-semibold text-slate-800 flex items-center gap-2">
+                            🛍 Catálogo público (vitrina compartible)
+                        </h3>
+                        <p class="text-xs text-slate-600">
+                            Activá esto para tener una URL pública que podés compartir por WhatsApp
+                            (<code class="bg-white px-1 rounded">{{ route('public.catalog') }}</code>).
+                            Los clientes ven tu catálogo, buscan productos y te contactan directo.
+                        </p>
+
+                        <div class="flex flex-wrap gap-4">
+                            <label class="inline-flex items-center gap-2">
+                                <input type="hidden" name="public_catalog_enabled" value="0" />
+                                <input type="checkbox" name="public_catalog_enabled" value="1"
+                                       x-model="enabled" class="rounded" />
+                                <span class="font-semibold text-sm">Habilitar catálogo público</span>
+                            </label>
+                            <label class="inline-flex items-center gap-2" x-show="enabled" x-cloak>
+                                <input type="hidden" name="public_catalog_show_prices" value="0" />
+                                <input type="checkbox" name="public_catalog_show_prices" value="1"
+                                       @checked(old('public_catalog_show_prices', $company->public_catalog_show_prices))
+                                       class="rounded" />
+                                <span class="font-semibold text-sm">Mostrar precios</span>
+                                <span class="text-xs text-slate-500">(si está apagado dice "Consultar precio")</span>
+                            </label>
+                        </div>
+
+                        <div x-show="enabled" x-cloak class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                                <x-input-label for="public_catalog_title" value="Título de la página (opcional)" />
+                                <x-text-input id="public_catalog_title" name="public_catalog_title" type="text"
+                                              class="mt-1 block w-full"
+                                              placeholder="Ej: Ferretería Central · Catálogo"
+                                              :value="old('public_catalog_title', $company->public_catalog_title)" />
+                            </div>
+                            <div>
+                                <x-input-label for="public_catalog_whatsapp" value="WhatsApp para consultas" />
+                                <x-text-input id="public_catalog_whatsapp" name="public_catalog_whatsapp" type="text"
+                                              class="mt-1 block w-full"
+                                              placeholder="50212345678 (con código de país)"
+                                              :value="old('public_catalog_whatsapp', $company->public_catalog_whatsapp)" />
+                                <p class="text-xs text-slate-500 mt-1">Si lo dejás vacío usa el teléfono general.</p>
+                            </div>
+                            <div class="md:col-span-2">
+                                <x-input-label for="public_catalog_intro" value="Texto de bienvenida (opcional)" />
+                                <textarea id="public_catalog_intro" name="public_catalog_intro" rows="2" maxlength="500"
+                                          class="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
+                                          placeholder="Bienvenidos a nuestro catálogo. Hacé tu consulta por WhatsApp.">{{ old('public_catalog_intro', $company->public_catalog_intro) }}</textarea>
+                            </div>
+                        </div>
+
+                        <div x-show="enabled" x-cloak class="mt-2 p-3 bg-white border border-emerald-300 rounded text-sm">
+                            <div class="font-semibold text-emerald-800">URL del catálogo:</div>
+                            <a href="{{ route('public.catalog') }}" target="_blank"
+                               class="font-mono text-emerald-700 hover:underline break-all">
+                                {{ route('public.catalog') }}
+                            </a>
+                            <div class="text-xs text-slate-500 mt-1">
+                                Tip: en la edición de cada producto podés marcarlo como "oculto del catálogo público"
+                                para esconderlo sin desactivarlo.
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="flex gap-3">
                         <x-primary-button>Guardar</x-primary-button>
                     </div>

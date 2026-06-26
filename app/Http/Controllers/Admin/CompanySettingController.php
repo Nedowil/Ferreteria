@@ -52,6 +52,11 @@ class CompanySettingController extends Controller
             'fel_yearly_quota' => ['nullable', 'integer', 'min:0', 'max:1000000'],
             'fel_cycle_month' => ['nullable', 'integer', 'min:1', 'max:12'],
             'fel_cycle_day' => ['nullable', 'integer', 'min:1', 'max:28'],
+            'public_catalog_enabled' => ['nullable', 'boolean'],
+            'public_catalog_show_prices' => ['nullable', 'boolean'],
+            'public_catalog_title' => ['nullable', 'string', 'max:180'],
+            'public_catalog_intro' => ['nullable', 'string', 'max:500'],
+            'public_catalog_whatsapp' => ['nullable', 'string', 'max:30'],
         ]);
 
         if ($request->hasFile('logo')) {
@@ -72,6 +77,8 @@ class CompanySettingController extends Controller
         $data['fel_yearly_quota'] = (int) ($data['fel_yearly_quota'] ?? 0);
         $data['fel_cycle_month'] = (int) ($data['fel_cycle_month'] ?? 1);
         $data['fel_cycle_day'] = (int) ($data['fel_cycle_day'] ?? 1);
+        $data['public_catalog_enabled'] = $request->boolean('public_catalog_enabled');
+        $data['public_catalog_show_prices'] = $request->boolean('public_catalog_show_prices');
 
         $company->update($data);
 

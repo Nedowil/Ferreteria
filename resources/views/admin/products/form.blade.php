@@ -504,11 +504,20 @@
                         <x-input-error :messages="$errors->get('image')" class="mt-2" />
                     </div>
 
-                    <label class="inline-flex items-center gap-2">
-                        <input type="checkbox" name="active" value="1"
-                               @checked(old('active', $product->active)) class="rounded" />
-                        <span>Activo</span>
-                    </label>
+                    <div class="flex flex-wrap items-center gap-6">
+                        <label class="inline-flex items-center gap-2">
+                            <input type="checkbox" name="active" value="1"
+                                   @checked(old('active', $product->active)) class="rounded" />
+                            <span>Activo</span>
+                        </label>
+                        <label class="inline-flex items-center gap-2"
+                               title="Si lo desactivás, este producto NO aparece en el catálogo público (aunque siga activo en el POS)">
+                            <input type="hidden" name="public_visible" value="0" />
+                            <input type="checkbox" name="public_visible" value="1"
+                                   @checked(old('public_visible', $product->exists ? $product->public_visible : true)) class="rounded" />
+                            <span>Visible en catálogo público</span>
+                        </label>
+                    </div>
 
                     <div class="flex gap-3">
                         <x-primary-button>Guardar</x-primary-button>

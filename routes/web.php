@@ -60,6 +60,8 @@ Route::middleware(['auth', 'verified'])
         Route::middleware('permission:productos.ver')->group(function () {
             Route::get('productos', [ProductController::class, 'index'])->name('productos.index');
             Route::get('productos/exportar', [ProductController::class, 'export'])->name('productos.export');
+            Route::get('productos/etiquetas-lote', [ProductController::class, 'labelBatch'])->name('productos.label_batch');
+            Route::post('productos/etiquetas-lote-zpl', [ProductController::class, 'labelBatchZpl'])->name('productos.label_batch_zpl');
             Route::get('productos/{producto}/etiqueta', [ProductController::class, 'label'])->name('productos.label');
             Route::post('productos/{producto}/etiqueta-zpl', [ProductController::class, 'labelZpl'])->name('productos.label_zpl');
             Route::get('inventario/bajo-stock', [InventoryController::class, 'lowStock'])->name('inventario.low_stock');
@@ -306,6 +308,10 @@ Route::middleware(['auth', 'verified'])
                 Route::get('valor-inventario', [ReportController::class, 'inventoryValue'])->name('inventory_value');
             });
     });
+
+// Catalogo publico (sin auth) — vitrina compartible por WhatsApp
+Route::get('catalogo', [\App\Http\Controllers\Public\PublicCatalogController::class, 'index'])
+    ->name('public.catalog');
 
 // Rutas publicas firmadas para compartir PDFs por WhatsApp/email sin requerir login
 Route::get('p/factura/{sale}', [\App\Http\Controllers\Public\PublicDocumentController::class, 'sale'])

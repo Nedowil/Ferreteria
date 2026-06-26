@@ -291,6 +291,89 @@ class ProductController extends Controller
         ]);
     }
 
+    /**
+     * Imprime etiquetas para multiples productos en una sola pasada.
+     *
+     * Acepta:
+     *   - ids: lista de product ids separada por coma (?ids=1,2,3)
+     *   - copias: copias por producto (default 1)
+     *   - formato: '' (A4 grid) o 'zebra'
+     *
+     * Util al recibir una compra grande: seleccionas los productos del listado
+     * y mandas todas las etiquetas a la Zebra de una vez.
+     */
+    public function labelBatch(Request $request): View
+    {
+        $idsParam = (string) $request->input('ids', '');
+        $ids = collect(explode(',', $idsParam))
+            ->map(fn ($s) => (int) trim($s))
+            ->filter()
+            ->unique()
+            ->take(500)
+            ->values()
+            ->all();
+
+        $copias = max(1, min(60, (int) $request->input('copias', 1)));
+        $formato = $request->string('formato')->toString();
+
+        $products = Product::whereIn('id', $ids)->orderBy('name')->get();
+
+        return view('admin.products.label_batch', [
+            'products' => $products,
+            'company' => CompanySetting::current(),
+            'copias' => $copias,
+            'formato' => $formato,
+            'totalLabels' => $products->count() * $copias,
+        ]);
+    }
+
+    /**
+     * Envia ZPL batch a la Zebra de red para todos los productos seleccionados.
+     */
+    public function labelBatchZpl(
+        Request $request,
+        \App\Services\Printer\ZplBuilder $zpl,
+        \App\Services\Printer\NetworkPrinter $printer,
+    ): \Illuminate\Http\JsonResponse {
+        $ids = collect(explode(',', (string) $request->input('ids', '')))
+            ->map(fn ($s) => (int) trim($s))
+            ->filter()
+            ->unique()
+            ->take(500)
+            ->values()
+            ->all();
+        $copias = max(1, min(60, (int) $request->input('copias', 1)));
+        $company = CompanySetting::current();
+
+        if (! $company->zebra_ip) {
+            return response()->json(['error' => 'No hay impresora Zebra de red configurada en Configuracion del emisor.'], 422);
+        }
+
+        $products = Product::whereIn('id', $ids)->orderBy('name')->get();
+        if ($products->isEmpty()) {
+            return response()->json(['error' => 'Sin productos para imprimir.'], 422);
+        }
+
+        // Concatenamos un ZPL por producto. Cada bloque ^XA...^XZ es una etiqueta
+        // independiente, la Zebra los procesa secuencialmente.
+        $payload = '';
+        foreach ($products as $p) {
+            $payload .= $zpl->buildLabel($p, $company, $copias);
+        }
+
+        try {
+            $printer->send(
+                $company->zebra_ip,
+                (int) ($company->zebra_port ?: 9100),
+                $payload,
+            );
+        } catch (\Throwable $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+
+        return response()->json(['ok' => true, 'count' => $products->count() * $copias]);
+    }
+
     public function labelZpl(
         Request $request,
         Product $producto,
@@ -360,6 +443,7 @@ class ProductController extends Controller
             'min_stock' => ['nullable', 'numeric', 'min:0'],
             'sells_by_measure' => ['nullable', 'boolean'],
             'measure_step' => ['nullable', 'numeric', 'gt:0'],
+            'public_visible' => ['nullable', 'boolean'],
             'image' => ['nullable', 'image', 'max:2048'],
             'presentations' => ['nullable', 'array'],
             'presentations.*.label' => ['nullable', 'string', 'max:30'],
@@ -376,6 +460,7 @@ class ProductController extends Controller
         if (! $data['sells_by_measure']) {
             $data['measure_step'] = null;
         }
+        $data['public_visible'] = $request->boolean('public_visible', true);
 
         // Si el usuario ingreso el stock inicial en cajas/rollos, lo convertimos a unidad base
         $mode = $data['stock_input_mode'] ?? 'base';

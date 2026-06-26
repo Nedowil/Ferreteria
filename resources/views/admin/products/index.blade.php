@@ -132,10 +132,30 @@
                     </div>
                 </div>
 
-                <div class="overflow-x-auto">
+                <div class="overflow-x-auto" x-data="labelBatchSelector()">
+                    <!-- Barra de seleccion masiva (aparece cuando hay al menos 1 marcado) -->
+                    <div x-show="selectedIds.length > 0" x-cloak x-transition
+                         class="mb-2 p-3 bg-orange-50 border border-orange-300 rounded flex flex-wrap items-center gap-3">
+                        <div class="font-semibold text-orange-900">
+                            <span x-text="selectedIds.length"></span> producto(s) seleccionado(s)
+                        </div>
+                        <a :href="batchUrl()"
+                           target="_blank"
+                           class="px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded text-sm font-bold inline-flex items-center gap-1">
+                            🖨 Imprimir etiquetas
+                        </a>
+                        <button type="button" @click="clearSelection()"
+                                class="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-sm">
+                            Limpiar seleccion
+                        </button>
+                    </div>
+
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                         <tr>
+                            <th class="px-3 py-2 text-left text-xs uppercase w-8">
+                                <input type="checkbox" @change="toggleAll($event.target.checked)" class="rounded" title="Seleccionar todos en la pagina" />
+                            </th>
                             <th class="px-3 py-2 text-left text-xs uppercase">SKU</th>
                             <th class="px-3 py-2 text-left text-xs uppercase">Nombre</th>
                             <th class="px-3 py-2 text-left text-xs uppercase">Categoria</th>
@@ -149,6 +169,9 @@
                         <tbody class="bg-white divide-y divide-gray-200">
                         @forelse ($products as $p)
                             <tr class="@if ($p->stock <= $p->min_stock) bg-red-50 @endif">
+                                <td class="px-3 py-2">
+                                    <input type="checkbox" :value="{{ $p->id }}" x-model.number="selectedIds" class="rounded label-cb" />
+                                </td>
                                 <td class="px-3 py-2 font-mono text-xs">{{ $p->sku }}</td>
                                 <td class="px-3 py-2">
                                     <div>{{ $p->name }}</div>
@@ -182,7 +205,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="8" class="px-4 py-6 text-center text-gray-500">Sin productos.</td></tr>
+                            <tr><td colspan="9" class="px-4 py-6 text-center text-gray-500">Sin productos.</td></tr>
                         @endforelse
                         </tbody>
                     </table>
@@ -192,4 +215,27 @@
             </div>
         </div>
     </div>
+
+    <script>
+        function labelBatchSelector() {
+            return {
+                selectedIds: [],
+                toggleAll(checked) {
+                    const pageIds = Array.from(document.querySelectorAll('.label-cb'))
+                        .map(cb => parseInt(cb.value, 10));
+                    if (checked) {
+                        const merged = new Set([...this.selectedIds, ...pageIds]);
+                        this.selectedIds = Array.from(merged);
+                    } else {
+                        this.selectedIds = this.selectedIds.filter(id => !pageIds.includes(id));
+                    }
+                },
+                clearSelection() { this.selectedIds = []; },
+                batchUrl() {
+                    const base = '{{ route('admin.productos.label_batch') }}';
+                    return base + '?ids=' + this.selectedIds.join(',');
+                },
+            };
+        }
+    </script>
 </x-app-layout>

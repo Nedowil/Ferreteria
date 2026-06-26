@@ -42,6 +42,7 @@ class Product extends Model
         'measure_step',
         'image_path',
         'active',
+        'public_visible',
         'created_by_user_id',
     ];
 
@@ -55,6 +56,7 @@ class Product extends Model
         'measure_step' => 'decimal:4',
         'sells_by_measure' => 'boolean',
         'active' => 'boolean',
+        'public_visible' => 'boolean',
     ];
 
     /**
