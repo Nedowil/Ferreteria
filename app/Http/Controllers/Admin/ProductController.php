@@ -155,6 +155,8 @@ class ProductController extends Controller
 
         $presentations = $data['presentations'] ?? [];
         unset($data['presentations']);
+        $location = $data['location'] ?? null;
+        unset($data['location']);
         $data['created_by_user_id'] = auth()->id();
 
         $product = Product::create($data);
@@ -163,17 +165,19 @@ class ProductController extends Controller
         // Crea fila de stock en la sucursal activa (o la primera disponible) si se indico stock inicial.
         // Si no hay sucursales aun, no pasa nada: products.stock guarda el global y stockFor()
         // hace fallback al global hasta que se cree alguna fila por sucursal.
-        if (! empty($data['stock'])) {
-            $branchId = \App\Support\CurrentBranch::id()
-                ?? \App\Models\Branch::where('active', true)->orderBy('id')->value('id')
-                ?? \App\Models\Branch::orderBy('id')->value('id');
+        $branchId = \App\Support\CurrentBranch::id()
+            ?? \App\Models\Branch::where('active', true)->orderBy('id')->value('id')
+            ?? \App\Models\Branch::orderBy('id')->value('id');
 
-            if ($branchId) {
-                \App\Models\ProductStock::firstOrCreate(
-                    ['product_id' => $product->id, 'branch_id' => $branchId],
-                    ['stock' => $data['stock'], 'min_stock' => $data['min_stock']],
-                );
-            }
+        if ($branchId && (! empty($data['stock']) || $location)) {
+            \App\Models\ProductStock::updateOrCreate(
+                ['product_id' => $product->id, 'branch_id' => $branchId],
+                array_filter([
+                    'stock' => $data['stock'] ?? null,
+                    'min_stock' => $data['min_stock'] ?? null,
+                    'location' => $location,
+                ], fn ($v) => $v !== null),
+            );
         }
 
         return redirect()->route('admin.productos.index')->with('status', 'Producto creado.');
@@ -204,6 +208,8 @@ class ProductController extends Controller
         unset($data['stock']);
         $presentations = $data['presentations'] ?? [];
         unset($data['presentations']);
+        $location = array_key_exists('location', $data) ? $data['location'] : null;
+        unset($data['location']);
 
         // Conserva el SKU/barcode existente si lo borraron, o regenera si esta vacio
         $data['sku'] = $this->ensureSku($data['sku'] ?? null, $data['name'], $producto->id);
@@ -211,6 +217,15 @@ class ProductController extends Controller
 
         $producto->update($data);
         $this->syncPresentations($producto, $presentations);
+
+        // Persiste la ubicacion en la sucursal actual
+        $branchId = \App\Support\CurrentBranch::id();
+        if ($branchId) {
+            \App\Models\ProductStock::updateOrCreate(
+                ['product_id' => $producto->id, 'branch_id' => $branchId],
+                ['location' => $location],
+            );
+        }
 
         return redirect()->route('admin.productos.index')->with('status', 'Producto actualizado.');
     }
@@ -444,6 +459,7 @@ class ProductController extends Controller
             'sells_by_measure' => ['nullable', 'boolean'],
             'measure_step' => ['nullable', 'numeric', 'gt:0'],
             'public_visible' => ['nullable', 'boolean'],
+            'location' => ['nullable', 'string', 'max:60'],
             'image' => ['nullable', 'image', 'max:2048'],
             'presentations' => ['nullable', 'array'],
             'presentations.*.label' => ['nullable', 'string', 'max:30'],

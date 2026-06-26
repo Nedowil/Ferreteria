@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ProductStock extends Model
 {
-    protected $fillable = ['product_id', 'branch_id', 'stock', 'min_stock'];
+    protected $fillable = ['product_id', 'branch_id', 'stock', 'min_stock', 'location'];
 
     protected $casts = [
         'stock' => 'decimal:2',

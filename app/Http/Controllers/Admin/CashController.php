@@ -81,7 +81,7 @@ class CashController extends Controller
         ]);
     }
 
-    public function open(Request $request): RedirectResponse
+    public function open(Request $request): RedirectResponse|\Illuminate\Http\JsonResponse
     {
         $data = $request->validate([
             'opening_amount' => ['required', 'numeric', 'min:0'],
@@ -96,13 +96,50 @@ class CashController extends Controller
                 branchId: CurrentBranch::id(),
             );
         } catch (\DomainException $e) {
+            if ($request->expectsJson()) {
+                return response()->json(['error' => $e->getMessage()], 422);
+            }
             return back()->withErrors(['open' => $e->getMessage()]);
         }
 
+        if ($request->expectsJson()) {
+            return response()->json(['ok' => true, 'id' => $session->id]);
+        }
         return redirect()->route('admin.caja.show', $session)->with('status', 'Caja abierta.');
     }
 
-    public function storeMovement(Request $request, CashSession $caja): RedirectResponse
+    /**
+     * Devuelve el estado de la caja del usuario actual. Pensado para que el
+     * POS sepa si tiene caja abierta sin recargar la pagina.
+     */
+    public function statusJson(): \Illuminate\Http\JsonResponse
+    {
+        $session = $this->service->currentSessionFor(auth()->id());
+        if (! $session) {
+            return response()->json(['open' => false]);
+        }
+
+        $session->loadCount(['sales as sales_count' => fn ($q) => $q->where('status', \App\Models\Sale::STATUS_COMPLETADA)]);
+        $salesTotal = (float) $session->sales()
+            ->where('status', \App\Models\Sale::STATUS_COMPLETADA)
+            ->sum('total');
+
+        return response()->json([
+            'open' => true,
+            'id' => $session->id,
+            'opened_at' => $session->opened_at?->format('d/m/Y H:i'),
+            'opening_amount' => (float) $session->opening_amount,
+            'sales_count' => (int) $session->sales_count,
+            'sales_total' => $salesTotal,
+            'urls' => [
+                'show' => route('admin.caja.show', $session),
+                'close' => route('admin.caja.close', $session),
+                'movement' => route('admin.caja.movimientos.store', $session),
+            ],
+        ]);
+    }
+
+    public function storeMovement(Request $request, CashSession $caja): RedirectResponse|\Illuminate\Http\JsonResponse
     {
         if ($caja->user_id !== auth()->id() && ! auth()->user()->hasRole('admin')) {
             abort(403);
@@ -123,13 +160,19 @@ class CashController extends Controller
                 userId: auth()->id(),
             );
         } catch (\DomainException $e) {
+            if ($request->expectsJson()) {
+                return response()->json(['error' => $e->getMessage()], 422);
+            }
             return back()->withErrors(['movement' => $e->getMessage()]);
         }
 
+        if ($request->expectsJson()) {
+            return response()->json(['ok' => true]);
+        }
         return redirect()->route('admin.caja.show', $caja)->with('status', 'Movimiento registrado.');
     }
 
-    public function close(Request $request, CashSession $caja): RedirectResponse
+    public function close(Request $request, CashSession $caja): RedirectResponse|\Illuminate\Http\JsonResponse
     {
         if ($caja->user_id !== auth()->id() && ! auth()->user()->hasRole('admin')) {
             abort(403);
@@ -147,9 +190,15 @@ class CashController extends Controller
                 notes: $data['closing_notes'] ?? null,
             );
         } catch (\DomainException $e) {
+            if ($request->expectsJson()) {
+                return response()->json(['error' => $e->getMessage()], 422);
+            }
             return back()->withErrors(['close' => $e->getMessage()]);
         }
 
+        if ($request->expectsJson()) {
+            return response()->json(['ok' => true]);
+        }
         return redirect()->route('admin.caja.show', $caja)->with('status', 'Caja cerrada.');
     }
 }

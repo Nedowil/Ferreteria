@@ -23,6 +23,30 @@
                         title="Abrir pantalla del cliente (segunda pantalla)">
                     📺 Pantalla cliente
                 </button>
+                <button type="button" @click="toggleTopSoldPanel()"
+                        class="px-2 py-1 rounded font-bold"
+                        :class="showTopSoldPanel ? 'bg-rose-500 text-white' : 'bg-rose-100 text-rose-800 hover:bg-rose-200'"
+                        title="Mostrar productos más vendidos del día">
+                    🔥 Top hoy
+                </button>
+
+                <!-- Caja: badge + acciones rapidas -->
+                <template x-if="cashStatus.open">
+                    <button type="button" @click="showCashPanel = true"
+                            class="px-2 py-1 rounded bg-emerald-100 text-emerald-800 font-bold hover:bg-emerald-200 inline-flex items-center gap-1"
+                            title="Movimientos / cerrar caja">
+                        🟢 Caja
+                        <span class="text-xs font-normal"
+                              x-text="'· ' + cashStatus.sales_count + ' ventas · Q' + cashStatus.sales_total.toFixed(2)"></span>
+                    </button>
+                </template>
+                <template x-if="cashStatus.checked && !cashStatus.open">
+                    <button type="button" @click="showCashOpenModal = true"
+                            class="px-2 py-1 rounded bg-red-100 text-red-800 font-bold hover:bg-red-200 animate-pulse"
+                            title="No tenés caja abierta">
+                        🔒 Caja cerrada · Abrir
+                    </button>
+                </template>
                 <template x-if="offlineQueue.length > 0">
                     <button type="button" @click="showOfflineQueuePanel = true"
                             class="px-2 py-1 rounded bg-amber-100 text-amber-800 font-bold hover:bg-amber-200">
@@ -41,6 +65,187 @@
                         Catálogo offline: <span x-text="offlineCatalog.length"></span> productos
                     </span>
                 </template>
+            </div>
+
+            <!-- Modal: Abrir caja -->
+            <div x-show="showCashOpenModal" x-cloak x-transition.opacity
+                 class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+                 @keydown.escape.window="showCashOpenModal = false">
+                <div @click.outside="showCashOpenModal = false"
+                     class="bg-white rounded-xl shadow-2xl max-w-md w-full">
+                    <div class="bg-emerald-600 text-white px-5 py-3 rounded-t-xl">
+                        <h3 class="font-bold text-lg">🔓 Abrir caja</h3>
+                    </div>
+                    <form @submit.prevent="submitOpenCash()" class="p-5 space-y-3">
+                        <div>
+                            <label class="text-sm font-medium">Monto de apertura (efectivo)</label>
+                            <input type="text" inputmode="decimal" x-model="cashOpenForm.opening_amount"
+                                   x-ref="openCashInput" placeholder="0.00"
+                                   class="mt-1 block w-full border-slate-300 rounded-md focus:border-emerald-500 focus:ring-emerald-500" />
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium">Notas (opcional)</label>
+                            <textarea x-model="cashOpenForm.opening_notes" rows="2"
+                                      class="mt-1 block w-full border-slate-300 rounded-md focus:border-emerald-500 focus:ring-emerald-500"></textarea>
+                        </div>
+                        <div x-show="cashOpenError" x-cloak class="p-2 bg-red-100 text-red-800 rounded text-sm" x-text="cashOpenError"></div>
+                        <div class="flex gap-2 justify-end pt-2">
+                            <button type="button" @click="showCashOpenModal = false"
+                                    class="px-4 py-2 bg-slate-200 text-slate-700 rounded">Cancelar</button>
+                            <button type="submit" :disabled="cashSubmitting"
+                                    class="px-4 py-2 bg-emerald-600 text-white rounded font-bold disabled:opacity-50">
+                                <span x-show="!cashSubmitting">Abrir caja</span>
+                                <span x-show="cashSubmitting">Abriendo…</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Panel: caja abierta (movimientos + cerrar) -->
+            <div x-show="showCashPanel" x-cloak x-transition.opacity
+                 class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+                 @keydown.escape.window="showCashPanel = false">
+                <div @click.outside="showCashPanel = false"
+                     class="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+                    <div class="bg-emerald-600 text-white px-5 py-3 rounded-t-xl flex justify-between items-center">
+                        <h3 class="font-bold text-lg">🟢 Caja abierta</h3>
+                        <button type="button" @click="showCashPanel = false"
+                                class="text-white hover:bg-white/20 rounded-full w-7 h-7 flex items-center justify-center">✕</button>
+                    </div>
+                    <div class="p-5 space-y-4">
+                        <div class="grid grid-cols-3 gap-2 text-center text-sm">
+                            <div class="bg-slate-50 rounded p-2">
+                                <div class="text-xs text-slate-500">Abierta</div>
+                                <div class="font-semibold text-xs" x-text="cashStatus.opened_at"></div>
+                            </div>
+                            <div class="bg-slate-50 rounded p-2">
+                                <div class="text-xs text-slate-500">Ventas</div>
+                                <div class="font-bold text-emerald-700" x-text="cashStatus.sales_count"></div>
+                            </div>
+                            <div class="bg-slate-50 rounded p-2">
+                                <div class="text-xs text-slate-500">Vendido</div>
+                                <div class="font-bold text-emerald-700" x-text="'Q' + cashStatus.sales_total.toFixed(2)"></div>
+                            </div>
+                        </div>
+
+                        <!-- Movimientos manuales -->
+                        <div class="border rounded p-3 space-y-2">
+                            <div class="font-semibold text-sm">💸 Movimiento manual</div>
+                            <div class="flex gap-2">
+                                <select x-model="movForm.type"
+                                        class="border-slate-300 rounded text-sm">
+                                    <option value="ingreso">Ingreso (entra)</option>
+                                    <option value="egreso">Egreso (sale)</option>
+                                </select>
+                                <input type="text" inputmode="decimal" x-model="movForm.amount"
+                                       placeholder="Monto Q"
+                                       class="flex-1 border-slate-300 rounded text-sm" />
+                            </div>
+                            <input type="text" x-model="movForm.description"
+                                   placeholder="Descripción (ej: almuerzo cajero, cambio del banco)"
+                                   class="w-full border-slate-300 rounded text-sm" />
+                            <button type="button" @click="submitMovement()" :disabled="cashSubmitting"
+                                    class="w-full py-2 bg-blue-600 text-white rounded text-sm font-bold disabled:opacity-50">
+                                Registrar movimiento
+                            </button>
+                            <div x-show="movMessage" x-cloak class="text-xs"
+                                 :class="movMessageOk ? 'text-emerald-700' : 'text-red-700'"
+                                 x-text="movMessage"></div>
+                        </div>
+
+                        <!-- Cerrar caja -->
+                        <div class="border-2 border-red-200 rounded p-3 space-y-2 bg-red-50">
+                            <div class="font-semibold text-sm text-red-800">🔒 Cerrar caja</div>
+                            <input type="text" inputmode="decimal" x-model="cashCloseForm.counted_cash"
+                                   placeholder="Efectivo contado al cierre Q"
+                                   class="w-full border-slate-300 rounded text-sm" />
+                            <input type="text" x-model="cashCloseForm.closing_notes"
+                                   placeholder="Notas (opcional)"
+                                   class="w-full border-slate-300 rounded text-sm" />
+                            <div x-show="cashCloseError" x-cloak class="p-2 bg-red-100 text-red-800 rounded text-xs" x-text="cashCloseError"></div>
+                            <button type="button" @click="submitCloseCash()" :disabled="cashSubmitting"
+                                    class="w-full py-2 bg-red-600 text-white rounded text-sm font-bold disabled:opacity-50">
+                                <span x-show="!cashSubmitting">Cerrar caja</span>
+                                <span x-show="cashSubmitting">Cerrando…</span>
+                            </button>
+                        </div>
+
+                        <a :href="cashStatus.urls?.show" target="_blank"
+                           class="block text-center text-xs text-slate-500 hover:underline">
+                            Ver detalle completo de la sesión →
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel Top vendidos -->
+            <div x-show="showTopSoldPanel" x-cloak x-transition.opacity
+                 class="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4"
+                 @keydown.escape.window="showTopSoldPanel = false">
+                <div @click.outside="showTopSoldPanel = false"
+                     class="bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[85vh] flex flex-col overflow-hidden">
+                    <div class="bg-gradient-to-r from-rose-500 to-orange-600 px-6 py-4 flex justify-between items-center">
+                        <h3 class="text-white font-bold text-lg flex items-center gap-2">
+                            🔥 Top vendidos
+                            <select x-model.number="topSoldDays" @change="loadTopSold()"
+                                    class="text-sm text-slate-800 rounded px-2 py-1 ml-2">
+                                <option value="1">Hoy</option>
+                                <option value="7">Últimos 7 días</option>
+                                <option value="30">Últimos 30 días</option>
+                            </select>
+                        </h3>
+                        <button type="button" @click="showTopSoldPanel = false"
+                                class="text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center">✕</button>
+                    </div>
+                    <div class="p-4 overflow-y-auto flex-1">
+                        <template x-if="loadingTopSold">
+                            <div class="text-center text-slate-500 py-12">Cargando…</div>
+                        </template>
+                        <template x-if="!loadingTopSold && topSoldProducts.length === 0">
+                            <div class="text-center text-slate-500 py-12">
+                                <div class="text-5xl mb-2">📭</div>
+                                <div>Aún no hay ventas en el rango seleccionado.</div>
+                            </div>
+                        </template>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3"
+                             x-show="!loadingTopSold && topSoldProducts.length > 0">
+                            <template x-for="(p, i) in topSoldProducts" :key="p.id">
+                                <button type="button"
+                                        @click="addItem(p); showTopSoldPanel = false;"
+                                        :disabled="p.stock <= 0"
+                                        class="border border-slate-200 rounded-lg p-3 text-left hover:bg-rose-50 hover:border-rose-300 transition disabled:opacity-50 disabled:cursor-not-allowed relative">
+                                    <div class="absolute top-1 right-1 text-xs font-bold bg-rose-500 text-white rounded-full w-7 h-7 flex items-center justify-center"
+                                         x-text="'#' + (i + 1)"></div>
+                                    <div class="flex items-center gap-2">
+                                        <template x-if="p.image_url">
+                                            <img :src="p.image_url" class="w-12 h-12 object-cover rounded" alt="" />
+                                        </template>
+                                        <template x-if="!p.image_url">
+                                            <div class="w-12 h-12 rounded bg-slate-100 flex items-center justify-center text-2xl">🔧</div>
+                                        </template>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="font-semibold text-sm leading-tight" x-text="p.name"></div>
+                                            <div class="text-xs text-slate-500 font-mono" x-text="p.sku"></div>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2 flex justify-between items-end">
+                                        <div>
+                                            <div class="text-xs text-rose-700 font-bold">
+                                                🔥 <span x-text="p.sold_qty"></span> vendidos
+                                            </div>
+                                            <div class="text-xs" :class="p.stock <= 0 ? 'text-red-600 font-bold' : 'text-slate-600'"
+                                                 x-text="p.stock <= 0 ? 'Sin stock' : 'Stock: ' + p.stock_formatted"></div>
+                                        </div>
+                                        <div class="text-sm font-bold text-orange-600">
+                                            Q<span x-text="p.sale_price.toFixed(2)"></span>
+                                        </div>
+                                    </div>
+                                </button>
+                            </template>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Panel cola offline -->
@@ -200,6 +405,9 @@
                                                         <span><span x-text="pr.label"></span>: Q<span x-text="pr.price.toFixed(2)"></span></span>
                                                     </template>
                                                 </div>
+                                            </template>
+                                            <template x-if="p.location">
+                                                <div class="text-xs text-blue-700 font-semibold">📍 <span x-text="p.location"></span></div>
                                             </template>
                                         </td>
                                         <td class="px-2 py-1 text-right">Q<span x-text="p.sale_price.toFixed(2)"></span>/<span x-text="p.base_unit_label"></span></td>
@@ -568,6 +776,12 @@
                             <span x-show="!submitting && items.length === 0">Carrito vacio</span>
                             <span x-show="!submitting && items.length > 0 && change < 0">Falta pago</span>
                             <span x-show="!submitting && items.length > 0 && change >= 0">Cobrar Q<span x-text="total.toFixed(2)"></span></span>
+                        </button>
+
+                        <button type="button" @click="quickQuote()" :disabled="items.length === 0 || savingQuote"
+                                class="mt-2 w-full py-2 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded-md text-sm font-semibold border border-blue-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1">
+                            <span x-show="!savingQuote">📝 Guardar como cotización (válida 7 días)</span>
+                            <span x-show="savingQuote">Guardando…</span>
                         </button>
 
                         <div class="mt-2 grid grid-cols-2 gap-2">
@@ -1449,6 +1663,8 @@
                     window.addEventListener('online', () => this.onConnectionChange(true));
                     window.addEventListener('offline', () => this.onConnectionChange(false));
 
+                    this.refreshCashStatus();
+
                     this.search();
                     this.loadHeldSales();
                     setInterval(() => {
@@ -2017,6 +2233,205 @@
                     this.recalc();
                 },
 
+                // ====== Caja (apertura/cierre/movimientos rapidos) ======
+                cashStatus: { checked: false, open: false, sales_count: 0, sales_total: 0, urls: {} },
+                showCashOpenModal: false,
+                showCashPanel: false,
+                cashSubmitting: false,
+                cashOpenForm: { opening_amount: '', opening_notes: '' },
+                cashOpenError: '',
+                cashCloseForm: { counted_cash: '', closing_notes: '' },
+                cashCloseError: '',
+                movForm: { type: 'egreso', amount: '', description: '' },
+                movMessage: '',
+                movMessageOk: false,
+                async refreshCashStatus() {
+                    try {
+                        const res = await fetch('{{ route('admin.caja.status_json') }}', {
+                            headers: { 'Accept': 'application/json' },
+                        });
+                        if (!res.ok) return;
+                        const data = await res.json();
+                        this.cashStatus = { ...data, checked: true };
+                    } catch (e) {}
+                },
+                async submitOpenCash() {
+                    this.cashSubmitting = true;
+                    this.cashOpenError = '';
+                    try {
+                        const fd = new FormData();
+                        fd.append('opening_amount', this.parseAmount(this.cashOpenForm.opening_amount));
+                        fd.append('opening_notes', this.cashOpenForm.opening_notes || '');
+                        const res = await fetch('{{ route('admin.caja.open') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            },
+                            body: fd,
+                        });
+                        const data = await res.json();
+                        if (!res.ok) { this.cashOpenError = data.error || 'Error'; return; }
+                        this.showCashOpenModal = false;
+                        this.cashOpenForm = { opening_amount: '', opening_notes: '' };
+                        await this.refreshCashStatus();
+                        this.shortcutToast('🟢 Caja abierta');
+                    } catch (e) {
+                        this.cashOpenError = 'Error de red: ' + e.message;
+                    } finally {
+                        this.cashSubmitting = false;
+                    }
+                },
+                async submitCloseCash() {
+                    if (!confirm('¿Cerrar la caja? No podrás cobrar más hasta abrir una nueva.')) return;
+                    this.cashSubmitting = true;
+                    this.cashCloseError = '';
+                    try {
+                        const fd = new FormData();
+                        fd.append('counted_cash', this.parseAmount(this.cashCloseForm.counted_cash));
+                        fd.append('closing_notes', this.cashCloseForm.closing_notes || '');
+                        const res = await fetch(this.cashStatus.urls.close, {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            },
+                            body: fd,
+                        });
+                        const data = await res.json();
+                        if (!res.ok) { this.cashCloseError = data.error || 'Error'; return; }
+                        this.showCashPanel = false;
+                        this.cashCloseForm = { counted_cash: '', closing_notes: '' };
+                        await this.refreshCashStatus();
+                        this.shortcutToast('🔒 Caja cerrada');
+                    } catch (e) {
+                        this.cashCloseError = 'Error de red: ' + e.message;
+                    } finally {
+                        this.cashSubmitting = false;
+                    }
+                },
+                async submitMovement() {
+                    const amount = this.parseAmount(this.movForm.amount);
+                    if (!amount || amount <= 0) {
+                        this.movMessage = 'Indicá un monto válido';
+                        this.movMessageOk = false;
+                        return;
+                    }
+                    this.cashSubmitting = true;
+                    try {
+                        const fd = new FormData();
+                        fd.append('type', this.movForm.type);
+                        fd.append('amount', amount);
+                        fd.append('description', this.movForm.description || '');
+                        const res = await fetch(this.cashStatus.urls.movement, {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            },
+                            body: fd,
+                        });
+                        const data = await res.json();
+                        if (!res.ok) {
+                            this.movMessage = data.error || 'Error';
+                            this.movMessageOk = false;
+                            return;
+                        }
+                        this.movMessage = '✓ Movimiento registrado';
+                        this.movMessageOk = true;
+                        this.movForm = { type: this.movForm.type, amount: '', description: '' };
+                        setTimeout(() => { this.movMessage = ''; }, 3000);
+                    } catch (e) {
+                        this.movMessage = 'Error: ' + e.message;
+                        this.movMessageOk = false;
+                    } finally {
+                        this.cashSubmitting = false;
+                    }
+                },
+
+                // ====== Cotizacion rapida (sin cobrar) ======
+                savingQuote: false,
+                async quickQuote() {
+                    if (this.items.length === 0) return;
+                    if (this.savingQuote) return;
+                    const days = prompt('¿Cuántos días será válida la cotización?', '7');
+                    if (days === null) return;
+                    const validDays = Math.max(1, Math.min(90, parseInt(days, 10) || 7));
+                    this.savingQuote = true;
+                    try {
+                        const payload = {
+                            customer_id: this.customer_id || null,
+                            valid_days: validDays,
+                            tax: this.tax,
+                            notes: 'Generada desde POS · modo ' + this.priceMode,
+                            items: this.items.map(it => ({
+                                product_id: it.product.id,
+                                quantity: this.parseAmount(it.quantity),
+                                unit_price: this.parseAmount(it.unit_price),
+                                discount: this.parseAmount(it.discount || 0),
+                                tax_type: it.tax_type || 'iva',
+                            })),
+                        };
+                        const res = await fetch('{{ route('admin.cotizaciones.quick') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            },
+                            body: JSON.stringify(payload),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) {
+                            alert(data.error || 'Error al crear la cotización');
+                            return;
+                        }
+                        // Limpiar carrito y mostrar confirmacion
+                        const msg = `✓ Cotización ${data.folio} creada\nVálida hasta: ${data.valid_until}\n\n¿Abrir la cotización ahora?`;
+                        const open = confirm(msg);
+                        this.items = [];
+                        this.discount = '';
+                        this.paid_amount = '';
+                        this.recalc();
+                        if (open) window.open(data.urls.show, '_blank');
+                    } catch (err) {
+                        alert('Error de red: ' + err.message);
+                    } finally {
+                        this.savingQuote = false;
+                    }
+                },
+
+                // ====== Top vendidos (panel rapido) ======
+                showTopSoldPanel: false,
+                topSoldDays: 1,
+                topSoldProducts: [],
+                loadingTopSold: false,
+                async toggleTopSoldPanel() {
+                    this.showTopSoldPanel = !this.showTopSoldPanel;
+                    if (this.showTopSoldPanel && this.topSoldProducts.length === 0) {
+                        await this.loadTopSold();
+                    }
+                },
+                async loadTopSold() {
+                    this.loadingTopSold = true;
+                    try {
+                        const url = new URL('{{ route('admin.ventas.top_sold') }}', window.location.origin);
+                        url.searchParams.set('days', this.topSoldDays);
+                        url.searchParams.set('limit', '16');
+                        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                        if (!res.ok) throw new Error('HTTP ' + res.status);
+                        const data = await res.json();
+                        this.topSoldProducts = data.products || [];
+                    } catch (e) {
+                        this.topSoldProducts = [];
+                    } finally {
+                        this.loadingTopSold = false;
+                    }
+                },
+
                 // ====== Pantalla del cliente (segunda pantalla / tablet) ======
                 _customerChannel: null,
                 _customerWindow: null,
@@ -2413,6 +2828,7 @@
                         this.completedSale = await mres.json();
                         this.showSaleModal = true;
                         this.broadcastSaleCompleted(this.completedSale.total, this.completedSale.paid_amount, this.completedSale.change_amount);
+                        this.refreshCashStatus();
                     } catch (err) {
                         // Red caída en medio: tratar como offline y encolar
                         this.onConnectionChange(false);

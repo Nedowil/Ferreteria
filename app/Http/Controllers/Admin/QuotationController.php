@@ -151,6 +151,56 @@ class QuotationController extends Controller
         return redirect()->route('admin.cotizaciones.show', $quotation)->with('status', 'Cotizacion creada.');
     }
 
+    /**
+     * Endpoint JSON para crear una cotizacion rapida desde el POS, sin abandonar
+     * la pantalla. El cajero arma el carrito como una venta normal y en vez de
+     * cobrar manda el carrito como cotizacion (default vence en 7 dias).
+     */
+    public function quickStore(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $data = $request->validate([
+            'customer_id' => ['nullable', 'exists:customers,id'],
+            'valid_days' => ['nullable', 'integer', 'min:1', 'max:90'],
+            'tax' => ['nullable', 'numeric', 'min:0'],
+            'notes' => ['nullable', 'string', 'max:500'],
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.product_id' => ['required', 'exists:products,id'],
+            'items.*.quantity' => ['required', 'numeric', 'min:0.01'],
+            'items.*.unit_price' => ['required', 'numeric', 'min:0'],
+            'items.*.discount' => ['nullable', 'numeric', 'min:0'],
+            'items.*.tax_type' => ['nullable', 'in:iva,exento'],
+        ]);
+
+        $days = (int) ($data['valid_days'] ?? 7);
+
+        try {
+            $quotation = $this->service->create(
+                data: [
+                    'customer_id' => $data['customer_id'] ?? null,
+                    'date' => now()->toDateString(),
+                    'valid_until' => now()->addDays($days)->toDateString(),
+                    'tax' => $data['tax'] ?? 0,
+                    'notes' => $data['notes'] ?? null,
+                ],
+                items: $data['items'],
+                userId: auth()->id(),
+            );
+        } catch (\DomainException $e) {
+            return response()->json(['error' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'id' => $quotation->id,
+            'folio' => $quotation->folio,
+            'valid_until' => $quotation->valid_until?->format('d/m/Y'),
+            'urls' => [
+                'show' => route('admin.cotizaciones.show', $quotation),
+                'pdf' => route('admin.cotizaciones.pdf', $quotation),
+            ],
+        ]);
+    }
+
     public function show(Quotation $cotizacion): View
     {
         $cotizacion->load(['customer', 'user', 'items.product.unit', 'convertedSale']);

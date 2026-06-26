@@ -175,6 +175,7 @@ Route::middleware(['auth', 'verified'])
         Route::middleware('permission:ventas.crear')->group(function () {
             Route::get('pos', [SaleController::class, 'pos'])->name('ventas.pos');
             Route::get('pos/productos', [SaleController::class, 'searchProducts'])->name('ventas.search_products');
+            Route::get('pos/top-vendidos', [SaleController::class, 'topSoldQuick'])->name('ventas.top_sold');
             Route::get('pos/pantalla-cliente', [SaleController::class, 'customerDisplay'])->name('ventas.customer_display');
             Route::post('ventas', [SaleController::class, 'store'])->name('ventas.store');
         });
@@ -197,6 +198,7 @@ Route::middleware(['auth', 'verified'])
 
         Route::middleware('permission:caja.ver')->group(function () {
             Route::get('caja', [CashController::class, 'index'])->name('caja.index');
+            Route::get('caja/estado-json', [CashController::class, 'statusJson'])->name('caja.status_json');
             Route::get('caja/{caja}/modal', [CashController::class, 'modal'])->name('caja.modal');
             Route::get('caja/{caja}', [CashController::class, 'show'])->name('caja.show');
         });
@@ -255,6 +257,7 @@ Route::middleware(['auth', 'verified'])
         Route::middleware('permission:cotizaciones.crear')->group(function () {
             Route::get('cotizaciones-nueva', [QuotationController::class, 'create'])->name('cotizaciones.create');
             Route::post('cotizaciones', [QuotationController::class, 'store'])->name('cotizaciones.store');
+            Route::post('cotizaciones/quick', [QuotationController::class, 'quickStore'])->name('cotizaciones.quick');
         });
 
         Route::middleware('permission:cotizaciones.convertir')->group(function () {

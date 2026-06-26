@@ -199,6 +199,88 @@ class SaleController extends Controller
     }
 
     /**
+     * Devuelve los productos mas vendidos en el rango pedido (por defecto hoy),
+     * limitado a la sucursal activa. Pensado para el panel "Vendidos hoy" del
+     * POS que ofrece acceso rapido a los items que mas se mueven en el dia.
+     */
+    public function topSoldQuick(Request $request): JsonResponse
+    {
+        $days = max(1, min(30, (int) $request->input('days', 1)));
+        $limit = max(1, min(30, (int) $request->input('limit', 12)));
+        $branchId = CurrentBranch::id();
+        $from = now()->subDays($days - 1)->startOfDay();
+
+        $rows = \App\Models\SaleItem::query()
+            ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
+            ->join('products', 'products.id', '=', 'sale_items.product_id')
+            ->where('sales.status', Sale::STATUS_COMPLETADA)
+            ->where('sales.date', '>=', $from)
+            ->when($branchId, fn ($q) => $q->where('sales.branch_id', $branchId))
+            ->where('products.active', true)
+            ->groupBy('products.id', 'products.name', 'products.sku', 'products.barcode',
+                'products.image_path', 'products.sale_price', 'products.tax_type',
+                'products.base_unit_label', 'products.container_label', 'products.container_factor',
+                'products.container_price', 'products.wholesale_price', 'products.wholesale_min_quantity',
+                'products.container_wholesale_price', 'products.contractor_price',
+                'products.container_contractor_price', 'products.sells_by_measure',
+                'products.measure_step', 'products.stock')
+            ->orderByDesc(\Illuminate\Support\Facades\DB::raw('SUM(sale_items.quantity)'))
+            ->limit($limit)
+            ->get([
+                'products.id', 'products.name', 'products.sku', 'products.barcode',
+                'products.image_path', 'products.sale_price', 'products.tax_type',
+                'products.base_unit_label', 'products.container_label', 'products.container_factor',
+                'products.container_price', 'products.wholesale_price', 'products.wholesale_min_quantity',
+                'products.container_wholesale_price', 'products.contractor_price',
+                'products.container_contractor_price', 'products.sells_by_measure',
+                'products.measure_step', 'products.stock',
+                \Illuminate\Support\Facades\DB::raw('SUM(sale_items.quantity) as sold_qty'),
+                \Illuminate\Support\Facades\DB::raw('COUNT(DISTINCT sales.id) as sold_count'),
+            ]);
+
+        // Mapeamos al mismo shape que searchProducts para que el frontend pueda
+        // hacer addItem(p) sin transformacion adicional.
+        $products = $rows->map(function ($p) use ($branchId) {
+            $model = Product::with('stocks')->find($p->id);
+            $stock = $model ? $model->stockFor($branchId) : (float) $p->stock;
+            return [
+                'id' => $p->id,
+                'sku' => $p->sku,
+                'barcode' => $p->barcode,
+                'name' => $p->name,
+                'image_url' => $p->image_path ? asset('storage/'.$p->image_path) : null,
+                'active' => true,
+                'tax_type' => $p->tax_type ?: 'iva',
+                'unit' => null,
+                'base_unit_label' => $p->base_unit_label ?: 'unidad',
+                'container_label' => $p->container_label,
+                'container_factor' => $p->container_factor ? (float) $p->container_factor : null,
+                'container_price' => $p->container_price ? (float) $p->container_price : null,
+                'wholesale_price' => $p->wholesale_price ? (float) $p->wholesale_price : null,
+                'wholesale_min_quantity' => $p->wholesale_min_quantity ? (float) $p->wholesale_min_quantity : null,
+                'container_wholesale_price' => $p->container_wholesale_price ? (float) $p->container_wholesale_price : null,
+                'contractor_price' => $p->contractor_price ? (float) $p->contractor_price : null,
+                'container_contractor_price' => $p->container_contractor_price ? (float) $p->container_contractor_price : null,
+                'sells_by_measure' => (bool) $p->sells_by_measure,
+                'measure_step' => $p->measure_step ? (float) $p->measure_step : null,
+                'sale_price' => (float) $p->sale_price,
+                'stock' => $stock,
+                'stock_formatted' => $model ? $model->formatStockMixed($stock) : (string) $stock,
+                'location' => $model ? $model->locationFor($branchId) : null,
+                'presentations' => [],
+                'sold_qty' => (float) $p->sold_qty,
+                'sold_count' => (int) $p->sold_count,
+            ];
+        });
+
+        return response()->json([
+            'days' => $days,
+            'branch_id' => $branchId,
+            'products' => $products,
+        ]);
+    }
+
+    /**
      * Vista de "pantalla del cliente": pensada para mostrarse en una segunda
      * pantalla / tablet frente al cliente mientras el cajero arma la venta.
      * Recibe el estado por BroadcastChannel (misma origen, instantaneo, sin
@@ -299,6 +381,7 @@ class SaleController extends Controller
                 'sale_price' => (float) $p->sale_price,
                 'stock' => $stock,
                 'stock_formatted' => $p->formatStockMixed($stock),
+                'location' => $p->locationFor($branchId),
                 'presentations' => $p->presentations->map(fn ($pr) => [
                     'label' => $pr->label,
                     'units_factor' => (float) $pr->units_factor,

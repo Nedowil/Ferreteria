@@ -492,6 +492,22 @@
                                           :value="old('min_stock', (float) $product->min_stock > 0 ? rtrim(rtrim(number_format($product->min_stock, 2, '.', ''),'0'),'.') : '')" />
                             <x-input-error :messages="$errors->get('min_stock')" class="mt-2" />
                         </div>
+                        @php
+                            $branchId = \App\Support\CurrentBranch::id();
+                            $branchName = \App\Support\CurrentBranch::model()?->name;
+                            $currentLocation = $product->exists && $branchId ? $product->locationFor($branchId) : null;
+                        @endphp
+                        <div class="md:col-span-2">
+                            <x-input-label for="location" :value="'Ubicación física en sucursal' . ($branchName ? ' (' . $branchName . ')' : '')" />
+                            <x-text-input id="location" name="location" type="text"
+                                          class="mt-1 block w-full"
+                                          placeholder="Ej: Pasillo 3 · Anaquel B · Columna 2"
+                                          :value="old('location', $currentLocation)" />
+                            <p class="text-xs text-slate-500 mt-1">
+                                📍 Dónde está físicamente en la sucursal actual. Aparece en el POS al buscarlo y en el inventario.
+                                Cada sucursal tiene su propia ubicación.
+                            </p>
+                        </div>
                     </div>
 
                     <div>

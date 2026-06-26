@@ -143,6 +143,15 @@ class Product extends Model
         return $this->hasMany(ProductPresentation::class)->where('active', true)->orderBy('display_order');
     }
 
+    public function locationFor(?int $branchId): ?string
+    {
+        if (! $branchId) return null;
+        $row = $this->relationLoaded('stocks')
+            ? $this->stocks->firstWhere('branch_id', $branchId)
+            : $this->stocks()->where('branch_id', $branchId)->first();
+        return $row?->location;
+    }
+
     public function stockFor(?int $branchId): float
     {
         if (! $branchId) {
