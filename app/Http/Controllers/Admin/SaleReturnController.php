@@ -101,7 +101,7 @@ class SaleReturnController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): RedirectResponse|\Illuminate\Http\JsonResponse
     {
         $data = $request->validate([
             'sale_id' => ['required', 'exists:sales,id'],
@@ -117,9 +117,23 @@ class SaleReturnController extends Controller
         try {
             $return = $this->service->create($data, $data['items'], auth()->id());
         } catch (\DomainException $e) {
+            if ($request->expectsJson()) {
+                return response()->json(['error' => $e->getMessage()], 422);
+            }
             return back()->withErrors(['return' => $e->getMessage()])->withInput();
         }
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => true,
+                'id' => $return->id,
+                'folio' => $return->folio,
+                'total' => (float) $return->total,
+                'urls' => [
+                    'show' => route('admin.devoluciones.show', $return),
+                ],
+            ]);
+        }
         return redirect()->route('admin.devoluciones.show', $return)->with('status', 'Devolucion registrada. Stock restituido.');
     }
 

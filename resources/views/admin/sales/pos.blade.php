@@ -29,6 +29,13 @@
                         title="Mostrar productos más vendidos del día">
                     🔥 Top hoy
                 </button>
+                @can('ventas.cancelar')
+                    <button type="button" @click="openReturnModal()"
+                            class="px-2 py-1 rounded bg-orange-100 text-orange-800 font-bold hover:bg-orange-200"
+                            title="Devolución rápida sin salir del POS">
+                        ↩ Devolución
+                    </button>
+                @endcan
 
                 <!-- Caja: badge + acciones rapidas -->
                 <template x-if="cashStatus.open">
@@ -65,6 +72,122 @@
                         Catálogo offline: <span x-text="offlineCatalog.length"></span> productos
                     </span>
                 </template>
+            </div>
+
+            <!-- Modal: Devolución rápida -->
+            <div x-show="showReturnModal" x-cloak x-transition.opacity
+                 class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+                 @keydown.escape.window="showReturnModal = false">
+                <div @click.outside="showReturnModal = false"
+                     class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+                    <div class="bg-gradient-to-r from-orange-500 to-red-600 px-5 py-3 text-white flex justify-between items-center">
+                        <h3 class="font-bold text-lg flex items-center gap-2">↩ Devolución rápida</h3>
+                        <button type="button" @click="showReturnModal = false"
+                                class="hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center">✕</button>
+                    </div>
+                    <div class="p-5 space-y-3 overflow-y-auto flex-1">
+                        {{-- Paso 1: buscar venta --}}
+                        <div class="flex gap-2 items-end">
+                            <div class="flex-1">
+                                <label class="text-sm font-medium">Folio de la venta</label>
+                                <input type="text" x-model="returnFolio"
+                                       x-ref="returnFolioInput"
+                                       @keydown.enter.prevent="loadSaleForReturn()"
+                                       placeholder="Ej: V-000123"
+                                       class="mt-1 block w-full border-slate-300 rounded-md focus:border-orange-500 focus:ring-orange-500" />
+                            </div>
+                            <button type="button" @click="loadSaleForReturn()"
+                                    :disabled="!returnFolio || returnLoading"
+                                    class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md font-bold disabled:opacity-50">
+                                <span x-show="!returnLoading">Buscar</span>
+                                <span x-show="returnLoading">…</span>
+                            </button>
+                        </div>
+                        <div x-show="returnError" x-cloak class="p-2 bg-red-100 text-red-800 rounded text-sm" x-text="returnError"></div>
+
+                        <template x-if="returnSale">
+                            <div class="border rounded p-3 bg-slate-50 space-y-3">
+                                <div class="text-sm">
+                                    <div><strong>Folio:</strong> <span x-text="returnSale.folio"></span></div>
+                                    <div><strong>Fecha:</strong> <span x-text="returnSale.date"></span></div>
+                                    <div><strong>Cliente:</strong> <span x-text="returnSale.customer"></span> (<span x-text="returnSale.tax_id"></span>)</div>
+                                    <div><strong>Total venta:</strong> Q<span x-text="returnSale.total.toFixed(2)"></span></div>
+                                </div>
+
+                                <div class="border-t pt-2">
+                                    <div class="text-xs font-semibold text-slate-600 mb-1">Items a devolver:</div>
+                                    <table class="min-w-full text-xs">
+                                        <thead>
+                                            <tr class="bg-white">
+                                                <th class="px-2 py-1 text-left">Producto</th>
+                                                <th class="px-2 py-1 text-right">Comprado</th>
+                                                <th class="px-2 py-1 text-right">Disponible</th>
+                                                <th class="px-2 py-1 text-right">Devolver</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <template x-for="(it, idx) in returnSale.items" :key="it.sale_item_id">
+                                                <tr class="border-t">
+                                                    <td class="px-2 py-1">
+                                                        <div class="font-semibold" x-text="it.name"></div>
+                                                        <div class="text-slate-500 font-mono" x-text="it.sku"></div>
+                                                    </td>
+                                                    <td class="px-2 py-1 text-right" x-text="it.quantity_bought"></td>
+                                                    <td class="px-2 py-1 text-right text-emerald-700 font-bold" x-text="it.quantity_available"></td>
+                                                    <td class="px-2 py-1 text-right">
+                                                        <input type="number" min="0" step="0.01"
+                                                               :max="it.quantity_available"
+                                                               x-model.number="returnItemsQty[idx]"
+                                                               :disabled="it.quantity_available <= 0"
+                                                               class="w-20 border-slate-300 rounded text-right text-xs" />
+                                                    </td>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="text-xs font-medium">Motivo</label>
+                                        <select x-model="returnReason"
+                                                class="mt-1 block w-full border-slate-300 rounded-md text-sm">
+                                            <option value="equivocacion">Equivocación</option>
+                                            <option value="defectuoso">Defectuoso</option>
+                                            <option value="no_satisfecho">Cliente no satisfecho</option>
+                                            <option value="otro">Otro</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="text-xs font-medium">Reintegrar como</label>
+                                        <select x-model="returnRefund"
+                                                class="mt-1 block w-full border-slate-300 rounded-md text-sm">
+                                            <option value="efectivo">Efectivo</option>
+                                            <option value="tarjeta">Tarjeta</option>
+                                            <option value="transferencia">Transferencia</option>
+                                            <option value="credito_nota">Nota de crédito</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium">Notas (opcional)</label>
+                                    <textarea x-model="returnNotes" rows="2" maxlength="500"
+                                              class="mt-1 block w-full border-slate-300 rounded-md text-sm"></textarea>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                    <div class="bg-slate-50 px-5 py-3 flex justify-end gap-2 border-t">
+                        <button type="button" @click="showReturnModal = false"
+                                class="px-4 py-2 bg-slate-200 text-slate-700 rounded text-sm font-medium">Cancelar</button>
+                        <button type="button" @click="submitReturn()"
+                                :disabled="!returnSale || returnSubmitting"
+                                class="px-5 py-2 bg-red-600 text-white rounded text-sm font-bold disabled:opacity-50">
+                            <span x-show="!returnSubmitting">Registrar devolución</span>
+                            <span x-show="returnSubmitting">Procesando…</span>
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <!-- Modal: Productos sustitutos -->
@@ -658,6 +781,26 @@
                             </div>
                         </template>
 
+                        <div class="flex items-center justify-between mb-1">
+                            <div class="text-xs text-slate-500">
+                                <span x-text="items.length"></span> producto(s) en carrito
+                            </div>
+                            <div class="flex gap-1">
+                                <button type="button" @click="undoLast()"
+                                        :disabled="cartHistory.length === 0"
+                                        class="px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                                        title="Deshacer último cambio (Ctrl+Z)">
+                                    ↺ Deshacer
+                                </button>
+                                <button type="button" @click="clearCart()"
+                                        :disabled="items.length === 0"
+                                        class="px-2 py-1 text-xs bg-red-100 hover:bg-red-200 text-red-700 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                                        title="Vaciar carrito">
+                                    🗑 Vaciar
+                                </button>
+                            </div>
+                        </div>
+
                         <div class="flex-1 max-h-80 overflow-y-auto border rounded">
                             <table class="min-w-full text-sm">
                                 <thead class="bg-gray-50 sticky top-0">
@@ -1134,6 +1277,9 @@
                         <div class="flex justify-between"><span>Auto-completar pago exacto</span><kbd class="px-2 py-1 bg-slate-100 rounded font-mono text-xs">F8</kbd></div>
                         <div class="flex justify-between"><span>Método: Efectivo</span><kbd class="px-2 py-1 bg-slate-100 rounded font-mono text-xs">F9</kbd></div>
                         <div class="flex justify-between"><span>Método: Tarjeta</span><kbd class="px-2 py-1 bg-slate-100 rounded font-mono text-xs">F10</kbd></div>
+
+                        <div class="text-xs font-bold uppercase text-slate-500 mt-3 mb-1">Editar carrito</div>
+                        <div class="flex justify-between"><span>Deshacer último cambio del carrito</span><kbd class="px-2 py-1 bg-slate-100 rounded font-mono text-xs">Ctrl + Z</kbd></div>
 
                         <div class="text-xs font-bold uppercase text-slate-500 mt-3 mb-1">Ayuda</div>
                         <div class="flex justify-between"><span>Mostrar/ocultar esta ayuda</span><kbd class="px-2 py-1 bg-slate-100 rounded font-mono text-xs">?</kbd></div>
@@ -1792,6 +1938,13 @@
                         if (inInput) { active.blur(); return; }
                     }
 
+                    // Ctrl+Z: deshacer ultimo cambio en el carrito (funciona aun en inputs)
+                    if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) {
+                        e.preventDefault();
+                        this.undoLast();
+                        return;
+                    }
+
                     // Las F-keys funcionan aunque haya un input enfocado.
                     // Otras teclas, no: dejarlas pasar para escribir normalmente.
                     if (inInput && !isFKey) return;
@@ -2296,6 +2449,8 @@
                     // si está definido, si no usa 1 (libre).
                     const baseStep = (p.sells_by_measure && p.measure_step) ? p.measure_step : 1;
 
+                    this.snapshotCart();
+
                     // Misma partida = mismo producto + misma etiqueta de presentacion
                     const existing = this.items.find(i => i.product.id === p.id && i.unit_label === unitLabel);
                     if (existing) {
@@ -2319,7 +2474,140 @@
                     this.recalc();
                 },
                 removeItem(idx) {
+                    this.snapshotCart();
                     this.items.splice(idx, 1);
+                    this.recalc();
+                },
+
+                // ====== Devolucion rapida ======
+                showReturnModal: false,
+                returnFolio: '',
+                returnSale: null,
+                returnItemsQty: [],
+                returnReason: 'equivocacion',
+                returnRefund: 'efectivo',
+                returnNotes: '',
+                returnError: '',
+                returnLoading: false,
+                returnSubmitting: false,
+                openReturnModal() {
+                    this.returnFolio = '';
+                    this.returnSale = null;
+                    this.returnItemsQty = [];
+                    this.returnError = '';
+                    this.returnReason = 'equivocacion';
+                    this.returnRefund = 'efectivo';
+                    this.returnNotes = '';
+                    this.showReturnModal = true;
+                    setTimeout(() => this.$refs.returnFolioInput?.focus(), 100);
+                },
+                async loadSaleForReturn() {
+                    const folio = (this.returnFolio || '').trim();
+                    if (!folio) return;
+                    this.returnLoading = true;
+                    this.returnError = '';
+                    this.returnSale = null;
+                    try {
+                        const url = new URL('{{ route('admin.devoluciones.search_sale') }}', window.location.origin);
+                        url.searchParams.set('folio', folio);
+                        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                        const data = await res.json();
+                        if (!res.ok) {
+                            this.returnError = data.error || 'No se encontró la venta.';
+                            return;
+                        }
+                        this.returnSale = data;
+                        // Por defecto sugerimos devolver TODO lo que queda disponible
+                        this.returnItemsQty = data.items.map(it => it.quantity_available);
+                    } catch (e) {
+                        this.returnError = 'Error de red: ' + e.message;
+                    } finally {
+                        this.returnLoading = false;
+                    }
+                },
+                async submitReturn() {
+                    if (!this.returnSale) return;
+                    const items = this.returnSale.items
+                        .map((it, idx) => ({
+                            sale_item_id: it.sale_item_id,
+                            quantity: +this.returnItemsQty[idx] || 0,
+                        }))
+                        .filter(i => i.quantity > 0);
+                    if (items.length === 0) {
+                        this.returnError = 'Indicá la cantidad a devolver de al menos un item.';
+                        return;
+                    }
+                    this.returnSubmitting = true;
+                    this.returnError = '';
+                    try {
+                        const res = await fetch('{{ route('admin.devoluciones.store') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            },
+                            body: JSON.stringify({
+                                sale_id: this.returnSale.id,
+                                reason_type: this.returnReason,
+                                refund_method: this.returnRefund,
+                                notes: this.returnNotes || null,
+                                items,
+                            }),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) {
+                            this.returnError = data.error || 'Error al registrar la devolución';
+                            return;
+                        }
+                        this.shortcutToast('↩ Devolución ' + data.folio + ' · Q' + data.total.toFixed(2));
+                        this.showReturnModal = false;
+                        // Refresca caja (la devolucion impacta el efectivo)
+                        this.refreshCashStatus();
+                    } catch (e) {
+                        this.returnError = 'Error de red: ' + e.message;
+                    } finally {
+                        this.returnSubmitting = false;
+                    }
+                },
+
+                // ====== Deshacer ultimo cambio (undo stack) ======
+                cartHistory: [],
+                MAX_HISTORY: 20,
+                snapshotCart() {
+                    // Snapshot profundo del estado relevante del carrito antes de mutarlo.
+                    // Lo usamos para Ctrl+Z / boton Deshacer.
+                    try {
+                        this.cartHistory.push(JSON.stringify({
+                            items: this.items,
+                            discount: this.discount,
+                        }));
+                        if (this.cartHistory.length > this.MAX_HISTORY) {
+                            this.cartHistory.shift();
+                        }
+                    } catch (e) { /* circular structure unlikely, ignore */ }
+                },
+                undoLast() {
+                    if (this.cartHistory.length === 0) {
+                        this.shortcutToast('Nada que deshacer');
+                        return;
+                    }
+                    try {
+                        const snap = JSON.parse(this.cartHistory.pop());
+                        this.items = snap.items || [];
+                        this.discount = snap.discount || '';
+                        this.recalc();
+                        this.shortcutToast('↺ Cambio deshecho');
+                    } catch (e) { /* ignore */ }
+                },
+                clearCart() {
+                    if (this.items.length === 0) return;
+                    if (!confirm('¿Vaciar el carrito? Podés deshacer con Ctrl+Z después.')) return;
+                    this.snapshotCart();
+                    this.items = [];
+                    this.discount = '';
+                    this.paid_amount = '';
                     this.recalc();
                 },
 
@@ -2642,6 +2930,7 @@
                 addQty(idx, delta) {
                     const it = this.items[idx];
                     if (!it) return;
+                    this.snapshotCart();
                     const current = this.parseAmount(it.quantity) || 0;
                     let next = +(current + delta).toFixed(4);
                     if (next < 0) next = 0;
@@ -2653,6 +2942,7 @@
                 setQty(idx, value) {
                     const it = this.items[idx];
                     if (!it) return;
+                    this.snapshotCart();
                     let next = +value;
                     if (isNaN(next) || next < 0) next = 0;
                     it.quantity = String(next);
@@ -2682,6 +2972,7 @@
                 applyItemDiscount() {
                     const idx = this.discountItemIdx;
                     if (idx === null || !this.items[idx]) return;
+                    this.snapshotCart();
                     const item = this.items[idx];
                     const total = this.parseAmount(item.quantity) * this.parseAmount(item.unit_price);
                     let dto = this.parseAmount(this.discountModalValue);
@@ -2697,6 +2988,7 @@
                 clearItemDiscount() {
                     const idx = this.discountItemIdx;
                     if (idx !== null && this.items[idx]) {
+                        this.snapshotCart();
                         this.items[idx].discount = '0';
                     }
                     this.showItemDiscountModal = false;

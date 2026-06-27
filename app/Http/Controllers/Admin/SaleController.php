@@ -352,7 +352,16 @@ class SaleController extends Controller
         }
 
         $limit = $cacheMode ? 500 : 15;
-        $products = $query->orderBy('name')->limit($limit)->get()->map(function ($p) use ($branchId, $term) {
+        $results = $query->orderBy('name')->limit($limit)->get();
+
+        // Fallback fuzzy: si no hubo resultados y el termino tiene al menos 4
+        // caracteres no numericos, buscamos por similitud aproximada para
+        // tolerar typos del cajero ("torllino" -> "tornillo").
+        if (! $cacheMode && $results->isEmpty() && mb_strlen($term) >= 4 && ! ctype_digit($term)) {
+            $results = $this->fuzzySearch($term, $branchId);
+        }
+
+        $products = $results->map(function ($p) use ($branchId, $term) {
             $stock = $p->stockFor($branchId);
 
             return [
@@ -403,6 +412,98 @@ class SaleController extends Controller
         });
 
         return response()->json($products);
+    }
+
+    /**
+     * Busqueda aproximada (typo-tolerant): normaliza el termino y la lista
+     * de productos activos, calcula la distancia de Levenshtein y devuelve
+     * los 15 mas cercanos cuya similitud supera el umbral. Tolera errores
+     * comunes como "torllino" -> "tornillo", "destornilador" -> "destornillador",
+     * acentos, mayusculas/minusculas, doble letra.
+     */
+    private function fuzzySearch(string $term, ?int $branchId): \Illuminate\Database\Eloquent\Collection
+    {
+        $normTerm = $this->normalizeForFuzzy($term);
+        if ($normTerm === '') return new \Illuminate\Database\Eloquent\Collection();
+
+        // Tomamos un universo razonable: productos activos cuyo nombre comparte
+        // al menos las primeras 2 letras del termino o algun token del termino.
+        // Mantiene la query barata sin escanear el catalogo completo.
+        $tokens = array_filter(preg_split('/\s+/', $normTerm));
+        if (empty($tokens)) return new \Illuminate\Database\Eloquent\Collection();
+
+        $first = $tokens[0];
+        $prefix = mb_substr($first, 0, 2);
+
+        $candidates = Product::with([
+                'unit', 'presentations',
+                'stocks' => fn ($q) => $branchId ? $q->where('branch_id', $branchId) : $q,
+                'substitutes' => fn ($q) => $q->where('active', true)
+                    ->with(['stocks' => fn ($q2) => $branchId ? $q2->where('branch_id', $branchId) : $q2]),
+            ])
+            ->where('active', true)
+            ->where(function ($q) use ($prefix, $tokens) {
+                $q->where('name', 'like', "{$prefix}%")
+                  ->orWhere('name', 'like', "% {$prefix}%");
+                foreach ($tokens as $t) {
+                    if (mb_strlen($t) >= 3) {
+                        $q->orWhere('name', 'like', "%{$t}%");
+                    }
+                }
+            })
+            ->limit(200)
+            ->get();
+
+        $maxDist = max(2, (int) floor(mb_strlen($normTerm) / 3));
+
+        $scored = $candidates->map(function ($p) use ($normTerm, $maxDist) {
+            $normName = $this->normalizeForFuzzy((string) $p->name);
+            if ($normName === '') return [$p, PHP_INT_MAX, 0];
+
+            // Levenshtein por palabra: el termino puede ser una palabra del nombre.
+            $best = PHP_INT_MAX;
+            foreach (preg_split('/\s+/', $normName) as $word) {
+                if ($word === '') continue;
+                $d = levenshtein(mb_substr($normTerm, 0, 60), mb_substr($word, 0, 60));
+                if ($d < $best) $best = $d;
+            }
+            // Tambien comparamos contra el nombre completo (multipalabra)
+            $full = levenshtein(mb_substr($normTerm, 0, 60), mb_substr($normName, 0, 60));
+            $best = min($best, $full);
+
+            similar_text($normTerm, $normName, $pct);
+            return [$p, $best, $pct];
+        });
+
+        return $scored
+            ->filter(fn ($row) => $row[1] <= $maxDist || $row[2] >= 60)
+            ->sortBy([fn ($a, $b) => $a[1] <=> $b[1], fn ($a, $b) => $b[2] <=> $a[2]])
+            ->take(15)
+            ->map(fn ($row) => $row[0])
+            ->values()
+            ->pipe(fn ($items) => new \Illuminate\Database\Eloquent\Collection($items->all()));
+    }
+
+    /**
+     * Normaliza un texto para comparacion fuzzy: minusculas, quita acentos,
+     * dobla letras comunes confundidas (rr/r, ll/l, ñ/n), elimina caracteres
+     * no alfabeticos. Devuelve string apto para Levenshtein/similar_text.
+     */
+    private function normalizeForFuzzy(string $s): string
+    {
+        $s = mb_strtolower(trim($s));
+        // Quitar acentos
+        $s = strtr($s, [
+            'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ü' => 'u',
+            'ñ' => 'n',
+        ]);
+        // Colapsar dobles letras comunes que se equivocan
+        $s = preg_replace('/(.)\1+/u', '$1', $s);
+        // Eliminar todo lo que no sea letra o espacio
+        $s = preg_replace('/[^a-z0-9 ]+/', ' ', $s);
+        // Colapsar espacios
+        $s = preg_replace('/\s+/', ' ', $s);
+        return trim($s);
     }
 
     public function store(Request $request): RedirectResponse|JsonResponse
