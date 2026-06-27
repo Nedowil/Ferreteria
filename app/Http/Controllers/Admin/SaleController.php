@@ -317,6 +317,8 @@ class SaleController extends Controller
                 'unit',
                 'presentations',
                 'stocks' => fn ($q) => $branchId ? $q->where('branch_id', $branchId) : $q,
+                'substitutes' => fn ($q) => $q->where('active', true)
+                    ->with(['stocks' => fn ($q2) => $branchId ? $q2->where('branch_id', $branchId) : $q2]),
             ]);
 
         // Si el termino existe y coincide EXACTO con un barcode o SKU, traemos
@@ -386,6 +388,15 @@ class SaleController extends Controller
                     'label' => $pr->label,
                     'units_factor' => (float) $pr->units_factor,
                     'price' => (float) $pr->price,
+                ])->values(),
+                'substitutes' => $p->substitutes->map(fn ($s) => [
+                    'id' => $s->id,
+                    'sku' => $s->sku,
+                    'name' => $s->name,
+                    'sale_price' => (float) $s->sale_price,
+                    'unit' => $s->base_unit_label ?: 'unidad',
+                    'stock' => $s->stockFor($branchId),
+                    'note' => $s->pivot->note,
                 ])->values(),
                 'exact_barcode_match' => $term !== '' && $p->barcode === $term,
             ];

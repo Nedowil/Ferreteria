@@ -143,6 +143,18 @@ class Product extends Model
         return $this->hasMany(ProductPresentation::class)->where('active', true)->orderBy('display_order');
     }
 
+    /**
+     * Productos sustitutos sugeridos cuando este producto no tiene stock
+     * o el cliente busca alternativas. Ordenados por prioridad.
+     */
+    public function substitutes(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(self::class, 'product_substitutes', 'product_id', 'substitute_id')
+            ->withPivot('priority', 'note')
+            ->withTimestamps()
+            ->orderBy('product_substitutes.priority');
+    }
+
     public function locationFor(?int $branchId): ?string
     {
         if (! $branchId) return null;

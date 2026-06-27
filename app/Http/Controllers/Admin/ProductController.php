@@ -157,10 +157,13 @@ class ProductController extends Controller
         unset($data['presentations']);
         $location = $data['location'] ?? null;
         unset($data['location']);
+        $substitutes = $data['substitutes'] ?? [];
+        unset($data['substitutes']);
         $data['created_by_user_id'] = auth()->id();
 
         $product = Product::create($data);
         $this->syncPresentations($product, $presentations);
+        $this->syncSubstitutes($product, $substitutes);
 
         // Crea fila de stock en la sucursal activa (o la primera disponible) si se indico stock inicial.
         // Si no hay sucursales aun, no pasa nada: products.stock guarda el global y stockFor()
@@ -185,7 +188,7 @@ class ProductController extends Controller
 
     public function edit(Product $producto): View
     {
-        $producto->load('presentations');
+        $producto->load('presentations', 'substitutes:id,sku,name,sale_price,base_unit_label');
         return view('admin.products.form', [
             'product' => $producto,
             'categories' => Category::where('active', true)->orderBy('name')->get(),
@@ -210,6 +213,8 @@ class ProductController extends Controller
         unset($data['presentations']);
         $location = array_key_exists('location', $data) ? $data['location'] : null;
         unset($data['location']);
+        $substitutes = $data['substitutes'] ?? [];
+        unset($data['substitutes']);
 
         // Conserva el SKU/barcode existente si lo borraron, o regenera si esta vacio
         $data['sku'] = $this->ensureSku($data['sku'] ?? null, $data['name'], $producto->id);
@@ -217,6 +222,7 @@ class ProductController extends Controller
 
         $producto->update($data);
         $this->syncPresentations($producto, $presentations);
+        $this->syncSubstitutes($producto, $substitutes);
 
         // Persiste la ubicacion en la sucursal actual
         $branchId = \App\Support\CurrentBranch::id();
@@ -291,6 +297,36 @@ class ProductController extends Controller
             'stock' => (float) $product->stock,
             'exact_barcode_match' => false,
         ], 201);
+    }
+
+    /**
+     * Buscador ligero para selectores autocomplete (sustitutos, picker
+     * dentro del form de producto). Devuelve maximo 12 coincidencias.
+     */
+    public function lookup(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $term = trim((string) $request->input('q'));
+        $excludeId = (int) $request->input('exclude_id', 0);
+
+        $rows = Product::query()
+            ->where('active', true)
+            ->when($excludeId, fn ($q) => $q->where('id', '!=', $excludeId))
+            ->when($term !== '', fn ($q) => $q->where(function ($q) use ($term) {
+                $q->where('name', 'like', "%{$term}%")
+                  ->orWhere('sku', 'like', "%{$term}%")
+                  ->orWhere('barcode', 'like', "%{$term}%");
+            }))
+            ->orderBy('name')
+            ->limit(12)
+            ->get(['id', 'sku', 'name', 'sale_price', 'base_unit_label']);
+
+        return response()->json($rows->map(fn ($p) => [
+            'id' => $p->id,
+            'sku' => $p->sku,
+            'name' => $p->name,
+            'sale_price' => (float) $p->sale_price,
+            'unit' => $p->base_unit_label ?: 'unidad',
+        ]));
     }
 
     public function label(Request $request, Product $producto): View
@@ -460,6 +496,9 @@ class ProductController extends Controller
             'measure_step' => ['nullable', 'numeric', 'gt:0'],
             'public_visible' => ['nullable', 'boolean'],
             'location' => ['nullable', 'string', 'max:60'],
+            'substitutes' => ['nullable', 'array'],
+            'substitutes.*.id' => ['required', 'integer', 'exists:products,id'],
+            'substitutes.*.note' => ['nullable', 'string', 'max:120'],
             'image' => ['nullable', 'image', 'max:2048'],
             'presentations' => ['nullable', 'array'],
             'presentations.*.label' => ['nullable', 'string', 'max:30'],
@@ -534,6 +573,26 @@ class ProductController extends Controller
                 'active' => true,
             ]);
         }
+    }
+
+    /**
+     * Sincroniza la lista de productos sustitutos. Acepta filas con
+     * { id, note } donde id es el producto sustituto. El orden de las filas
+     * define la prioridad.
+     */
+    private function syncSubstitutes(\App\Models\Product $product, array $rows): void
+    {
+        $sync = [];
+        $priority = 1;
+        foreach ($rows as $row) {
+            $id = (int) ($row['id'] ?? 0);
+            if (! $id || $id === $product->id) continue;
+            $sync[$id] = [
+                'priority' => $priority++,
+                'note' => isset($row['note']) ? mb_substr((string) $row['note'], 0, 120) : null,
+            ];
+        }
+        $product->substitutes()->sync($sync);
     }
 
     private function uploadImage(Request $request): ?string

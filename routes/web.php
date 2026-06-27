@@ -59,6 +59,7 @@ Route::middleware(['auth', 'verified'])
 
         Route::middleware('permission:productos.ver')->group(function () {
             Route::get('productos', [ProductController::class, 'index'])->name('productos.index');
+            Route::get('productos/lookup', [ProductController::class, 'lookup'])->name('productos.lookup');
             Route::get('productos/exportar', [ProductController::class, 'export'])->name('productos.export');
             Route::get('productos/etiquetas-lote', [ProductController::class, 'labelBatch'])->name('productos.label_batch');
             Route::post('productos/etiquetas-lote-zpl', [ProductController::class, 'labelBatchZpl'])->name('productos.label_batch_zpl');

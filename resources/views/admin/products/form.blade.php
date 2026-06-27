@@ -520,6 +520,83 @@
                         <x-input-error :messages="$errors->get('image')" class="mt-2" />
                     </div>
 
+                    {{-- Productos sustitutos --}}
+                    @php
+                        $existingSubs = $product->exists ? $product->substitutes->map(fn ($s) => [
+                            'id' => $s->id,
+                            'sku' => $s->sku,
+                            'name' => $s->name,
+                            'sale_price' => (float) $s->sale_price,
+                            'unit' => $s->base_unit_label ?: 'unidad',
+                            'note' => $s->pivot->note,
+                        ])->values()->toArray() : [];
+                    @endphp
+                    <div class="border-l-4 border-violet-500 bg-violet-50 p-4 rounded space-y-3"
+                         x-data="substitutesPicker(@js($existingSubs), {{ $product->id ?? 0 }})">
+                        <h3 class="font-semibold text-slate-800 flex items-center gap-2">
+                            🔄 Productos sustitutos / alternativos (opcional)
+                        </h3>
+                        <p class="text-xs text-slate-600">
+                            Cuando este producto no tiene stock o no se encuentra, el POS sugiere estas
+                            alternativas al cajero. Ejemplo: <em>tornillo 5mm</em> → sugiere <em>4mm</em> y <em>6mm</em>.
+                            El orden de las filas define la prioridad.
+                        </p>
+
+                        {{-- Buscador --}}
+                        <div class="relative">
+                            <input type="text" x-model="query" @input.debounce.250ms="search()"
+                                   placeholder="Buscar producto para agregar como sustituto…"
+                                   class="block w-full border-slate-300 rounded text-sm" />
+                            <div x-show="results.length > 0" x-cloak
+                                 class="absolute top-full left-0 right-0 bg-white border border-slate-200 rounded shadow-lg mt-1 max-h-60 overflow-y-auto z-10">
+                                <template x-for="r in results" :key="r.id">
+                                    <button type="button" @click="add(r)"
+                                            class="w-full text-left px-3 py-2 hover:bg-violet-50 border-b last:border-b-0 text-sm flex justify-between gap-2">
+                                        <div>
+                                            <div class="font-medium" x-text="r.name"></div>
+                                            <div class="text-xs text-slate-500 font-mono" x-text="r.sku"></div>
+                                        </div>
+                                        <div class="text-xs text-slate-600 whitespace-nowrap">
+                                            Q<span x-text="r.sale_price.toFixed(2)"></span>/<span x-text="r.unit"></span>
+                                        </div>
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+
+                        {{-- Lista actual de sustitutos --}}
+                        <div x-show="items.length === 0" class="text-center text-sm text-slate-500 py-3">
+                            Sin sustitutos definidos.
+                        </div>
+                        <div class="space-y-2">
+                            <template x-for="(it, idx) in items" :key="it.id">
+                                <div class="bg-white border border-violet-200 rounded p-2 flex items-center gap-2">
+                                    <div class="flex flex-col items-center text-xs text-violet-700 font-bold w-6">
+                                        <button type="button" @click="moveUp(idx)" :disabled="idx === 0"
+                                                class="hover:bg-violet-100 px-1 rounded disabled:opacity-30">▲</button>
+                                        <span x-text="idx + 1"></span>
+                                        <button type="button" @click="moveDown(idx)" :disabled="idx === items.length - 1"
+                                                class="hover:bg-violet-100 px-1 rounded disabled:opacity-30">▼</button>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="font-medium text-sm truncate" x-text="it.name"></div>
+                                        <div class="text-xs text-slate-500 font-mono">
+                                            <span x-text="it.sku"></span> ·
+                                            Q<span x-text="it.sale_price.toFixed(2)"></span>/<span x-text="it.unit"></span>
+                                        </div>
+                                    </div>
+                                    <input type="text" x-model="it.note" maxlength="120"
+                                           placeholder="Nota (ej: más grueso, otro color)"
+                                           class="w-56 border-slate-300 rounded text-xs" />
+                                    <button type="button" @click="remove(idx)"
+                                            class="text-red-600 hover:bg-red-50 rounded px-2 py-1 text-sm">✕</button>
+                                    <input type="hidden" :name="`substitutes[${idx}][id]`" :value="it.id" />
+                                    <input type="hidden" :name="`substitutes[${idx}][note]`" :value="it.note || ''" />
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
                     <div class="flex flex-wrap items-center gap-6">
                         <label class="inline-flex items-center gap-2">
                             <input type="checkbox" name="active" value="1"
@@ -543,4 +620,45 @@
             </div>
         </div>
     </div>
+
+    <script>
+        function substitutesPicker(initial, currentId) {
+            return {
+                items: initial || [],
+                query: '',
+                results: [],
+                currentId: currentId,
+                async search() {
+                    const term = this.query.trim();
+                    if (term.length < 2) { this.results = []; return; }
+                    try {
+                        const url = new URL('{{ route('admin.productos.lookup') }}', window.location.origin);
+                        url.searchParams.set('q', term);
+                        if (this.currentId) url.searchParams.set('exclude_id', this.currentId);
+                        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                        if (!res.ok) return;
+                        const data = await res.json();
+                        const existingIds = new Set(this.items.map(i => i.id));
+                        this.results = data.filter(r => !existingIds.has(r.id));
+                    } catch (e) { this.results = []; }
+                },
+                add(p) {
+                    this.items.push({ ...p, note: '' });
+                    this.query = '';
+                    this.results = [];
+                },
+                remove(idx) { this.items.splice(idx, 1); },
+                moveUp(idx) {
+                    if (idx === 0) return;
+                    const item = this.items.splice(idx, 1)[0];
+                    this.items.splice(idx - 1, 0, item);
+                },
+                moveDown(idx) {
+                    if (idx >= this.items.length - 1) return;
+                    const item = this.items.splice(idx, 1)[0];
+                    this.items.splice(idx + 1, 0, item);
+                },
+            };
+        }
+    </script>
 </x-app-layout>

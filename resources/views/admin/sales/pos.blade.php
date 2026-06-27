@@ -67,6 +67,62 @@
                 </template>
             </div>
 
+            <!-- Modal: Productos sustitutos -->
+            <div x-show="showSubstitutesModal" x-cloak x-transition.opacity
+                 class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+                 @keydown.escape.window="showSubstitutesModal = false">
+                <div @click.outside="showSubstitutesModal = false"
+                     class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden">
+                    <div class="bg-gradient-to-r from-violet-500 to-purple-600 px-5 py-3 text-white flex justify-between items-center">
+                        <h3 class="font-bold text-lg">🔄 Sustitutos sugeridos</h3>
+                        <button type="button" @click="showSubstitutesModal = false"
+                                class="hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center">✕</button>
+                    </div>
+                    <div class="p-4 overflow-y-auto flex-1">
+                        <template x-if="substitutesFor">
+                            <div class="mb-3 p-3 bg-amber-50 border border-amber-200 rounded text-sm">
+                                <div class="text-amber-900">
+                                    <strong x-text="substitutesFor.name"></strong>
+                                    <span class="font-mono text-xs ml-2 text-amber-700" x-text="substitutesFor.sku"></span>
+                                </div>
+                                <div class="text-xs text-amber-700 mt-0.5">
+                                    ⚠ Sin stock disponible — estas son las alternativas configuradas
+                                </div>
+                            </div>
+                        </template>
+                        <div class="space-y-2">
+                            <template x-for="(s, i) in (substitutesFor?.substitutes || [])" :key="s.id">
+                                <button type="button" @click="pickSubstitute(s)" :disabled="s.stock <= 0"
+                                        class="w-full text-left border border-slate-200 rounded-lg p-3 hover:bg-violet-50 hover:border-violet-300 transition flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <div class="text-violet-600 font-bold text-lg" x-text="(i + 1) + '°'"></div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="font-semibold text-sm" x-text="s.name"></div>
+                                        <div class="text-xs text-slate-500 font-mono" x-text="s.sku"></div>
+                                        <template x-if="s.note">
+                                            <div class="text-xs text-violet-700 italic mt-0.5">💡 <span x-text="s.note"></span></div>
+                                        </template>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="font-bold text-orange-600">
+                                            Q<span x-text="s.sale_price.toFixed(2)"></span>
+                                            <span class="text-xs font-normal text-slate-500">/ <span x-text="s.unit"></span></span>
+                                        </div>
+                                        <div class="text-xs" :class="s.stock <= 0 ? 'text-red-600 font-bold' : 'text-emerald-700'"
+                                             x-text="s.stock <= 0 ? 'Sin stock' : 'Stock: ' + s.stock"></div>
+                                    </div>
+                                </button>
+                            </template>
+                            <template x-if="!substitutesFor || !substitutesFor.substitutes || substitutesFor.substitutes.length === 0">
+                                <div class="text-center text-slate-500 py-8">
+                                    <div class="text-4xl mb-2">🤷</div>
+                                    Sin sustitutos configurados para este producto.
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Modal: Abrir caja -->
             <div x-show="showCashOpenModal" x-cloak x-transition.opacity
                  class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
@@ -408,6 +464,12 @@
                                             </template>
                                             <template x-if="p.location">
                                                 <div class="text-xs text-blue-700 font-semibold">📍 <span x-text="p.location"></span></div>
+                                            </template>
+                                            <template x-if="p.substitutes && p.substitutes.length > 0 && p.stock <= 0">
+                                                <button type="button" @click.stop="openSubstitutes(p)"
+                                                        class="mt-1 text-xs px-2 py-0.5 rounded bg-violet-100 hover:bg-violet-200 text-violet-800 font-bold">
+                                                    🔄 Ver <span x-text="p.substitutes.length"></span> sustituto(s)
+                                                </button>
                                             </template>
                                         </td>
                                         <td class="px-2 py-1 text-right">Q<span x-text="p.sale_price.toFixed(2)"></span>/<span x-text="p.base_unit_label"></span></td>
@@ -1444,6 +1506,34 @@
                                                 (se aplica automáticamente).
                                             </div>
                                         </template>
+
+                                        <template x-if="detailProduct.substitutes && detailProduct.substitutes.length > 0">
+                                            <div class="mt-4">
+                                                <div class="text-sm font-semibold text-violet-800 mb-2">
+                                                    🔄 Sustitutos / alternativos
+                                                </div>
+                                                <div class="space-y-1">
+                                                    <template x-for="s in detailProduct.substitutes" :key="s.id">
+                                                        <button type="button" @click="pickSubstitute(s); closeProductDetail();"
+                                                                :disabled="s.stock <= 0"
+                                                                class="w-full text-left text-xs p-2 rounded border border-violet-200 hover:bg-violet-50 disabled:opacity-50 flex justify-between items-center gap-2">
+                                                            <div class="min-w-0">
+                                                                <div class="font-semibold truncate" x-text="s.name"></div>
+                                                                <div class="text-slate-500 font-mono" x-text="s.sku"></div>
+                                                                <template x-if="s.note">
+                                                                    <div class="text-violet-700 italic">💡 <span x-text="s.note"></span></div>
+                                                                </template>
+                                                            </div>
+                                                            <div class="text-right whitespace-nowrap">
+                                                                <div class="font-bold text-orange-600">Q<span x-text="s.sale_price.toFixed(2)"></span></div>
+                                                                <div :class="s.stock <= 0 ? 'text-red-600 font-bold' : 'text-emerald-700'"
+                                                                     x-text="s.stock <= 0 ? 'Sin stock' : 'Stock: ' + s.stock"></div>
+                                                            </div>
+                                                        </button>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </template>
                                     </div>
                                 </template>
                             </div>
@@ -2231,6 +2321,34 @@
                 removeItem(idx) {
                     this.items.splice(idx, 1);
                     this.recalc();
+                },
+
+                // ====== Sustitutos / alternativos ======
+                showSubstitutesModal: false,
+                substitutesFor: null,
+                openSubstitutes(product) {
+                    if (!product.substitutes || product.substitutes.length === 0) return;
+                    this.substitutesFor = product;
+                    this.showSubstitutesModal = true;
+                },
+                async pickSubstitute(s) {
+                    // El payload de sustituto es minimo (id, sku, name, price, stock).
+                    // Pedimos al backend la version completa para poder usar addItem()
+                    // con todo el shape (modos de precio, container, etc.).
+                    try {
+                        const url = new URL('{{ route('admin.ventas.search_products') }}', window.location.origin);
+                        url.searchParams.set('q', s.sku);
+                        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                        const products = await res.json();
+                        const full = products.find(p => p.id === s.id) || products[0];
+                        if (full) {
+                            this.addItem(full);
+                            this.showSubstitutesModal = false;
+                            this.substitutesFor = null;
+                        }
+                    } catch (e) {
+                        alert('No se pudo cargar el sustituto: ' + e.message);
+                    }
                 },
 
                 // ====== Caja (apertura/cierre/movimientos rapidos) ======
