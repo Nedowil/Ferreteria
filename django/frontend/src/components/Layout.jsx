@@ -21,6 +21,12 @@ export default function Layout({ children }) {
           <NavLink to="/unidades" className={linkClass}>Unidades</NavLink>
           <NavLink to="/bajo-stock" className={linkClass}>Stock bajo</NavLink>
           <NavLink to="/conteo" className={linkClass}>Conteo físico</NavLink>
+          <div className="px-5 pt-4 pb-1 text-xs uppercase text-slate-500">Compras</div>
+          <NavLink to="/proveedores" className={linkClass}>Proveedores</NavLink>
+          <NavLink to="/compras" className={linkClass}>Compras</NavLink>
+          <NavLink to="/cuentas-por-pagar" className={linkClass}>Cuentas por pagar</NavLink>
+          <div className="px-5 pt-4 pb-1 text-xs uppercase text-slate-500">Clientes</div>
+          <NavLink to="/clientes" className={linkClass}>Clientes</NavLink>
         </nav>
         <div className="px-5 py-3 border-t border-slate-700 text-xs text-slate-400">
           {user?.name || user?.email}

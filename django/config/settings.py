@@ -51,6 +51,8 @@ INSTALLED_APPS = [
     # Apps del proyecto
     "core",
     "inventory",
+    "partners",
+    "purchasing",
 ]
 
 MIDDLEWARE = [

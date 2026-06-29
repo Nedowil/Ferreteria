@@ -19,7 +19,9 @@ arquitectura **desacoplada**:
 | Multi-sucursal (header `X-Branch-Id`) | ✅ | ✅ |
 | Inventario: productos, categorías, marcas, unidades | ✅ | ✅ |
 | Inventario: movimientos, stock bajo, conteo físico | ✅ | ✅ |
-| Proveedores / Clientes / Compras | ⏳ | ⏳ |
+| Proveedores y Clientes | ✅ | ✅ |
+| Compras (pendiente → recibida → entra a inventario) | ✅ | ✅ |
+| Compras al crédito + cuentas por pagar (abonos) | ✅ | ✅ |
 | POS / Caja / Cotizaciones / Devoluciones | ⏳ | ⏳ |
 | Facturación / FEL Guatemala / Reportes | ⏳ | ⏳ |
 
@@ -75,6 +77,12 @@ activa viaja en el header `X-Branch-Id`.
 | GET | `/api/inventory/products/low-stock/` | Stock bajo + sugerencia de compra |
 | POST | `/api/inventory/stock-count/` | Conteo físico masivo |
 | CRUD | `/api/inventory/categories/`, `/brands/`, `/units/` | Catálogos |
+| CRUD | `/api/suppliers/`, `/api/customers/` | Proveedores y clientes |
+| CRUD | `/api/purchases/` | Compras (cabecera + partidas) |
+| POST | `/api/purchases/{id}/receive/` | Recibir → genera entradas de inventario |
+| POST | `/api/purchases/{id}/cancel/` | Cancelar compra pendiente |
+| GET/POST | `/api/purchases/{id}/payments/` | Abonos (cuentas por pagar) |
+| GET | `/api/purchases/payable/` | Compras con saldo pendiente |
 
 ## Estructura
 

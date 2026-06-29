@@ -9,6 +9,12 @@ import InventoryShow from "./pages/products/InventoryShow";
 import LowStock from "./pages/products/LowStock";
 import StockCount from "./pages/products/StockCount";
 import CatalogList from "./pages/catalogs/CatalogList";
+import SupplierList from "./pages/partners/SupplierList";
+import CustomerList from "./pages/partners/CustomerList";
+import PurchaseList from "./pages/purchases/PurchaseList";
+import PurchaseForm from "./pages/purchases/PurchaseForm";
+import PurchaseDetail from "./pages/purchases/PurchaseDetail";
+import Payable from "./pages/purchases/Payable";
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
@@ -31,6 +37,12 @@ export default function App() {
       <Route path="/categorias" element={<Protected><CatalogList kind="categories" /></Protected>} />
       <Route path="/marcas" element={<Protected><CatalogList kind="brands" /></Protected>} />
       <Route path="/unidades" element={<Protected><CatalogList kind="units" /></Protected>} />
+      <Route path="/proveedores" element={<Protected><SupplierList /></Protected>} />
+      <Route path="/clientes" element={<Protected><CustomerList /></Protected>} />
+      <Route path="/compras" element={<Protected><PurchaseList /></Protected>} />
+      <Route path="/compras/nueva" element={<Protected><PurchaseForm /></Protected>} />
+      <Route path="/compras/:id" element={<Protected><PurchaseDetail /></Protected>} />
+      <Route path="/cuentas-por-pagar" element={<Protected><Payable /></Protected>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

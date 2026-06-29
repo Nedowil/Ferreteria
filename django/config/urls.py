@@ -22,6 +22,10 @@ api_patterns = [
     path("", include(router.urls)),
     # Inventario
     path("inventory/", include("inventory.urls")),
+    # Proveedores / Clientes
+    path("", include("partners.urls")),
+    # Compras
+    path("", include("purchasing.urls")),
 ]
 
 urlpatterns = [
