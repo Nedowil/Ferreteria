@@ -19,11 +19,33 @@ export default function Ticket() {
 
   const { company, sale, fel } = t;
 
+  const printThermal = async () => {
+    try {
+      const { data } = await api.post(`/sales/${id}/print/`);
+      if (data.status === "sent") {
+        alert("Ticket enviado a la impresora de red.");
+        return;
+      }
+      // system/bluetooth: descarga el .bin ESC/POS para entregarlo a la impresora.
+      const bytes = Uint8Array.from(atob(data.escpos_base64), (c) => c.charCodeAt(0));
+      const url = URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" }));
+      const a = document.createElement("a");
+      a.href = url; a.download = `ticket-${sale.folio}.escpos.bin`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert(e.response?.data?.detail || "No se pudo imprimir en la térmica.");
+    }
+  };
+
   return (
     <div className="max-w-md mx-auto">
       <div className="flex justify-between mb-3 print:hidden">
         <button onClick={() => navigate(-1)} className="text-sm text-slate-500">← Volver</button>
-        <button onClick={() => window.print()} className="bg-slate-700 text-white rounded px-4 py-2 text-sm">Imprimir</button>
+        <div className="flex gap-2">
+          <button onClick={printThermal} className="bg-blue-600 text-white rounded px-4 py-2 text-sm">Imprimir térmica</button>
+          <button onClick={() => window.print()} className="bg-slate-700 text-white rounded px-4 py-2 text-sm">Imprimir</button>
+        </div>
       </div>
 
       <div className="bg-white shadow rounded-lg p-6 text-sm font-mono leading-tight" id="ticket">

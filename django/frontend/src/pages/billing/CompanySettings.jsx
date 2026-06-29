@@ -46,6 +46,26 @@ export default function CompanySettings() {
     }
   };
 
+  const testPrinter = async () => {
+    setMsg(""); setErr("");
+    try {
+      const { data } = await api.post("/printer/test/");
+      if (data.status === "sent") {
+        setMsg("Prueba enviada a la impresora de red.");
+        return;
+      }
+      const bytes = Uint8Array.from(atob(data.escpos_base64), (ch) => ch.charCodeAt(0));
+      const url = URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" }));
+      const a = document.createElement("a");
+      a.href = url; a.download = "prueba.escpos.bin";
+      a.click();
+      URL.revokeObjectURL(url);
+      setMsg("Modo no-red: se descargó el archivo ESC/POS de prueba.");
+    } catch (e2) {
+      setErr(e2.response?.data?.detail || "No se pudo imprimir la prueba.");
+    }
+  };
+
   if (!c) return <div className="text-slate-400">Cargando…</div>;
 
   return (
@@ -144,6 +164,12 @@ export default function CompanySettings() {
               </Field>
             </>
           )}
+          <div className="sm:col-span-2">
+            <button type="button" onClick={testPrinter} className="text-sm border border-slate-300 rounded px-4 py-2 hover:bg-slate-50">
+              Imprimir prueba
+            </button>
+            <span className="ml-2 text-xs text-slate-500">Guarda los cambios antes de probar.</span>
+          </div>
         </Section>
 
         <Section title="Catálogo público (en línea)">

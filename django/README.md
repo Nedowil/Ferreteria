@@ -33,6 +33,7 @@ arquitectura **desacoplada**:
 | Auditoría (bitácora create/update/delete) | ✅ | ✅ |
 | Configuración de empresa (datos fiscales, IVA, FEL, impresoras) | ✅ | ✅ |
 | Facturación / FEL Guatemala (emisión, anulación, cupo, ticket) | ✅ | ✅ |
+| Impresión de tickets en térmica (ESC/POS: red 9100 / sistema) | ✅ | ✅ |
 | Catálogo público en línea (sin login, precios condicionales, WhatsApp) | ✅ | ✅ |
 | Importación CSV (productos, clientes, ventas históricas) | ✅ | ✅ |
 | Respaldos (ZIP de BD + media, descarga/borrado, cron) | ✅ | ✅ |
@@ -186,6 +187,8 @@ activa viaja en el header `X-Branch-Id`.
 | GET | `/api/invoices/pending/` | Ventas completadas sin factura certificada |
 | GET | `/api/sales/{id}/ticket/` | Datos del comprobante para imprimir |
 | GET | `/api/fel/config/` | Configuración del certificador FEL activo |
+| POST | `/api/sales/{id}/print/` | Imprime el ticket en la térmica (ESC/POS) |
+| POST | `/api/printer/test/` | Ticket de prueba de impresora (`configuracion.gestionar`) |
 | GET | `/api/public/catalog/` · `/info/` | Catálogo público (sin auth) — productos visibles y encabezado |
 | GET | `/api/imports/template/{tipo}/` | Plantilla CSV (`productos`/`clientes`/`ventas`) |
 | POST | `/api/imports/products/` · `/customers/` · `/sales/` | Importar CSV (`imports.gestionar`) |
@@ -211,6 +214,21 @@ empresa (`fel_yearly_quota`, `0` = sin límite).
 
 > Nota: los detalles finos del XML de Pequeño Contribuyente conviene validarlos
 > contra el sandbox de Infile antes de pasar a producción.
+
+### Impresión de tickets (ESC/POS)
+
+`billing/printing.py` genera los comandos **ESC/POS** del ticket (sin dependencias)
+a partir de los mismos datos del comprobante. Según `CompanySetting.printer_mode`:
+
+- `network`: el backend abre un socket TCP a `printer_ip:printer_port` (puerto
+  RAW/JetDirect 9100) y envía los bytes — el servidor debe estar en la misma red
+  que la impresora.
+- `system` / `bluetooth`: el endpoint devuelve los bytes ESC/POS en base64 y el
+  SPA descarga un `.bin` para entregarlo a la impresora (o se usa la impresión
+  del navegador desde la vista del ticket).
+
+El ancho (`printer_width` 58/80 mm) ajusta las columnas; los acentos y la ñ se
+codifican en CP850. Hay un endpoint de **impresión de prueba** (`/api/printer/test/`).
 
 ### Catálogo público, importación CSV y respaldos
 

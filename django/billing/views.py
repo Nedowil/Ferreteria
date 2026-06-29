@@ -7,9 +7,12 @@ from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+import base64
+
+from core.models import CompanySetting
 from core.permissions import HasPermission
 from sales.models import Sale
-from . import services
+from . import printing, services
 from .models import ElectronicInvoice
 from .serializers import InvoiceSerializer
 
@@ -75,6 +78,49 @@ def sale_ticket(request, sale_id):
     if not sale:
         return Response({"detail": "Venta inexistente."}, status=status.HTTP_404_NOT_FOUND)
     return Response(services.build_ticket(sale))
+
+
+def _deliver_escpos(company, data):
+    """Envía los bytes a la impresora de red, o los devuelve (base64) si el
+    modo es sistema/bluetooth para que el cliente los entregue."""
+    if company.printer_mode == "network":
+        if not company.printer_ip:
+            return Response({"detail": "Configura la IP de la impresora de red."},
+                            status=status.HTTP_400_BAD_REQUEST)
+        try:
+            printing.send_to_network_printer(company.printer_ip, company.printer_port, data)
+        except OSError as e:
+            return Response({"detail": f"No se pudo conectar con la impresora: {e}"},
+                            status=status.HTTP_502_BAD_GATEWAY)
+        return Response({"status": "sent", "mode": "network"})
+    # system | bluetooth: el cliente entrega los bytes a la impresora.
+    return Response({
+        "status": "raw", "mode": company.printer_mode,
+        "escpos_base64": base64.b64encode(data).decode("ascii"),
+    })
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def print_ticket(request, sale_id):
+    """Imprime el ticket de una venta en la impresora térmica configurada."""
+    sale = Sale.objects.filter(pk=sale_id).select_related("customer").first()
+    if not sale:
+        return Response({"detail": "Venta inexistente."}, status=status.HTTP_404_NOT_FOUND)
+    company = CompanySetting.current()
+    ticket = services.build_ticket(sale)
+    data = printing.build_ticket_escpos(
+        ticket, width_mm=company.printer_width, auto_cut=company.printer_auto_cut)
+    return _deliver_escpos(company, data)
+
+
+@api_view(["POST"])
+@permission_classes([HasPermission.require("configuracion.gestionar")])
+def printer_test(request):
+    """Imprime un ticket de prueba para validar la configuración."""
+    company = CompanySetting.current()
+    data = printing.build_test_escpos(company)
+    return _deliver_escpos(company, data)
 
 
 @api_view(["GET"])

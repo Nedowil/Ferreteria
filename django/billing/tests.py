@@ -284,6 +284,98 @@ class InfileCertifierTests(TestCase):
             self.assertIsInstance(get_certifier(), InfileCertifier)
 
 
+class PrintingTests(TestCase):
+    """Generación ESC/POS y endpoints de impresión térmica."""
+
+    def setUp(self):
+        self.company = CompanySetting.current()
+        self.branch = Branch.objects.create(name="Matriz", code="M", is_main=True)
+        perms = sync_permissions()
+        for role, codes in ROLE_MATRIX.items():
+            g, _ = Group.objects.get_or_create(name=role)
+            g.permissions.set([perms[c] for c in codes if c in perms])
+        self.admin = User.objects.create_user(username="a", email="a@test.com", password="x123", is_superuser=True)
+        self.seller = User.objects.create_user(username="s", email="s@test.com", password="x123")
+        self.seller.groups.add(Group.objects.get(name="vendedor"))
+
+    def _client(self, email):
+        c = APIClient()
+        r = c.post("/api/auth/token/", {"email": email, "password": "x123"}, format="json")
+        c.credentials(HTTP_AUTHORIZATION=f"Bearer {r.json()['access']}", HTTP_X_BRANCH_ID=str(self.branch.id))
+        return c
+
+    def test_build_ticket_escpos_genera_bytes(self):
+        from .printing import build_ticket_escpos
+        sale = _make_sale()
+        data = build_ticket_escpos(services.build_ticket(sale), width_mm=80, auto_cut=True)
+        self.assertIsInstance(data, bytes)
+        self.assertTrue(data.startswith(b"\x1b@"))      # init
+        self.assertIn(b"\x1dV", data)                    # corte
+        self.assertIn(b"TOTAL", data)
+
+    def test_ancho_58mm_usa_32_columnas(self):
+        from .printing import Escpos, _width_chars
+        self.assertEqual(_width_chars(58), 32)
+        self.assertEqual(_width_chars(80), 48)
+        e = Escpos(32)
+        e.cols("A", "B")
+        self.assertIn(b"A" + b" " * 30 + b"B", e.bytes())
+
+    def test_print_modo_system_devuelve_base64(self):
+        self.company.printer_mode = "system"
+        self.company.save()
+        sale = _make_sale()
+        r = self._client("a@test.com").post(f"/api/sales/{sale.id}/print/")
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertEqual(r.json()["status"], "raw")
+        import base64
+        self.assertTrue(base64.b64decode(r.json()["escpos_base64"]).startswith(b"\x1b@"))
+
+    def test_print_modo_network_envia(self):
+        from unittest.mock import patch
+        self.company.printer_mode = "network"
+        self.company.printer_ip = "192.168.0.50"
+        self.company.save()
+        sale = _make_sale()
+        with patch("billing.printing.send_to_network_printer") as send:
+            r = self._client("a@test.com").post(f"/api/sales/{sale.id}/print/")
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertEqual(r.json()["status"], "sent")
+        send.assert_called_once()
+
+    def test_print_network_sin_ip_da_400(self):
+        self.company.printer_mode = "network"
+        self.company.printer_ip = ""
+        self.company.save()
+        sale = _make_sale()
+        r = self._client("a@test.com").post(f"/api/sales/{sale.id}/print/")
+        self.assertEqual(r.status_code, 400)
+
+    def test_print_network_falla_conexion_da_502(self):
+        from unittest.mock import patch
+        self.company.printer_mode = "network"
+        self.company.printer_ip = "10.0.0.9"
+        self.company.save()
+        sale = _make_sale()
+        with patch("billing.printing.send_to_network_printer", side_effect=OSError("timeout")):
+            r = self._client("a@test.com").post(f"/api/sales/{sale.id}/print/")
+        self.assertEqual(r.status_code, 502)
+
+    def test_print_venta_inexistente_404(self):
+        r = self._client("a@test.com").post("/api/sales/99999/print/")
+        self.assertEqual(r.status_code, 404)
+
+    def test_prueba_impresora_requiere_permiso(self):
+        self.company.printer_mode = "system"
+        self.company.save()
+        # admin (configuracion.gestionar) puede
+        r = self._client("a@test.com").post("/api/printer/test/")
+        self.assertEqual(r.status_code, 200, r.content)
+        # vendedor no
+        r = self._client("s@test.com").post("/api/printer/test/")
+        self.assertEqual(r.status_code, 403)
+
+
 def build_sample_dte(pequeno=False):
     """DTE mínimo (dict) para probar el XML sin tocar la BD."""
     return {
