@@ -152,12 +152,22 @@ activa viaja en el header `X-Branch-Id`.
 ### Facturación Electrónica (FEL Guatemala)
 
 El módulo `billing` certifica DTEs a través de un **adaptador** (`billing/fel/`):
-el driver se elige con `FEL_DRIVER` (por defecto `stub`, que simula la respuesta
-del certificador SAT generando UUID de autorización, serie y número — útil para
-desarrollo y demo sin credenciales). Para producción se implementa un certificador
-real (Infile/otro) con la misma interfaz `FelCertifier`. Pequeños contribuyentes
-emiten `FPEQ`; régimen general emite `FACT`. El cupo anual (bolsón) se controla
-en la configuración de empresa (`fel_yearly_quota`, `0` = sin límite).
+el driver se elige con `FEL_DRIVER`:
+
+- `stub` (por defecto): simula la respuesta del certificador SAT generando UUID
+  de autorización, serie y número — útil para desarrollo y demo sin credenciales.
+- `infile`: certificador real **Infile/FEEL**. Firma el XML (`firma_xml`) y lo
+  certifica ante la SAT (`/fel/certificacion/v2/dte/`), anulando vía
+  `/fel/anulacion/v2/dte/`. Las credenciales se leen del entorno
+  (`FEL_INFILE_*`, ver `.env.example`); mientras estén vacías, el driver aborta
+  con un mensaje claro (estado visible en `/api/fel/config/` → `infile_ready`).
+
+Pequeños contribuyentes emiten `FPEQ` (sin desglose de IVA en ítems); régimen
+general emite `FACT`. El cupo anual (bolsón) se controla en la configuración de
+empresa (`fel_yearly_quota`, `0` = sin límite).
+
+> Nota: los detalles finos del XML de Pequeño Contribuyente conviene validarlos
+> contra el sandbox de Infile antes de pasar a producción.
 
 ### Catálogo público, importación CSV y respaldos
 
@@ -191,7 +201,7 @@ django/
 ├── billing/         # Facturación Electrónica (FEL)
 │   ├── models.py            # ElectronicInvoice (DTE: estado, serie/número, UUID SAT)
 │   ├── services.py          # emit_invoice / cancel_invoice / quota_status / build_ticket
-│   ├── fel/                 # adaptador del certificador (base + stub) y build_dte
+│   ├── fel/                 # adaptador: base + stub + infile (Infile/FEEL) y build_dte/XML
 │   └── views.py             # emisión, anulación, cupo, ticket, config FEL
 ├── imports/         # Importación CSV (productos, clientes, ventas)
 │   ├── services.py          # parse_csv + import_products/customers/sales + plantillas

@@ -158,10 +158,26 @@ COMPANY_DEFAULT_TAX_RATE = float(os.getenv("COMPANY_DEFAULT_TAX_RATE", "12"))
 COMPANY_PRICES_INCLUDE_TAX = env_bool("COMPANY_PRICES_INCLUDE_TAX", True)
 
 # FEL Guatemala. driver: 'stub' (simula al certificador, para desarrollo/demo)
-# o un certificador real (infile/soap) cuando se configuren credenciales.
+# o 'infile' (certificador real Infile/FEEL) cuando se configuren credenciales.
 FEL_DRIVER = os.getenv("FEL_DRIVER", "stub")
 FEL_ENVIRONMENT = os.getenv("FEL_ENVIRONMENT", "PRUEBAS")  # PRUEBAS|PRODUCCION
 FEL_CERTIFICADOR = os.getenv("FEL_CERTIFICADOR", "Certificador de pruebas")
+
+# Credenciales del certificador Infile/FEEL. Vacías por defecto: el driver
+# 'infile' aborta con un mensaje claro hasta que se configuren (sandbox).
+FEL_INFILE_FIRMA_URL = os.getenv(
+    "FEL_INFILE_FIRMA_URL", "https://signer-emisores.feel.com.gt/sign_solicitud_firmas/firma_xml")
+FEL_INFILE_CERT_URL = os.getenv(
+    "FEL_INFILE_CERT_URL", "https://certificador.feel.com.gt/fel/certificacion/v2/dte/")
+FEL_INFILE_ANUL_URL = os.getenv(
+    "FEL_INFILE_ANUL_URL", "https://certificador.feel.com.gt/fel/anulacion/v2/dte/")
+FEL_INFILE_USUARIO = os.getenv("FEL_INFILE_USUARIO", "")          # header USUARIO
+FEL_INFILE_LLAVE_WS = os.getenv("FEL_INFILE_LLAVE_WS", "")        # header LLAVE (certificación)
+FEL_INFILE_LLAVE_FIRMA = os.getenv("FEL_INFILE_LLAVE_FIRMA", "")  # token de firma
+FEL_INFILE_ALIAS = os.getenv("FEL_INFILE_ALIAS", "")             # usuario FEL (alias de firma)
+FEL_INFILE_NIT_EMISOR = os.getenv("FEL_INFILE_NIT_EMISOR", "")
+FEL_INFILE_CORREO_COPIA = os.getenv("FEL_INFILE_CORREO_COPIA", "")
+FEL_INFILE_IDENTIFICADOR_PREFIX = os.getenv("FEL_INFILE_IDENTIFICADOR_PREFIX", "FERRE")
 
 
 # ---------------------------------------------------------------------------

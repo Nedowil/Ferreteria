@@ -40,41 +40,55 @@ def build_dte(sale, company):
     configurado; el monto de IVA total se toma de la venta.
     """
     rate = Decimal(company.default_tax_rate)
+    pequeno = company.tax_regime == "PEQUENO_CONTRIBUYENTE"
     items = []
-    for it in sale.items.select_related("product"):
+    for i, it in enumerate(sale.items.select_related("product"), start=1):
         gross = Decimal(it.subtotal)
-        if it.tax_type == "exento" or rate <= 0:
+        # El pequeño contribuyente no desglosa IVA en los ítems.
+        if pequeno or it.tax_type == "exento" or rate <= 0:
             iva = Decimal("0")
         elif company.prices_include_tax:
             iva = (gross - gross / (1 + rate / 100)).quantize(Decimal("0.01"))
         else:
             iva = (gross * rate / 100).quantize(Decimal("0.01"))
         items.append({
+            "linea": i,
             "descripcion": it.product.name,
             "cantidad": str(it.quantity),
+            "unidad_medida": (it.unit_label or it.product.base_unit_label or "UNI")[:3].upper(),
             "precio_unitario": str(it.unit_price),
             "tipo": "B",  # B=bien
             "gravado": it.tax_type != "exento",
+            "descuento": str(it.discount or 0),
             "monto": str(gross),
+            "monto_gravable": str((gross - iva).quantize(Decimal("0.01"))),
             "iva": str(iva),
         })
 
     customer = sale.customer
     return {
-        "tipo_documento": "FACT",
+        "tipo_documento": "FPEQ" if pequeno else "FACT",
         "moneda": company.currency_code,
         "fecha_emision": sale.date.isoformat(),
         "emisor": {
             "nit": company.tax_id,
             "nombre": company.legal_name or company.commercial_name,
             "nombre_comercial": company.commercial_name,
+            "establecimiento": getattr(company, "establishment_code", None) or "1",
+            "correo": company.email or "",
             "direccion": company.address or "Ciudad",
-            "afiliacion_iva": "PEQUENO" if company.tax_regime == "PEQUENO_CONTRIBUYENTE" else "GEN",
+            "municipio": company.municipality or "Guatemala",
+            "departamento": company.department or "Guatemala",
+            "codigo_postal": company.postal_code or "01001",
+            "pais": company.country_code or "GT",
+            "afiliacion_iva": "PEQUENO" if pequeno else "GEN",
         },
         "receptor": {
             "nit": (customer.tax_id if customer and customer.tax_id else "CF"),
             "nombre": (customer.name if customer else "Consumidor Final"),
+            "correo": (customer.email if customer and customer.email else ""),
             "direccion": (customer.address if customer and customer.address else "Ciudad"),
+            "pais": "GT",
         },
         "items": items,
         "totales": {

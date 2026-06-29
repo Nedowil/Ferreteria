@@ -3,13 +3,16 @@
 from django.conf import settings
 
 from .stub import StubCertifier
+from .infile import InfileCertifier
 
 
 def get_certifier():
+    """Devuelve el certificador configurado.
+
+    - ``stub``   → simula al certificador (desarrollo/demo).
+    - ``infile`` → certificador real Infile/FEEL (requiere credenciales).
+    """
     driver = getattr(settings, "FEL_DRIVER", "stub")
-    # Solo el stub está implementado; un certificador real (infile/soap) se
-    # registraría aquí cuando se configuren credenciales.
-    if driver == "stub":
-        return StubCertifier()
-    # Fallback seguro: stub (evita romper si el driver real aún no existe).
+    if driver == "infile":
+        return InfileCertifier()
     return StubCertifier()

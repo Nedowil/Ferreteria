@@ -184,3 +184,124 @@ class FelApiTests(TestCase):
         r = self._client("a@test.com").get("/api/fel/config/")
         self.assertEqual(r.status_code, 200)
         self.assertTrue(r.json()["is_stub"])
+
+
+INFILE_CREDS = dict(
+    FEL_DRIVER="infile",
+    FEL_INFILE_USUARIO="USR123",
+    FEL_INFILE_LLAVE_WS="LLAVE-WS",
+    FEL_INFILE_LLAVE_FIRMA="LLAVE-FIRMA",
+    FEL_INFILE_ALIAS="alias@empresa.gt",
+    FEL_INFILE_NIT_EMISOR="123456K",
+    FEL_INFILE_CORREO_COPIA="copia@empresa.gt",
+)
+
+
+class InfileCertifierTests(TestCase):
+    """Driver real de Infile, con la capa HTTP mockeada (sin red)."""
+
+    def setUp(self):
+        from .fel.infile import InfileCertifier
+        self.cert = InfileCertifier()
+        self.dte = build_sample_dte()
+
+    def test_sin_credenciales_falla_con_mensaje_claro(self):
+        # Por defecto (stub, sin credenciales infile) certify aborta.
+        from django.test import override_settings
+        with override_settings(FEL_DRIVER="infile", FEL_INFILE_USUARIO="",
+                               FEL_INFILE_LLAVE_WS="", FEL_INFILE_LLAVE_FIRMA="",
+                               FEL_INFILE_ALIAS="", FEL_INFILE_NIT_EMISOR=""):
+            res = self.cert.certify(self.dte)
+        self.assertFalse(res.ok)
+        self.assertIn("credenciales", res.error.lower())
+
+    def test_certifica_con_respuesta_exitosa(self):
+        from unittest.mock import patch
+        from django.test import override_settings
+        responses = [
+            {"resultado": True, "archivo": "<dte firmado/>"},          # firma
+            {"resultado": True, "uuid": "ABC-UUID", "serie": "A1",      # certificación
+             "numero": 55, "xml_certificado": "<dte certificado/>"},
+        ]
+        with override_settings(**INFILE_CREDS), \
+                patch.object(type(self.cert), "_post_json", side_effect=responses) as m:
+            res = self.cert.certify(self.dte)
+        self.assertTrue(res.ok, res.error)
+        self.assertEqual(res.uuid, "ABC-UUID")
+        self.assertEqual(res.serie, "A1")
+        self.assertEqual(res.numero, "55")
+        self.assertEqual(m.call_count, 2)  # firma + certificación
+
+    def test_error_de_certificacion_se_propaga(self):
+        from unittest.mock import patch
+        from django.test import override_settings
+        responses = [
+            {"resultado": True, "archivo": "<dte firmado/>"},
+            {"resultado": False, "descripcion_errores": [{"mensaje_error": "NIT inválido"}]},
+        ]
+        with override_settings(**INFILE_CREDS), \
+                patch.object(type(self.cert), "_post_json", side_effect=responses):
+            res = self.cert.certify(self.dte)
+        self.assertFalse(res.ok)
+        self.assertIn("NIT inválido", res.error)
+
+    def test_emit_invoice_usa_infile(self):
+        """El servicio de emisión funciona end-to-end con el driver infile mockeado."""
+        from unittest.mock import patch
+        from django.test import override_settings
+        sale = _make_sale()
+        responses = [
+            {"resultado": True, "archivo": "<firmado/>"},
+            {"resultado": True, "uuid": "UUID-XYZ", "serie": "S1", "numero": 7},
+        ]
+        with override_settings(**INFILE_CREDS), \
+                patch("billing.fel.infile.InfileCertifier._post_json", side_effect=responses):
+            inv = services.emit_invoice(sale, user=None)
+        self.assertEqual(inv.status, ElectronicInvoice.STATUS_CERTIFICADA)
+        self.assertEqual(inv.uuid, "UUID-XYZ")
+
+    def test_build_xml_factura_incluye_iva(self):
+        from .fel.infile import build_invoice_xml
+        xml = build_invoice_xml(self.dte)
+        self.assertIn("GTDocumento", xml)
+        self.assertIn('Tipo="FACT"', xml)
+        self.assertIn("<dte:Impuesto>", xml)
+        self.assertIn("IVA", xml)
+
+    def test_build_xml_pequeno_contribuyente_sin_iva(self):
+        from .fel.infile import build_invoice_xml
+        dte = build_sample_dte(pequeno=True)
+        xml = build_invoice_xml(dte)
+        self.assertIn('Tipo="FPEQ"', xml)
+        self.assertNotIn("<dte:Impuesto>", xml)
+        self.assertIn('TipoFrase="4"', xml)
+
+    def test_factory_devuelve_infile(self):
+        from django.test import override_settings
+        from .fel import get_certifier
+        from .fel.infile import InfileCertifier
+        with override_settings(FEL_DRIVER="infile"):
+            self.assertIsInstance(get_certifier(), InfileCertifier)
+
+
+def build_sample_dte(pequeno=False):
+    """DTE mínimo (dict) para probar el XML sin tocar la BD."""
+    return {
+        "tipo_documento": "FPEQ" if pequeno else "FACT",
+        "moneda": "GTQ",
+        "fecha_emision": "2026-06-29T12:00:00-06:00",
+        "emisor": {
+            "nit": "123456K", "nombre": "Mi Ferretería", "nombre_comercial": "Ferre",
+            "establecimiento": "1", "correo": "a@b.gt", "direccion": "Zona 1",
+            "municipio": "Guatemala", "departamento": "Guatemala", "codigo_postal": "01001",
+            "pais": "GT", "afiliacion_iva": "PEQUENO" if pequeno else "GEN",
+        },
+        "receptor": {"nit": "CF", "nombre": "Consumidor Final", "correo": "",
+                     "direccion": "Ciudad", "pais": "GT"},
+        "items": [{
+            "linea": 1, "descripcion": "Martillo", "cantidad": "1", "unidad_medida": "UNI",
+            "precio_unitario": "112.00", "tipo": "B", "gravado": True, "descuento": "0",
+            "monto": "112.00", "monto_gravable": "100.00", "iva": "12.00",
+        }],
+        "totales": {"gran_total": "112.00", "total_iva": "0" if pequeno else "12.00"},
+    }

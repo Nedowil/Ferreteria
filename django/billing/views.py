@@ -81,9 +81,14 @@ def sale_ticket(request, sale_id):
 @permission_classes([IsAuthenticated])
 def fel_config(request):
     """Configuración FEL actual (solo lectura; las credenciales viven en el entorno)."""
+    infile_required = ["FEL_INFILE_USUARIO", "FEL_INFILE_LLAVE_WS",
+                       "FEL_INFILE_LLAVE_FIRMA", "FEL_INFILE_ALIAS", "FEL_INFILE_NIT_EMISOR"]
+    infile_missing = [k for k in infile_required if not getattr(settings, k, "")]
     return Response({
         "driver": settings.FEL_DRIVER,
         "environment": settings.FEL_ENVIRONMENT,
         "certificador": settings.FEL_CERTIFICADOR,
         "is_stub": settings.FEL_DRIVER == "stub",
+        "infile_ready": settings.FEL_DRIVER == "infile" and not infile_missing,
+        "infile_missing": infile_missing if settings.FEL_DRIVER == "infile" else [],
     })

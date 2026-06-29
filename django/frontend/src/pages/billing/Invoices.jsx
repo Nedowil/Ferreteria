@@ -56,11 +56,19 @@ export default function Invoices() {
     <div className="max-w-5xl">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-lg font-semibold">Facturación electrónica (FEL)</h1>
-        {cfg?.is_stub && (
+        {cfg?.is_stub ? (
           <span className="text-xs bg-indigo-100 text-indigo-700 rounded px-2 py-1">
             Certificador de pruebas (simulado)
           </span>
-        )}
+        ) : cfg?.infile_ready ? (
+          <span className="text-xs bg-green-100 text-green-700 rounded px-2 py-1">
+            Infile · {cfg.environment}
+          </span>
+        ) : cfg?.driver === "infile" ? (
+          <span className="text-xs bg-amber-100 text-amber-800 rounded px-2 py-1">
+            Infile sin credenciales{cfg.infile_missing?.length ? ` (${cfg.infile_missing.length})` : ""}
+          </span>
+        ) : null}
       </div>
 
       {quota && (
