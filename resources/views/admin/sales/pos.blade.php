@@ -3530,7 +3530,7 @@
     La venta se registrará formalmente al restablecerse la conexión.<br>
     Folio definitivo asignado al sincronizar.
   </div>
-  <script>window.onload = () => { window.print(); };</script>
+  <script>window.onload = () => { window.print(); };<\/script>
 </body></html>`;
                     const w = window.open('', '_blank', 'width=420,height=640');
                     if (!w) {
