@@ -1,323 +1,191 @@
-"""Vistas del módulo de inventario."""
+"""API REST del módulo de inventario (Django REST Framework)."""
 
 from decimal import Decimal
 
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.core.paginator import Paginator
-from django.db.models import F, ProtectedError, Q
-from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse_lazy
-from django.utils import timezone
-from django.views.generic import CreateView, DeleteView, ListView, UpdateView
+from django.db.models import F
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from .forms import BrandForm, CategoryForm, MovementForm, ProductForm, UnitForm
-from .models import (
-    Brand,
-    Category,
-    InventoryMovement,
-    Product,
-    Unit,
+from core.api_utils import BranchContextMixin, get_request_branch
+from .models import Brand, Category, InventoryMovement, Product, Unit
+from .serializers import (
+    BrandSerializer,
+    CategorySerializer,
+    MovementCreateSerializer,
+    MovementSerializer,
+    ProductListSerializer,
+    ProductSerializer,
+    StockCountSerializer,
+    UnitSerializer,
 )
 from .services import InventoryError, apply_movement
 from .utils import generate_barcode, generate_sku
 
 
-# ---------------------------------------------------------------------------
-# Catálogos simples: Categorías, Marcas, Unidades (CRUD genérico)
-# ---------------------------------------------------------------------------
+class CategoryViewSet(viewsets.ModelViewSet):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ["name"]
+    ordering = ["name"]
 
-class CategoryList(LoginRequiredMixin, ListView):
-    model = Category
-    template_name = "inventory/catalog_list.html"
-    paginate_by = 15
-    extra_context = {"title": "Categorías", "create_url": "inventory:category_create",
-                     "edit_url": "inventory:category_edit", "delete_url": "inventory:category_delete",
-                     "show_description": True}
+    def perform_destroy(self, instance):
+        if instance.products.exists():
+            raise ValidationError("No se puede eliminar: tiene productos asociados.")
+        instance.delete()
+
+
+class BrandViewSet(CategoryViewSet):
+    queryset = Brand.objects.all()
+    serializer_class = BrandSerializer
+
+
+class UnitViewSet(viewsets.ModelViewSet):
+    queryset = Unit.objects.all()
+    serializer_class = UnitSerializer
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ["name", "abbreviation"]
+    ordering = ["name"]
+
+    def perform_destroy(self, instance):
+        if instance.products.exists():
+            raise ValidationError("No se puede eliminar: tiene productos asociados.")
+        instance.delete()
+
+
+class ProductViewSet(BranchContextMixin, viewsets.ModelViewSet):
+    queryset = (
+        Product.objects.filter(deleted_at__isnull=True)
+        .select_related("category", "brand", "unit")
+        .prefetch_related("presentations")
+        .order_by("-created_at")
+    )
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ["category", "brand", "active"]
+    search_fields = ["name", "sku", "barcode"]
+    ordering_fields = ["name", "sale_price", "stock", "created_at"]
+
+    def get_serializer_class(self):
+        if self.action == "list":
+            return ProductListSerializer
+        return ProductSerializer
 
     def get_queryset(self):
-        qs = Category.objects.all()
-        q = self.request.GET.get("q")
-        if q:
-            qs = qs.filter(name__icontains=q)
+        qs = super().get_queryset()
+        if self.request.query_params.get("low_stock") in ("1", "true", "True"):
+            qs = qs.filter(stock__lte=F("min_stock"), active=True)
         return qs
 
+    def perform_create(self, serializer):
+        initial_stock = serializer.validated_data.pop("initial_stock", Decimal("0"))
+        input_mode = serializer.validated_data.pop("stock_input_mode", "base")
 
-class BrandList(CategoryList):
-    model = Brand
-    extra_context = {"title": "Marcas", "create_url": "inventory:brand_create",
-                     "edit_url": "inventory:brand_edit", "delete_url": "inventory:brand_delete",
-                     "show_description": True}
+        product = serializer.save(created_by=self.request.user, stock=Decimal("0"))
+        if not product.sku:
+            product.sku = generate_sku(product.name, Product)
+        if not product.barcode:
+            product.barcode = generate_barcode(Product)
+        product.save(update_fields=["sku", "barcode"])
 
-    def get_queryset(self):
-        qs = Brand.objects.all()
-        q = self.request.GET.get("q")
-        if q:
-            qs = qs.filter(name__icontains=q)
-        return qs
+        if initial_stock and initial_stock > 0:
+            qty = initial_stock
+            if input_mode == "container" and product.container_factor:
+                qty = qty * product.container_factor
+            apply_movement(
+                product, InventoryMovement.ENTRADA, qty,
+                reason="Stock inicial", user=self.request.user, branch=self.branch,
+            )
+            product.refresh_from_db()
 
+    def perform_update(self, serializer):
+        serializer.validated_data.pop("initial_stock", None)
+        serializer.validated_data.pop("stock_input_mode", None)
+        product = serializer.save()
+        if not product.sku:
+            product.sku = generate_sku(product.name, Product)
+        if not product.barcode:
+            product.barcode = generate_barcode(Product)
+        product.save(update_fields=["sku", "barcode"])
 
-class UnitList(LoginRequiredMixin, ListView):
-    model = Unit
-    template_name = "inventory/catalog_list.html"
-    paginate_by = 20
-    extra_context = {"title": "Unidades", "create_url": "inventory:unit_create",
-                     "edit_url": "inventory:unit_edit", "delete_url": "inventory:unit_delete",
-                     "show_description": False, "is_unit": True}
+    def perform_destroy(self, instance):
+        from django.utils import timezone
+        instance.deleted_at = timezone.now()
+        instance.active = False
+        instance.save(update_fields=["deleted_at", "active", "updated_at"])
 
+    # ---- Acciones de inventario ----
 
-class _CatalogFormMixin(LoginRequiredMixin):
-    template_name = "inventory/catalog_form.html"
+    @action(detail=True, methods=["get", "post"])
+    def movements(self, request, pk=None):
+        product = self.get_object()
+        if request.method == "GET":
+            qs = product.movements.select_related("user", "branch")
+            page = self.paginate_queryset(qs)
+            ser = MovementSerializer(page if page is not None else qs, many=True)
+            return self.get_paginated_response(ser.data) if page is not None else Response(ser.data)
 
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        ctx["title"] = self.title
-        ctx["cancel_url"] = self.cancel_url
-        return ctx
-
-
-class CategoryCreate(_CatalogFormMixin, CreateView):
-    model = Category; form_class = CategoryForm
-    success_url = reverse_lazy("inventory:category_list")
-    title = "Nueva categoría"; cancel_url = "inventory:category_list"
-
-
-class CategoryUpdate(_CatalogFormMixin, UpdateView):
-    model = Category; form_class = CategoryForm
-    success_url = reverse_lazy("inventory:category_list")
-    title = "Editar categoría"; cancel_url = "inventory:category_list"
-
-
-class BrandCreate(_CatalogFormMixin, CreateView):
-    model = Brand; form_class = BrandForm
-    success_url = reverse_lazy("inventory:brand_list")
-    title = "Nueva marca"; cancel_url = "inventory:brand_list"
-
-
-class BrandUpdate(_CatalogFormMixin, UpdateView):
-    model = Brand; form_class = BrandForm
-    success_url = reverse_lazy("inventory:brand_list")
-    title = "Editar marca"; cancel_url = "inventory:brand_list"
-
-
-class UnitCreate(_CatalogFormMixin, CreateView):
-    model = Unit; form_class = UnitForm
-    success_url = reverse_lazy("inventory:unit_list")
-    title = "Nueva unidad"; cancel_url = "inventory:unit_list"
-
-
-class UnitUpdate(_CatalogFormMixin, UpdateView):
-    model = Unit; form_class = UnitForm
-    success_url = reverse_lazy("inventory:unit_list")
-    title = "Editar unidad"; cancel_url = "inventory:unit_list"
-
-
-class _CatalogDelete(LoginRequiredMixin, DeleteView):
-    """Borrado con guarda: si tiene productos asociados, no permite eliminar."""
-    template_name = "inventory/confirm_delete.html"
-
-    def post(self, request, *args, **kwargs):
-        self.object = self.get_object()
-        if self.object.products.exists():
-            messages.error(request, "No se puede eliminar: tiene productos asociados.")
-            return redirect(self.success_url)
+        # POST: aplicar movimiento
+        ser = MovementCreateSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        data = ser.validated_data
+        qty = data["quantity"]
+        reason = data.get("reason") or None
+        if data.get("input_mode") == "container" and product.container_factor:
+            base_qty = qty * product.container_factor
+            reason = (reason or "") + (
+                f" ({qty} {product.container_label} = {base_qty} {product.base_unit_label})"
+            )
+            qty = base_qty
         try:
-            response = super().post(request, *args, **kwargs)
-            messages.success(request, "Eliminado correctamente.")
-            return response
-        except ProtectedError:
-            messages.error(request, "No se puede eliminar: tiene registros asociados.")
-            return redirect(self.success_url)
+            movement = apply_movement(
+                product, data["type"], qty, reason=reason,
+                user=request.user, branch=self.branch,
+            )
+        except InventoryError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(MovementSerializer(movement).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=["get"], url_path="low-stock")
+    def low_stock(self, request):
+        branch = self.branch
+        products = (
+            Product.objects.filter(active=True, stock__lte=F("min_stock"))
+            .select_related("category", "brand").order_by("stock")
+        )
+        rows = []
+        for p in products:
+            stock = p.stock_for(branch.pk if branch else None)
+            suggested = max(Decimal("0"), (p.min_stock * 2) - stock)
+            rows.append({
+                "id": p.id, "sku": p.sku, "name": p.name,
+                "category_name": p.category.name if p.category else None,
+                "brand_name": p.brand.name if p.brand else None,
+                "stock": stock, "min_stock": p.min_stock, "suggested": suggested,
+            })
+        return Response(rows)
 
 
-class CategoryDelete(_CatalogDelete):
-    model = Category; success_url = reverse_lazy("inventory:category_list")
+class StockCountView(APIView):
+    """Conteo físico masivo: aplica ajustes para los productos con diferencia."""
 
+    def post(self, request):
+        from django.utils import timezone
 
-class BrandDelete(_CatalogDelete):
-    model = Brand; success_url = reverse_lazy("inventory:brand_list")
+        ser = StockCountSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        reason = ser.validated_data.get("reason") or f"Conteo físico masivo {timezone.localdate()}"
+        branch = get_request_branch(request)
 
-
-class UnitDelete(_CatalogDelete):
-    model = Unit; success_url = reverse_lazy("inventory:unit_list")
-
-
-# ---------------------------------------------------------------------------
-# Productos
-# ---------------------------------------------------------------------------
-
-@login_required
-def product_list(request):
-    qs = (Product.objects.filter(deleted_at__isnull=True)
-          .select_related("category", "brand")
-          .order_by("-created_at"))
-
-    q = request.GET.get("q", "").strip()
-    if q:
-        qs = qs.filter(Q(name__icontains=q) | Q(sku__icontains=q) | Q(barcode__icontains=q))
-    if request.GET.get("category"):
-        qs = qs.filter(category_id=request.GET["category"])
-    if request.GET.get("brand"):
-        qs = qs.filter(brand_id=request.GET["brand"])
-    if request.GET.get("low_stock"):
-        qs = qs.filter(stock__lte=F("min_stock"), active=True)
-
-    paginator = Paginator(qs, 15)
-    page = paginator.get_page(request.GET.get("page"))
-    context = {
-        "products": page,
-        "page_obj": page,
-        "categories": Category.objects.filter(active=True),
-        "brands": Brand.objects.filter(active=True),
-        "filters": request.GET,
-        "current_branch": getattr(request, "branch", None),
-    }
-    return render(request, "inventory/product_list.html", context)
-
-
-@login_required
-def product_create(request):
-    if request.method == "POST":
-        form = ProductForm(request.POST, request.FILES)
-        if form.is_valid():
-            product = form.save(commit=False)
-            if not product.sku:
-                product.sku = generate_sku(product.name, Product)
-            if not product.barcode:
-                product.barcode = generate_barcode(Product)
-            product.created_by = request.user
-            product.stock = 0
-            product.save()
-            form.save_m2m()
-
-            # Stock inicial vía servicio (respeta multi-sucursal)
-            qty = form.cleaned_data.get("initial_stock") or Decimal("0")
-            if qty and qty > 0:
-                if form.cleaned_data.get("stock_input_mode") == "container" and product.container_factor:
-                    qty = qty * product.container_factor
-                apply_movement(
-                    product, InventoryMovement.ENTRADA, qty,
-                    reason="Stock inicial", user=request.user,
-                    branch=getattr(request, "branch", None),
-                )
-            messages.success(request, "Producto creado correctamente.")
-            return redirect("inventory:product_list")
-    else:
-        form = ProductForm()
-    return render(request, "inventory/product_form.html", {"form": form, "title": "Nuevo producto"})
-
-
-@login_required
-def product_edit(request, pk):
-    product = get_object_or_404(Product, pk=pk, deleted_at__isnull=True)
-    if request.method == "POST":
-        form = ProductForm(request.POST, request.FILES, instance=product)
-        if form.is_valid():
-            obj = form.save(commit=False)
-            if not obj.sku:
-                obj.sku = generate_sku(obj.name, Product)
-            if not obj.barcode:
-                obj.barcode = generate_barcode(Product)
-            obj.save()
-            form.save_m2m()
-            messages.success(request, "Producto actualizado. El stock se ajusta desde Inventario.")
-            return redirect("inventory:product_list")
-    else:
-        form = ProductForm(instance=product)
-    return render(request, "inventory/product_form.html",
-                  {"form": form, "title": "Editar producto", "product": product})
-
-
-@login_required
-def product_delete(request, pk):
-    product = get_object_or_404(Product, pk=pk, deleted_at__isnull=True)
-    if request.method == "POST":
-        product.deleted_at = timezone.now()
-        product.active = False
-        product.save(update_fields=["deleted_at", "active", "updated_at"])
-        messages.success(request, "Producto eliminado.")
-        return redirect("inventory:product_list")
-    return render(request, "inventory/confirm_delete.html",
-                  {"object": product, "cancel_url": "inventory:product_list"})
-
-
-# ---------------------------------------------------------------------------
-# Inventario: movimientos por producto, stock bajo, conteo físico
-# ---------------------------------------------------------------------------
-
-@login_required
-def inventory_show(request, pk):
-    product = get_object_or_404(Product, pk=pk, deleted_at__isnull=True)
-    branch = getattr(request, "branch", None)
-
-    if request.method == "POST":
-        form = MovementForm(request.POST)
-        if form.is_valid():
-            qty = form.cleaned_data["quantity"]
-            reason = form.cleaned_data.get("reason") or None
-            if form.cleaned_data.get("input_mode") == "container" and product.container_factor:
-                base_qty = qty * product.container_factor
-                suffix = f" ({qty} {product.container_label} = {base_qty} {product.base_unit_label})"
-                reason = (reason or "") + suffix
-                qty = base_qty
-            try:
-                apply_movement(
-                    product, form.cleaned_data["type"], qty,
-                    reason=reason, user=request.user, branch=branch,
-                )
-                messages.success(request, "Movimiento aplicado.")
-                return redirect("inventory:inventory_show", pk=product.pk)
-            except InventoryError as e:
-                messages.error(request, str(e))
-    else:
-        form = MovementForm()
-
-    movements = product.movements.select_related("user", "branch")
-    paginator = Paginator(movements, 15)
-    page = paginator.get_page(request.GET.get("page"))
-    stock_here = product.stock_for(branch.pk if branch else None)
-    return render(request, "inventory/inventory_show.html", {
-        "product": product, "form": form, "movements": page, "page_obj": page,
-        "stock_here": stock_here,
-    })
-
-
-@login_required
-def low_stock(request):
-    branch = getattr(request, "branch", None)
-    products = (Product.objects.filter(active=True, stock__lte=F("min_stock"))
-                .select_related("category", "brand").order_by("stock"))
-
-    # La velocidad de venta de 30 días no está disponible hasta portar el módulo
-    # de ventas; por ahora sugerimos reponer hasta el doble del mínimo.
-    rows = []
-    for p in products:
-        stock = p.stock_for(branch.pk if branch else None)
-        suggested = max(Decimal("0"), (p.min_stock * 2) - stock)
-        rows.append({"product": p, "stock": stock, "suggested": suggested})
-
-    return render(request, "inventory/low_stock.html", {"rows": rows})
-
-
-@login_required
-def stock_count(request):
-    branch = getattr(request, "branch", None)
-
-    if request.method == "POST":
-        reason = request.POST.get("reason") or f"Conteo físico masivo {timezone.localdate()}"
         adjusted, errors = 0, []
-        for key, value in request.POST.items():
-            if not key.startswith("count_") or value.strip() == "":
-                continue
-            pid = key.replace("count_", "")
-            product = Product.objects.filter(pk=pid).first()
+        for item in ser.validated_data["counts"]:
+            product = Product.objects.filter(pk=item["product_id"]).first()
             if not product:
                 continue
-            try:
-                new_count = Decimal(value)
-            except Exception:
-                continue
+            new_count = item["new_count"]
             current = product.stock_for(branch.pk if branch else None)
             if abs(new_count - current) < Decimal("0.001"):
                 continue
@@ -330,26 +198,4 @@ def stock_count(request):
                 adjusted += 1
             except InventoryError as e:
                 errors.append(f"{product.sku}: {e}")
-        if adjusted:
-            messages.success(request, f"Se aplicaron {adjusted} ajustes de stock.")
-        else:
-            messages.info(request, "No hubo diferencias que ajustar.")
-        for err in errors[:5]:
-            messages.error(request, err)
-        return redirect("inventory:stock_count")
-
-    qs = Product.objects.filter(active=True, deleted_at__isnull=True).select_related("category", "brand")
-    q = request.GET.get("q", "").strip()
-    if q:
-        qs = qs.filter(Q(name__icontains=q) | Q(sku__icontains=q) | Q(barcode__icontains=q))
-    if request.GET.get("category"):
-        qs = qs.filter(category_id=request.GET["category"])
-    if request.GET.get("brand"):
-        qs = qs.filter(brand_id=request.GET["brand"])
-    qs = qs.order_by("name")[:200]
-
-    rows = [{"product": p, "stock": p.stock_for(branch.pk if branch else None)} for p in qs]
-    return render(request, "inventory/stock_count.html", {
-        "rows": rows, "categories": Category.objects.filter(active=True),
-        "brands": Brand.objects.filter(active=True), "filters": request.GET,
-    })
+        return Response({"adjusted": adjusted, "errors": errors})

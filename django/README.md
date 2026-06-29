@@ -1,91 +1,110 @@
-# Ferretería — versión Django
+# Ferretería — versión Django (API REST + SPA)
 
-Migración del sistema de gestión de ferretería (originalmente en Laravel) a
-**Python + Django 5.1**, con plantillas renderizadas en servidor (Tailwind vía
-CDN + Alpine.js) y PostgreSQL en producción / SQLite en desarrollo.
+Migración del sistema de gestión de ferretería (originalmente en Laravel) a una
+arquitectura **desacoplada**:
 
-> Esta es una migración **incremental**. La app Laravel original sigue en la
-> raíz del repositorio como referencia. Aquí se van portando los módulos uno
-> por uno, dejando cada uno funcional y verificable.
+- **Backend:** Python + **Django 5.1** + **Django REST Framework**, autenticación
+  con **JWT** (SimpleJWT). PostgreSQL en producción / SQLite en desarrollo.
+- **Frontend:** SPA en **React 18 + Vite**, estilado con **Tailwind CSS**, que
+  consume la API REST.
+
+> Migración **incremental**. La app Laravel original sigue en la raíz del
+> repositorio como referencia. Aquí se portan los módulos uno por uno.
 
 ## Estado de la migración
 
-| Módulo | Estado |
-|--------|--------|
-| Proyecto base, settings, multi-sucursal en sesión | ✅ |
-| Autenticación + roles (admin / vendedor / almacenista) | ✅ |
-| Inventario: productos, categorías, marcas, unidades | ✅ |
-| Inventario: movimientos de stock (entrada/salida/ajuste) con multi-sucursal | ✅ |
-| Inventario: stock bajo y conteo físico masivo | ✅ |
-| Proveedores y compras | ⏳ pendiente |
-| Clientes | ⏳ pendiente |
-| Punto de Venta (POS) | ⏳ pendiente |
-| Caja | ⏳ pendiente |
-| Cotizaciones, devoluciones | ⏳ pendiente |
-| Facturación / FEL Guatemala | ⏳ pendiente |
-| Reportes, auditoría, backups | ⏳ pendiente |
+| Módulo | API | SPA |
+|--------|-----|-----|
+| Auth JWT + perfil + roles | ✅ | ✅ |
+| Multi-sucursal (header `X-Branch-Id`) | ✅ | ✅ |
+| Inventario: productos, categorías, marcas, unidades | ✅ | ✅ |
+| Inventario: movimientos, stock bajo, conteo físico | ✅ | ✅ |
+| Proveedores / Clientes / Compras | ⏳ | ⏳ |
+| POS / Caja / Cotizaciones / Devoluciones | ⏳ | ⏳ |
+| Facturación / FEL Guatemala / Reportes | ⏳ | ⏳ |
 
 ## Requisitos
 
 - Python 3.11+
+- Node 18+
 - PostgreSQL 13+ (opcional en desarrollo; SQLite funciona out-of-the-box)
 
-## Instalación en desarrollo
+## Puesta en marcha (desarrollo)
+
+### Backend (API en http://localhost:8000)
 
 ```bash
 cd django
-pip install -r requirements.txt
-cp .env.example .env        # ya viene un .env de desarrollo con SQLite
-python manage.py migrate
-python manage.py seed_demo   # crea roles, sucursal y usuario admin
-python manage.py runserver
+python -m venv .venv
+.venv/bin/pip install -r requirements.txt
+cp .env.example .env          # trae un .env de desarrollo con SQLite
+.venv/bin/python manage.py migrate
+.venv/bin/python manage.py seed_demo
+.venv/bin/python manage.py runserver
 ```
+
+### Frontend (SPA en http://localhost:5173)
+
+```bash
+cd django/frontend
+npm install
+npm run dev
+```
+
+El SPA proxya `/api` y `/media` al backend (ver `vite.config.js`).
 
 Acceso por defecto:
 
 - **Correo:** `admin@ferreteria.test`
 - **Contraseña:** `password`
 
-### Cambiar a PostgreSQL
+## La API
 
-Edita `.env`:
+Base: `/api/`. Autenticación: `Authorization: Bearer <access>`. La sucursal
+activa viaja en el header `X-Branch-Id`.
 
-```env
-DB_ENGINE=postgresql
-DB_NAME=ferreteria
-DB_USER=ferreteria
-DB_PASSWORD=tu_password
-DB_HOST=127.0.0.1
-DB_PORT=5432
-```
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| POST | `/api/auth/token/` | Login → `{access, refresh}` |
+| POST | `/api/auth/token/refresh/` | Renovar access token |
+| GET | `/api/auth/me/` | Usuario actual + sucursal |
+| GET | `/api/dashboard/` | KPIs del tablero |
+| GET | `/api/branches/` | Sucursales del usuario |
+| CRUD | `/api/inventory/products/` | Productos (filtros: `search`, `category`, `brand`, `low_stock`) |
+| GET/POST | `/api/inventory/products/{id}/movements/` | Historial / aplicar movimiento |
+| GET | `/api/inventory/products/low-stock/` | Stock bajo + sugerencia de compra |
+| POST | `/api/inventory/stock-count/` | Conteo físico masivo |
+| CRUD | `/api/inventory/categories/`, `/brands/`, `/units/` | Catálogos |
 
 ## Estructura
 
 ```
 django/
-├── config/          # settings, urls, wsgi
-├── core/            # Usuario, Sucursal, multi-sucursal, tablero
-│   ├── middleware.py        # sucursal activa en sesión
-│   ├── context_processors.py
-│   └── management/commands/seed_demo.py
-├── inventory/       # Productos, categorías, marcas, unidades, stock
-│   ├── models.py    # Product, Category, Brand, Unit, ProductStock,
-│   │                #   ProductPresentation, ProductSubstitute, InventoryMovement
-│   ├── services.py  # apply_movement(): lógica de stock con bloqueo y multi-sucursal
-│   ├── utils.py     # parseo de fracciones, autogeneración SKU/EAN-13
-│   ├── forms.py
-│   └── views.py
-└── templates/
+├── config/          # settings (DRF/JWT/CORS), urls de la API, paginación
+├── core/            # Usuario, Sucursal, auth API, dashboard, seed_demo
+│   ├── serializers.py
+│   ├── api_utils.py         # resolución de sucursal por header
+│   └── views.py             # me / dashboard / BranchViewSet
+├── inventory/       # Inventario
+│   ├── models.py            # Product, Category, Brand, Unit, ProductStock,
+│   │                        #   ProductPresentation, ProductSubstitute, InventoryMovement
+│   ├── services.py          # apply_movement(): stock con bloqueo + multi-sucursal
+│   ├── utils.py             # fracciones, autogeneración SKU/EAN-13
+│   ├── serializers.py
+│   └── views.py             # viewsets DRF
+└── frontend/        # SPA React + Vite + Tailwind
+    └── src/
+        ├── api/client.js        # axios + interceptores JWT (refresh) + X-Branch-Id
+        ├── auth/AuthContext.jsx
+        ├── components/Layout.jsx
+        └── pages/               # Login, Dashboard, products/*, catalogs/*
 ```
 
 ## Notas de la migración
 
-- El **stock por sucursal** vive en `ProductStock`; el `Product.stock` global es
-  la suma de todas las sucursales. La primera fila de stock de un producto
-  hereda el stock global; las siguientes empiezan en cero (igual que Laravel).
-- Los **movimientos** se aplican con `inventory.services.apply_movement()` dentro
-  de una transacción con `select_for_update()` para evitar condiciones de carrera.
-- El **SKU** se autogenera con prefijo de 3 letras del nombre + contador; el
-  **código de barras** es un EAN-13 interno (prefijo `200`).
-- Se soportan empaques (caja/rollo/fardo), precios mayorista/constructor, venta
-  por medida e impuesto IVA/exento, igual que el modelo original.
+- **JWT stateless:** el access token dura 60 min y se renueva automáticamente
+  con el refresh token (interceptor de axios). La sucursal activa se guarda en
+  `localStorage` y viaja como header `X-Branch-Id`.
+- **Stock por sucursal** en `ProductStock`; `Product.stock` global = suma de
+  sucursales. Movimientos vía `apply_movement()` con `select_for_update()`.
+- **SKU** autogenerado (3 letras + contador) y **código de barras** EAN-13 interno.
