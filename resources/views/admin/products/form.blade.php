@@ -238,33 +238,9 @@
                         </div>
                     </div>
 
-                    <!-- Precio contratista (opcional) -->
-                    <div class="border-l-4 border-blue-500 bg-blue-50 p-4 rounded">
-                        <h3 class="font-semibold text-slate-800 flex items-center gap-2">
-                            👷 Precio contratista (opcional)
-                        </h3>
-                        <p class="text-xs text-slate-600 mt-1">
-                            Para obras, instaladores y proyectos. Se aplica automáticamente cuando el cliente
-                            está marcado como <strong>"Contratista"</strong>. <strong>Dejá en blanco si no aplica.</strong>
-                        </p>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
-                            <div>
-                                <x-input-label for="contractor_price" value="Precio contratista (por unidad base)" />
-                                <x-text-input id="contractor_price" name="contractor_price" type="text" inputmode="decimal"
-                                              class="mt-1 block w-full"
-                                              placeholder="0.00"
-                                              :value="old('contractor_price', (float) $product->contractor_price > 0 ? number_format($product->contractor_price, 2, '.', '') : '')" />
-                            </div>
-                            <div>
-                                <x-input-label for="container_contractor_price" value="Precio contratista por empaque (Q)" />
-                                <x-text-input id="container_contractor_price" name="container_contractor_price" type="text" inputmode="decimal"
-                                              class="mt-1 block w-full"
-                                              placeholder="0.00"
-                                              :value="old('container_contractor_price', (float) $product->container_contractor_price > 0 ? number_format($product->container_contractor_price, 2, '.', '') : '')" />
-                                <p class="text-xs text-slate-500 mt-1">Para caja/rollo entero a contratista.</p>
-                            </div>
-                        </div>
-                    </div>
+                    {{-- Precio contratista: oculto del form. Solo se usan publico y mayorista.
+                         Columnas contractor_price / container_contractor_price siguen en BD por
+                         si se reactivara. Para mostrar de vuelta este bloque, descomentar. --}}
 
                     <!-- Venta por peso o medida -->
                     <div class="border-l-4 border-cyan-500 bg-cyan-50 p-4 rounded"

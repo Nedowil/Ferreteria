@@ -96,7 +96,7 @@
                             automáticamente el precio correspondiente.
                         </p>
 
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-2 mt-3">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3">
                             <label class="flex items-start gap-2 p-3 bg-white rounded border cursor-pointer transition"
                                    :class="type === 'retail' ? 'border-pink-500 ring-2 ring-pink-200' : 'border-slate-200'">
                                 <input type="radio" name="customer_type" value="retail" x-model="type" class="mt-1" />
@@ -117,16 +117,7 @@
                                     </span>
                                 </span>
                             </label>
-                            <label class="flex items-start gap-2 p-3 bg-white rounded border cursor-pointer transition"
-                                   :class="type === 'contractor' ? 'border-pink-500 ring-2 ring-pink-200' : 'border-slate-200'">
-                                <input type="radio" name="customer_type" value="contractor" x-model="type" class="mt-1" />
-                                <span>
-                                    <span class="font-semibold text-sm">👷 Contratista</span>
-                                    <span class="block text-xs text-slate-500">
-                                        Obras / instaladores. Precio contratista.
-                                    </span>
-                                </span>
-                            </label>
+                            {{-- Contratista oculto: solo Publico y Mayorista. --}}
                         </div>
 
                         <div x-show="type === 'wholesale'" x-cloak class="mt-3">

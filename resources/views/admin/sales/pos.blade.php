@@ -4,11 +4,7 @@
     // bloques { } al matchear parentesis del @json, asi que cualquier closure
     // con match/return/multilinea adentro lo rompe.
     $posCustomers = $customers->map(function ($c) {
-        $badge = match ($c->customer_type) {
-            'wholesale' => ' 🏗',
-            'contractor' => ' 👷',
-            default => '',
-        };
+        $badge = $c->customer_type === 'wholesale' ? ' 🏗' : '';
         $taxIdPart = $c->tax_id ? ' ('.$c->tax_id.')' : '';
         return [
             'id' => $c->id,
@@ -912,7 +908,7 @@
                         <!-- Selector de modo de precio (público / mayorista / contratista) -->
                         <div class="mb-3 p-2 rounded border bg-slate-50 border-slate-200">
                             <div class="text-xs font-semibold text-slate-600 mb-1.5">Modo de precio</div>
-                            <div class="grid grid-cols-3 gap-1.5">
+                            <div class="grid grid-cols-2 gap-1.5">
                                 <button type="button" @click="setPriceMode('retail')"
                                         :class="priceMode === 'retail' ? 'bg-orange-500 text-white shadow' : 'bg-white text-slate-700 border border-slate-300'"
                                         class="px-2 py-1.5 rounded text-xs font-bold flex items-center justify-center gap-1">
@@ -923,16 +919,10 @@
                                         class="px-2 py-1.5 rounded text-xs font-bold flex items-center justify-center gap-1">
                                     🏗 Mayorista
                                 </button>
-                                <button type="button" @click="setPriceMode('contractor')"
-                                        :class="priceMode === 'contractor' ? 'bg-blue-500 text-white shadow' : 'bg-white text-slate-700 border border-slate-300'"
-                                        class="px-2 py-1.5 rounded text-xs font-bold flex items-center justify-center gap-1">
-                                    👷 Contratista
-                                </button>
                             </div>
                             <div class="text-xs mt-1.5"
                                  :class="{
                                     'text-pink-700': priceMode === 'wholesale',
-                                    'text-blue-700': priceMode === 'contractor',
                                     'text-slate-500': priceMode === 'retail',
                                  }">
                                 <template x-if="priceMode === 'retail'"><span>Precios al público.</span></template>
@@ -944,13 +934,11 @@
                                         </template>
                                     </span>
                                 </template>
-                                <template x-if="priceMode === 'contractor'"><span>Precios contratista activos.</span></template>
                             </div>
-                            <template x-if="customerCustomerType && customerCustomerType !== 'retail'">
+                            <template x-if="customerCustomerType === 'wholesale'">
                                 <div class="mt-1 text-xs">
-                                    <span class="px-1.5 py-0.5 rounded font-bold"
-                                          :class="customerCustomerType === 'wholesale' ? 'bg-pink-100 text-pink-700' : 'bg-blue-100 text-blue-700'">
-                                        <span x-text="customerCustomerType === 'wholesale' ? '🏗 Cliente mayorista' : '👷 Cliente contratista'"></span>
+                                    <span class="px-1.5 py-0.5 rounded font-bold bg-pink-100 text-pink-700">
+                                        🏗 Cliente mayorista
                                     </span>
                                 </div>
                             </template>
@@ -1962,7 +1950,7 @@
                 customerIsWholesale: false,
                 customerCustomerType: 'retail',
                 customerWholesaleDiscount: 0,
-                // Modo de precio: 'retail' | 'wholesale' | 'contractor'
+                // Modo de precio: 'retail' | 'wholesale'
                 priceMode: 'retail',
                 // Compat: refleja priceMode === 'wholesale' para código existente
                 get wholesaleMode() { return this.priceMode === 'wholesale'; },
@@ -2152,10 +2140,9 @@
                             return;
                         case 'F3':
                             e.preventDefault();
-                            // Cicla: retail → wholesale → contractor → retail
-                            const cycle = { retail: 'wholesale', wholesale: 'contractor', contractor: 'retail' };
-                            this.setPriceMode(cycle[this.priceMode] || 'retail');
-                            this.shortcutToast('Modo: ' + (this.priceMode === 'retail' ? '🛒 Público' : this.priceMode === 'wholesale' ? '🏗 Mayorista' : '👷 Contratista'));
+                            // Toggle: retail ↔ wholesale
+                            this.setPriceMode(this.priceMode === 'wholesale' ? 'retail' : 'wholesale');
+                            this.shortcutToast('Modo: ' + (this.priceMode === 'retail' ? '🛒 Público' : '🏗 Mayorista'));
                             return;
                         case 'F4':
                             e.preventDefault();
@@ -2288,12 +2275,11 @@
                     this.customerWholesaleDiscount = parseFloat(c.wholesale_discount_percent) || 0;
                     // El modo del POS sigue al cliente; el usuario puede cambiar manualmente.
                     if (c.customer_type === 'wholesale') this.priceMode = 'wholesale';
-                    else if (c.customer_type === 'contractor') this.priceMode = 'contractor';
                     else this.priceMode = 'retail';
                     this.recalcPricesForMode();
                 },
                 setPriceMode(mode) {
-                    if (!['retail', 'wholesale', 'contractor'].includes(mode)) return;
+                    if (!['retail', 'wholesale'].includes(mode)) return;
                     this.priceMode = mode;
                     this.recalcPricesForMode();
                 },
@@ -2312,11 +2298,6 @@
                             }
                             return price;
                         }
-                        return null;
-                    }
-                    if (this.priceMode === 'contractor') {
-                        if (isContainerPresentation && p.container_contractor_price) return p.container_contractor_price;
-                        if (p.contractor_price) return p.contractor_price * units_factor;
                         return null;
                     }
                     // retail
