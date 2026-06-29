@@ -190,7 +190,10 @@
         function purchaseForm() {
             return {
                 products: @json($products),
-                suppliers: @json($suppliers->map(fn($s) => ['id' => $s->id, 'label' => $s->name . ($s->tax_id ? " ($s->tax_id)" : '')])),
+                suppliers: @json($suppliers->map(function ($s) {
+                    $taxIdPart = $s->tax_id ? ' ('.$s->tax_id.')' : '';
+                    return ['id' => $s->id, 'label' => $s->name.$taxIdPart];
+                })),
                 supplier_id: '',
                 supplierSearch: '',
                 supplierOpen: false,

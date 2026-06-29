@@ -160,37 +160,46 @@
         </div>
     </div>
 
+    @php
+        // Construimos el payload aqui para no meter PHP complejo dentro de @json(...)
+        // (Blade no respeta los limites de string al contar parentesis y se rompe
+        // con closures multilinea / casts / nested calls).
+        $saleJson = null;
+        if ($sale) {
+            $saleJson = [
+                'id' => $sale->id,
+                'folio' => $sale->folio,
+                'date' => $sale->date->format('d/m/Y H:i'),
+                'customer' => $sale->customer?->name ?: 'Consumidor Final',
+                'tax_id' => $sale->customer?->tax_id ?: 'CF',
+                'payment_method' => $sale->payment_method,
+                'total' => (float) $sale->total,
+                'items' => $sale->items->map(function ($it) use ($sale) {
+                    $returned = $sale->returnedQuantityFor($it->id);
+                    return [
+                        'sale_item_id' => $it->id,
+                        'sku' => $it->product?->sku,
+                        'name' => $it->product?->name,
+                        'unit_label' => $it->unit_label,
+                        'tax_type' => $it->tax_type ?: 'iva',
+                        'unit_price' => (float) $it->unit_price,
+                        'quantity_bought' => (float) $it->quantity,
+                        'quantity_returned' => $returned,
+                        'quantity_available' => max(0, (float) $it->quantity - $returned),
+                        'selected' => false,
+                        'quantity_to_return' => '',
+                    ];
+                })->values()->all(),
+            ];
+        }
+    @endphp
     <script>
         function returnForm() {
             return {
                 folio: '{{ $sale?->folio ?? '' }}',
                 loading: false,
                 error: '',
-                sale: @json($sale ? [
-                    'id' => $sale->id,
-                    'folio' => $sale->folio,
-                    'date' => $sale->date->format('d/m/Y H:i'),
-                    'customer' => $sale->customer?->name ?: 'Consumidor Final',
-                    'tax_id' => $sale->customer?->tax_id ?: 'CF',
-                    'payment_method' => $sale->payment_method,
-                    'total' => (float) $sale->total,
-                    'items' => $sale->items->map(function ($it) use ($sale) {
-                        $returned = $sale->returnedQuantityFor($it->id);
-                        return [
-                            'sale_item_id' => $it->id,
-                            'sku' => $it->product?->sku,
-                            'name' => $it->product?->name,
-                            'unit_label' => $it->unit_label,
-                            'tax_type' => $it->tax_type ?: 'iva',
-                            'unit_price' => (float) $it->unit_price,
-                            'quantity_bought' => (float) $it->quantity,
-                            'quantity_returned' => $returned,
-                            'quantity_available' => max(0, (float) $it->quantity - $returned),
-                            'selected' => false,
-                            'quantity_to_return' => '',
-                        ];
-                    })->values(),
-                ] : null),
+                sale: @json($saleJson),
                 subtotal: 0,
                 subtotalExento: 0,
                 tax: 0,

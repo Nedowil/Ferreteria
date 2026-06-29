@@ -162,7 +162,10 @@
         function quotationForm() {
             return {
                 products: @json($products),
-                customers: @json($customers->map(fn($c) => ['id' => $c->id, 'label' => $c->name . ($c->tax_id ? " ($c->tax_id)" : '')])),
+                customers: @json($customers->map(function ($c) {
+                    $taxIdPart = $c->tax_id ? ' ('.$c->tax_id.')' : '';
+                    return ['id' => $c->id, 'label' => $c->name.$taxIdPart];
+                })),
                 customer_id: '',
                 customerSearch: '',
                 customerOpen: false,
