@@ -27,6 +27,13 @@ import QuotationDetail from "./pages/quotes/QuotationDetail";
 import ReturnsList from "./pages/returns/ReturnsList";
 import ReturnCreate from "./pages/returns/ReturnCreate";
 import ReturnDetail from "./pages/returns/ReturnDetail";
+import ReportsIndex from "./pages/reports/ReportsIndex";
+import SalesReport from "./pages/reports/SalesReport";
+import ProfitReport from "./pages/reports/ProfitReport";
+import InventoryValue from "./pages/reports/InventoryValue";
+import DeadStock from "./pages/reports/DeadStock";
+import DailyCash from "./pages/reports/DailyCash";
+import { TopProducts, TopCustomers, TopSuppliers, BySeller, ByCategory } from "./pages/reports/Rankings";
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
@@ -67,6 +74,17 @@ export default function App() {
       <Route path="/devoluciones" element={<Protected><ReturnsList /></Protected>} />
       <Route path="/devoluciones/nueva" element={<Protected><ReturnCreate /></Protected>} />
       <Route path="/devoluciones/:id" element={<Protected><ReturnDetail /></Protected>} />
+      <Route path="/reportes" element={<Protected><ReportsIndex /></Protected>} />
+      <Route path="/reportes/ventas" element={<Protected><SalesReport /></Protected>} />
+      <Route path="/reportes/utilidad" element={<Protected><ProfitReport /></Protected>} />
+      <Route path="/reportes/top-productos" element={<Protected><TopProducts /></Protected>} />
+      <Route path="/reportes/top-clientes" element={<Protected><TopCustomers /></Protected>} />
+      <Route path="/reportes/top-proveedores" element={<Protected><TopSuppliers /></Protected>} />
+      <Route path="/reportes/por-vendedor" element={<Protected><BySeller /></Protected>} />
+      <Route path="/reportes/por-categoria" element={<Protected><ByCategory /></Protected>} />
+      <Route path="/reportes/stock-muerto" element={<Protected><DeadStock /></Protected>} />
+      <Route path="/reportes/corte-diario" element={<Protected><DailyCash /></Protected>} />
+      <Route path="/reportes/valor-inventario" element={<Protected><InventoryValue /></Protected>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

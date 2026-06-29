@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     "sales",
     "quotes",
     "salereturns",
+    "reports",
 ]
 
 MIDDLEWARE = [

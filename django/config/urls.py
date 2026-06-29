@@ -34,6 +34,8 @@ api_patterns = [
     path("", include("quotes.urls")),
     # Devoluciones
     path("", include("salereturns.urls")),
+    # Reportes
+    path("reports/", include("reports.urls")),
 ]
 
 urlpatterns = [

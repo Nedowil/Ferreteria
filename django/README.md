@@ -27,7 +27,8 @@ arquitectura **desacoplada**:
 | Ventas al crédito + cuentas por cobrar (abonos) | ✅ | ✅ |
 | Cotizaciones (crear, convertir a venta) | ✅ | ✅ |
 | Devoluciones (por ticket / por producto / sin ticket) | ✅ | ✅ |
-| Facturación / FEL Guatemala / Reportes | ⏳ | ⏳ |
+| Reportes (ventas, utilidad, top, stock muerto, caja, inventario) | ✅ | ✅ |
+| Facturación / FEL Guatemala | ⏳ | ⏳ |
 
 ## Requisitos
 
@@ -115,6 +116,13 @@ activa viaja en el header `X-Branch-Id`.
 | POST | `/api/returns/without-sale/` | Devolución sin ticket |
 | GET | `/api/returns/search-by-product/` | Buscar ventas por producto |
 | POST | `/api/returns/{id}/cancel/` | Cancelar devolución (revierte stock) |
+| GET | `/api/reports/sales/` | Ventas por periodo (KPIs, por día, por método) |
+| GET | `/api/reports/profit/` | Utilidad bruta (ingreso − costo, margen) |
+| GET | `/api/reports/top-products/` · `top-customers/` · `top-suppliers/` | Rankings |
+| GET | `/api/reports/by-seller/` · `by-category/` | Ventas por vendedor / categoría |
+| GET | `/api/reports/dead-stock/` | Productos sin salidas en N días |
+| GET | `/api/reports/daily-cash/` | Corte diario de caja |
+| GET | `/api/reports/inventory-value/` | Valor de inventario (costo y venta) |
 
 ## Estructura
 

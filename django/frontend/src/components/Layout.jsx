@@ -28,6 +28,8 @@ export default function Layout({ children }) {
           <NavLink to="/unidades" className={linkClass}>Unidades</NavLink>
           <NavLink to="/bajo-stock" className={linkClass}>Stock bajo</NavLink>
           <NavLink to="/conteo" className={linkClass}>Conteo físico</NavLink>
+          <div className="px-5 pt-4 pb-1 text-xs uppercase text-slate-500">Reportes</div>
+          <NavLink to="/reportes" end className={linkClass}>Reportes</NavLink>
           <div className="px-5 pt-4 pb-1 text-xs uppercase text-slate-500">Compras</div>
           <NavLink to="/proveedores" className={linkClass}>Proveedores</NavLink>
           <NavLink to="/compras" className={linkClass}>Compras</NavLink>
