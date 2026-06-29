@@ -12,8 +12,27 @@
                     </div>
                 @endif
 
-                <!-- Paso 1: buscar venta -->
-                <div class="mb-4 p-3 bg-slate-50 rounded border border-slate-200">
+                {{-- Pestañas de modo de búsqueda --}}
+                <div class="flex gap-1 border-b border-slate-200 mb-3">
+                    <button type="button" @click="setMode('folio')"
+                            :class="mode === 'folio' ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+                            class="px-4 py-2 rounded-t font-bold text-sm">
+                        🧾 Por folio
+                    </button>
+                    <button type="button" @click="setMode('product')"
+                            :class="mode === 'product' ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+                            class="px-4 py-2 rounded-t font-bold text-sm">
+                        📦 Por producto
+                    </button>
+                    <button type="button" @click="setMode('noticket')"
+                            :class="mode === 'noticket' ? 'bg-red-500 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+                            class="px-4 py-2 rounded-t font-bold text-sm">
+                        🆓 Sin ticket
+                    </button>
+                </div>
+
+                {{-- MODO POR FOLIO --}}
+                <div x-show="mode === 'folio'" class="mb-4 p-3 bg-slate-50 rounded border border-slate-200">
                     <label class="text-sm font-semibold text-slate-700">🔎 Buscar venta original</label>
                     <p class="text-xs text-slate-500 mb-2">Escribí o escaneá el folio de la venta (ej. V-000005).</p>
                     <div class="flex gap-2">
@@ -29,8 +48,161 @@
                     <div x-show="error" x-cloak class="mt-2 p-2 bg-red-50 text-red-700 rounded text-sm" x-text="error"></div>
                 </div>
 
-                <!-- Paso 2: datos de la venta + selección de items -->
-                <template x-if="sale">
+                {{-- MODO POR PRODUCTO --}}
+                <div x-show="mode === 'product'" x-cloak class="mb-4 p-3 bg-slate-50 rounded border border-slate-200">
+                    <label class="text-sm font-semibold text-slate-700">📦 Buscar por producto</label>
+                    <p class="text-xs text-slate-500 mb-2">
+                        Escaneá el producto que trae el cliente. Te muestro las últimas ventas (30 días) que lo contienen,
+                        para que el cliente reconozca la suya.
+                    </p>
+                    <div class="flex gap-2">
+                        <input type="text" x-model="productTerm" x-ref="productInput"
+                               @keydown.enter.prevent="searchByProduct()"
+                               placeholder="Código de barras, SKU o parte del nombre"
+                               class="flex-1 border-gray-300 rounded-md shadow-sm text-sm" />
+                        <button type="button" @click="searchByProduct()" :disabled="loading"
+                                class="px-4 py-2 bg-indigo-600 text-white rounded text-sm font-semibold disabled:opacity-50">
+                            <span x-show="!loading">Buscar</span>
+                            <span x-show="loading">...</span>
+                        </button>
+                    </div>
+                    <div x-show="error" x-cloak class="mt-2 p-2 bg-red-50 text-red-700 rounded text-sm" x-text="error"></div>
+
+                    <template x-if="productInfo">
+                        <div class="mt-3 p-2 bg-orange-50 border border-orange-200 rounded text-sm">
+                            <strong>Producto:</strong> <span x-text="productInfo.name"></span>
+                            <span class="font-mono text-xs text-slate-500" x-text="' · ' + productInfo.sku"></span>
+                        </div>
+                    </template>
+
+                    <template x-if="productSales.length > 0">
+                        <div class="mt-3">
+                            <div class="text-xs font-semibold text-slate-600 mb-1">
+                                Últimas ventas (<span x-text="productSales.length"></span>):
+                            </div>
+                            <div class="space-y-1 max-h-72 overflow-y-auto">
+                                <template x-for="s in productSales" :key="s.id">
+                                    <button type="button" @click="pickSaleFromProduct(s)"
+                                            class="w-full text-left p-2 border border-slate-200 rounded hover:bg-orange-50 hover:border-orange-300 text-xs flex justify-between gap-2">
+                                        <div>
+                                            <div class="font-bold font-mono text-sm" x-text="s.folio"></div>
+                                            <div class="text-slate-600" x-text="s.date + ' · ' + s.customer + ' (' + s.tax_id + ')'"></div>
+                                            <div class="text-slate-500">Cajero: <span x-text="s.cashier"></span></div>
+                                        </div>
+                                        <div class="text-right whitespace-nowrap">
+                                            <div class="font-bold text-orange-600">Q<span x-text="s.total.toFixed(2)"></span></div>
+                                            <div class="text-slate-600">
+                                                <span x-text="s.product_quantity"></span> ×
+                                                Q<span x-text="s.product_unit_price.toFixed(2)"></span>
+                                            </div>
+                                        </div>
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                {{-- MODO SIN TICKET --}}
+                <div x-show="mode === 'noticket'" x-cloak class="mb-4 p-4 bg-red-50 rounded border border-red-200 space-y-3">
+                    <div class="font-bold text-red-900">⚠ Devolución sin ticket</div>
+                    <p class="text-xs text-red-800">
+                        Usá esta opción solo si el cliente no tiene comprobante y no encontraste la venta original.
+                        Queda registrada con motivo <em>"sin ticket"</em>. <strong>No genera nota de crédito electrónica.</strong>
+                    </p>
+
+                    <form @submit.prevent="submitNoticket()" class="space-y-3">
+                        <div class="flex gap-2">
+                            <input type="text" x-model="noticketTerm" x-ref="noticketInput"
+                                   @keydown.enter.prevent="lookupNoticketProduct()"
+                                   placeholder="Escaneá o tipeá código del producto"
+                                   class="flex-1 border-gray-300 rounded-md shadow-sm text-sm" />
+                            <button type="button" @click="lookupNoticketProduct()" :disabled="loading"
+                                    class="px-4 py-2 bg-orange-600 text-white rounded text-sm font-semibold disabled:opacity-50">
+                                + Agregar
+                            </button>
+                        </div>
+
+                        <template x-if="noticketItems.length > 0">
+                            <table class="min-w-full text-sm border">
+                                <thead class="bg-slate-100">
+                                    <tr>
+                                        <th class="px-2 py-1 text-left">Producto</th>
+                                        <th class="px-2 py-1 text-right w-24">Cantidad</th>
+                                        <th class="px-2 py-1 text-right w-32">Precio unit.</th>
+                                        <th class="px-2 py-1 text-right w-28">Subtotal</th>
+                                        <th class="px-2 py-1 w-8"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="(it, idx) in noticketItems" :key="idx">
+                                        <tr class="border-t">
+                                            <td class="px-2 py-1">
+                                                <div class="font-semibold" x-text="it.name"></div>
+                                                <div class="text-xs text-slate-500 font-mono" x-text="it.sku"></div>
+                                            </td>
+                                            <td class="px-2 py-1 text-right">
+                                                <input type="number" min="0.01" step="0.01"
+                                                       x-model.number="it.quantity"
+                                                       class="w-20 border-gray-300 rounded text-right text-sm" />
+                                            </td>
+                                            <td class="px-2 py-1 text-right">
+                                                <input type="number" min="0" step="0.01"
+                                                       x-model.number="it.unit_price"
+                                                       class="w-24 border-gray-300 rounded text-right text-sm" />
+                                            </td>
+                                            <td class="px-2 py-1 text-right font-semibold">
+                                                Q<span x-text="((+it.quantity||0)*(+it.unit_price||0)).toFixed(2)"></span>
+                                            </td>
+                                            <td class="px-2 py-1 text-center">
+                                                <button type="button" @click="noticketItems.splice(idx, 1)"
+                                                        class="text-red-600 hover:bg-red-100 rounded px-2">✕</button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </template>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                                <x-input-label value="Reintegrar como *" />
+                                <select x-model="noticketRefund" required
+                                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                    <option value="efectivo">💵 Efectivo</option>
+                                    <option value="tarjeta">💳 Tarjeta</option>
+                                    <option value="transferencia">🏦 Transferencia</option>
+                                    <option value="credito_nota">📋 Nota de crédito interna</option>
+                                </select>
+                            </div>
+                            <div>
+                                <x-input-label value="Motivo / observación" />
+                                <input type="text" x-model="noticketNotes" maxlength="500"
+                                       placeholder="Ej: cliente no presentó ticket"
+                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />
+                            </div>
+                        </div>
+
+                        <div class="text-right text-lg font-bold text-orange-700">
+                            Total reintegro: Q<span x-text="noticketTotal.toFixed(2)"></span>
+                        </div>
+
+                        <div x-show="error" x-cloak class="p-2 bg-red-100 text-red-800 rounded text-sm" x-text="error"></div>
+
+                        <div class="flex justify-end gap-2">
+                            <a href="{{ route('admin.devoluciones.index') }}"
+                               class="px-4 py-2 bg-slate-200 text-slate-700 rounded text-sm">Cancelar</a>
+                            <button type="submit" :disabled="noticketItems.length === 0 || submitting"
+                                    class="px-5 py-2 bg-red-600 text-white rounded font-bold hover:bg-red-700 disabled:opacity-50">
+                                <span x-show="!submitting">✓ Registrar devolución sin ticket</span>
+                                <span x-show="submitting">Procesando…</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Paso 2: datos de la venta + selección de items (solo modo folio/producto) -->
+                <template x-if="sale && mode !== 'noticket'">
                     <form method="POST" action="{{ route('admin.devoluciones.store') }}">
                         @csrf
                         <input type="hidden" name="sale_id" :value="sale.id" />
@@ -196,6 +368,7 @@
     <script>
         function returnForm() {
             return {
+                mode: 'folio',     // 'folio' | 'product' | 'noticket'
                 folio: '{{ $sale?->folio ?? '' }}',
                 loading: false,
                 error: '',
@@ -206,6 +379,146 @@
                 total: 0,
                 taxRate: {{ (float) \App\Models\CompanySetting::current()->default_tax_rate }},
                 pricesIncludeTax: {{ \App\Models\CompanySetting::current()->prices_include_tax ? 'true' : 'false' }},
+
+                // Modo "por producto"
+                productTerm: '',
+                productInfo: null,
+                productSales: [],
+
+                // Modo "sin ticket"
+                noticketTerm: '',
+                noticketItems: [],
+                noticketRefund: 'efectivo',
+                noticketNotes: '',
+                submitting: false,
+                get noticketTotal() {
+                    return this.noticketItems.reduce(
+                        (sum, it) => sum + (+it.quantity || 0) * (+it.unit_price || 0),
+                        0
+                    );
+                },
+
+                setMode(m) {
+                    this.mode = m;
+                    this.error = '';
+                    setTimeout(() => {
+                        if (m === 'product') this.$refs.productInput?.focus();
+                        else if (m === 'noticket') this.$refs.noticketInput?.focus();
+                    }, 60);
+                },
+
+                async searchByProduct() {
+                    const term = (this.productTerm || '').trim();
+                    if (!term) return;
+                    this.loading = true;
+                    this.error = '';
+                    this.productInfo = null;
+                    this.productSales = [];
+                    try {
+                        const url = new URL('{{ route('admin.devoluciones.search_by_product') }}', window.location.origin);
+                        url.searchParams.set('q', term);
+                        url.searchParams.set('days', '30');
+                        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                        const data = await res.json();
+                        if (!res.ok) {
+                            this.error = data.error || 'No se encontró el producto.';
+                            return;
+                        }
+                        this.productInfo = data.product;
+                        this.productSales = data.sales;
+                        if (data.sales.length === 0) {
+                            this.error = 'No hay ventas recientes con este producto. Probá la opción "Sin ticket".';
+                        }
+                    } catch (e) {
+                        this.error = 'Error de red: ' + e.message;
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                async pickSaleFromProduct(s) {
+                    this.mode = 'folio';
+                    this.folio = s.folio;
+                    await this.loadSale();
+                },
+                async lookupNoticketProduct() {
+                    const term = (this.noticketTerm || '').trim();
+                    if (!term) return;
+                    this.loading = true;
+                    this.error = '';
+                    try {
+                        const url = new URL('{{ route('admin.ventas.search_products') }}', window.location.origin);
+                        url.searchParams.set('q', term);
+                        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                        const products = await res.json();
+                        if (!Array.isArray(products) || products.length === 0) {
+                            this.error = 'No se encontró el producto con ese código.';
+                            return;
+                        }
+                        const exact = products.find(p => p.barcode === term || p.sku === term) || products[0];
+                        const existing = this.noticketItems.find(i => i.product_id === exact.id);
+                        if (existing) {
+                            existing.quantity = +(existing.quantity || 0) + 1;
+                        } else {
+                            this.noticketItems.push({
+                                product_id: exact.id,
+                                sku: exact.sku,
+                                name: exact.name,
+                                quantity: 1,
+                                unit_price: +exact.sale_price || 0,
+                            });
+                        }
+                        this.noticketTerm = '';
+                        setTimeout(() => this.$refs.noticketInput?.focus(), 50);
+                    } catch (e) {
+                        this.error = 'Error de red: ' + e.message;
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                async submitNoticket() {
+                    const items = this.noticketItems
+                        .map(it => ({
+                            product_id: it.product_id,
+                            quantity: +it.quantity || 0,
+                            unit_price: +it.unit_price || 0,
+                        }))
+                        .filter(i => i.quantity > 0 && i.unit_price >= 0);
+                    if (items.length === 0) {
+                        this.error = 'Agregá al menos un producto con cantidad mayor a 0.';
+                        return;
+                    }
+                    if (!confirm('¿Confirmar devolución sin ticket por Q' + this.noticketTotal.toFixed(2) + '?')) return;
+                    this.submitting = true;
+                    this.error = '';
+                    try {
+                        const res = await fetch('{{ route('admin.devoluciones.store_without_sale') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            },
+                            body: JSON.stringify({
+                                refund_method: this.noticketRefund,
+                                reason: this.noticketNotes || 'Cliente no presentó ticket',
+                                notes: this.noticketNotes || null,
+                                items,
+                            }),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) {
+                            this.error = data.error || 'Error al registrar la devolución';
+                            return;
+                        }
+                        // Redirige a la vista del detalle
+                        window.location.href = data.urls.show;
+                    } catch (e) {
+                        this.error = 'Error de red: ' + e.message;
+                    } finally {
+                        this.submitting = false;
+                    }
+                },
 
                 get hasItems() {
                     return this.sale && this.sale.items.some(i => i.selected && parseFloat(i.quantity_to_return) > 0);
