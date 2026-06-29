@@ -46,8 +46,15 @@ export function AuthProvider({ children }) {
 
   const currentBranchId = tokenStore.branch ? Number(tokenStore.branch) : user?.current_branch?.id;
 
+  // ¿El usuario tiene un permiso? (el superusuario admin tiene todos)
+  const can = (perm) => {
+    if (!user) return false;
+    if (user.is_superuser) return true;
+    return (user.permissions || []).includes(perm);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, branches, loading, login, logout, setBranch, currentBranchId }}>
+    <AuthContext.Provider value={{ user, branches, loading, login, logout, setBranch, currentBranchId, can }}>
       {children}
     </AuthContext.Provider>
   );

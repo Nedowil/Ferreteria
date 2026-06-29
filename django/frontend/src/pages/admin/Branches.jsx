@@ -1,0 +1,85 @@
+import { useEffect, useState } from "react";
+import api from "../../api/client";
+
+const BLANK = { name: "", code: "", address: "", phone: "", email: "", is_main: false, active: true };
+
+export default function Branches() {
+  const [items, setItems] = useState([]);
+  const [editing, setEditing] = useState(null);
+  const [error, setError] = useState("");
+
+  const load = () => { api.get("/branches/").then((r) => setItems(r.data.results || r.data)); };
+  useEffect(load, []);
+
+  const save = async (e) => {
+    e.preventDefault(); setError("");
+    try {
+      if (editing.id) await api.put(`/branches/${editing.id}/`, editing);
+      else await api.post("/branches/", editing);
+      setEditing(null); load();
+    } catch (err) { setError(JSON.stringify(err.response?.data) || "Error"); }
+  };
+  const remove = async (id) => {
+    if (!confirm("¿Eliminar sucursal?")) return;
+    try { await api.delete(`/branches/${id}/`); load(); }
+    catch (err) { alert(err.response?.data?.detail || "No se pudo eliminar."); }
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-lg font-semibold">Sucursales</h1>
+        <button onClick={() => setEditing(BLANK)} className="bg-blue-600 text-white rounded px-4 py-2 text-sm font-medium">+ Nueva sucursal</button>
+      </div>
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-slate-50 text-slate-500 text-left">
+            <tr><th className="px-4 py-2">Nombre</th><th className="px-4 py-2">Código</th><th className="px-4 py-2">Teléfono</th>
+                <th className="px-4 py-2">Principal</th><th className="px-4 py-2">Activa</th><th className="px-4 py-2 text-right">Acciones</th></tr>
+          </thead>
+          <tbody>
+            {items.map((b) => (
+              <tr key={b.id} className="border-t">
+                <td className="px-4 py-2 font-medium">{b.name}</td>
+                <td className="px-4 py-2 font-mono text-xs">{b.code}</td>
+                <td className="px-4 py-2 text-slate-500">{b.phone || "—"}</td>
+                <td className="px-4 py-2">{b.is_main ? "★" : ""}</td>
+                <td className="px-4 py-2">{b.active ? <span className="text-green-600">Sí</span> : <span className="text-slate-400">No</span>}</td>
+                <td className="px-4 py-2 text-right">
+                  <button onClick={() => setEditing(b)} className="text-blue-600 hover:underline">Editar</button>
+                  <button onClick={() => remove(b.id)} className="text-red-600 hover:underline ml-3">Eliminar</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {editing && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4" onClick={() => setEditing(null)}>
+          <form onClick={(e) => e.stopPropagation()} onSubmit={save} className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+            <h3 className="font-semibold mb-4">{editing.id ? "Editar" : "Nueva"} sucursal</h3>
+            {error && <div className="bg-red-100 text-red-800 rounded px-3 py-2 text-xs mb-3">{error}</div>}
+            <div className="grid grid-cols-2 gap-3">
+              {[["name", "Nombre", true], ["code", "Código", true], ["phone", "Teléfono"], ["email", "Correo"], ["address", "Dirección", false, true]].map(([k, label, req, full]) => (
+                <div key={k} className={full ? "col-span-2" : ""}>
+                  <label className="block text-sm font-medium mb-1">{label}</label>
+                  <input value={editing[k] || ""} onChange={(e) => setEditing({ ...editing, [k]: e.target.value })} required={req}
+                         className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-6 mt-3 text-sm">
+              <label className="flex items-center gap-2"><input type="checkbox" checked={editing.is_main} onChange={(e) => setEditing({ ...editing, is_main: e.target.checked })} /> Principal</label>
+              <label className="flex items-center gap-2"><input type="checkbox" checked={editing.active} onChange={(e) => setEditing({ ...editing, active: e.target.checked })} /> Activa</label>
+            </div>
+            <div className="flex gap-2 mt-5">
+              <button className="bg-blue-600 text-white rounded px-5 py-2 text-sm font-medium">Guardar</button>
+              <button type="button" onClick={() => setEditing(null)} className="px-5 py-2 text-sm text-slate-500">Cancelar</button>
+            </div>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}

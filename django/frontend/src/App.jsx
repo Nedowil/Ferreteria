@@ -34,6 +34,13 @@ import InventoryValue from "./pages/reports/InventoryValue";
 import DeadStock from "./pages/reports/DeadStock";
 import DailyCash from "./pages/reports/DailyCash";
 import { TopProducts, TopCustomers, TopSuppliers, BySeller, ByCategory } from "./pages/reports/Rankings";
+import Users from "./pages/admin/Users";
+import Roles from "./pages/admin/Roles";
+import Branches from "./pages/admin/Branches";
+import Transfers from "./pages/admin/Transfers";
+import TransferCreate from "./pages/admin/TransferCreate";
+import TransferDetail from "./pages/admin/TransferDetail";
+import AuditLog from "./pages/admin/AuditLog";
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
@@ -85,6 +92,13 @@ export default function App() {
       <Route path="/reportes/stock-muerto" element={<Protected><DeadStock /></Protected>} />
       <Route path="/reportes/corte-diario" element={<Protected><DailyCash /></Protected>} />
       <Route path="/reportes/valor-inventario" element={<Protected><InventoryValue /></Protected>} />
+      <Route path="/admin/usuarios" element={<Protected><Users /></Protected>} />
+      <Route path="/admin/roles" element={<Protected><Roles /></Protected>} />
+      <Route path="/admin/sucursales" element={<Protected><Branches /></Protected>} />
+      <Route path="/transferencias" element={<Protected><Transfers /></Protected>} />
+      <Route path="/transferencias/nueva" element={<Protected><TransferCreate /></Protected>} />
+      <Route path="/transferencias/:id" element={<Protected><TransferDetail /></Protected>} />
+      <Route path="/admin/auditoria" element={<Protected><AuditLog /></Protected>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

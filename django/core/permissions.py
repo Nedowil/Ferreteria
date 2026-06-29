@@ -1,0 +1,144 @@
+"""Catálogo de permisos y matriz de roles (portado del seeder de Laravel).
+
+Los permisos se modelan como django.contrib.auth Permission bajo un único
+ContentType (el del modelo Branch), con el codename estilo 'ventas.crear'. Los
+roles son Groups de Django.
+"""
+
+from rest_framework.permissions import BasePermission
+
+# (codename, etiqueta legible, grupo) — el grupo es solo para agrupar en la UI.
+PERMISSIONS = [
+    ("usuarios.ver", "Ver usuarios", "Usuarios"),
+    ("usuarios.crear", "Crear usuarios", "Usuarios"),
+    ("usuarios.editar", "Editar usuarios", "Usuarios"),
+    ("usuarios.eliminar", "Eliminar usuarios", "Usuarios"),
+    ("roles.gestionar", "Gestionar roles", "Usuarios"),
+    ("catalogos.gestionar", "Gestionar catálogos", "Inventario"),
+    ("productos.ver", "Ver productos", "Inventario"),
+    ("productos.crear", "Crear productos", "Inventario"),
+    ("productos.editar", "Editar productos", "Inventario"),
+    ("productos.eliminar", "Eliminar productos", "Inventario"),
+    ("inventario.ajustar", "Ajustar inventario", "Inventario"),
+    ("proveedores.ver", "Ver proveedores", "Compras"),
+    ("proveedores.crear", "Crear proveedores", "Compras"),
+    ("proveedores.editar", "Editar proveedores", "Compras"),
+    ("proveedores.eliminar", "Eliminar proveedores", "Compras"),
+    ("compras.ver", "Ver compras", "Compras"),
+    ("compras.crear", "Crear compras", "Compras"),
+    ("compras.recibir", "Recibir compras", "Compras"),
+    ("compras.cancelar", "Cancelar compras", "Compras"),
+    ("clientes.ver", "Ver clientes", "Ventas"),
+    ("clientes.crear", "Crear clientes", "Ventas"),
+    ("clientes.editar", "Editar clientes", "Ventas"),
+    ("clientes.eliminar", "Eliminar clientes", "Ventas"),
+    ("ventas.ver", "Ver ventas", "Ventas"),
+    ("ventas.crear", "Crear ventas (POS)", "Ventas"),
+    ("ventas.cancelar", "Cancelar ventas", "Ventas"),
+    ("caja.ver", "Ver caja", "Caja"),
+    ("caja.abrir", "Abrir caja", "Caja"),
+    ("caja.cerrar", "Cerrar caja", "Caja"),
+    ("caja.movimientos", "Movimientos de caja", "Caja"),
+    ("caja.ver_todas", "Ver todas las cajas", "Caja"),
+    ("reportes.ver", "Ver reportes", "Reportes"),
+    ("configuracion.gestionar", "Gestionar configuración", "Administración"),
+    ("cotizaciones.ver", "Ver cotizaciones", "Ventas"),
+    ("cotizaciones.crear", "Crear cotizaciones", "Ventas"),
+    ("cotizaciones.convertir", "Convertir cotizaciones", "Ventas"),
+    ("cotizaciones.cancelar", "Cancelar cotizaciones", "Ventas"),
+    ("facturas.ver", "Ver facturas", "Facturación"),
+    ("facturas.emitir", "Emitir facturas", "Facturación"),
+    ("facturas.anular", "Anular facturas", "Facturación"),
+    ("sucursales.gestionar", "Gestionar sucursales", "Administración"),
+    ("transferencias.gestionar", "Gestionar transferencias", "Administración"),
+    ("auditoria.ver", "Ver auditoría", "Administración"),
+    ("backup.gestionar", "Gestionar respaldos", "Administración"),
+    ("imports.gestionar", "Gestionar importaciones", "Administración"),
+    # Widgets del tablero (controlan qué ve cada usuario en el panel)
+    ("dashboard.ventas_hoy", "Tablero: ventas de hoy", "Tablero"),
+    ("dashboard.ventas_mes", "Tablero: ventas del mes", "Tablero"),
+    ("dashboard.productos_total", "Tablero: total de productos", "Tablero"),
+    ("dashboard.stock_bajo", "Tablero: stock bajo", "Tablero"),
+    ("dashboard.productos_reponer", "Tablero: productos por reponer", "Tablero"),
+    ("dashboard.accesos_rapidos", "Tablero: accesos rápidos", "Tablero"),
+    ("dashboard.cajas_abiertas", "Tablero: cajas abiertas", "Tablero"),
+    ("dashboard.fel_quota", "Tablero: cupo FEL", "Tablero"),
+]
+
+ALL_CODENAMES = [p[0] for p in PERMISSIONS]
+
+# Matriz rol → permisos (admin recibe todos)
+ROLE_MATRIX = {
+    "admin": ALL_CODENAMES,
+    "almacenista": [
+        "catalogos.gestionar", "productos.ver", "productos.crear", "productos.editar",
+        "productos.eliminar", "inventario.ajustar", "proveedores.ver", "proveedores.crear",
+        "proveedores.editar", "proveedores.eliminar", "compras.ver", "compras.crear",
+        "compras.recibir", "compras.cancelar",
+        "dashboard.productos_total", "dashboard.stock_bajo", "dashboard.productos_reponer",
+        "dashboard.accesos_rapidos",
+    ],
+    "vendedor": [
+        "productos.ver", "clientes.ver", "clientes.crear", "clientes.editar",
+        "ventas.ver", "ventas.crear", "caja.ver", "caja.abrir", "caja.cerrar",
+        "caja.movimientos", "cotizaciones.ver", "cotizaciones.crear",
+        "cotizaciones.convertir", "cotizaciones.cancelar", "facturas.ver", "facturas.emitir",
+        "dashboard.ventas_hoy", "dashboard.cajas_abiertas", "dashboard.accesos_rapidos",
+    ],
+}
+
+
+def get_permission_content_type():
+    """ContentType bajo el cual viven los permisos de la app (el de Branch)."""
+    from django.contrib.contenttypes.models import ContentType
+    from .models import Branch
+    return ContentType.objects.get_for_model(Branch)
+
+
+def sync_permissions():
+    """Crea/actualiza los Permission del catálogo. Devuelve {codename: Permission}."""
+    from django.contrib.auth.models import Permission
+    ct = get_permission_content_type()
+    out = {}
+    for code, label, _group in PERMISSIONS:
+        perm, _ = Permission.objects.get_or_create(
+            codename=code, content_type=ct, defaults={"name": label}
+        )
+        if perm.name != label:
+            perm.name = label
+            perm.save(update_fields=["name"])
+        out[code] = perm
+    return out
+
+
+def user_permission_codenames(user):
+    """Conjunto de codenames de permisos efectivos del usuario."""
+    if not user or not user.is_authenticated:
+        return set()
+    if user.is_superuser:
+        return set(ALL_CODENAMES)
+    return set(
+        user.groups.values_list("permissions__codename", flat=True).distinct()
+    ) & set(ALL_CODENAMES)
+
+
+class HasPermission(BasePermission):
+    """Permiso DRF que exige un codename. Uso: permission_classes=[HasPermission('ventas.crear')].
+
+    Como DRF instancia la clase, se usa con una factoría:
+        HasPermission.require('ventas.crear')
+    """
+
+    required = None
+
+    @classmethod
+    def require(cls, codename):
+        return type(f"HasPerm_{codename}", (cls,), {"required": codename})
+
+    def has_permission(self, request, view):
+        user = request.user
+        if not user or not user.is_authenticated:
+            return False
+        if user.is_superuser:
+            return True
+        return self.required in user_permission_codenames(user)

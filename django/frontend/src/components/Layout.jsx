@@ -5,7 +5,8 @@ const linkClass = ({ isActive }) =>
   "block px-5 py-2 hover:bg-slate-800 " + (isActive ? "bg-slate-800 text-white" : "");
 
 export default function Layout({ children }) {
-  const { user, branches, currentBranchId, setBranch, logout } = useAuth();
+  const { user, branches, currentBranchId, setBranch, logout, can } = useAuth();
+  const showAdmin = can("usuarios.ver") || can("sucursales.gestionar") || can("transferencias.gestionar") || can("auditoria.ver");
   return (
     <div className="min-h-screen flex">
       <aside className="w-60 bg-slate-900 text-slate-200 flex flex-col fixed inset-y-0">
@@ -36,6 +37,16 @@ export default function Layout({ children }) {
           <NavLink to="/cuentas-por-pagar" className={linkClass}>Cuentas por pagar</NavLink>
           <div className="px-5 pt-4 pb-1 text-xs uppercase text-slate-500">Clientes</div>
           <NavLink to="/clientes" className={linkClass}>Clientes</NavLink>
+          {showAdmin && (
+            <>
+              <div className="px-5 pt-4 pb-1 text-xs uppercase text-slate-500">Administración</div>
+              {can("transferencias.gestionar") && <NavLink to="/transferencias" className={linkClass}>Transferencias</NavLink>}
+              {can("usuarios.ver") && <NavLink to="/admin/usuarios" className={linkClass}>Usuarios</NavLink>}
+              {can("roles.gestionar") && <NavLink to="/admin/roles" className={linkClass}>Roles</NavLink>}
+              {can("sucursales.gestionar") && <NavLink to="/admin/sucursales" className={linkClass}>Sucursales</NavLink>}
+              {can("auditoria.ver") && <NavLink to="/admin/auditoria" className={linkClass}>Auditoría</NavLink>}
+            </>
+          )}
         </nav>
         <div className="px-5 py-3 border-t border-slate-700 text-xs text-slate-400">
           {user?.name || user?.email}

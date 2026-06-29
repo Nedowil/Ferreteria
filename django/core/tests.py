@@ -26,6 +26,61 @@ class ApiTestBase(APITestCase):
                                 HTTP_X_BRANCH_ID=str(self.branch.id))
 
 
+class AdminPermissionTests(APITestCase):
+    """Verifica el sistema de permisos por rol."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from django.contrib.auth.models import Group
+        from core.permissions import ROLE_MATRIX, sync_permissions
+        User = get_user_model()
+        self.branch = Branch.objects.create(name="Matriz", code="M", is_main=True)
+        perms = sync_permissions()
+        for role, codes in ROLE_MATRIX.items():
+            g, _ = Group.objects.get_or_create(name=role)
+            g.permissions.set([perms[c] for c in codes if c in perms])
+
+        # Admin (superusuario)
+        self.admin = User.objects.create_user(username="a", email="a@test.com", password="x123", is_superuser=True)
+        # Vendedor
+        self.seller = User.objects.create_user(username="s", email="s@test.com", password="x123")
+        self.seller.groups.add(Group.objects.get(name="vendedor"))
+
+    def _client(self, email):
+        from rest_framework.test import APIClient
+        c = APIClient()
+        r = c.post("/api/auth/token/", {"email": email, "password": "x123"}, format="json")
+        c.credentials(HTTP_AUTHORIZATION=f"Bearer {r.json()['access']}", HTTP_X_BRANCH_ID=str(self.branch.id))
+        return c
+
+    def test_me_incluye_permisos_del_rol(self):
+        me = self._client("s@test.com").get("/api/auth/me/").json()
+        self.assertIn("ventas.crear", me["permissions"])
+        self.assertNotIn("usuarios.crear", me["permissions"])
+
+    def test_vendedor_no_puede_crear_usuarios(self):
+        r = self._client("s@test.com").post("/api/users/", {"name": "x", "email": "x@x.com"}, format="json")
+        self.assertEqual(r.status_code, 403)
+
+    def test_admin_puede_listar_usuarios(self):
+        r = self._client("a@test.com").get("/api/users/")
+        self.assertEqual(r.status_code, 200)
+
+    def test_vendedor_no_ve_auditoria(self):
+        r = self._client("s@test.com").get("/api/audit-logs/")
+        self.assertEqual(r.status_code, 403)
+
+    def test_crear_usuario_asigna_rol_y_sucursales(self):
+        c = self._client("a@test.com")
+        r = c.post("/api/users/", {
+            "name": "Nuevo", "email": "nuevo@test.com", "password": "Secreta123!",
+            "role": "vendedor", "branches": [{"branch_id": self.branch.id, "is_default": True}],
+        }, format="json")
+        self.assertEqual(r.status_code, 201, r.content)
+        self.assertEqual(r.json()["roles"], ["vendedor"])
+        self.assertEqual(len(r.json()["branches"]), 1)
+
+
 class AuthAndProductApiTests(ApiTestBase):
     def test_me_devuelve_sucursal(self):
         r = self.client.get("/api/auth/me/")

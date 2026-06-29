@@ -11,6 +11,7 @@ from django.contrib.auth.models import Group
 from django.core.management.base import BaseCommand
 
 from core.models import Branch, BranchUser
+from core.permissions import ROLE_MATRIX, sync_permissions
 
 User = get_user_model()
 
@@ -18,13 +19,18 @@ ROLES = ["admin", "vendedor", "almacenista"]
 
 
 class Command(BaseCommand):
-    help = "Crea roles, sucursal principal y usuario administrador por defecto."
+    help = "Crea permisos, roles, sucursal principal y usuario administrador por defecto."
 
     def handle(self, *args, **options):
+        # Permisos del catálogo y asignación por rol
+        perms = sync_permissions()
+        self.stdout.write(f"  + {len(perms)} permisos sincronizados")
         for role in ROLES:
             group, created = Group.objects.get_or_create(name=role)
             if created:
                 self.stdout.write(f"  + rol '{role}'")
+            codenames = ROLE_MATRIX.get(role, [])
+            group.permissions.set([perms[c] for c in codenames if c in perms])
 
         branch, created = Branch.objects.get_or_create(
             code="MATRIZ",

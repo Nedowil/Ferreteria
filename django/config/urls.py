@@ -11,6 +11,8 @@ from core import views as core_views
 
 router = DefaultRouter()
 router.register("branches", core_views.BranchViewSet, basename="branch")
+router.register("users", core_views.UserViewSet, basename="user")
+router.register("roles", core_views.RoleViewSet, basename="role")
 
 api_patterns = [
     # Autenticación JWT
@@ -19,6 +21,7 @@ api_patterns = [
     path("auth/me/", core_views.me, name="me"),
     # Núcleo
     path("dashboard/", core_views.dashboard, name="dashboard"),
+    path("permissions/", core_views.permission_catalog, name="permission-catalog"),
     path("", include(router.urls)),
     # Inventario
     path("inventory/", include("inventory.urls")),
@@ -36,6 +39,10 @@ api_patterns = [
     path("", include("salereturns.urls")),
     # Reportes
     path("reports/", include("reports.urls")),
+    # Transferencias
+    path("", include("transfers.urls")),
+    # Auditoría
+    path("", include("audit.urls")),
 ]
 
 urlpatterns = [

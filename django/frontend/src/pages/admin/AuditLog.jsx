@@ -1,0 +1,87 @@
+import { Fragment, useEffect, useState } from "react";
+import api from "../../api/client";
+
+const EVENT_BADGE = {
+  created: "bg-green-100 text-green-700",
+  updated: "bg-blue-100 text-blue-700",
+  deleted: "bg-red-100 text-red-700",
+};
+
+export default function AuditLog() {
+  const [data, setData] = useState({ results: [] });
+  const [summary, setSummary] = useState(null);
+  const [filters, setFilters] = useState({ event: "", type: "", q: "", from: "", to: "" });
+  const [expanded, setExpanded] = useState(null);
+
+  const load = () => {
+    const params = {};
+    Object.entries(filters).forEach(([k, v]) => { if (v) params[k] = v; });
+    api.get("/audit-logs/", { params }).then((r) => setData(r.data));
+  };
+  useEffect(() => {
+    load();
+    api.get("/audit-logs/summary/").then((r) => setSummary(r.data));
+  }, []);
+
+  return (
+    <div>
+      <h1 className="text-lg font-semibold mb-4">Bitácora de auditoría</h1>
+      {summary && (
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-4">
+          {[["Total", summary.counts.total, ""], ["Creados", summary.counts.created, "text-green-600"],
+            ["Actualizados", summary.counts.updated, "text-blue-600"], ["Eliminados", summary.counts.deleted, "text-red-600"],
+            ["Hoy", summary.counts.today, ""]].map(([l, v, c]) => (
+            <div key={l} className="bg-white rounded-lg shadow p-3">
+              <div className="text-xs text-slate-500">{l}</div>
+              <div className={"text-xl font-bold " + c}>{v}</div>
+            </div>
+          ))}
+        </div>
+      )}
+      <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white rounded-lg shadow p-4 mb-4 flex flex-wrap gap-2 items-end">
+        <select value={filters.event} onChange={(e) => setFilters({ ...filters, event: e.target.value })} className="border border-slate-300 rounded px-2 py-2 text-sm">
+          <option value="">Todos los eventos</option><option value="created">Creado</option><option value="updated">Actualizado</option><option value="deleted">Eliminado</option>
+        </select>
+        <select value={filters.type} onChange={(e) => setFilters({ ...filters, type: e.target.value })} className="border border-slate-300 rounded px-2 py-2 text-sm">
+          <option value="">Todos los recursos</option>
+          {summary?.types.map((t) => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <input placeholder="Buscar (ID/desc)" value={filters.q} onChange={(e) => setFilters({ ...filters, q: e.target.value })} className="border border-slate-300 rounded px-3 py-2 text-sm w-40" />
+        <input type="date" value={filters.from} onChange={(e) => setFilters({ ...filters, from: e.target.value })} className="border border-slate-300 rounded px-2 py-2 text-sm" />
+        <input type="date" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} className="border border-slate-300 rounded px-2 py-2 text-sm" />
+        <button className="bg-slate-700 text-white rounded px-4 py-2 text-sm">Filtrar</button>
+      </form>
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-slate-50 text-slate-500 text-left">
+            <tr><th className="px-4 py-2">Fecha</th><th className="px-4 py-2">Usuario</th><th className="px-4 py-2">Evento</th>
+                <th className="px-4 py-2">Recurso</th><th className="px-4 py-2">ID</th><th className="px-4 py-2"></th></tr>
+          </thead>
+          <tbody>
+            {data.results.map((l) => (
+              <Fragment key={l.id}>
+                <tr className="border-t">
+                  <td className="px-4 py-2 text-xs text-slate-500">{new Date(l.created_at).toLocaleString()}</td>
+                  <td className="px-4 py-2">{l.user_name || "—"}</td>
+                  <td className="px-4 py-2"><span className={"text-xs px-2 py-0.5 rounded " + EVENT_BADGE[l.event]}>{l.event_display}</span></td>
+                  <td className="px-4 py-2 font-mono text-xs">{l.auditable_type}</td>
+                  <td className="px-4 py-2 font-mono text-xs">{l.auditable_id}</td>
+                  <td className="px-4 py-2 text-right"><button onClick={() => setExpanded(expanded === l.id ? null : l.id)} className="text-blue-600 hover:underline text-xs">{expanded === l.id ? "ocultar" : "ver cambios"}</button></td>
+                </tr>
+                {expanded === l.id && (
+                  <tr className="bg-slate-50"><td colSpan="6" className="px-4 py-2">
+                    <div className="grid grid-cols-2 gap-4 text-xs">
+                      <div><div className="font-semibold mb-1 text-slate-500">Antes</div><pre className="whitespace-pre-wrap">{l.old_values ? JSON.stringify(l.old_values, null, 1) : "—"}</pre></div>
+                      <div><div className="font-semibold mb-1 text-slate-500">Después</div><pre className="whitespace-pre-wrap">{l.new_values ? JSON.stringify(l.new_values, null, 1) : "—"}</pre></div>
+                    </div>
+                  </td></tr>
+                )}
+              </Fragment>
+            ))}
+            {data.results.length === 0 && <tr><td colSpan="6" className="px-5 py-10 text-center text-slate-400">Sin registros.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}

@@ -58,6 +58,8 @@ INSTALLED_APPS = [
     "quotes",
     "salereturns",
     "reports",
+    "transfers",
+    "audit",
 ]
 
 MIDDLEWARE = [
@@ -69,6 +71,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # Guarda el request actual para la auditoría (thread-local)
+    "audit.context.AuditContextMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"

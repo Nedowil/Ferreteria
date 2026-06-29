@@ -28,6 +28,9 @@ arquitectura **desacoplada**:
 | Cotizaciones (crear, convertir a venta) | ✅ | ✅ |
 | Devoluciones (por ticket / por producto / sin ticket) | ✅ | ✅ |
 | Reportes (ventas, utilidad, top, stock muerto, caja, inventario) | ✅ | ✅ |
+| Usuarios, roles y permisos (53 permisos, enforcement por rol) | ✅ | ✅ |
+| Sucursales + transferencias de stock entre sucursales | ✅ | ✅ |
+| Auditoría (bitácora create/update/delete) | ✅ | ✅ |
 | Facturación / FEL Guatemala | ⏳ | ⏳ |
 
 ## Requisitos
@@ -123,6 +126,11 @@ activa viaja en el header `X-Branch-Id`.
 | GET | `/api/reports/dead-stock/` | Productos sin salidas en N días |
 | GET | `/api/reports/daily-cash/` | Corte diario de caja |
 | GET | `/api/reports/inventory-value/` | Valor de inventario (costo y venta) |
+| CRUD | `/api/users/` · `/api/roles/` · `/api/branches/` | Usuarios, roles y sucursales |
+| GET | `/api/permissions/` | Catálogo de permisos para la UI de roles |
+| CRUD | `/api/transfers/` | Transferencias entre sucursales |
+| POST | `/api/transfers/{id}/send/` · `/receive/` · `/cancel/` | Enviar / recibir / cancelar |
+| GET | `/api/audit-logs/` · `/api/audit-logs/summary/` | Bitácora de auditoría |
 
 ## Estructura
 
