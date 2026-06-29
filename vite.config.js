@@ -8,4 +8,9 @@ export default defineConfig({
             refresh: true,
         }),
     ],
+    build: {
+        // esbuild minifica el CSS sin las advertencias ruidosas de lightningcss
+        // sobre pseudo-clases que Tailwind genera para variantes con dark/hover/focus.
+        cssMinify: 'esbuild',
+    },
 });
