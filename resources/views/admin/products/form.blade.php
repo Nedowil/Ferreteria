@@ -51,20 +51,10 @@
                                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">{{ old('description', $product->description) }}</textarea>
                     </div>
 
-                    {{-- Categoria / Marca / Unidad: ocultos del form porque no se usan
-                         en este negocio. Los campos siguen en BD (nullable) y los
-                         valores existentes se conservan. Para reactivar, descomentar.
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <x-input-label for="category_id" value="Categoria" />
-                            <select id="category_id" name="category_id"
-                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                                <option value="">—</option>
-                                @foreach ($categories as $c)
-                                    <option value="{{ $c->id }}" @selected(old('category_id', $product->category_id) == $c->id)>{{ $c->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
+                    {{-- Solo Marca visible. Categoria y Unidad quedan comentadas (los
+                         valores existentes en BD se conservan). Para reactivar alguna,
+                         descomentar el bloque correspondiente. --}}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-md">
                         <div>
                             <x-input-label for="brand_id" value="Marca" />
                             <select id="brand_id" name="brand_id"
@@ -74,20 +64,30 @@
                                     <option value="{{ $b->id }}" @selected(old('brand_id', $product->brand_id) == $b->id)>{{ $b->name }}</option>
                                 @endforeach
                             </select>
+                            <p class="text-xs text-slate-500 mt-1">
+                                Gestionás las marcas en <a href="{{ route('admin.marcas.index') }}" class="text-indigo-600 hover:underline">Catálogos → Marcas</a>.
+                            </p>
                         </div>
-                        <div>
-                            <x-input-label for="unit_id" value="Unidad" />
-                            <select id="unit_id" name="unit_id"
-                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                                <option value="">—</option>
-                                @foreach ($units as $u)
-                                    <option value="{{ $u->id }}" @selected(old('unit_id', $product->unit_id) == $u->id)>{{ $u->name }} ({{ $u->abbreviation }})</option>
-                                @endforeach
-                            </select>
-                        </div>
-                    --}}
-                    <div class="hidden">
                     </div>
+                    {{--
+                        Categoria (oculta - reactivable):
+                        <x-input-label for="category_id" value="Categoria" />
+                        <select id="category_id" name="category_id" class="...">
+                            <option value="">—</option>
+                            @foreach ($categories as $c)
+                                <option value="{{ $c->id }}" @selected(old('category_id', $product->category_id) == $c->id)>{{ $c->name }}</option>
+                            @endforeach
+                        </select>
+
+                        Unidad (oculta - reactivable):
+                        <x-input-label for="unit_id" value="Unidad" />
+                        <select id="unit_id" name="unit_id" class="...">
+                            <option value="">—</option>
+                            @foreach ($units as $u)
+                                <option value="{{ $u->id }}" @selected(old('unit_id', $product->unit_id) == $u->id)>{{ $u->name }} ({{ $u->abbreviation }})</option>
+                            @endforeach
+                        </select>
+                    --}}
 
                     <!-- UNIDAD BASE Y EMPAQUE -->
                     <div class="border-l-4 border-sky-500 bg-sky-50 p-4 rounded">
