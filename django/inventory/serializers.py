@@ -58,14 +58,21 @@ class ProductListSerializer(serializers.ModelSerializer):
     brand_name = serializers.CharField(source="brand.name", read_only=True)
     stock_display = serializers.CharField(source="format_stock_mixed", read_only=True)
     is_low_stock = serializers.BooleanField(read_only=True)
+    branch_stock = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
         fields = [
             "id", "sku", "barcode", "name", "category_name", "brand_name",
-            "sale_price", "stock", "min_stock", "stock_display", "is_low_stock",
-            "active", "image",
+            "purchase_price", "sale_price", "stock", "branch_stock", "min_stock",
+            "stock_display", "is_low_stock", "active", "image",
         ]
+
+    def get_branch_stock(self, obj):
+        """Existencia en la sucursal activa (header X-Branch-Id). Si no hay
+        sucursal en contexto, devuelve el stock global."""
+        branch = self.context.get("branch")
+        return obj.stock_for(branch.pk if branch else None)
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -133,12 +140,23 @@ class MovementSerializer(serializers.ModelSerializer):
 
 
 class MovementCreateSerializer(serializers.Serializer):
-    """Aplicar un movimiento manual sobre un producto."""
+    """Aplicar un movimiento manual sobre un producto.
+
+    Para entrada/salida la cantidad debe ser > 0. Para ajuste la cantidad es
+    el stock final deseado, por lo que se permite 0 (dejar el producto en cero).
+    """
 
     type = serializers.ChoiceField(choices=[c[0] for c in InventoryMovement.TYPE_CHOICES])
-    quantity = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0.01"))
+    quantity = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0"))
     input_mode = serializers.ChoiceField(choices=["base", "container"], required=False, default="base")
     reason = serializers.CharField(required=False, allow_blank=True, max_length=255)
+
+    def validate(self, attrs):
+        if attrs["type"] != InventoryMovement.AJUSTE and attrs["quantity"] <= 0:
+            raise serializers.ValidationError(
+                {"quantity": "La cantidad debe ser mayor que cero para entradas y salidas."}
+            )
+        return attrs
 
 
 class StockCountItemSerializer(serializers.Serializer):

@@ -3,10 +3,11 @@ import { Link } from "react-router-dom";
 import api from "../../api/client";
 
 export default function Payable() {
-  const [data, setData] = useState({ results: [], count: 0 });
+  const [data, setData] = useState({ results: [], total_balance: 0 });
   useEffect(() => { api.get("/purchases/payable/").then((r) => setData(r.data)); }, []);
 
-  const totalDebt = data.results.reduce((s, p) => s + Number(p.balance), 0);
+  // El total viene calculado en el backend sobre TODAS las cuentas (no solo la página)
+  const totalDebt = Number(data.total_balance || 0);
 
   return (
     <div>

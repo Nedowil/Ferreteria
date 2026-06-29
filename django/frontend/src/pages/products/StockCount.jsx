@@ -62,14 +62,14 @@ export default function StockCount() {
             </thead>
             <tbody>
               {products.map((p) => {
-                const sys = Number(p.stock);
+                const sys = Number(p.branch_stock ?? p.stock);
                 const val = counts[p.id];
                 const diff = val === "" || val === undefined ? null : Number(val) - sys;
                 return (
                   <tr key={p.id} className="border-t">
                     <td className="px-4 py-2 font-mono text-xs">{p.sku}</td>
                     <td className="px-4 py-2 font-medium">{p.name}</td>
-                    <td className="px-4 py-2 text-right text-slate-500">{p.stock}</td>
+                    <td className="px-4 py-2 text-right text-slate-500">{p.branch_stock ?? p.stock}</td>
                     <td className="px-4 py-2 text-right">
                       <input type="number" step="any" value={val ?? ""}
                              onChange={(e) => setCounts({ ...counts, [p.id]: e.target.value })}

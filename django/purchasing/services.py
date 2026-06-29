@@ -80,7 +80,10 @@ def sync_items(purchase, items, manual_tax=Decimal("0")):
     purchase.subtotal = subtotal
     purchase.tax = final_tax
     purchase.total = subtotal + final_tax
-    _sync_payment_status(purchase)
+    # Una compra marcada como pagada se considera saldada por completo.
+    if purchase.payment_status == Purchase.PAY_PAGADA:
+        purchase.amount_paid = purchase.total
+    purchase.payment_status = _derive_payment_status(purchase)
     purchase.save()
 
 
@@ -132,21 +135,22 @@ def register_payment(purchase, amount, *, date=None, method="efectivo", referenc
         amount=amount, payment_method=method, reference=reference, notes=notes,
     )
     purchase.amount_paid = Decimal(purchase.amount_paid) + amount
-    _sync_payment_status(purchase)
+    purchase.payment_status = _derive_payment_status(purchase)
     purchase.save(update_fields=["amount_paid", "payment_status", "updated_at"])
     return payment
 
 
-def _sync_payment_status(purchase):
-    """Deriva payment_status a partir de amount_paid vs total."""
+def _derive_payment_status(purchase):
+    """Deriva payment_status a partir de amount_paid vs total.
+
+    pagada  → pagado >= total (y total > 0)
+    parcial → hay algún abono pero no cubre el total
+    al_credito → sin abonos
+    """
     paid = Decimal(purchase.amount_paid or 0)
     total = Decimal(purchase.total or 0)
-    if paid <= 0:
-        # Respeta 'al_credito' si ya venía marcado; si no, queda pagada por defecto
-        if purchase.payment_status == Purchase.PAY_CREDITO:
-            return
-        purchase.payment_status = purchase.payment_status or Purchase.PAY_PAGADA
-    elif paid >= total:
-        purchase.payment_status = Purchase.PAY_PAGADA
-    else:
-        purchase.payment_status = Purchase.PAY_PARCIAL
+    if total > 0 and paid >= total:
+        return Purchase.PAY_PAGADA
+    if paid > 0:
+        return Purchase.PAY_PARCIAL
+    return Purchase.PAY_CREDITO

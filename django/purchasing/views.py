@@ -1,5 +1,8 @@
 """API de Compras."""
 
+from decimal import Decimal
+
+from django.db.models import F, Sum
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
@@ -117,6 +120,15 @@ class PurchaseViewSet(BranchContextMixin, viewsets.ModelViewSet):
         qs = (self.get_queryset()
               .filter(status=Purchase.STATUS_RECIBIDA)
               .exclude(payment_status=Purchase.PAY_PAGADA))
+        # Saldo total de TODAS las cuentas por pagar (no solo la página actual)
+        agg = qs.aggregate(total=Sum(F("total") - F("amount_paid")))
+        total_balance = agg["total"] or Decimal("0")
+
         page = self.paginate_queryset(qs)
-        ser = PurchaseListSerializer(page if page is not None else qs, many=True)
-        return self.get_paginated_response(ser.data) if page is not None else Response(ser.data)
+        if page is not None:
+            ser = PurchaseListSerializer(page, many=True)
+            resp = self.get_paginated_response(ser.data)
+            resp.data["total_balance"] = total_balance
+            return resp
+        ser = PurchaseListSerializer(qs, many=True)
+        return Response({"results": ser.data, "total_balance": total_balance})

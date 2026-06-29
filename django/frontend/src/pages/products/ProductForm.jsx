@@ -14,6 +14,32 @@ const EMPTY = {
   initial_stock: "0", stock_input_mode: "base",
 };
 
+// Campos a nivel de módulo (identidad estable → no pierden el foco al escribir)
+function TextField({ label, name, form, errors, onChange, type = "text", hint }) {
+  return (
+    <div>
+      <label className="block text-sm font-medium mb-1">{label}</label>
+      <input type={type} value={form[name] ?? ""} onChange={(e) => onChange(name, e.target.value)}
+             className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
+      {hint && <p className="text-xs text-slate-400 mt-1">{hint}</p>}
+      {errors[name] && <p className="text-red-600 text-xs mt-1">{String(errors[name])}</p>}
+    </div>
+  );
+}
+
+function SelectField({ label, name, form, onChange, options, empty, labelKey = "name" }) {
+  return (
+    <div>
+      <label className="block text-sm font-medium mb-1">{label}</label>
+      <select value={form[name] ?? ""} onChange={(e) => onChange(name, e.target.value)}
+              className="w-full border border-slate-300 rounded px-3 py-2 text-sm">
+        <option value="">{empty}</option>
+        {options.map((o) => <option key={o.id} value={o.id}>{o[labelKey]}</option>)}
+      </select>
+    </div>
+  );
+}
+
 export default function ProductForm() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -42,7 +68,6 @@ export default function ProductForm() {
   const submit = async (e) => {
     e.preventDefault();
     setBusy(true); setErrors({});
-    // Limpia strings vacíos en campos numéricos opcionales (-> null)
     const payload = { ...form };
     ["category", "brand", "unit", "container_factor", "container_price", "wholesale_price",
      "wholesale_min_quantity", "container_wholesale_price", "contractor_price",
@@ -61,16 +86,6 @@ export default function ProductForm() {
     }
   };
 
-  const F = ({ label, k, type = "text", hint }) => (
-    <div>
-      <label className="block text-sm font-medium mb-1">{label}</label>
-      <input type={type} value={form[k] ?? ""} onChange={(e) => set(k, e.target.value)}
-             className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
-      {hint && <p className="text-xs text-slate-400 mt-1">{hint}</p>}
-      {errors[k] && <p className="text-red-600 text-xs mt-1">{String(errors[k])}</p>}
-    </div>
-  );
-
   return (
     <form onSubmit={submit} className="max-w-4xl space-y-5">
       <h1 className="text-lg font-semibold">{editing ? "Editar producto" : "Nuevo producto"}</h1>
@@ -79,19 +94,19 @@ export default function ProductForm() {
       <section className="bg-white rounded-lg shadow p-5">
         <h3 className="font-semibold mb-3">Identificación</h3>
         <div className="grid grid-cols-2 gap-4">
-          <F label="SKU" k="sku" hint="Se autogenera si lo dejas vacío" />
-          <F label="Código de barras" k="barcode" hint="EAN-13 automático si lo dejas vacío" />
+          <TextField label="SKU" name="sku" form={form} errors={errors} onChange={set} hint="Se autogenera si lo dejas vacío" />
+          <TextField label="Código de barras" name="barcode" form={form} errors={errors} onChange={set} hint="EAN-13 automático si lo dejas vacío" />
         </div>
-        <div className="mt-4"><F label="Nombre" k="name" /></div>
+        <div className="mt-4"><TextField label="Nombre" name="name" form={form} errors={errors} onChange={set} /></div>
         <div className="mt-4">
           <label className="block text-sm font-medium mb-1">Descripción</label>
           <textarea value={form.description ?? ""} onChange={(e) => set("description", e.target.value)} rows="2"
                     className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
         </div>
         <div className="grid grid-cols-3 gap-4 mt-4">
-          <Select label="Categoría" k="category" form={form} set={set} options={categories} empty="— Sin categoría —" />
-          <Select label="Marca" k="brand" form={form} set={set} options={brands} empty="— Sin marca —" />
-          <Select label="Unidad" k="unit" form={form} set={set} options={units} empty="— Sin unidad —" labelKey="name" />
+          <SelectField label="Categoría" name="category" form={form} onChange={set} options={categories} empty="— Sin categoría —" />
+          <SelectField label="Marca" name="brand" form={form} onChange={set} options={brands} empty="— Sin marca —" />
+          <SelectField label="Unidad" name="unit" form={form} onChange={set} options={units} empty="— Sin unidad —" />
         </div>
       </section>
 
@@ -99,18 +114,18 @@ export default function ProductForm() {
         <h3 className="font-semibold mb-1">Unidad y empaque</h3>
         <p className="text-xs text-slate-500 mb-3">Ej.: empaque "caja", factor 50 → 1 caja = 50 unidades base.</p>
         <div className="grid grid-cols-4 gap-4">
-          <F label="Unidad base" k="base_unit_label" />
-          <F label="Empaque" k="container_label" />
-          <F label="Factor de empaque" k="container_factor" type="number" />
-          <F label="Precio por empaque" k="container_price" type="number" />
+          <TextField label="Unidad base" name="base_unit_label" form={form} errors={errors} onChange={set} />
+          <TextField label="Empaque" name="container_label" form={form} errors={errors} onChange={set} />
+          <TextField label="Factor de empaque" name="container_factor" form={form} errors={errors} onChange={set} type="number" />
+          <TextField label="Precio por empaque" name="container_price" form={form} errors={errors} onChange={set} type="number" />
         </div>
       </section>
 
       <section className="bg-white rounded-lg shadow p-5">
         <h3 className="font-semibold mb-3">Precios e impuesto</h3>
         <div className="grid grid-cols-2 gap-4">
-          <F label="Precio de compra" k="purchase_price" type="number" />
-          <F label="Precio de venta" k="sale_price" type="number" />
+          <TextField label="Precio de compra" name="purchase_price" form={form} errors={errors} onChange={set} type="number" />
+          <TextField label="Precio de venta" name="sale_price" form={form} errors={errors} onChange={set} type="number" />
         </div>
         <div className="mt-4">
           <label className="block text-sm font-medium mb-1">Impuesto</label>
@@ -123,11 +138,11 @@ export default function ProductForm() {
           </div>
         </div>
         <div className="grid grid-cols-3 gap-4 mt-4">
-          <F label="Precio mayorista" k="wholesale_price" type="number" />
-          <F label="Cant. mín. mayorista" k="wholesale_min_quantity" type="number" />
-          <F label="Precio empaque mayorista" k="container_wholesale_price" type="number" />
-          <F label="Precio constructor" k="contractor_price" type="number" />
-          <F label="Precio empaque constructor" k="container_contractor_price" type="number" />
+          <TextField label="Precio mayorista" name="wholesale_price" form={form} errors={errors} onChange={set} type="number" />
+          <TextField label="Cant. mín. mayorista" name="wholesale_min_quantity" form={form} errors={errors} onChange={set} type="number" />
+          <TextField label="Precio empaque mayorista" name="container_wholesale_price" form={form} errors={errors} onChange={set} type="number" />
+          <TextField label="Precio constructor" name="contractor_price" form={form} errors={errors} onChange={set} type="number" />
+          <TextField label="Precio empaque constructor" name="container_contractor_price" form={form} errors={errors} onChange={set} type="number" />
         </div>
       </section>
 
@@ -135,27 +150,21 @@ export default function ProductForm() {
         <h3 className="font-semibold mb-3">Inventario</h3>
         {!editing ? (
           <div className="grid grid-cols-3 gap-4 mb-4">
-            <F label="Stock inicial" k="initial_stock" type="number" />
-            <div>
-              <label className="block text-sm font-medium mb-1">Modo</label>
-              <select value={form.stock_input_mode} onChange={(e) => set("stock_input_mode", e.target.value)}
-                      className="w-full border border-slate-300 rounded px-3 py-2 text-sm">
-                <option value="base">Unidad base</option>
-                <option value="container">Empaque</option>
-              </select>
-            </div>
+            <TextField label="Stock inicial" name="initial_stock" form={form} errors={errors} onChange={set} type="number" />
+            <SelectField label="Modo" name="stock_input_mode" form={form} onChange={set}
+                         options={[{ id: "base", name: "Unidad base" }, { id: "container", name: "Empaque" }]} empty="" />
           </div>
         ) : (
           <p className="text-sm text-slate-500 mb-4">El stock se ajusta desde <b>Inventario</b> del producto.</p>
         )}
         <div className="grid grid-cols-3 gap-4">
-          <F label="Stock mínimo" k="min_stock" type="number" />
+          <TextField label="Stock mínimo" name="min_stock" form={form} errors={errors} onChange={set} type="number" />
         </div>
         <div className="flex gap-6 mt-4 text-sm items-end">
           <label className="flex items-center gap-2">
             <input type="checkbox" checked={form.sells_by_measure} onChange={(e) => set("sells_by_measure", e.target.checked)} /> Se vende por medida
           </label>
-          <F label="Paso de medida" k="measure_step" type="number" />
+          <TextField label="Paso de medida" name="measure_step" form={form} errors={errors} onChange={set} type="number" />
         </div>
       </section>
 
@@ -178,18 +187,5 @@ export default function ProductForm() {
         <button type="button" onClick={() => navigate("/productos")} className="px-6 py-2 text-slate-500">Cancelar</button>
       </div>
     </form>
-  );
-}
-
-function Select({ label, k, form, set, options, empty, labelKey = "name" }) {
-  return (
-    <div>
-      <label className="block text-sm font-medium mb-1">{label}</label>
-      <select value={form[k] ?? ""} onChange={(e) => set(k, e.target.value)}
-              className="w-full border border-slate-300 rounded px-3 py-2 text-sm">
-        <option value="">{empty}</option>
-        {options.map((o) => <option key={o.id} value={o.id}>{o[labelKey]}</option>)}
-      </select>
-    </div>
   );
 }

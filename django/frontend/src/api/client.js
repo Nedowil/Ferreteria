@@ -48,7 +48,9 @@ api.interceptors.response.use(
         const { data } = await refreshing;
         refreshing = null;
         tokenStore.set({ access: data.access, refresh: data.refresh });
-        original.headers.Authorization = `Bearer ${data.access}`;
+        // No fijamos los headers a mano: al reintentar, el interceptor de
+        // request vuelve a aplicar el access token y X-Branch-Id frescos.
+        delete original.headers.Authorization;
         return api(original);
       } catch (e) {
         refreshing = null;

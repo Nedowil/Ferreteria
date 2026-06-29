@@ -55,6 +55,19 @@ npm run dev
 
 El SPA proxya `/api` y `/media` al backend (ver `vite.config.js`).
 
+### Tests
+
+```bash
+cd django
+.venv/bin/python manage.py test
+```
+
+Cubren la lógica crítica: servicio de stock (`apply_movement`: entrada/salida/
+ajuste, guarda de negativo, multi-sucursal), utilidades (SKU, EAN-13,
+fracciones), servicio de compras (totales con IVA solo sobre lo gravado,
+recepción que genera inventario y actualiza costo, abonos y cuentas por pagar)
+y la capa API con JWT (creación de productos, movimientos, flujo de compra).
+
 Acceso por defecto:
 
 - **Correo:** `admin@ferreteria.test`
