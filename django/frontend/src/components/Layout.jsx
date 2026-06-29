@@ -14,6 +14,11 @@ export default function Layout({ children }) {
         </div>
         <nav className="flex-1 overflow-y-auto py-3 text-sm">
           <NavLink to="/" end className={linkClass}>Tablero</NavLink>
+          <div className="px-5 pt-4 pb-1 text-xs uppercase text-slate-500">Ventas</div>
+          <NavLink to="/pos" className={linkClass}>Punto de venta</NavLink>
+          <NavLink to="/ventas" className={linkClass}>Ventas</NavLink>
+          <NavLink to="/caja" className={linkClass}>Caja</NavLink>
+          <NavLink to="/cuentas-por-cobrar" className={linkClass}>Cuentas por cobrar</NavLink>
           <div className="px-5 pt-4 pb-1 text-xs uppercase text-slate-500">Inventario</div>
           <NavLink to="/productos" className={linkClass}>Productos</NavLink>
           <NavLink to="/categorias" className={linkClass}>Categorías</NavLink>

@@ -53,6 +53,8 @@ INSTALLED_APPS = [
     "inventory",
     "partners",
     "purchasing",
+    "cashbox",
+    "sales",
 ]
 
 MIDDLEWARE = [
@@ -142,6 +144,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Datos de la empresa por defecto (se sobreescriben con CompanySetting en BD)
 COMPANY_DEFAULT_TAX_RATE = float(os.getenv("COMPANY_DEFAULT_TAX_RATE", "12"))
+# True = los precios de venta YA incluyen IVA (precio al público); el IVA se
+# extrae del total. False = el IVA se suma sobre el precio.
+COMPANY_PRICES_INCLUDE_TAX = env_bool("COMPANY_PRICES_INCLUDE_TAX", True)
 
 
 # ---------------------------------------------------------------------------

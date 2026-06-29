@@ -15,6 +15,12 @@ import PurchaseList from "./pages/purchases/PurchaseList";
 import PurchaseForm from "./pages/purchases/PurchaseForm";
 import PurchaseDetail from "./pages/purchases/PurchaseDetail";
 import Payable from "./pages/purchases/Payable";
+import POS from "./pages/pos/POS";
+import SalesList from "./pages/pos/SalesList";
+import SaleDetail from "./pages/pos/SaleDetail";
+import Receivable from "./pages/pos/Receivable";
+import CashBox from "./pages/cash/CashBox";
+import CashSessions from "./pages/cash/CashSessions";
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
@@ -43,6 +49,12 @@ export default function App() {
       <Route path="/compras/nueva" element={<Protected><PurchaseForm /></Protected>} />
       <Route path="/compras/:id" element={<Protected><PurchaseDetail /></Protected>} />
       <Route path="/cuentas-por-pagar" element={<Protected><Payable /></Protected>} />
+      <Route path="/pos" element={<Protected><POS /></Protected>} />
+      <Route path="/ventas" element={<Protected><SalesList /></Protected>} />
+      <Route path="/ventas/:id" element={<Protected><SaleDetail /></Protected>} />
+      <Route path="/cuentas-por-cobrar" element={<Protected><Receivable /></Protected>} />
+      <Route path="/caja" element={<Protected><CashBox /></Protected>} />
+      <Route path="/caja/historial" element={<Protected><CashSessions /></Protected>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

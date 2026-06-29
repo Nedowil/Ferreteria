@@ -22,7 +22,10 @@ arquitectura **desacoplada**:
 | Proveedores y Clientes | ✅ | ✅ |
 | Compras (pendiente → recibida → entra a inventario) | ✅ | ✅ |
 | Compras al crédito + cuentas por pagar (abonos) | ✅ | ✅ |
-| POS / Caja / Cotizaciones / Devoluciones | ⏳ | ⏳ |
+| Punto de Venta (POS) con niveles de precio y vuelto | ✅ | ✅ |
+| Caja (apertura, movimientos, arqueo y cierre) | ✅ | ✅ |
+| Ventas al crédito + cuentas por cobrar (abonos) | ✅ | ✅ |
+| Cotizaciones / Devoluciones | ⏳ | ⏳ |
 | Facturación / FEL Guatemala / Reportes | ⏳ | ⏳ |
 
 ## Requisitos
@@ -96,6 +99,14 @@ activa viaja en el header `X-Branch-Id`.
 | POST | `/api/purchases/{id}/cancel/` | Cancelar compra pendiente |
 | GET/POST | `/api/purchases/{id}/payments/` | Abonos (cuentas por pagar) |
 | GET | `/api/purchases/payable/` | Compras con saldo pendiente |
+| CRUD | `/api/sales/` | Ventas POS (crear descuenta stock y registra en caja) |
+| POST | `/api/sales/{id}/cancel/` | Cancelar venta (revierte stock) |
+| GET/POST | `/api/sales/{id}/payments/` | Abonos (cuentas por cobrar) |
+| GET | `/api/sales/receivable/` | Ventas al crédito con saldo |
+| GET | `/api/cashbox/cash-sessions/current/` | Caja abierta del usuario |
+| POST | `/api/cashbox/cash-sessions/open/` | Abrir caja |
+| POST | `/api/cashbox/cash-sessions/{id}/movement/` | Ingreso/egreso |
+| POST | `/api/cashbox/cash-sessions/{id}/close/` | Arqueo y cierre |
 
 ## Estructura
 
