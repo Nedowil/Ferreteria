@@ -10,30 +10,35 @@
                     <div class="mb-4 p-3 bg-green-100 text-green-800 rounded">{{ session('status') }}</div>
                 @endif
 
-                <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+                <form method="GET" class="flex flex-wrap items-center gap-2 mb-4">
                     <input type="text" name="q" value="{{ $search }}" placeholder="Folio"
-                           class="border-gray-300 rounded-md shadow-sm" />
-                    <select name="status" class="border-gray-300 rounded-md shadow-sm">
+                           class="border-gray-300 rounded-md shadow-sm text-sm h-10 w-40" />
+                    <select name="status" class="border-gray-300 rounded-md shadow-sm text-sm h-10">
                         <option value="">Todos los estados</option>
                         @foreach (['vigente', 'aceptada', 'expirada', 'convertida', 'cancelada'] as $st)
                             <option value="{{ $st }}" @selected($status === $st)>{{ ucfirst($st) }}</option>
                         @endforeach
                     </select>
-                    <button class="px-4 py-2 bg-gray-700 text-white rounded">Filtrar</button>
-                    <div class="text-right flex gap-2 flex-wrap justify-end">
+                    <button class="h-10 px-4 bg-gray-700 hover:bg-gray-800 text-white rounded text-sm font-semibold">
+                        Filtrar
+                    </button>
+
+                    <div class="flex gap-2 flex-wrap ml-auto">
                         <a href="{{ route('admin.cotizaciones.export', request()->only('q','status','from','to')) }}"
-                           class="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 inline-flex items-center gap-2"
+                           class="h-10 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-sm font-semibold inline-flex items-center gap-1"
                            title="Una fila por cotizacion">
-                            📊 Exportar Excel
+                            📊 Excel
                         </a>
                         <a href="{{ route('admin.cotizaciones.export', array_merge(request()->only('q','status','from','to'), ['detalle' => 1])) }}"
-                           class="px-4 py-2 bg-emerald-700 text-white rounded hover:bg-emerald-800 inline-flex items-center gap-2"
+                           class="h-10 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded text-sm font-semibold inline-flex items-center gap-1"
                            title="Una fila por producto cotizado">
-                            📊 Exportar con detalle
+                            📊 Excel detalle
                         </a>
                         @can('cotizaciones.crear')
                             <a href="{{ route('admin.cotizaciones.create') }}"
-                               class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">+ Nueva cotizacion</a>
+                               class="h-10 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm font-semibold inline-flex items-center">
+                                + Nueva cotización
+                            </a>
                         @endcan
                     </div>
                 </form>
