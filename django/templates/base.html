@@ -1,0 +1,80 @@
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ app_name }}{% endblock %} · {{ app_name }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>[x-cloak]{display:none!important}</style>
+</head>
+<body class="h-full bg-slate-100 text-slate-800">
+{% if user.is_authenticated %}
+<div class="min-h-full flex">
+    <!-- Sidebar -->
+    <aside class="w-60 bg-slate-900 text-slate-200 flex flex-col fixed inset-y-0">
+        <div class="px-5 py-4 text-lg font-bold text-white border-b border-slate-700">
+            🔧 {{ app_name }}
+        </div>
+        <nav class="flex-1 overflow-y-auto py-3 text-sm">
+            {% block sidebar %}
+            <a href="{% url 'dashboard' %}" class="block px-5 py-2 hover:bg-slate-800">Tablero</a>
+            <div class="px-5 pt-4 pb-1 text-xs uppercase text-slate-500">Inventario</div>
+            <a href="{% url 'inventory:product_list' %}" class="block px-5 py-2 hover:bg-slate-800">Productos</a>
+            <a href="{% url 'inventory:category_list' %}" class="block px-5 py-2 hover:bg-slate-800">Categorías</a>
+            <a href="{% url 'inventory:brand_list' %}" class="block px-5 py-2 hover:bg-slate-800">Marcas</a>
+            <a href="{% url 'inventory:unit_list' %}" class="block px-5 py-2 hover:bg-slate-800">Unidades</a>
+            <a href="{% url 'inventory:low_stock' %}" class="block px-5 py-2 hover:bg-slate-800">Stock bajo</a>
+            <a href="{% url 'inventory:stock_count' %}" class="block px-5 py-2 hover:bg-slate-800">Conteo físico</a>
+            {% endblock %}
+        </nav>
+        <div class="px-5 py-3 border-t border-slate-700 text-xs text-slate-400">
+            {{ user.name|default:user.email }}
+        </div>
+    </aside>
+
+    <!-- Main -->
+    <div class="flex-1 ml-60 flex flex-col min-h-full">
+        <header class="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between sticky top-0 z-10">
+            <h1 class="text-lg font-semibold">{% block header %}{% endblock %}</h1>
+            <div class="flex items-center gap-4">
+                {% if current_branch %}
+                <form method="post" action="{% url 'branch_switch' %}" class="flex items-center gap-2">
+                    {% csrf_token %}
+                    <select name="branch_id" onchange="this.form.submit()"
+                            class="text-sm border border-slate-300 rounded px-2 py-1">
+                        {% for b in available_branches %}
+                        <option value="{{ b.id }}" {% if b.id == current_branch.id %}selected{% endif %}>{{ b.name }}</option>
+                        {% endfor %}
+                    </select>
+                </form>
+                {% endif %}
+                <form method="post" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button class="text-sm text-slate-500 hover:text-red-600">Salir</button>
+                </form>
+            </div>
+        </header>
+
+        <main class="p-6 flex-1">
+            {% if messages %}
+                {% for message in messages %}
+                <div class="mb-4 rounded px-4 py-3 text-sm
+                    {% if message.tags == 'error' %}bg-red-100 text-red-800
+                    {% elif message.tags == 'success' %}bg-green-100 text-green-800
+                    {% else %}bg-blue-100 text-blue-800{% endif %}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            {% endif %}
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</div>
+{% else %}
+    {% block guest %}{% endblock %}
+{% endif %}
+{% block scripts %}{% endblock %}
+</body>
+</html>

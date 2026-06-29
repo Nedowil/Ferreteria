@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block header %}Conteo físico{% endblock %}
+{% block content %}
+<form method="get" class="bg-white rounded-lg shadow p-4 mb-4 flex flex-wrap gap-2 items-end">
+    <input name="q" value="{{ filters.q }}" placeholder="Nombre, SKU o código"
+           class="border border-slate-300 rounded px-3 py-2 text-sm w-64">
+    <select name="category" class="border border-slate-300 rounded px-2 py-2 text-sm">
+        <option value="">Todas las categorías</option>
+        {% for c in categories %}<option value="{{ c.id }}" {% if filters.category == c.id|stringformat:'s' %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+    </select>
+    <select name="brand" class="border border-slate-300 rounded px-2 py-2 text-sm">
+        <option value="">Todas las marcas</option>
+        {% for b in brands %}<option value="{{ b.id }}" {% if filters.brand == b.id|stringformat:'s' %}selected{% endif %}>{{ b.name }}</option>{% endfor %}
+    </select>
+    <button class="bg-slate-700 text-white rounded px-4 py-2 text-sm">Filtrar</button>
+</form>
+
+<form method="post" x-data="{ counted: 0 }" onsubmit="return confirm('Vas a aplicar los ajustes de stock. ¿Confirmás?')">
+    {% csrf_token %}
+    <div class="bg-white rounded-lg shadow p-4 mb-4 flex items-center gap-4">
+        <input name="reason" placeholder="Motivo (opcional)" class="border border-slate-300 rounded px-3 py-2 text-sm flex-1">
+        <span class="text-sm text-slate-500">Con cambios: <strong x-text="counted"></strong></span>
+        <button class="bg-blue-600 text-white rounded px-5 py-2 text-sm font-medium">Aplicar conteo</button>
+    </div>
+
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <table class="w-full text-sm">
+            <thead class="bg-slate-50 text-slate-500 text-left sticky top-0">
+                <tr><th class="px-4 py-2">SKU</th><th class="px-4 py-2">Producto</th>
+                    <th class="px-4 py-2 text-right">Sistema</th><th class="px-4 py-2 text-right">Conteo físico</th>
+                    <th class="px-4 py-2 text-right">Diferencia</th></tr>
+            </thead>
+            <tbody>
+            {% for row in rows %}
+                <tr class="border-t" x-data="{ sys: {{ row.stock }}, val: '' }">
+                    <td class="px-4 py-2 font-mono text-xs">{{ row.product.sku }}</td>
+                    <td class="px-4 py-2">
+                        <div class="font-medium">{{ row.product.name }}</div>
+                        <div class="text-xs text-slate-400">{{ row.product.base_unit_label }}</div>
+                    </td>
+                    <td class="px-4 py-2 text-right text-slate-500">{{ row.stock }}</td>
+                    <td class="px-4 py-2 text-right">
+                        <input type="number" step="any" name="count_{{ row.product.pk }}" x-model="val"
+                               @input="counted = $root.querySelectorAll('input[type=number]').length && [...$root.querySelectorAll('input[type=number]')].filter(i=>i.value!=='').length"
+                               class="border border-slate-300 rounded px-2 py-1 text-sm w-24 text-right">
+                    </td>
+                    <td class="px-4 py-2 text-right text-xs"
+                        :class="val==='' ? 'text-slate-300' : (Number(val)-sys>0 ? 'text-green-600' : (Number(val)-sys<0 ? 'text-red-600':'text-slate-400'))">
+                        <span x-text="val==='' ? '—' : ((Number(val)-sys>0?'+':'') + (Number(val)-sys))"></span>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="5" class="px-5 py-10 text-center text-slate-400">No hay productos con ese filtro.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</form>
+{% endblock %}

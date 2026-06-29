@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block guest %}
+<div class="min-h-screen flex items-center justify-center bg-slate-900 px-4">
+    <div class="w-full max-w-sm bg-white rounded-xl shadow-lg p-8">
+        <div class="text-center mb-6">
+            <div class="text-3xl">🔧</div>
+            <h1 class="text-xl font-bold mt-2">Ferretería</h1>
+            <p class="text-sm text-slate-500">Sistema de gestión</p>
+        </div>
+        {% if form.errors %}
+        <div class="mb-4 bg-red-100 text-red-800 text-sm rounded px-3 py-2">
+            Credenciales inválidas. Intenta de nuevo.
+        </div>
+        {% endif %}
+        <form method="post">
+            {% csrf_token %}
+            <label class="block text-sm font-medium mb-1">Correo</label>
+            <input type="email" name="username" required autofocus
+                   class="w-full border border-slate-300 rounded px-3 py-2 mb-4"
+                   placeholder="admin@ferreteria.test">
+            <label class="block text-sm font-medium mb-1">Contraseña</label>
+            <input type="password" name="password" required
+                   class="w-full border border-slate-300 rounded px-3 py-2 mb-6">
+            <button class="w-full bg-slate-900 text-white rounded py-2 font-medium hover:bg-slate-800">
+                Ingresar
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

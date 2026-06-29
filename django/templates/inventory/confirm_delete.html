@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block header %}Confirmar eliminación{% endblock %}
+{% block content %}
+<div class="max-w-md bg-white rounded-lg shadow p-6">
+    <p class="mb-6">¿Eliminar <strong>{{ object }}</strong>? Esta acción no se puede deshacer.</p>
+    <form method="post">
+        {% csrf_token %}
+        <div class="flex gap-2">
+            <button class="bg-red-600 text-white rounded px-5 py-2 text-sm font-medium">Sí, eliminar</button>
+            <a href="{% url cancel_url %}" class="px-5 py-2 text-sm text-slate-500">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
