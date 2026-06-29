@@ -61,6 +61,7 @@ INSTALLED_APPS = [
     "transfers",
     "audit",
     "billing",
+    "imports",
 ]
 
 MIDDLEWARE = [

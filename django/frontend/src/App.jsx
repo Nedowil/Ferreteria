@@ -44,6 +44,9 @@ import AuditLog from "./pages/admin/AuditLog";
 import Invoices from "./pages/billing/Invoices";
 import Ticket from "./pages/billing/Ticket";
 import CompanySettings from "./pages/billing/CompanySettings";
+import ImportData from "./pages/admin/ImportData";
+import Backups from "./pages/admin/Backups";
+import PublicCatalog from "./pages/public/PublicCatalog";
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
@@ -56,6 +59,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/catalogo" element={<PublicCatalog />} />
       <Route path="/" element={<Protected><Dashboard /></Protected>} />
       <Route path="/productos" element={<Protected><ProductList /></Protected>} />
       <Route path="/productos/nuevo" element={<Protected><ProductForm /></Protected>} />
@@ -105,6 +109,8 @@ export default function App() {
       <Route path="/admin/auditoria" element={<Protected><AuditLog /></Protected>} />
       <Route path="/facturas" element={<Protected><Invoices /></Protected>} />
       <Route path="/admin/empresa" element={<Protected><CompanySettings /></Protected>} />
+      <Route path="/admin/importar" element={<Protected><ImportData /></Protected>} />
+      <Route path="/admin/respaldos" element={<Protected><Backups /></Protected>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

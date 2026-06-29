@@ -164,3 +164,67 @@ class PurchaseApiTests(ApiTestBase):
             "supplier_id": supplier.id, "date": "2026-06-29", "items": [],
         }, format="json")
         self.assertEqual(r.status_code, 400)
+
+
+class BackupApiTests(APITestCase):
+    """Respaldos: generación, listado, descarga y borrado (backup.gestionar)."""
+
+    def setUp(self):
+        import tempfile
+        from pathlib import Path
+        from django.contrib.auth import get_user_model
+        from core import backups
+
+        User = get_user_model()
+        self.branch = Branch.objects.create(name="Matriz", code="M", is_main=True)
+        self.admin = User.objects.create_user(
+            username="a", email="a@test.com", password="x123", is_superuser=True)
+        self.seller = User.objects.create_user(username="s", email="s@test.com", password="x123")
+
+        # Aísla los respaldos en un directorio temporal.
+        self._tmp = tempfile.mkdtemp()
+        self._orig_dir = backups.BACKUP_DIR
+        backups.BACKUP_DIR = Path(self._tmp)
+        self.backups = backups
+
+    def tearDown(self):
+        import shutil
+        self.backups.BACKUP_DIR = self._orig_dir
+        shutil.rmtree(self._tmp, ignore_errors=True)
+
+    def _client(self, email):
+        from rest_framework.test import APIClient
+        c = APIClient()
+        r = c.post("/api/auth/token/", {"email": email, "password": "x123"}, format="json")
+        c.credentials(HTTP_AUTHORIZATION=f"Bearer {r.json()['access']}", HTTP_X_BRANCH_ID=str(self.branch.id))
+        return c
+
+    def test_filename_valido_evita_traversal(self):
+        self.assertTrue(self.backups.is_valid_filename("ferreteria-2026-06-29_120000.zip"))
+        self.assertFalse(self.backups.is_valid_filename("../etc/passwd"))
+        self.assertFalse(self.backups.is_valid_filename("otro.zip"))
+
+    def test_genera_lista_y_elimina_respaldo(self):
+        c = self._client("a@test.com")
+        # Generar
+        r = c.post("/api/backups/", {}, format="json")
+        self.assertEqual(r.status_code, 201, r.content)
+        fname = r.json()["filename"]
+        # Listar
+        r = c.get("/api/backups/")
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(any(b["filename"] == fname for b in r.json()))
+        # Descargar
+        r = c.get(f"/api/backups/{fname}/download/")
+        self.assertEqual(r.status_code, 200)
+        # Eliminar
+        r = c.delete(f"/api/backups/{fname}/")
+        self.assertEqual(r.status_code, 204)
+
+    def test_usuario_sin_permiso_no_accede(self):
+        r = self._client("s@test.com").get("/api/backups/")
+        self.assertEqual(r.status_code, 403)
+
+    def test_descarga_inexistente_404(self):
+        r = self._client("a@test.com").get("/api/backups/ferreteria-9999-99-99_000000.zip/download/")
+        self.assertEqual(r.status_code, 404)

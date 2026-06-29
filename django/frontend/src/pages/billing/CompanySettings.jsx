@@ -145,6 +145,37 @@ export default function CompanySettings() {
             </>
           )}
         </Section>
+
+        <Section title="Catálogo público (en línea)">
+          <Field label="Catálogo habilitado">
+            <select className={input} value={c.public_catalog_enabled ? "1" : "0"} onChange={(e) => set("public_catalog_enabled", e.target.value === "1")}>
+              <option value="0">Deshabilitado</option>
+              <option value="1">Habilitado</option>
+            </select>
+          </Field>
+          <Field label="Mostrar precios">
+            <select className={input} value={c.public_catalog_show_prices ? "1" : "0"} onChange={(e) => set("public_catalog_show_prices", e.target.value === "1")}>
+              <option value="1">Sí</option>
+              <option value="0">No — solo “Consultar”</option>
+            </select>
+          </Field>
+          <Field label="Título del catálogo">
+            <input className={input} value={c.public_catalog_title || ""} onChange={(e) => set("public_catalog_title", e.target.value)} />
+          </Field>
+          <Field label="WhatsApp (para consultas)">
+            <input className={input} value={c.public_catalog_whatsapp || ""} onChange={(e) => set("public_catalog_whatsapp", e.target.value)} placeholder="+502 5555-1234" />
+          </Field>
+          <Field label="Introducción" full>
+            <textarea className={input} rows={2} value={c.public_catalog_intro || ""} onChange={(e) => set("public_catalog_intro", e.target.value)} />
+          </Field>
+          {c.public_catalog_enabled && (
+            <div className="sm:col-span-2">
+              <a href="/catalogo" target="_blank" rel="noreferrer" className="text-sm text-blue-600 hover:underline">
+                Abrir catálogo público (/catalogo) ↗
+              </a>
+            </div>
+          )}
+        </Section>
       </fieldset>
     </form>
   );

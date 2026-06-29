@@ -33,6 +33,9 @@ arquitectura **desacoplada**:
 | Auditoría (bitácora create/update/delete) | ✅ | ✅ |
 | Configuración de empresa (datos fiscales, IVA, FEL, impresoras) | ✅ | ✅ |
 | Facturación / FEL Guatemala (emisión, anulación, cupo, ticket) | ✅ | ✅ |
+| Catálogo público en línea (sin login, precios condicionales, WhatsApp) | ✅ | ✅ |
+| Importación CSV (productos, clientes, ventas históricas) | ✅ | ✅ |
+| Respaldos (ZIP de BD + media, descarga/borrado, cron) | ✅ | ✅ |
 
 ## Requisitos
 
@@ -140,6 +143,11 @@ activa viaja en el header `X-Branch-Id`.
 | GET | `/api/invoices/pending/` | Ventas completadas sin factura certificada |
 | GET | `/api/sales/{id}/ticket/` | Datos del comprobante para imprimir |
 | GET | `/api/fel/config/` | Configuración del certificador FEL activo |
+| GET | `/api/public/catalog/` · `/info/` | Catálogo público (sin auth) — productos visibles y encabezado |
+| GET | `/api/imports/template/{tipo}/` | Plantilla CSV (`productos`/`clientes`/`ventas`) |
+| POST | `/api/imports/products/` · `/customers/` · `/sales/` | Importar CSV (`imports.gestionar`) |
+| GET/POST | `/api/backups/` | Listar / generar respaldo (`backup.gestionar`) |
+| GET/DELETE | `/api/backups/{archivo}/download/` · `/{archivo}/` | Descargar / eliminar respaldo |
 
 ### Facturación Electrónica (FEL Guatemala)
 
@@ -150,6 +158,19 @@ desarrollo y demo sin credenciales). Para producción se implementa un certifica
 real (Infile/otro) con la misma interfaz `FelCertifier`. Pequeños contribuyentes
 emiten `FPEQ`; régimen general emite `FACT`. El cupo anual (bolsón) se controla
 en la configuración de empresa (`fel_yearly_quota`, `0` = sin límite).
+
+### Catálogo público, importación CSV y respaldos
+
+- **Catálogo público:** ruta `/catalogo` (sin login). Se activa desde la
+  configuración de empresa (`public_catalog_enabled`); muestra solo productos
+  con `public_visible=True`, con precios condicionales y enlace de WhatsApp.
+- **Importación CSV:** importa productos (alta/actualización por SKU,
+  autogeneración de SKU/EAN-13, alta de categoría/marca/unidad), clientes
+  (por nombre) y ventas históricas (solo para reportes; no afectan inventario
+  ni caja). Cada tipo tiene plantilla descargable.
+- **Respaldos:** `manage.py backup_run --keep=14` genera un ZIP con la base de
+  datos (archivo SQLite, `pg_dump` o `dumpdata` JSON como respaldo universal) y
+  los archivos de `media/`. Programable por cron; también desde la UI.
 
 ## Estructura
 
@@ -172,6 +193,9 @@ django/
 │   ├── services.py          # emit_invoice / cancel_invoice / quota_status / build_ticket
 │   ├── fel/                 # adaptador del certificador (base + stub) y build_dte
 │   └── views.py             # emisión, anulación, cupo, ticket, config FEL
+├── imports/         # Importación CSV (productos, clientes, ventas)
+│   ├── services.py          # parse_csv + import_products/customers/sales + plantillas
+│   └── views.py             # endpoints de subida y descarga de plantillas
 └── frontend/        # SPA React + Vite + Tailwind
     └── src/
         ├── api/client.js        # axios + interceptores JWT (refresh) + X-Branch-Id

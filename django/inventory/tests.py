@@ -109,3 +109,52 @@ class ApplyMovementTests(TestCase):
         self.product.stock = Decimal("20")
         self.product.save()
         self.assertEqual(self.product.stock_for(99), Decimal("20"))
+
+
+class PublicCatalogTests(TestCase):
+    """Catálogo público (sin autenticación)."""
+
+    def setUp(self):
+        from rest_framework.test import APIClient
+        from core.models import CompanySetting
+        self.client = APIClient()  # sin credenciales: público
+        self.company = CompanySetting.current()
+        self.visible = Product.objects.create(
+            sku="PUB-1", name="Pala", sale_price=Decimal("50"), public_visible=True, stock=Decimal("3"),
+        )
+        self.hidden = Product.objects.create(
+            sku="PUB-2", name="Producto oculto", sale_price=Decimal("99"), public_visible=False, stock=Decimal("1"),
+        )
+
+    def _enable(self, **kw):
+        self.company.public_catalog_enabled = True
+        for k, v in kw.items():
+            setattr(self.company, k, v)
+        self.company.save()
+
+    def test_catalogo_deshabilitado_da_404(self):
+        self.company.public_catalog_enabled = False
+        self.company.save()
+        self.assertEqual(self.client.get("/api/public/catalog/").status_code, 404)
+        self.assertEqual(self.client.get("/api/public/catalog/info/").status_code, 404)
+
+    def test_lista_solo_productos_visibles_sin_auth(self):
+        self._enable(public_catalog_show_prices=True)
+        r = self.client.get("/api/public/catalog/")
+        self.assertEqual(r.status_code, 200)
+        names = [p["name"] for p in (r.json().get("results") or r.json())]
+        self.assertIn("Pala", names)
+        self.assertNotIn("Producto oculto", names)
+
+    def test_oculta_precios_cuando_show_prices_false(self):
+        self._enable(public_catalog_show_prices=False)
+        r = self.client.get("/api/public/catalog/")
+        item = (r.json().get("results") or r.json())[0]
+        self.assertIsNone(item["price"])
+
+    def test_info_incluye_link_whatsapp(self):
+        self._enable(public_catalog_whatsapp="+502 5555-1234", public_catalog_title="Mi Tienda")
+        r = self.client.get("/api/public/catalog/info/")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["title"], "Mi Tienda")
+        self.assertEqual(r.json()["whatsapp_link"], "https://wa.me/50255551234")
