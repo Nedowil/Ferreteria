@@ -74,6 +74,49 @@ cd django
 .venv/bin/python manage.py test
 ```
 
+## Despliegue (producción)
+
+En producción Django sirve **todo** desde un solo origen: la API en `/api/`, el
+SPA compilado y sus estáticos vía **WhiteNoise** (no hace falta nginx para
+servir archivos), y gunicorn como servidor WSGI. No se necesita CORS porque el
+SPA y la API comparten dominio.
+
+### Con Docker (recomendado)
+
+```bash
+cd django
+cp .env.example .env     # ajusta SECRET_KEY, DB_*, DJANGO_SUPERUSER_*, dominio
+docker compose up -d --build
+```
+
+Esto levanta PostgreSQL y la app. El `entrypoint.sh` aplica migraciones,
+recolecta estáticos, ejecuta `init_app` (permisos, roles, sucursal y el admin de
+`DJANGO_SUPERUSER_EMAIL`/`PASSWORD`) y arranca gunicorn en el puerto 8000.
+La imagen es multi-stage: compila el SPA con Node y lo copia al runtime de Python.
+
+### Manual (sin Docker)
+
+```bash
+cd django/frontend && npm ci && npm run build        # genera frontend/dist
+cd .. && .venv/bin/pip install -r requirements.txt
+DEBUG=False .venv/bin/python manage.py collectstatic --noinput
+DEBUG=False .venv/bin/python manage.py migrate
+DEBUG=False .venv/bin/python manage.py init_app
+DEBUG=False .venv/bin/gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3
+```
+
+### Checklist de producción
+
+- `DEBUG=False` y un `SECRET_KEY` largo y aleatorio.
+- `ALLOWED_HOSTS` con tu dominio y `CSRF_TRUSTED_ORIGINS=https://tu-dominio`.
+- Base de datos PostgreSQL (`DB_ENGINE=postgresql` + `DB_*`).
+- TLS por un proxy/balanceador delante; opcionalmente `SECURE_SSL_REDIRECT=True`
+  y `SECURE_HSTS_SECONDS` (la app ya respeta `X-Forwarded-Proto`).
+- Crear el primer admin con `DJANGO_SUPERUSER_EMAIL`/`DJANGO_SUPERUSER_PASSWORD`.
+- Respaldos automáticos: programar `manage.py backup_run --keep=14` por cron
+  (los respaldos quedan en el volumen `backups`).
+- FEL: poner `FEL_DRIVER=infile` y las credenciales `FEL_INFILE_*` cuando estén.
+
 Cubren la lógica crítica: servicio de stock (`apply_movement`: entrada/salida/
 ajuste, guarda de negativo, multi-sucursal), utilidades (SKU, EAN-13,
 fracciones), servicio de compras (totales con IVA solo sobre lo gravado,

@@ -66,6 +66,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # WhiteNoise sirve los archivos estáticos (incluido el SPA) en producción.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -142,11 +144,21 @@ USE_TZ = True
 
 
 # Static & media
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_DIRS = [BASE_DIR / "static"]
 
-MEDIA_URL = "media/"
+# El SPA compilado (Vite) vive en frontend/dist; sus assets se sirven en /static/
+# y su index.html actúa como fallback para las rutas del cliente (ver config/urls).
+SPA_DIR = BASE_DIR / "frontend" / "dist"
+STATICFILES_DIRS = [d for d in [BASE_DIR / "static", SPA_DIR] if d.exists()]
+
+# WhiteNoise: comprime y cachea los estáticos sin necesitar nginx para servirlos.
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+}
+
+MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -162,6 +174,27 @@ COMPANY_PRICES_INCLUDE_TAX = env_bool("COMPANY_PRICES_INCLUDE_TAX", True)
 FEL_DRIVER = os.getenv("FEL_DRIVER", "stub")
 FEL_ENVIRONMENT = os.getenv("FEL_ENVIRONMENT", "PRUEBAS")  # PRUEBAS|PRODUCCION
 FEL_CERTIFICADOR = os.getenv("FEL_CERTIFICADOR", "Certificador de pruebas")
+
+
+# ---------------------------------------------------------------------------
+# Seguridad en producción (se activa cuando DEBUG=False)
+# ---------------------------------------------------------------------------
+# Orígenes confiables para CSRF (el dominio público), p. ej.
+# CSRF_TRUSTED_ORIGINS=https://ferreteria.example.com
+CSRF_TRUSTED_ORIGINS = [
+    o.strip() for o in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()
+]
+
+if not DEBUG:
+    # Detrás de un proxy/balanceador que termina TLS.
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", False)
+    SESSION_COOKIE_SECURE = env_bool("SESSION_COOKIE_SECURE", True)
+    CSRF_COOKIE_SECURE = env_bool("CSRF_COOKIE_SECURE", True)
+    SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "0"))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", True)
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = "DENY"
 
 # Credenciales del certificador Infile/FEEL. Vacías por defecto: el driver
 # 'infile' aborta con un mensaje claro hasta que se configuren (sandbox).

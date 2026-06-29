@@ -1,0 +1,57 @@
+# Despliegue de la Ferretería: Django (gunicorn + SPA) + PostgreSQL.
+# Uso:  docker compose up -d --build
+# Copia .env.example a .env y ajusta las credenciales antes de levantar.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-ferreteria}
+      POSTGRES_USER: ${DB_USER:-ferreteria}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-ferreteria}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-ferreteria}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DEBUG: ${DEBUG:-False}
+      SECRET_KEY: ${SECRET_KEY}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-*}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-}
+      DB_ENGINE: postgresql
+      DB_NAME: ${DB_NAME:-ferreteria}
+      DB_USER: ${DB_USER:-ferreteria}
+      DB_PASSWORD: ${DB_PASSWORD:-ferreteria}
+      DB_HOST: db
+      DB_PORT: 5432
+      DJANGO_SUPERUSER_EMAIL: ${DJANGO_SUPERUSER_EMAIL:-}
+      DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD:-}
+      # FEL (opcional)
+      FEL_DRIVER: ${FEL_DRIVER:-stub}
+      FEL_INFILE_USUARIO: ${FEL_INFILE_USUARIO:-}
+      FEL_INFILE_LLAVE_WS: ${FEL_INFILE_LLAVE_WS:-}
+      FEL_INFILE_LLAVE_FIRMA: ${FEL_INFILE_LLAVE_FIRMA:-}
+      FEL_INFILE_ALIAS: ${FEL_INFILE_ALIAS:-}
+      FEL_INFILE_NIT_EMISOR: ${FEL_INFILE_NIT_EMISOR:-}
+      FEL_INFILE_CORREO_COPIA: ${FEL_INFILE_CORREO_COPIA:-}
+    volumes:
+      - media:/app/media
+      - backups:/app/backups
+    ports:
+      - "${WEB_PORT:-8000}:8000"
+
+volumes:
+  pgdata:
+  media:
+  backups:

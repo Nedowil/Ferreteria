@@ -1,9 +1,10 @@
-"""URLs raíz del proyecto Ferretería (API REST)."""
+"""URLs raíz del proyecto Ferretería (API REST + SPA)."""
 
 from django.conf import settings
-from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import include, path
+from django.http import HttpResponse
+from django.urls import include, path, re_path
+from django.views.static import serve as static_serve
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
@@ -58,10 +59,31 @@ api_patterns = [
     path("", include("imports.urls")),
 ]
 
+def spa_index(request):
+    """Sirve el index.html del SPA compilado (fallback de rutas del cliente).
+
+    En desarrollo el SPA corre en Vite (:5173); este fallback solo aplica cuando
+    se sirve el build desde Django (producción) o si se accede directo al :8000.
+    """
+    index = settings.SPA_DIR / "index.html"
+    if not index.exists():
+        return HttpResponse(
+            "El SPA no está compilado. Ejecuta `npm run build` en frontend/ "
+            "o usa el servidor de desarrollo de Vite (npm run dev).",
+            content_type="text/plain", status=200,
+        )
+    resp = HttpResponse(index.read_text(encoding="utf-8"))
+    resp["Cache-Control"] = "no-cache"
+    return resp
+
+
 urlpatterns = [
     path("django-admin/", admin.site.urls),
     path("api/", include(api_patterns)),
+    # Archivos subidos (imágenes de productos, logos). En producción los sirve
+    # gunicorn/Django: suficiente para el volumen de una ferretería.
+    re_path(r"^media/(?P<path>.*)$", static_serve, {"document_root": settings.MEDIA_ROOT}),
+    # Fallback del SPA: cualquier ruta que no sea API, admin, estáticos o media
+    # devuelve el index.html para que React Router maneje la navegación.
+    re_path(r"^(?!api/|django-admin/|static/|media/).*$", spa_index, name="spa"),
 ]
-
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
