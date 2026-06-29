@@ -1,13 +1,13 @@
 """Lógica de negocio de Ventas / POS (SaleService de Laravel)."""
 
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal
 from datetime import timedelta
 
-from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
 from cashbox import services as cash
+from core.pricing import compute_totals as _compute_totals, money as _money
 from inventory.models import InventoryMovement, Product
 from inventory.services import apply_movement
 from .models import Sale, SalePayment
@@ -17,50 +17,10 @@ class SaleError(Exception):
     """Error de dominio en una operación de venta."""
 
 
-CENTS = Decimal("0.01")
-
-
-def _money(value):
-    return Decimal(value).quantize(CENTS, rounding=ROUND_HALF_UP)
-
-
 def generate_folio():
     last = Sale.objects.order_by("-id").first()
     nxt = (last.id if last else 0) + 1
     return f"V-{nxt:06d}"
-
-
-def _compute_totals(lines, global_discount):
-    """Calcula subtotal, descuento total, IVA y total a partir de las partidas.
-
-    `lines` es una lista de dicts con: gross (cantidad*precio), line_discount, tax_type.
-    Devuelve (subtotal, total_discount, tax, total).
-    """
-    subtotal_gravado = sum((l["gross"] for l in lines if l["tax_type"] != "exento"), Decimal("0"))
-    subtotal_exento = sum((l["gross"] for l in lines if l["tax_type"] == "exento"), Decimal("0"))
-    subtotal = subtotal_gravado + subtotal_exento
-
-    line_discounts = sum((l["line_discount"] for l in lines), Decimal("0"))
-    total_discount = min(line_discounts + Decimal(global_discount or 0), subtotal)
-
-    # Repartir el descuento proporcionalmente entre gravado y exento
-    if subtotal > 0:
-        disc_gravado = (total_discount * subtotal_gravado / subtotal)
-    else:
-        disc_gravado = Decimal("0")
-    base_gravado = subtotal_gravado - disc_gravado
-    base_exento = subtotal_exento - (total_discount - disc_gravado)
-
-    rate = Decimal(str(settings.COMPANY_DEFAULT_TAX_RATE))
-    if settings.COMPANY_PRICES_INCLUDE_TAX:
-        # El IVA va incluido en el precio; lo extraemos de la base gravada.
-        tax = base_gravado - (base_gravado / (1 + rate / 100)) if rate > 0 else Decimal("0")
-        total = base_gravado + base_exento
-    else:
-        tax = base_gravado * rate / 100 if rate > 0 else Decimal("0")
-        total = base_gravado + tax + base_exento
-
-    return _money(subtotal), _money(total_discount), _money(tax), _money(total)
 
 
 @transaction.atomic

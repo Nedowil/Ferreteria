@@ -18,6 +18,8 @@ export default function Layout({ children }) {
           <NavLink to="/pos" className={linkClass}>Punto de venta</NavLink>
           <NavLink to="/ventas" className={linkClass}>Ventas</NavLink>
           <NavLink to="/caja" className={linkClass}>Caja</NavLink>
+          <NavLink to="/cotizaciones" className={linkClass}>Cotizaciones</NavLink>
+          <NavLink to="/devoluciones" className={linkClass}>Devoluciones</NavLink>
           <NavLink to="/cuentas-por-cobrar" className={linkClass}>Cuentas por cobrar</NavLink>
           <div className="px-5 pt-4 pb-1 text-xs uppercase text-slate-500">Inventario</div>
           <NavLink to="/productos" className={linkClass}>Productos</NavLink>

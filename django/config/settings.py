@@ -55,6 +55,8 @@ INSTALLED_APPS = [
     "purchasing",
     "cashbox",
     "sales",
+    "quotes",
+    "salereturns",
 ]
 
 MIDDLEWARE = [

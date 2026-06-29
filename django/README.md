@@ -25,7 +25,8 @@ arquitectura **desacoplada**:
 | Punto de Venta (POS) con niveles de precio y vuelto | ✅ | ✅ |
 | Caja (apertura, movimientos, arqueo y cierre) | ✅ | ✅ |
 | Ventas al crédito + cuentas por cobrar (abonos) | ✅ | ✅ |
-| Cotizaciones / Devoluciones | ⏳ | ⏳ |
+| Cotizaciones (crear, convertir a venta) | ✅ | ✅ |
+| Devoluciones (por ticket / por producto / sin ticket) | ✅ | ✅ |
 | Facturación / FEL Guatemala / Reportes | ⏳ | ⏳ |
 
 ## Requisitos
@@ -107,6 +108,13 @@ activa viaja en el header `X-Branch-Id`.
 | POST | `/api/cashbox/cash-sessions/open/` | Abrir caja |
 | POST | `/api/cashbox/cash-sessions/{id}/movement/` | Ingreso/egreso |
 | POST | `/api/cashbox/cash-sessions/{id}/close/` | Arqueo y cierre |
+| CRUD | `/api/quotations/` | Cotizaciones |
+| POST | `/api/quotations/{id}/convert/` | Convertir cotización en venta |
+| POST | `/api/quotations/{id}/cancel/` | Cancelar cotización |
+| CRUD | `/api/returns/` | Devoluciones (con venta de origen) |
+| POST | `/api/returns/without-sale/` | Devolución sin ticket |
+| GET | `/api/returns/search-by-product/` | Buscar ventas por producto |
+| POST | `/api/returns/{id}/cancel/` | Cancelar devolución (revierte stock) |
 
 ## Estructura
 

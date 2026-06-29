@@ -21,6 +21,12 @@ import SaleDetail from "./pages/pos/SaleDetail";
 import Receivable from "./pages/pos/Receivable";
 import CashBox from "./pages/cash/CashBox";
 import CashSessions from "./pages/cash/CashSessions";
+import QuotationList from "./pages/quotes/QuotationList";
+import QuotationForm from "./pages/quotes/QuotationForm";
+import QuotationDetail from "./pages/quotes/QuotationDetail";
+import ReturnsList from "./pages/returns/ReturnsList";
+import ReturnCreate from "./pages/returns/ReturnCreate";
+import ReturnDetail from "./pages/returns/ReturnDetail";
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
@@ -55,6 +61,12 @@ export default function App() {
       <Route path="/cuentas-por-cobrar" element={<Protected><Receivable /></Protected>} />
       <Route path="/caja" element={<Protected><CashBox /></Protected>} />
       <Route path="/caja/historial" element={<Protected><CashSessions /></Protected>} />
+      <Route path="/cotizaciones" element={<Protected><QuotationList /></Protected>} />
+      <Route path="/cotizaciones/nueva" element={<Protected><QuotationForm /></Protected>} />
+      <Route path="/cotizaciones/:id" element={<Protected><QuotationDetail /></Protected>} />
+      <Route path="/devoluciones" element={<Protected><ReturnsList /></Protected>} />
+      <Route path="/devoluciones/nueva" element={<Protected><ReturnCreate /></Protected>} />
+      <Route path="/devoluciones/:id" element={<Protected><ReturnDetail /></Protected>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

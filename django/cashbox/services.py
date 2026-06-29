@@ -138,6 +138,35 @@ def close_session(session, counted_cash, *, notes=None):
     return session
 
 
+def register_return_cash(user, amount, *, description=None):
+    """Registra una devolución en efectivo como egreso de la caja del usuario.
+
+    Devuelve el CashMovement o None si el usuario no tiene caja abierta.
+    """
+    session = current_session_for(user)
+    if session is None:
+        return None
+    mov = CashMovement.objects.create(
+        session=session, user=user, type=CashMovement.DEVOLUCION,
+        payment_method="efectivo", amount=Decimal(str(amount)), description=description,
+    )
+    _refresh_expected(session)
+    return mov
+
+
+def register_return_cancellation_cash(user, amount, *, description=None):
+    """Reversa de una devolución en efectivo (ingreso) al cancelarla."""
+    session = current_session_for(user)
+    if session is None:
+        return None
+    mov = CashMovement.objects.create(
+        session=session, user=user, type=CashMovement.INGRESO,
+        payment_method="efectivo", amount=Decimal(str(amount)), description=description,
+    )
+    _refresh_expected(session)
+    return mov
+
+
 def totals_by_payment_method(session):
     """Totales netos (ventas - devoluciones) por método de pago."""
     out = {}

@@ -30,6 +30,10 @@ api_patterns = [
     path("cashbox/", include("cashbox.urls")),
     # Ventas (POS)
     path("", include("sales.urls")),
+    # Cotizaciones
+    path("", include("quotes.urls")),
+    # Devoluciones
+    path("", include("salereturns.urls")),
 ]
 
 urlpatterns = [
