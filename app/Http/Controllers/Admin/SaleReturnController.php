@@ -87,6 +87,109 @@ class SaleReturnController extends Controller
         ]);
     }
 
+    /**
+     * Busca ventas recientes que contienen un producto (por barcode/SKU/nombre).
+     * Pensado para el flujo de devolucion cuando el cliente no trae el ticket:
+     * el cajero escanea el producto y el sistema sugiere las ultimas ventas
+     * donde se vendio ese item para que el cliente reconozca cual fue la suya.
+     */
+    public function searchSalesByProduct(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $term = trim((string) $request->input('q'));
+        $days = max(1, min(180, (int) $request->input('days', 30)));
+
+        if ($term === '') {
+            return response()->json(['error' => 'Indicá un código o nombre de producto.'], 422);
+        }
+
+        $product = \App\Models\Product::query()
+            ->where(function ($q) use ($term) {
+                $q->where('barcode', $term)
+                  ->orWhere('sku', $term)
+                  ->orWhere('barcode', 'like', "%{$term}%")
+                  ->orWhere('sku', 'like', "%{$term}%")
+                  ->orWhere('name', 'like', "%{$term}%");
+            })
+            ->orderByRaw("CASE
+                WHEN barcode = ? THEN 0
+                WHEN sku = ? THEN 1
+                ELSE 2 END", [$term, $term])
+            ->first();
+
+        if (! $product) {
+            return response()->json(['error' => 'No se encontró el producto con ese código o nombre.'], 404);
+        }
+
+        $sales = Sale::query()
+            ->whereHas('items', fn ($q) => $q->where('product_id', $product->id))
+            ->where('status', Sale::STATUS_COMPLETADA)
+            ->where('date', '>=', now()->subDays($days))
+            ->with(['customer', 'user', 'items.product'])
+            ->orderByDesc('date')
+            ->limit(20)
+            ->get();
+
+        return response()->json([
+            'product' => [
+                'id' => $product->id,
+                'sku' => $product->sku,
+                'name' => $product->name,
+                'unit' => $product->base_unit_label ?: 'unidad',
+            ],
+            'sales' => $sales->map(function (Sale $s) use ($product) {
+                $line = $s->items->firstWhere('product_id', $product->id);
+                return [
+                    'id' => $s->id,
+                    'folio' => $s->folio,
+                    'date' => $s->date->format('d/m/Y H:i'),
+                    'customer' => $s->customer?->name ?: 'Consumidor Final',
+                    'tax_id' => $s->customer?->tax_id ?: 'CF',
+                    'total' => (float) $s->total,
+                    'cashier' => $s->user?->name,
+                    'payment_method' => $s->payment_method,
+                    'product_quantity' => $line ? (float) $line->quantity : 0,
+                    'product_unit_price' => $line ? (float) $line->unit_price : 0,
+                    'product_subtotal' => $line ? (float) $line->subtotal : 0,
+                ];
+            })->values(),
+        ]);
+    }
+
+    /**
+     * Registra una devolucion SIN venta de origen (cliente no tiene ticket
+     * y no se encuentra la venta). El stock se restituye, se da reintegro al
+     * cliente y queda registrado en sale_returns con sale_id=null y
+     * reason_type='sin_ticket'. NO genera nota de credito electronica.
+     */
+    public function storeWithoutSale(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $data = $request->validate([
+            'refund_method' => ['required', 'in:efectivo,tarjeta,transferencia,credito_nota'],
+            'reason' => ['nullable', 'string', 'max:500'],
+            'notes' => ['nullable', 'string', 'max:500'],
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.product_id' => ['required', 'exists:products,id'],
+            'items.*.quantity' => ['required', 'numeric', 'gt:0'],
+            'items.*.unit_price' => ['required', 'numeric', 'min:0'],
+        ]);
+
+        try {
+            $return = $this->service->createWithoutSale($data, $data['items'], auth()->id());
+        } catch (\DomainException $e) {
+            return response()->json(['error' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'id' => $return->id,
+            'folio' => $return->folio,
+            'total' => (float) $return->total,
+            'urls' => [
+                'show' => route('admin.devoluciones.show', $return),
+            ],
+        ]);
+    }
+
     public function create(Request $request): View
     {
         $saleId = $request->integer('sale');

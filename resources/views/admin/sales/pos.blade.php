@@ -106,26 +106,194 @@
                                 class="hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center">✕</button>
                     </div>
                     <div class="p-5 space-y-3 overflow-y-auto flex-1">
-                        {{-- Paso 1: buscar venta --}}
-                        <div class="flex gap-2 items-end">
-                            <div class="flex-1">
-                                <label class="text-sm font-medium">Folio de la venta</label>
-                                <input type="text" x-model="returnFolio"
-                                       x-ref="returnFolioInput"
-                                       @keydown.enter.prevent="loadSaleForReturn()"
-                                       placeholder="Ej: V-000123"
-                                       class="mt-1 block w-full border-slate-300 rounded-md focus:border-orange-500 focus:ring-orange-500" />
-                            </div>
-                            <button type="button" @click="loadSaleForReturn()"
-                                    :disabled="!returnFolio || returnLoading"
-                                    class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md font-bold disabled:opacity-50">
-                                <span x-show="!returnLoading">Buscar</span>
-                                <span x-show="returnLoading">…</span>
+                        {{-- Tabs de modo de busqueda --}}
+                        <div class="flex gap-1 border-b border-slate-200">
+                            <button type="button" @click="setReturnMode('folio')"
+                                    :class="returnMode === 'folio' ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+                                    class="px-3 py-2 rounded-t font-bold text-sm">
+                                🧾 Por folio
+                            </button>
+                            <button type="button" @click="setReturnMode('product')"
+                                    :class="returnMode === 'product' ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+                                    class="px-3 py-2 rounded-t font-bold text-sm">
+                                📦 Por producto
+                            </button>
+                            <button type="button" @click="setReturnMode('noticket')"
+                                    :class="returnMode === 'noticket' ? 'bg-red-500 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+                                    class="px-3 py-2 rounded-t font-bold text-sm">
+                                🆓 Sin ticket
                             </button>
                         </div>
+
+                        {{-- MODO: POR FOLIO --}}
+                        <div x-show="returnMode === 'folio'">
+                            <div class="flex gap-2 items-end">
+                                <div class="flex-1">
+                                    <label class="text-sm font-medium">Folio de la venta</label>
+                                    <input type="text" x-model="returnFolio"
+                                           x-ref="returnFolioInput"
+                                           @keydown.enter.prevent="loadSaleForReturn()"
+                                           placeholder="Ej: V-000123"
+                                           class="mt-1 block w-full border-slate-300 rounded-md focus:border-orange-500 focus:ring-orange-500" />
+                                </div>
+                                <button type="button" @click="loadSaleForReturn()"
+                                        :disabled="!returnFolio || returnLoading"
+                                        class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md font-bold disabled:opacity-50">
+                                    <span x-show="!returnLoading">Buscar</span>
+                                    <span x-show="returnLoading">…</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        {{-- MODO: POR PRODUCTO --}}
+                        <div x-show="returnMode === 'product'" x-cloak>
+                            <div class="flex gap-2 items-end">
+                                <div class="flex-1">
+                                    <label class="text-sm font-medium">Escaneá el producto o tipeá SKU/nombre</label>
+                                    <input type="text" x-model="returnProductTerm"
+                                           x-ref="returnProductInput"
+                                           @keydown.enter.prevent="searchSalesByProduct()"
+                                           placeholder="Código de barras, SKU, o parte del nombre"
+                                           class="mt-1 block w-full border-slate-300 rounded-md focus:border-orange-500 focus:ring-orange-500" />
+                                </div>
+                                <button type="button" @click="searchSalesByProduct()"
+                                        :disabled="!returnProductTerm || returnLoading"
+                                        class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md font-bold disabled:opacity-50">
+                                    <span x-show="!returnLoading">Buscar</span>
+                                    <span x-show="returnLoading">…</span>
+                                </button>
+                            </div>
+                            <div class="text-xs text-slate-500 mt-1">
+                                Busca las últimas ventas de los últimos 30 días que contienen este producto.
+                            </div>
+
+                            <template x-if="returnProductInfo">
+                                <div class="mt-3 p-2 bg-orange-50 border border-orange-200 rounded text-sm">
+                                    <strong>Producto encontrado:</strong>
+                                    <span x-text="returnProductInfo.name"></span>
+                                    <span class="font-mono text-xs text-slate-500" x-text="returnProductInfo.sku"></span>
+                                </div>
+                            </template>
+
+                            <template x-if="returnProductSales.length > 0">
+                                <div class="mt-2">
+                                    <div class="text-xs font-semibold text-slate-600 mb-1">
+                                        Últimas ventas (<span x-text="returnProductSales.length"></span>) — click para seleccionar:
+                                    </div>
+                                    <div class="space-y-1 max-h-64 overflow-y-auto">
+                                        <template x-for="s in returnProductSales" :key="s.id">
+                                            <button type="button" @click="pickSaleFromProductSearch(s)"
+                                                    class="w-full text-left p-2 border border-slate-200 rounded hover:bg-orange-50 hover:border-orange-300 text-xs flex justify-between gap-2">
+                                                <div>
+                                                    <div class="font-bold font-mono" x-text="s.folio"></div>
+                                                    <div class="text-slate-600" x-text="s.date + ' · ' + s.customer + ' (' + s.tax_id + ')'"></div>
+                                                    <div class="text-slate-500">Cajero: <span x-text="s.cashier"></span></div>
+                                                </div>
+                                                <div class="text-right whitespace-nowrap">
+                                                    <div class="font-bold text-orange-600">Q<span x-text="s.total.toFixed(2)"></span></div>
+                                                    <div class="text-slate-600">
+                                                        <span x-text="s.product_quantity"></span> ×
+                                                        Q<span x-text="s.product_unit_price.toFixed(2)"></span>
+                                                    </div>
+                                                </div>
+                                            </button>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+
+                        {{-- MODO: SIN TICKET --}}
+                        <div x-show="returnMode === 'noticket'" x-cloak class="space-y-3">
+                            <div class="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-900">
+                                <div class="font-bold">⚠ Devolución sin ticket</div>
+                                <div class="text-xs mt-1">
+                                    Usá esta opción cuando el cliente no tiene el comprobante y no pudiste encontrar la venta.
+                                    Quedará registrada con motivo <em>"sin ticket"</em> para auditoría. <strong>No genera nota de crédito electrónica.</strong>
+                                </div>
+                            </div>
+
+                            <div class="flex gap-2 items-end">
+                                <div class="flex-1">
+                                    <label class="text-sm font-medium">Producto a devolver (escaneá o buscá)</label>
+                                    <input type="text" x-model="returnNoticketTerm"
+                                           x-ref="returnNoticketInput"
+                                           @keydown.enter.prevent="lookupNoticketProduct()"
+                                           placeholder="Código de barras, SKU"
+                                           class="mt-1 block w-full border-slate-300 rounded-md focus:border-orange-500 focus:ring-orange-500" />
+                                </div>
+                                <button type="button" @click="lookupNoticketProduct()"
+                                        :disabled="!returnNoticketTerm || returnLoading"
+                                        class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md font-bold disabled:opacity-50">
+                                    + Agregar
+                                </button>
+                            </div>
+
+                            <template x-if="returnNoticketItems.length > 0">
+                                <div>
+                                    <table class="min-w-full text-xs">
+                                        <thead>
+                                            <tr class="bg-slate-100">
+                                                <th class="px-2 py-1 text-left">Producto</th>
+                                                <th class="px-2 py-1 text-right">Cantidad</th>
+                                                <th class="px-2 py-1 text-right">Precio</th>
+                                                <th class="px-2 py-1"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <template x-for="(it, idx) in returnNoticketItems" :key="idx">
+                                                <tr class="border-t">
+                                                    <td class="px-2 py-1">
+                                                        <div class="font-semibold" x-text="it.name"></div>
+                                                        <div class="text-slate-500 font-mono" x-text="it.sku"></div>
+                                                    </td>
+                                                    <td class="px-2 py-1 text-right">
+                                                        <input type="number" min="0.01" step="0.01"
+                                                               x-model.number="it.quantity"
+                                                               class="w-20 border-slate-300 rounded text-right text-xs" />
+                                                    </td>
+                                                    <td class="px-2 py-1 text-right">
+                                                        <input type="number" min="0" step="0.01"
+                                                               x-model.number="it.unit_price"
+                                                               class="w-24 border-slate-300 rounded text-right text-xs" />
+                                                    </td>
+                                                    <td class="px-2 py-1 text-right">
+                                                        <button type="button" @click="returnNoticketItems.splice(idx, 1)"
+                                                                class="text-red-600 hover:bg-red-50 px-1 rounded">✕</button>
+                                                    </td>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
+                                    <div class="mt-2 text-right text-sm font-bold">
+                                        Total reintegro: Q<span x-text="noticketTotal.toFixed(2)"></span>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="text-xs font-medium">Reintegrar como</label>
+                                    <select x-model="returnRefund"
+                                            class="mt-1 block w-full border-slate-300 rounded-md text-sm">
+                                        <option value="efectivo">Efectivo</option>
+                                        <option value="tarjeta">Tarjeta</option>
+                                        <option value="transferencia">Transferencia</option>
+                                        <option value="credito_nota">Nota de crédito interna</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium">Motivo / observación</label>
+                                    <input type="text" x-model="returnNotes" maxlength="500"
+                                           placeholder="Ej: cliente no presentó ticket"
+                                           class="mt-1 block w-full border-slate-300 rounded-md text-sm" />
+                                </div>
+                            </div>
+                        </div>
+
                         <div x-show="returnError" x-cloak class="p-2 bg-red-100 text-red-800 rounded text-sm" x-text="returnError"></div>
 
-                        <template x-if="returnSale">
+                        <template x-if="returnSale && returnMode !== 'noticket'">
                             <div class="border rounded p-3 bg-slate-50 space-y-3">
                                 <div class="text-sm">
                                     <div><strong>Folio:</strong> <span x-text="returnSale.folio"></span></div>
@@ -201,9 +369,17 @@
                         <button type="button" @click="showReturnModal = false"
                                 class="px-4 py-2 bg-slate-200 text-slate-700 rounded text-sm font-medium">Cancelar</button>
                         <button type="button" @click="submitReturn()"
+                                x-show="returnMode !== 'noticket'"
                                 :disabled="!returnSale || returnSubmitting"
                                 class="px-5 py-2 bg-red-600 text-white rounded text-sm font-bold disabled:opacity-50">
                             <span x-show="!returnSubmitting">Registrar devolución</span>
+                            <span x-show="returnSubmitting">Procesando…</span>
+                        </button>
+                        <button type="button" @click="submitReturnWithoutSale()"
+                                x-show="returnMode === 'noticket'"
+                                :disabled="returnNoticketItems.length === 0 || returnSubmitting"
+                                class="px-5 py-2 bg-red-600 text-white rounded text-sm font-bold disabled:opacity-50">
+                            <span x-show="!returnSubmitting">Registrar devolución sin ticket</span>
                             <span x-show="returnSubmitting">Procesando…</span>
                         </button>
                     </div>
@@ -2495,6 +2671,7 @@
 
                 // ====== Devolucion rapida ======
                 showReturnModal: false,
+                returnMode: 'folio',          // 'folio' | 'product' | 'noticket'
                 returnFolio: '',
                 returnSale: null,
                 returnItemsQty: [],
@@ -2504,7 +2681,24 @@
                 returnError: '',
                 returnLoading: false,
                 returnSubmitting: false,
+
+                // Modo "por producto" (busca ventas que contengan un item)
+                returnProductTerm: '',
+                returnProductInfo: null,
+                returnProductSales: [],
+
+                // Modo "sin ticket" (devolucion libre)
+                returnNoticketTerm: '',
+                returnNoticketItems: [],
+                get noticketTotal() {
+                    return this.returnNoticketItems.reduce(
+                        (sum, it) => sum + (+it.quantity || 0) * (+it.unit_price || 0),
+                        0
+                    );
+                },
+
                 openReturnModal() {
+                    this.returnMode = 'folio';
                     this.returnFolio = '';
                     this.returnSale = null;
                     this.returnItemsQty = [];
@@ -2512,8 +2706,138 @@
                     this.returnReason = 'equivocacion';
                     this.returnRefund = 'efectivo';
                     this.returnNotes = '';
+                    this.returnProductTerm = '';
+                    this.returnProductInfo = null;
+                    this.returnProductSales = [];
+                    this.returnNoticketTerm = '';
+                    this.returnNoticketItems = [];
                     this.showReturnModal = true;
                     setTimeout(() => this.$refs.returnFolioInput?.focus(), 100);
+                },
+                setReturnMode(mode) {
+                    this.returnMode = mode;
+                    this.returnError = '';
+                    setTimeout(() => {
+                        if (mode === 'folio') this.$refs.returnFolioInput?.focus();
+                        else if (mode === 'product') this.$refs.returnProductInput?.focus();
+                        else if (mode === 'noticket') this.$refs.returnNoticketInput?.focus();
+                    }, 80);
+                },
+                async searchSalesByProduct() {
+                    const term = (this.returnProductTerm || '').trim();
+                    if (!term) return;
+                    this.returnLoading = true;
+                    this.returnError = '';
+                    this.returnProductInfo = null;
+                    this.returnProductSales = [];
+                    try {
+                        const url = new URL('{{ route('admin.devoluciones.search_by_product') }}', window.location.origin);
+                        url.searchParams.set('q', term);
+                        url.searchParams.set('days', '30');
+                        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                        const data = await res.json();
+                        if (!res.ok) {
+                            this.returnError = data.error || 'No se encontró el producto.';
+                            return;
+                        }
+                        this.returnProductInfo = data.product;
+                        this.returnProductSales = data.sales;
+                        if (data.sales.length === 0) {
+                            this.returnError = 'No hay ventas recientes con este producto. Probá la opción "Sin ticket".';
+                        }
+                    } catch (e) {
+                        this.returnError = 'Error de red: ' + e.message;
+                    } finally {
+                        this.returnLoading = false;
+                    }
+                },
+                async pickSaleFromProductSearch(s) {
+                    // Vuelve al modo folio cargando la venta seleccionada
+                    this.returnMode = 'folio';
+                    this.returnFolio = s.folio;
+                    await this.loadSaleForReturn();
+                },
+                async lookupNoticketProduct() {
+                    const term = (this.returnNoticketTerm || '').trim();
+                    if (!term) return;
+                    this.returnLoading = true;
+                    this.returnError = '';
+                    try {
+                        const url = new URL('{{ route('admin.ventas.search_products') }}', window.location.origin);
+                        url.searchParams.set('q', term);
+                        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                        const products = await res.json();
+                        if (!Array.isArray(products) || products.length === 0) {
+                            this.returnError = 'No se encontró el producto con ese código.';
+                            return;
+                        }
+                        // Preferimos match exacto de barcode/SKU
+                        const exact = products.find(p => p.barcode === term || p.sku === term) || products[0];
+                        // ¿Ya está en la lista? aumentamos cantidad
+                        const existing = this.returnNoticketItems.find(i => i.product_id === exact.id);
+                        if (existing) {
+                            existing.quantity = +(existing.quantity || 0) + 1;
+                        } else {
+                            this.returnNoticketItems.push({
+                                product_id: exact.id,
+                                sku: exact.sku,
+                                name: exact.name,
+                                quantity: 1,
+                                unit_price: +exact.sale_price || 0,
+                            });
+                        }
+                        this.returnNoticketTerm = '';
+                        setTimeout(() => this.$refs.returnNoticketInput?.focus(), 50);
+                    } catch (e) {
+                        this.returnError = 'Error de red: ' + e.message;
+                    } finally {
+                        this.returnLoading = false;
+                    }
+                },
+                async submitReturnWithoutSale() {
+                    const items = this.returnNoticketItems
+                        .map(it => ({
+                            product_id: it.product_id,
+                            quantity: +it.quantity || 0,
+                            unit_price: +it.unit_price || 0,
+                        }))
+                        .filter(i => i.quantity > 0 && i.unit_price >= 0);
+                    if (items.length === 0) {
+                        this.returnError = 'Agregá al menos un producto con cantidad mayor a 0.';
+                        return;
+                    }
+                    if (!confirm('¿Confirmar devolución sin ticket por Q' + this.noticketTotal.toFixed(2) + '?')) return;
+                    this.returnSubmitting = true;
+                    this.returnError = '';
+                    try {
+                        const res = await fetch('{{ route('admin.devoluciones.store_without_sale') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            },
+                            body: JSON.stringify({
+                                refund_method: this.returnRefund,
+                                reason: this.returnNotes || 'Cliente no presentó ticket',
+                                notes: this.returnNotes || null,
+                                items,
+                            }),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) {
+                            this.returnError = data.error || 'Error al registrar la devolución';
+                            return;
+                        }
+                        this.shortcutToast('🆓 Devolución sin ticket ' + data.folio + ' · Q' + data.total.toFixed(2));
+                        this.showReturnModal = false;
+                        this.refreshCashStatus();
+                    } catch (e) {
+                        this.returnError = 'Error de red: ' + e.message;
+                    } finally {
+                        this.returnSubmitting = false;
+                    }
                 },
                 async loadSaleForReturn() {
                     const folio = (this.returnFolio || '').trim();

@@ -18,6 +18,7 @@ class SaleReturn extends Model
     public const REASON_EQUIVOCACION = 'equivocacion';
     public const REASON_DEFECTUOSO = 'defectuoso';
     public const REASON_NO_SATISFECHO = 'no_satisfecho';
+    public const REASON_SIN_TICKET = 'sin_ticket';
     public const REASON_OTRO = 'otro';
 
     protected $fillable = [
@@ -77,6 +78,7 @@ class SaleReturn extends Model
             self::REASON_EQUIVOCACION => 'Cliente se equivocó',
             self::REASON_DEFECTUOSO => 'Producto defectuoso',
             self::REASON_NO_SATISFECHO => 'No satisfecho',
+            self::REASON_SIN_TICKET => 'Devolución sin ticket',
             default => 'Otro',
         };
     }

@@ -189,11 +189,13 @@ Route::middleware(['auth', 'verified'])
         Route::middleware('permission:ventas.ver')->group(function () {
             Route::get('devoluciones', [\App\Http\Controllers\Admin\SaleReturnController::class, 'index'])->name('devoluciones.index');
             Route::get('devoluciones/buscar-venta', [\App\Http\Controllers\Admin\SaleReturnController::class, 'searchSale'])->name('devoluciones.search_sale');
+            Route::get('devoluciones/buscar-por-producto', [\App\Http\Controllers\Admin\SaleReturnController::class, 'searchSalesByProduct'])->name('devoluciones.search_by_product');
             Route::get('devoluciones/{devolucion}', [\App\Http\Controllers\Admin\SaleReturnController::class, 'show'])->name('devoluciones.show');
         });
         Route::middleware('permission:ventas.cancelar')->group(function () {
             Route::get('devoluciones-nueva', [\App\Http\Controllers\Admin\SaleReturnController::class, 'create'])->name('devoluciones.create');
             Route::post('devoluciones', [\App\Http\Controllers\Admin\SaleReturnController::class, 'store'])->name('devoluciones.store');
+            Route::post('devoluciones/sin-ticket', [\App\Http\Controllers\Admin\SaleReturnController::class, 'storeWithoutSale'])->name('devoluciones.store_without_sale');
             Route::post('devoluciones/{devolucion}/cancelar', [\App\Http\Controllers\Admin\SaleReturnController::class, 'cancel'])->name('devoluciones.cancel');
         });
 
