@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     "reports",
     "transfers",
     "audit",
+    "billing",
 ]
 
 MIDDLEWARE = [
@@ -154,6 +155,12 @@ COMPANY_DEFAULT_TAX_RATE = float(os.getenv("COMPANY_DEFAULT_TAX_RATE", "12"))
 # True = los precios de venta YA incluyen IVA (precio al público); el IVA se
 # extrae del total. False = el IVA se suma sobre el precio.
 COMPANY_PRICES_INCLUDE_TAX = env_bool("COMPANY_PRICES_INCLUDE_TAX", True)
+
+# FEL Guatemala. driver: 'stub' (simula al certificador, para desarrollo/demo)
+# o un certificador real (infile/soap) cuando se configuren credenciales.
+FEL_DRIVER = os.getenv("FEL_DRIVER", "stub")
+FEL_ENVIRONMENT = os.getenv("FEL_ENVIRONMENT", "PRUEBAS")  # PRUEBAS|PRODUCCION
+FEL_CERTIFICADOR = os.getenv("FEL_CERTIFICADOR", "Certificador de pruebas")
 
 
 # ---------------------------------------------------------------------------

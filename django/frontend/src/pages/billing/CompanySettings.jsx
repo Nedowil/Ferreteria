@@ -1,0 +1,151 @@
+import { useEffect, useState } from "react";
+import api from "../../api/client";
+import { useAuth } from "../../auth/AuthContext";
+
+const Section = ({ title, children }) => (
+  <section className="bg-white rounded-lg shadow overflow-hidden">
+    <div className="px-5 py-3 border-b font-semibold">{title}</div>
+    <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">{children}</div>
+  </section>
+);
+
+const Field = ({ label, children, full }) => (
+  <div className={full ? "sm:col-span-2" : ""}>
+    <label className="block text-xs text-slate-500 mb-1">{label}</label>
+    {children}
+  </div>
+);
+
+const input = "w-full border border-slate-300 rounded px-3 py-2 text-sm";
+
+export default function CompanySettings() {
+  const { can } = useAuth();
+  const editable = can("configuracion.gestionar");
+  const [c, setC] = useState(null);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    api.get("/company-settings/").then((r) => setC(r.data));
+  }, []);
+
+  const set = (k, v) => setC((p) => ({ ...p, [k]: v }));
+
+  const save = async (e) => {
+    e.preventDefault();
+    setMsg(""); setErr(""); setSaving(true);
+    try {
+      const { data } = await api.put("/company-settings/", c);
+      setC(data);
+      setMsg("Configuración guardada.");
+    } catch (e2) {
+      setErr(e2.response?.data?.detail || "No se pudo guardar la configuración.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!c) return <div className="text-slate-400">Cargando…</div>;
+
+  return (
+    <form onSubmit={save} className="max-w-4xl space-y-5">
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-semibold">Configuración de la empresa</h1>
+        {editable && (
+          <button disabled={saving} className="bg-blue-600 text-white rounded px-5 py-2 text-sm font-medium disabled:opacity-50">
+            {saving ? "Guardando…" : "Guardar cambios"}
+          </button>
+        )}
+      </div>
+      {!editable && <div className="bg-amber-100 text-amber-800 rounded px-4 py-2 text-sm">Solo lectura — no tienes permiso para editar.</div>}
+      {msg && <div className="bg-green-100 text-green-800 rounded px-4 py-2 text-sm">{msg}</div>}
+      {err && <div className="bg-red-100 text-red-800 rounded px-4 py-2 text-sm">{err}</div>}
+
+      <fieldset disabled={!editable} className="space-y-5">
+        <Section title="Datos fiscales (emisor)">
+          <Field label="Nombre comercial">
+            <input className={input} value={c.commercial_name || ""} onChange={(e) => set("commercial_name", e.target.value)} />
+          </Field>
+          <Field label="Razón social">
+            <input className={input} value={c.legal_name || ""} onChange={(e) => set("legal_name", e.target.value)} />
+          </Field>
+          <Field label="NIT">
+            <input className={input} value={c.tax_id || ""} onChange={(e) => set("tax_id", e.target.value)} />
+          </Field>
+          <Field label="Régimen">
+            <select className={input} value={c.tax_regime} onChange={(e) => set("tax_regime", e.target.value)}>
+              <option value="PEQUENO_CONTRIBUYENTE">Pequeño contribuyente</option>
+              <option value="GENERAL">Régimen general (IVA)</option>
+            </select>
+          </Field>
+          <Field label="Dirección" full>
+            <input className={input} value={c.address || ""} onChange={(e) => set("address", e.target.value)} />
+          </Field>
+          <Field label="Departamento">
+            <input className={input} value={c.department || ""} onChange={(e) => set("department", e.target.value)} />
+          </Field>
+          <Field label="Municipio">
+            <input className={input} value={c.municipality || ""} onChange={(e) => set("municipality", e.target.value)} />
+          </Field>
+          <Field label="Teléfono">
+            <input className={input} value={c.phone || ""} onChange={(e) => set("phone", e.target.value)} />
+          </Field>
+          <Field label="Correo">
+            <input className={input} value={c.email || ""} onChange={(e) => set("email", e.target.value)} />
+          </Field>
+        </Section>
+
+        <Section title="IVA y facturación">
+          <Field label="IVA (%)">
+            <input type="number" step="0.01" className={input} value={c.default_tax_rate} onChange={(e) => set("default_tax_rate", e.target.value)} />
+          </Field>
+          <Field label="Los precios incluyen IVA">
+            <select className={input} value={c.prices_include_tax ? "1" : "0"} onChange={(e) => set("prices_include_tax", e.target.value === "1")}>
+              <option value="1">Sí — precio al público con IVA</option>
+              <option value="0">No — el IVA se suma aparte</option>
+            </select>
+          </Field>
+        </Section>
+
+        <Section title="Cupo FEL (bolsón de DTEs)">
+          <Field label="Cupo anual (0 = sin límite)">
+            <input type="number" min="0" className={input} value={c.fel_yearly_quota} onChange={(e) => set("fel_yearly_quota", e.target.value)} />
+          </Field>
+          <Field label="Mes de inicio del ciclo">
+            <input type="number" min="1" max="12" className={input} value={c.fel_cycle_month} onChange={(e) => set("fel_cycle_month", e.target.value)} />
+          </Field>
+          <Field label="Día de inicio del ciclo">
+            <input type="number" min="1" max="31" className={input} value={c.fel_cycle_day} onChange={(e) => set("fel_cycle_day", e.target.value)} />
+          </Field>
+        </Section>
+
+        <Section title="Impresora térmica (tickets)">
+          <Field label="Modo">
+            <select className={input} value={c.printer_mode} onChange={(e) => set("printer_mode", e.target.value)}>
+              <option value="system">Sistema</option>
+              <option value="network">Red (IP)</option>
+              <option value="bluetooth">Bluetooth</option>
+            </select>
+          </Field>
+          <Field label="Ancho del papel (mm)">
+            <select className={input} value={c.printer_width} onChange={(e) => set("printer_width", e.target.value)}>
+              <option value="58">58 mm</option>
+              <option value="80">80 mm</option>
+            </select>
+          </Field>
+          {c.printer_mode === "network" && (
+            <>
+              <Field label="IP de la impresora">
+                <input className={input} value={c.printer_ip || ""} onChange={(e) => set("printer_ip", e.target.value)} />
+              </Field>
+              <Field label="Puerto">
+                <input type="number" className={input} value={c.printer_port} onChange={(e) => set("printer_port", e.target.value)} />
+              </Field>
+            </>
+          )}
+        </Section>
+      </fieldset>
+    </form>
+  );
+}

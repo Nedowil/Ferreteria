@@ -6,7 +6,7 @@ const linkClass = ({ isActive }) =>
 
 export default function Layout({ children }) {
   const { user, branches, currentBranchId, setBranch, logout, can } = useAuth();
-  const showAdmin = can("usuarios.ver") || can("sucursales.gestionar") || can("transferencias.gestionar") || can("auditoria.ver");
+  const showAdmin = can("usuarios.ver") || can("sucursales.gestionar") || can("transferencias.gestionar") || can("auditoria.ver") || can("configuracion.gestionar");
   return (
     <div className="min-h-screen flex">
       <aside className="w-60 bg-slate-900 text-slate-200 flex flex-col fixed inset-y-0">
@@ -21,6 +21,7 @@ export default function Layout({ children }) {
           <NavLink to="/caja" className={linkClass}>Caja</NavLink>
           <NavLink to="/cotizaciones" className={linkClass}>Cotizaciones</NavLink>
           <NavLink to="/devoluciones" className={linkClass}>Devoluciones</NavLink>
+          {can("facturas.ver") && <NavLink to="/facturas" className={linkClass}>Facturación (FEL)</NavLink>}
           <NavLink to="/cuentas-por-cobrar" className={linkClass}>Cuentas por cobrar</NavLink>
           <div className="px-5 pt-4 pb-1 text-xs uppercase text-slate-500">Inventario</div>
           <NavLink to="/productos" className={linkClass}>Productos</NavLink>
@@ -45,6 +46,7 @@ export default function Layout({ children }) {
               {can("roles.gestionar") && <NavLink to="/admin/roles" className={linkClass}>Roles</NavLink>}
               {can("sucursales.gestionar") && <NavLink to="/admin/sucursales" className={linkClass}>Sucursales</NavLink>}
               {can("auditoria.ver") && <NavLink to="/admin/auditoria" className={linkClass}>Auditoría</NavLink>}
+              {can("configuracion.gestionar") && <NavLink to="/admin/empresa" className={linkClass}>Empresa</NavLink>}
             </>
           )}
         </nav>

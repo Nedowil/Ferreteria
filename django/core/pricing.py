@@ -15,6 +15,18 @@ def money(value):
     return Decimal(value).quantize(CENTS, rounding=ROUND_HALF_UP)
 
 
+def tax_config():
+    """(tasa_iva, precios_incluyen_iva) desde CompanySetting, o desde settings."""
+    try:
+        from core.models import CompanySetting
+        cs = CompanySetting.objects.first()
+        if cs is not None:
+            return Decimal(cs.default_tax_rate), bool(cs.prices_include_tax)
+    except Exception:
+        pass
+    return Decimal(str(settings.COMPANY_DEFAULT_TAX_RATE)), bool(settings.COMPANY_PRICES_INCLUDE_TAX)
+
+
 def compute_totals(lines, global_discount=0):
     """Calcula (subtotal, descuento_total, IVA, total) a partir de las partidas.
 
@@ -35,8 +47,8 @@ def compute_totals(lines, global_discount=0):
     base_gravado = subtotal_gravado - disc_gravado
     base_exento = subtotal_exento - (total_discount - disc_gravado)
 
-    rate = Decimal(str(settings.COMPANY_DEFAULT_TAX_RATE))
-    if settings.COMPANY_PRICES_INCLUDE_TAX:
+    rate, include_tax = tax_config()
+    if include_tax:
         tax = base_gravado - (base_gravado / (1 + rate / 100)) if rate > 0 else Decimal("0")
         total = base_gravado + base_exento
     else:

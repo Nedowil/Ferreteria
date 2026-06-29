@@ -1,16 +1,33 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, Link } from "react-router-dom";
 import api from "../../api/client";
+import { useAuth } from "../../auth/AuthContext";
 
 export default function SaleDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { can } = useAuth();
   const [s, setS] = useState(null);
+  const [invoice, setInvoice] = useState(null);
   const [pay, setPay] = useState({ amount: "", payment_method: "efectivo", reference: "" });
   const [error, setError] = useState("");
 
-  const load = () => { api.get(`/sales/${id}/`).then((r) => setS(r.data)); };
+  const load = () => {
+    api.get(`/sales/${id}/`).then((r) => setS(r.data));
+    api.get("/invoices/", { params: { sale: id } })
+      .then((r) => {
+        const list = r.data.results || r.data;
+        setInvoice(list.find((i) => String(i.sale) === String(id)) || null);
+      })
+      .catch(() => setInvoice(null));
+  };
   useEffect(load, [id]);
+
+  const emitInvoice = async () => {
+    setError("");
+    try { await api.post(`/sales/${id}/emit-invoice/`); load(); }
+    catch (err) { setError(err.response?.data?.detail || "No se pudo emitir la factura."); }
+  };
 
   const cancel = async () => {
     if (!confirm("¿Cancelar esta venta? Se devolverá el stock.")) return;
@@ -112,6 +129,29 @@ export default function SaleDetail() {
               </form>
             </section>
           )}
+
+          <section className="bg-white rounded-lg shadow p-5 space-y-3">
+            <h3 className="font-semibold">Factura electrónica</h3>
+            {invoice && invoice.status === "certificada" ? (
+              <div className="text-sm space-y-1">
+                <div className="text-green-700 font-medium">✓ Certificada ({invoice.document_type})</div>
+                <div className="text-slate-500">Serie-Número</div>
+                <div className="font-mono text-xs">{invoice.serie}-{invoice.numero}</div>
+                <div className="text-slate-500">Autorización SAT</div>
+                <div className="font-mono text-xs break-all">{invoice.uuid}</div>
+              </div>
+            ) : invoice && invoice.status === "anulada" ? (
+              <div className="text-sm text-red-600 font-medium">Factura anulada</div>
+            ) : (
+              <>
+                <p className="text-sm text-slate-500">Esta venta aún no tiene factura electrónica.</p>
+                {s.status === "completada" && can("facturas.emitir") && (
+                  <button onClick={emitInvoice} className="w-full bg-blue-600 text-white rounded px-4 py-2 text-sm font-medium">Emitir factura (FEL)</button>
+                )}
+              </>
+            )}
+            <Link to={`/ventas/${id}/ticket`} className="block text-center w-full border border-slate-300 text-slate-700 rounded px-4 py-2 text-sm">Ver / imprimir comprobante</Link>
+          </section>
 
           {s.status === "completada" && (
             <section className="bg-white rounded-lg shadow p-5">

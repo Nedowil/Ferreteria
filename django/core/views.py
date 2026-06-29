@@ -9,16 +9,35 @@ from rest_framework.response import Response
 
 from inventory.models import Product
 from .api_utils import get_request_branch
-from .models import Branch, User
-from .permissions import PERMISSIONS, HasPermission, sync_permissions
+from .models import Branch, CompanySetting, User
+from .permissions import PERMISSIONS, HasPermission, sync_permissions, user_permission_codenames
 from .serializers import (
     BranchSerializer,
+    CompanySettingSerializer,
     RoleSerializer,
     RoleWriteSerializer,
     UserAdminSerializer,
     UserSerializer,
     UserWriteSerializer,
 )
+
+
+@api_view(["GET", "PUT", "PATCH"])
+@permission_classes([IsAuthenticated])
+def company_settings(request):
+    """Configuración de la empresa. GET para todos; edición requiere permiso."""
+    company = CompanySetting.current()
+    if request.method == "GET":
+        return Response(CompanySettingSerializer(company).data)
+    # Edición
+    user = request.user
+    if not (user.is_superuser or "configuracion.gestionar" in user_permission_codenames(user)):
+        return Response({"detail": "No tienes permiso para editar la configuración."},
+                        status=status.HTTP_403_FORBIDDEN)
+    ser = CompanySettingSerializer(company, data=request.data, partial=True)
+    ser.is_valid(raise_exception=True)
+    ser.save()
+    return Response(ser.data)
 
 
 @api_view(["GET"])

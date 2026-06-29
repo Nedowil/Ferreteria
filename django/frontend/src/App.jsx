@@ -41,6 +41,9 @@ import Transfers from "./pages/admin/Transfers";
 import TransferCreate from "./pages/admin/TransferCreate";
 import TransferDetail from "./pages/admin/TransferDetail";
 import AuditLog from "./pages/admin/AuditLog";
+import Invoices from "./pages/billing/Invoices";
+import Ticket from "./pages/billing/Ticket";
+import CompanySettings from "./pages/billing/CompanySettings";
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
@@ -72,6 +75,7 @@ export default function App() {
       <Route path="/pos" element={<Protected><POS /></Protected>} />
       <Route path="/ventas" element={<Protected><SalesList /></Protected>} />
       <Route path="/ventas/:id" element={<Protected><SaleDetail /></Protected>} />
+      <Route path="/ventas/:id/ticket" element={<Protected><Ticket /></Protected>} />
       <Route path="/cuentas-por-cobrar" element={<Protected><Receivable /></Protected>} />
       <Route path="/caja" element={<Protected><CashBox /></Protected>} />
       <Route path="/caja/historial" element={<Protected><CashSessions /></Protected>} />
@@ -99,6 +103,8 @@ export default function App() {
       <Route path="/transferencias/nueva" element={<Protected><TransferCreate /></Protected>} />
       <Route path="/transferencias/:id" element={<Protected><TransferDetail /></Protected>} />
       <Route path="/admin/auditoria" element={<Protected><AuditLog /></Protected>} />
+      <Route path="/facturas" element={<Protected><Invoices /></Protected>} />
+      <Route path="/admin/empresa" element={<Protected><CompanySettings /></Protected>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

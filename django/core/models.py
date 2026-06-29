@@ -71,6 +71,75 @@ class Branch(models.Model):
         )
 
 
+class CompanySetting(models.Model):
+    """Configuración de la empresa (singleton): datos fiscales, IVA, FEL e impresoras."""
+
+    # Datos fiscales / emisor
+    commercial_name = models.CharField("nombre comercial", max_length=255, default="Mi Ferretería")
+    legal_name = models.CharField("razón social", max_length=255, blank=True, null=True)
+    tax_id = models.CharField("NIT", max_length=30, default="CF")
+    tax_regime = models.CharField("régimen", max_length=40, default="PEQUENO_CONTRIBUYENTE")  # | GENERAL
+    address = models.CharField("dirección", max_length=255, blank=True, null=True)
+    department = models.CharField("departamento", max_length=120, blank=True, null=True)
+    municipality = models.CharField("municipio", max_length=120, blank=True, null=True)
+    postal_code = models.CharField("código postal", max_length=10, blank=True, null=True)
+    phone = models.CharField("teléfono", max_length=30, blank=True, null=True)
+    email = models.EmailField("correo", max_length=255, blank=True, null=True)
+    logo_path = models.CharField(max_length=255, blank=True, null=True)
+    country_code = models.CharField(max_length=3, default="GT")
+    currency_code = models.CharField(max_length=3, default="GTQ")
+
+    # IVA
+    default_tax_rate = models.DecimalField("IVA %", max_digits=5, decimal_places=2, default=12)
+    prices_include_tax = models.BooleanField("precios incluyen IVA", default=True)
+    phrases = models.JSONField("frases SAT", blank=True, null=True)
+
+    # Cupo FEL (bolsón de DTEs)
+    fel_yearly_quota = models.PositiveIntegerField("cupo anual FEL", default=0)  # 0 = sin límite
+    fel_cycle_month = models.PositiveSmallIntegerField(default=1)
+    fel_cycle_day = models.PositiveSmallIntegerField(default=1)
+
+    # Impresora térmica
+    printer_mode = models.CharField(max_length=20, default="system")  # system|bluetooth|network
+    printer_ip = models.CharField(max_length=45, blank=True, null=True)
+    printer_port = models.PositiveSmallIntegerField(default=9100)
+    printer_width = models.PositiveSmallIntegerField(default=80)  # mm 58|80
+    printer_auto_cut = models.BooleanField(default=True)
+
+    # Impresora Zebra (etiquetas)
+    zebra_mode = models.CharField(max_length=20, default="system")
+    zebra_ip = models.CharField(max_length=45, blank=True, null=True)
+    zebra_port = models.PositiveSmallIntegerField(default=9100)
+    zebra_label_width = models.PositiveSmallIntegerField(default=50)
+    zebra_label_height = models.PositiveSmallIntegerField(default=25)
+    zebra_dpi = models.PositiveSmallIntegerField(default=203)
+
+    # Catálogo público
+    public_catalog_enabled = models.BooleanField(default=False)
+    public_catalog_show_prices = models.BooleanField(default=True)
+    public_catalog_title = models.CharField(max_length=180, blank=True, null=True)
+    public_catalog_intro = models.TextField(blank=True, null=True)
+    public_catalog_whatsapp = models.CharField(max_length=30, blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "configuración de empresa"
+        verbose_name_plural = "configuración de empresa"
+
+    def __str__(self):
+        return self.commercial_name
+
+    @classmethod
+    def current(cls):
+        """Devuelve (o crea) la única fila de configuración."""
+        obj = cls.objects.first()
+        if obj is None:
+            obj = cls.objects.create()
+        return obj
+
+
 class BranchUser(models.Model):
     """Tabla intermedia branch_user con el flag is_default."""
 

@@ -4,8 +4,14 @@ from django.contrib.auth.models import Group, Permission
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
-from .models import Branch, BranchUser, User
+from .models import Branch, BranchUser, CompanySetting, User
 from .permissions import ALL_CODENAMES, user_permission_codenames
+
+
+class CompanySettingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CompanySetting
+        exclude = ["created_at", "updated_at"]
 
 
 class BranchSerializer(serializers.ModelSerializer):

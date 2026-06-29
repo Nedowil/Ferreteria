@@ -22,6 +22,7 @@ api_patterns = [
     # Núcleo
     path("dashboard/", core_views.dashboard, name="dashboard"),
     path("permissions/", core_views.permission_catalog, name="permission-catalog"),
+    path("company-settings/", core_views.company_settings, name="company-settings"),
     path("", include(router.urls)),
     # Inventario
     path("inventory/", include("inventory.urls")),
@@ -43,6 +44,8 @@ api_patterns = [
     path("", include("transfers.urls")),
     # Auditoría
     path("", include("audit.urls")),
+    # Facturación Electrónica (FEL)
+    path("", include("billing.urls")),
 ]
 
 urlpatterns = [

@@ -31,7 +31,8 @@ arquitectura **desacoplada**:
 | Usuarios, roles y permisos (53 permisos, enforcement por rol) | ✅ | ✅ |
 | Sucursales + transferencias de stock entre sucursales | ✅ | ✅ |
 | Auditoría (bitácora create/update/delete) | ✅ | ✅ |
-| Facturación / FEL Guatemala | ⏳ | ⏳ |
+| Configuración de empresa (datos fiscales, IVA, FEL, impresoras) | ✅ | ✅ |
+| Facturación / FEL Guatemala (emisión, anulación, cupo, ticket) | ✅ | ✅ |
 
 ## Requisitos
 
@@ -131,6 +132,24 @@ activa viaja en el header `X-Branch-Id`.
 | CRUD | `/api/transfers/` | Transferencias entre sucursales |
 | POST | `/api/transfers/{id}/send/` · `/receive/` · `/cancel/` | Enviar / recibir / cancelar |
 | GET | `/api/audit-logs/` · `/api/audit-logs/summary/` | Bitácora de auditoría |
+| GET/PUT | `/api/company-settings/` | Configuración de empresa (edición: `configuracion.gestionar`) |
+| GET | `/api/invoices/` | Facturas electrónicas (filtros: `status`, `document_type`, `sale`) |
+| POST | `/api/sales/{id}/emit-invoice/` | Emitir/certificar la factura (FEL) de una venta |
+| POST | `/api/invoices/{id}/annul/` | Anular factura certificada (requiere `reason`) |
+| GET | `/api/invoices/quota/` | Cupo del bolsón de DTEs del ciclo |
+| GET | `/api/invoices/pending/` | Ventas completadas sin factura certificada |
+| GET | `/api/sales/{id}/ticket/` | Datos del comprobante para imprimir |
+| GET | `/api/fel/config/` | Configuración del certificador FEL activo |
+
+### Facturación Electrónica (FEL Guatemala)
+
+El módulo `billing` certifica DTEs a través de un **adaptador** (`billing/fel/`):
+el driver se elige con `FEL_DRIVER` (por defecto `stub`, que simula la respuesta
+del certificador SAT generando UUID de autorización, serie y número — útil para
+desarrollo y demo sin credenciales). Para producción se implementa un certificador
+real (Infile/otro) con la misma interfaz `FelCertifier`. Pequeños contribuyentes
+emiten `FPEQ`; régimen general emite `FACT`. El cupo anual (bolsón) se controla
+en la configuración de empresa (`fel_yearly_quota`, `0` = sin límite).
 
 ## Estructura
 
@@ -148,6 +167,11 @@ django/
 │   ├── utils.py             # fracciones, autogeneración SKU/EAN-13
 │   ├── serializers.py
 │   └── views.py             # viewsets DRF
+├── billing/         # Facturación Electrónica (FEL)
+│   ├── models.py            # ElectronicInvoice (DTE: estado, serie/número, UUID SAT)
+│   ├── services.py          # emit_invoice / cancel_invoice / quota_status / build_ticket
+│   ├── fel/                 # adaptador del certificador (base + stub) y build_dte
+│   └── views.py             # emisión, anulación, cupo, ticket, config FEL
 └── frontend/        # SPA React + Vite + Tailwind
     └── src/
         ├── api/client.js        # axios + interceptores JWT (refresh) + X-Branch-Id
