@@ -1761,13 +1761,20 @@
                 query: '',
                 results: [],
                 items: [],
-                customers: @json($customers->map(fn($c) => [
-                    'id' => $c->id,
-                    'label' => $c->name . ($c->tax_id ? " ($c->tax_id)" : '')
-                        . ($c->customer_type === 'wholesale' ? ' 🏗' : ($c->customer_type === 'contractor' ? ' 👷' : '')),
-                    'customer_type' => $c->customer_type,
-                    'wholesale_discount_percent' => (float) $c->wholesale_discount_percent,
-                ])),
+                customers: @json($customers->map(function ($c) {
+                    $badge = match ($c->customer_type) {
+                        'wholesale' => ' 🏗',
+                        'contractor' => ' 👷',
+                        default => '',
+                    };
+                    $taxIdPart = $c->tax_id ? ' ('.$c->tax_id.')' : '';
+                    return [
+                        'id' => $c->id,
+                        'label' => $c->name.$taxIdPart.$badge,
+                        'customer_type' => $c->customer_type,
+                        'wholesale_discount_percent' => (float) $c->wholesale_discount_percent,
+                    ];
+                })),
                 customer_id: '',
                 customerIsWholesale: false,
                 customerCustomerType: 'retail',
