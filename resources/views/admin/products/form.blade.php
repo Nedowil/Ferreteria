@@ -181,21 +181,73 @@
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    @php
+                        $purchaseOld = old('purchase_price', (float) $product->purchase_price > 0 ? number_format($product->purchase_price, 4, '.', '') : '');
+                        $saleOld = old('sale_price', (float) $product->sale_price > 0 ? number_format($product->sale_price, 4, '.', '') : '');
+                    @endphp
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4"
+                         x-data="priceConverter({
+                            purchaseInit: @js((float) $purchaseOld ?: 0),
+                            saleInit: @js((float) $saleOld ?: 0),
+                         })" x-init="init()">
+
+                        {{-- PRECIO DE COMPRA --}}
                         <div>
-                            <x-input-label for="purchase_price" value="Precio de compra *" />
-                            <x-text-input id="purchase_price" name="purchase_price" type="text" inputmode="decimal"
-                                          class="mt-1 block w-full"
-                                          placeholder="0.00"
-                                          :value="old('purchase_price', (float) $product->purchase_price > 0 ? number_format($product->purchase_price, 2, '.', '') : '')" required />
+                            <x-input-label for="purchase_input" value="Precio de compra *" />
+                            <div class="mt-1 flex gap-1">
+                                <input id="purchase_input" type="text" inputmode="decimal"
+                                       x-model="purchaseRaw" @input="recalc('purchase')"
+                                       placeholder="0.00" required
+                                       class="block w-full border-gray-300 rounded-md shadow-sm" />
+                                <select x-show="hasContainer" x-cloak x-model="purchaseMode"
+                                        @change="recalc('purchase')"
+                                        class="border-gray-300 rounded-md shadow-sm text-sm bg-slate-50">
+                                    <option value="base" x-text="'por ' + (baseUnit || 'unidad')"></option>
+                                    <option value="container" x-text="'por ' + containerLabel"></option>
+                                </select>
+                            </div>
+                            <input type="hidden" name="purchase_price" :value="purchasePerBase.toFixed(4)" />
+                            <div x-show="hasContainer && purchaseRaw" x-cloak
+                                 class="text-xs text-slate-500 mt-1 leading-snug">
+                                <span x-show="purchaseMode === 'container'">
+                                    = <strong>Q<span x-text="purchasePerBase.toFixed(2)"></span></strong>
+                                    / <span x-text="baseUnit"></span>
+                                </span>
+                                <span x-show="purchaseMode === 'base'">
+                                    = <strong>Q<span x-text="purchasePerContainer.toFixed(2)"></span></strong>
+                                    / <span x-text="containerLabel"></span>
+                                </span>
+                            </div>
                             <x-input-error :messages="$errors->get('purchase_price')" class="mt-2" />
                         </div>
+
+                        {{-- PRECIO DE VENTA --}}
                         <div>
-                            <x-input-label for="sale_price" value="Precio de venta (por unidad base) *" />
-                            <x-text-input id="sale_price" name="sale_price" type="text" inputmode="decimal"
-                                          class="mt-1 block w-full"
-                                          placeholder="0.00"
-                                          :value="old('sale_price', (float) $product->sale_price > 0 ? number_format($product->sale_price, 2, '.', '') : '')" required />
+                            <x-input-label for="sale_input" value="Precio de venta *" />
+                            <div class="mt-1 flex gap-1">
+                                <input id="sale_input" type="text" inputmode="decimal"
+                                       x-model="saleRaw" @input="recalc('sale')"
+                                       placeholder="0.00" required
+                                       class="block w-full border-gray-300 rounded-md shadow-sm" />
+                                <select x-show="hasContainer" x-cloak x-model="saleMode"
+                                        @change="recalc('sale')"
+                                        class="border-gray-300 rounded-md shadow-sm text-sm bg-slate-50">
+                                    <option value="base" x-text="'por ' + (baseUnit || 'unidad')"></option>
+                                    <option value="container" x-text="'por ' + containerLabel"></option>
+                                </select>
+                            </div>
+                            <input type="hidden" name="sale_price" :value="salePerBase.toFixed(4)" />
+                            <div x-show="hasContainer && saleRaw" x-cloak
+                                 class="text-xs text-slate-500 mt-1 leading-snug">
+                                <span x-show="saleMode === 'container'">
+                                    = <strong>Q<span x-text="salePerBase.toFixed(2)"></span></strong>
+                                    / <span x-text="baseUnit"></span>
+                                </span>
+                                <span x-show="saleMode === 'base'">
+                                    = <strong>Q<span x-text="salePerContainer.toFixed(2)"></span></strong>
+                                    / <span x-text="containerLabel"></span>
+                                </span>
+                            </div>
                             <x-input-error :messages="$errors->get('sale_price')" class="mt-2" />
                         </div>
                     </div>
@@ -638,6 +690,90 @@
                     if (idx >= this.items.length - 1) return;
                     const item = this.items.splice(idx, 1)[0];
                     this.items.splice(idx + 1, 0, item);
+                },
+            };
+        }
+
+        /**
+         * Convertidor de precios compra/venta cuando el producto tiene empaque.
+         * Permite que el usuario escriba el precio "por rollo" o "por caja" y el
+         * sistema calcula y guarda automaticamente el precio por unidad base
+         * (que es lo que la BD almacena en purchase_price / sale_price).
+         *
+         * Lee container_label, container_factor y base_unit_label desde los
+         * inputs del mismo form, actualizandose en vivo cuando cambian.
+         */
+        function priceConverter({ purchaseInit, saleInit }) {
+            return {
+                containerLabel: '',
+                containerFactor: 0,
+                baseUnit: 'unidad',
+                purchaseRaw: purchaseInit > 0 ? String(purchaseInit) : '',
+                purchaseMode: 'base',
+                saleRaw: saleInit > 0 ? String(saleInit) : '',
+                saleMode: 'base',
+                init() {
+                    const labelEl = document.getElementById('container_label');
+                    const factorEl = document.getElementById('container_factor');
+                    const baseEl = document.getElementById('base_unit_label');
+                    const sync = () => {
+                        this.containerLabel = (labelEl?.value || '').trim();
+                        this.containerFactor = this.parseFraction(factorEl?.value);
+                        this.baseUnit = (baseEl?.value || '').trim() || 'unidad';
+                        // Si se borra el empaque, forzamos a modo base
+                        if (!this.hasContainer) {
+                            this.purchaseMode = 'base';
+                            this.saleMode = 'base';
+                        }
+                    };
+                    sync();
+                    labelEl?.addEventListener('input', sync);
+                    factorEl?.addEventListener('input', sync);
+                    baseEl?.addEventListener('input', sync);
+                },
+                get hasContainer() {
+                    return this.containerLabel && this.containerFactor > 0;
+                },
+                get purchasePerBase() {
+                    const v = parseFloat(String(this.purchaseRaw).replace(',', '.')) || 0;
+                    if (this.purchaseMode === 'container' && this.containerFactor > 0) {
+                        return v / this.containerFactor;
+                    }
+                    return v;
+                },
+                get purchasePerContainer() {
+                    const v = parseFloat(String(this.purchaseRaw).replace(',', '.')) || 0;
+                    if (this.purchaseMode === 'base' && this.containerFactor > 0) {
+                        return v * this.containerFactor;
+                    }
+                    return v;
+                },
+                get salePerBase() {
+                    const v = parseFloat(String(this.saleRaw).replace(',', '.')) || 0;
+                    if (this.saleMode === 'container' && this.containerFactor > 0) {
+                        return v / this.containerFactor;
+                    }
+                    return v;
+                },
+                get salePerContainer() {
+                    const v = parseFloat(String(this.saleRaw).replace(',', '.')) || 0;
+                    if (this.saleMode === 'base' && this.containerFactor > 0) {
+                        return v * this.containerFactor;
+                    }
+                    return v;
+                },
+                recalc() { /* getters reactivos, nada que hacer aqui */ },
+                parseFraction(s) {
+                    if (s === null || s === undefined) return 0;
+                    s = String(s).replace(/\s/g, '').replace(',', '.');
+                    if (s.includes('/')) {
+                        const [a, b] = s.split('/');
+                        const num = parseFloat(a), den = parseFloat(b);
+                        if (!isNaN(num) && !isNaN(den) && den !== 0) return num / den;
+                        return 0;
+                    }
+                    const n = parseFloat(s);
+                    return isNaN(n) ? 0 : n;
                 },
             };
         }
