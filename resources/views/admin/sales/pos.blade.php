@@ -875,10 +875,10 @@
                                 </div>
 
                                 @can('clientes.crear')
-                                    <button type="button" @click="openCustomerModal()"
+                                    <button type="button" @click.stop.prevent="customerSearchOpen = false; openCustomerModal()"
                                             title="Nuevo cliente"
-                                            class="px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded-md text-sm font-bold shadow flex items-center gap-1">
-                                        +
+                                            class="px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md text-sm font-bold shadow flex items-center justify-center gap-1 whitespace-nowrap">
+                                        + Nuevo
                                     </button>
                                 @endcan
                             </div>
