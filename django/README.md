@@ -23,6 +23,7 @@ arquitectura **desacoplada**:
 | Compras (pendiente → recibida → entra a inventario) | ✅ | ✅ |
 | Compras al crédito + cuentas por pagar (abonos) | ✅ | ✅ |
 | Punto de Venta (POS) con niveles de precio y vuelto | ✅ | ✅ |
+| Pantalla de cliente (monitor secundario, carrito y total en vivo) | — | ✅ |
 | Caja (apertura, movimientos, arqueo y cierre) | ✅ | ✅ |
 | Ventas al crédito + cuentas por cobrar (abonos) | ✅ | ✅ |
 | Cotizaciones (crear, convertir a venta) | ✅ | ✅ |
@@ -229,6 +230,14 @@ a partir de los mismos datos del comprobante. Según `CompanySetting.printer_mod
 
 El ancho (`printer_width` 58/80 mm) ajusta las columnas; los acentos y la ñ se
 codifican en CP850. Hay un endpoint de **impresión de prueba** (`/api/printer/test/`).
+
+### Pantalla de cliente (POS)
+
+Desde el POS, el botón **«Pantalla cliente»** abre una ventana (`/pantalla-cliente`)
+pensada para un segundo monitor de cara al cliente. Muestra en vivo el carrito y
+el total, y al cobrar muestra el agradecimiento con el vuelto. La sincronización
+es 100% en el navegador (sin backend) vía **BroadcastChannel**, con respaldo en
+`localStorage` para que una ventana abierta después tome el estado actual.
 
 ### Catálogo público, importación CSV y respaldos
 

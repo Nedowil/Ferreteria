@@ -47,6 +47,7 @@ import CompanySettings from "./pages/billing/CompanySettings";
 import ImportData from "./pages/admin/ImportData";
 import Backups from "./pages/admin/Backups";
 import PublicCatalog from "./pages/public/PublicCatalog";
+import CustomerDisplay from "./pages/pos/CustomerDisplay";
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
@@ -60,6 +61,7 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/catalogo" element={<PublicCatalog />} />
+      <Route path="/pantalla-cliente" element={<CustomerDisplay />} />
       <Route path="/" element={<Protected><Dashboard /></Protected>} />
       <Route path="/productos" element={<Protected><ProductList /></Protected>} />
       <Route path="/productos/nuevo" element={<Protected><ProductForm /></Protected>} />

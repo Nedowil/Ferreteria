@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/client";
+import { publishDisplay, openCustomerDisplay } from "../../pos/customerDisplay";
 
 // Elige el precio según el nivel del cliente (público o mayorista).
 function priceFor(product, qty, customer) {
@@ -26,11 +27,13 @@ export default function POS() {
   const [credit, setCredit] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [companyName, setCompanyName] = useState("Ferretería");
   const searchRef = useRef(null);
 
   useEffect(() => {
     api.get("/cashbox/cash-sessions/current/").then((r) => setCashOpen(r.data.session || false));
     api.get("/customers/?active=1&page_size=300").then((r) => setCustomers(r.data.results || r.data));
+    api.get("/company-settings/").then((r) => setCompanyName(r.data.commercial_name || "Ferretería")).catch(() => {});
   }, []);
 
   const customer = customers.find((c) => String(c.id) === String(customerId)) || null;
@@ -74,6 +77,16 @@ export default function POS() {
   const total = cart.reduce((s, i) => s + Number(i.quantity || 0) * Number(i.unit_price || 0), 0);
   const change = paymentMethod === "efectivo" && !credit ? Math.max(0, Number(paid || 0) - total) : 0;
 
+  // Espeja el carrito a la pantalla de cliente (ventana/monitor secundario).
+  useEffect(() => {
+    publishDisplay({
+      type: cart.length ? "cart" : "idle",
+      company: companyName,
+      items: cart.map((i) => ({ name: i.name, quantity: i.quantity, unit_price: i.unit_price })),
+      total,
+    });
+  }, [cart, total, companyName]);
+
   const checkout = async () => {
     setError("");
     if (cart.length === 0) { setError("El carrito está vacío."); return; }
@@ -90,6 +103,11 @@ export default function POS() {
         })),
       };
       const { data } = await api.post("/sales/", payload);
+      // Muestra el agradecimiento y el vuelto en la pantalla de cliente.
+      publishDisplay({
+        type: "sale", company: companyName, total,
+        paid: payload.paid_amount, change,
+      });
       navigate(`/ventas/${data.id}`);
     } catch (err) {
       setError(err.response?.data?.detail || "No se pudo completar la venta.");
@@ -102,12 +120,18 @@ export default function POS() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-lg font-semibold">Punto de venta</h1>
-        {cashOpen === false && (
-          <span className="text-sm text-amber-700 bg-amber-100 rounded px-3 py-1">
-            ⚠️ Caja cerrada — <button onClick={() => navigate("/caja")} className="underline">ábrela</button> para registrar el efectivo
-          </span>
-        )}
-        {cashOpen && <span className="text-sm text-green-700 bg-green-100 rounded px-3 py-1">Caja abierta</span>}
+        <div className="flex items-center gap-3">
+          <button onClick={openCustomerDisplay}
+                  className="text-sm border border-slate-300 rounded px-3 py-1 hover:bg-slate-50">
+            🖥️ Pantalla cliente
+          </button>
+          {cashOpen === false && (
+            <span className="text-sm text-amber-700 bg-amber-100 rounded px-3 py-1">
+              ⚠️ Caja cerrada — <button onClick={() => navigate("/caja")} className="underline">ábrela</button> para registrar el efectivo
+            </span>
+          )}
+          {cashOpen && <span className="text-sm text-green-700 bg-green-100 rounded px-3 py-1">Caja abierta</span>}
+        </div>
       </div>
 
       {error && <div className="bg-red-100 text-red-800 rounded px-4 py-2 text-sm mb-4">{error}</div>}
