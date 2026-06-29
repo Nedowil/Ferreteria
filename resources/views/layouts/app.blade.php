@@ -41,15 +41,16 @@
             function toggleDarkMode() {
                 const isDark = document.documentElement.classList.toggle('dark');
                 localStorage.setItem('theme', isDark ? 'dark' : 'light');
-                const label = document.getElementById('themeLabel');
-                if (label) label.textContent = isDark ? '☀️ Modo claro' : '🌙 Modo oscuro';
+                syncThemeUi();
             }
-            // Set inicial del label
-            window.addEventListener('DOMContentLoaded', () => {
-                const label = document.getElementById('themeLabel');
-                if (label) label.textContent = document.documentElement.classList.contains('dark')
-                    ? '☀️ Modo claro' : '🌙 Modo oscuro';
-            });
+            function syncThemeUi() {
+                const isDark = document.documentElement.classList.contains('dark');
+                const icon = document.getElementById('themeIcon');
+                if (icon) icon.textContent = isDark ? '☀️' : '🌙';
+                const btn = document.getElementById('themeBtn');
+                if (btn) btn.title = isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro';
+            }
+            window.addEventListener('DOMContentLoaded', syncThemeUi);
         </script>
     </head>
     <body class="font-sans antialiased bg-slate-100"
@@ -98,6 +99,13 @@
                         </div>
 
                         <div class="flex items-center gap-3">
+                            <!-- Toggle modo oscuro (visible siempre) -->
+                            <button type="button" onclick="toggleDarkMode()"
+                                    class="p-2 rounded-lg text-slate-600 hover:text-orange-500 hover:bg-orange-50 transition"
+                                    title="Cambiar tema claro/oscuro" id="themeBtn">
+                                <span id="themeIcon" class="text-xl leading-none">🌙</span>
+                            </button>
+
                             @auth
                                 @php
                                     $currentBranch = \App\Support\CurrentBranch::model();
@@ -129,10 +137,6 @@
                                     </x-slot>
                                     <x-slot name="content">
                                         <x-dropdown-link :href="route('profile.edit')">Mi perfil</x-dropdown-link>
-                                        <button type="button" onclick="toggleDarkMode()"
-                                                class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700">
-                                            <span id="themeLabel">🌙 Modo oscuro</span>
-                                        </button>
                                         <form method="POST" action="{{ route('logout') }}">
                                             @csrf
                                             <x-dropdown-link :href="route('logout')"
