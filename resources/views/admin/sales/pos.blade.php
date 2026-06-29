@@ -28,22 +28,14 @@
                 </div>
             @endif
 
-            <!-- Estado de conexión / cola offline / pantalla cliente -->
+            <!-- Topbar: pantalla cliente + devolucion (los demas badges quedan
+                 ocultos por pedido del usuario; siguen funcionando en segundo plano:
+                 deteccion offline, top vendidos, estado de caja). -->
             <div class="mb-3 flex flex-wrap items-center gap-2 text-sm">
-                <span class="px-2 py-1 rounded font-bold"
-                      :class="isOnline ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800 animate-pulse'">
-                    <span x-text="isOnline ? '🟢 En línea' : '🔴 Sin conexión'"></span>
-                </span>
                 <button type="button" @click="openCustomerDisplay()"
                         class="px-2 py-1 rounded bg-indigo-100 text-indigo-800 font-bold hover:bg-indigo-200"
                         title="Abrir pantalla del cliente (segunda pantalla)">
                     📺 Pantalla cliente
-                </button>
-                <button type="button" @click="toggleTopSoldPanel()"
-                        class="px-2 py-1 rounded font-bold"
-                        :class="showTopSoldPanel ? 'bg-rose-500 text-white' : 'bg-rose-100 text-rose-800 hover:bg-rose-200'"
-                        title="Mostrar productos más vendidos del día">
-                    🔥 Top hoy
                 </button>
                 @can('ventas.cancelar')
                     <button type="button" @click="openReturnModal()"
@@ -53,40 +45,27 @@
                     </button>
                 @endcan
 
-                <!-- Caja: badge + acciones rapidas -->
-                <template x-if="cashStatus.open">
-                    <button type="button" @click="showCashPanel = true"
-                            class="px-2 py-1 rounded bg-emerald-100 text-emerald-800 font-bold hover:bg-emerald-200 inline-flex items-center gap-1"
-                            title="Movimientos / cerrar caja">
-                        🟢 Caja
-                        <span class="text-xs font-normal"
-                              x-text="'· ' + cashStatus.sales_count + ' ventas · Q' + cashStatus.sales_total.toFixed(2)"></span>
-                    </button>
+                {{-- Aviso minimo cuando se pierde la conexion (no es un boton, solo informativo) --}}
+                <template x-if="!isOnline">
+                    <span class="px-2 py-1 rounded bg-red-100 text-red-800 font-bold animate-pulse"
+                          title="Las ventas se guardan localmente y se sincronizan al volver">
+                        🔴 Sin conexión
+                    </span>
                 </template>
+                {{-- Aviso minimo cuando hay caja cerrada (no se puede vender sin caja) --}}
                 <template x-if="cashStatus.checked && !cashStatus.open">
                     <button type="button" @click="showCashOpenModal = true"
                             class="px-2 py-1 rounded bg-red-100 text-red-800 font-bold hover:bg-red-200 animate-pulse"
                             title="No tenés caja abierta">
-                        🔒 Caja cerrada · Abrir
+                        🔒 Abrir caja
                     </button>
                 </template>
+                {{-- Aviso cuando hay ventas pendientes de sincronizar --}}
                 <template x-if="offlineQueue.length > 0">
                     <button type="button" @click="showOfflineQueuePanel = true"
                             class="px-2 py-1 rounded bg-amber-100 text-amber-800 font-bold hover:bg-amber-200">
                         ⏳ <span x-text="offlineQueue.length"></span> venta(s) pendientes
                     </button>
-                </template>
-                <template x-if="offlineQueue.length > 0 && isOnline">
-                    <button type="button" @click="syncOfflineQueue()" :disabled="syncing"
-                            class="px-2 py-1 rounded bg-emerald-500 text-white font-bold hover:bg-emerald-600 disabled:opacity-50">
-                        <span x-show="!syncing">↻ Sincronizar</span>
-                        <span x-show="syncing">Sincronizando...</span>
-                    </button>
-                </template>
-                <template x-if="offlineCatalogStaleAt">
-                    <span class="text-xs text-slate-500">
-                        Catálogo offline: <span x-text="offlineCatalog.length"></span> productos
-                    </span>
                 </template>
             </div>
 
