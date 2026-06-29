@@ -4,7 +4,9 @@ import api from "../../api/client";
 const BLANK = { name: "", tax_id: "", email: "", phone: "", address: "", notes: "",
   active: true, customer_type: "retail", wholesale_discount_percent: "", credit_limit: "0", credit_enabled: false };
 
-const TYPES = [["retail", "Público"], ["wholesale", "Mayorista"], ["contractor", "Contratista"]];
+// Solo se usan Público y Mayorista. El tipo 'contractor' sigue en BD pero no
+// se ofrece en la UI (igual que en la app Laravel).
+const TYPES = [["retail", "Público"], ["wholesale", "Mayorista"]];
 
 export default function CustomerList() {
   const [items, setItems] = useState([]);

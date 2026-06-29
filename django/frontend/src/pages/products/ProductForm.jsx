@@ -8,11 +8,23 @@ const EMPTY = {
   base_unit_label: "unidad", container_label: "", container_factor: "", container_price: "",
   tax_type: "iva", purchase_price: "0", sale_price: "0",
   wholesale_price: "", wholesale_min_quantity: "", container_wholesale_price: "",
-  contractor_price: "", container_contractor_price: "",
   min_stock: "0", sells_by_measure: false, measure_step: "",
   active: true, public_visible: true,
   initial_stock: "0", stock_input_mode: "base",
 };
+
+// Parsea "1/2", "0,5", "10" -> número (0 si inválido)
+function parseFrac(s) {
+  if (s === null || s === undefined) return 0;
+  s = String(s).replace(/\s/g, "").replace(",", ".");
+  if (s.includes("/")) {
+    const [a, b] = s.split("/");
+    const num = parseFloat(a), den = parseFloat(b);
+    return !isNaN(num) && !isNaN(den) && den !== 0 ? num / den : 0;
+  }
+  const n = parseFloat(s);
+  return isNaN(n) ? 0 : n;
+}
 
 // Campos a nivel de módulo (identidad estable → no pierden el foco al escribir)
 function TextField({ label, name, form, errors, onChange, type = "text", hint }) {
@@ -40,6 +52,38 @@ function SelectField({ label, name, form, onChange, options, empty, labelKey = "
   );
 }
 
+// Precio con selector "por unidad base / por empaque". El valor guardado en el
+// form (perBase) siempre está por unidad base; el usuario puede tipear por empaque.
+function PriceField({ label, raw, mode, onRaw, onMode, error, hasContainer, factor, baseUnit, containerLabel }) {
+  const v = parseFrac(raw);
+  const perBase = mode === "container" && factor > 0 ? v / factor : v;
+  const perContainer = mode === "base" && factor > 0 ? v * factor : v;
+  return (
+    <div>
+      <label className="block text-sm font-medium mb-1">{label}</label>
+      <div className="flex gap-1">
+        <input type="text" inputMode="decimal" value={raw} onChange={(e) => onRaw(e.target.value)}
+               placeholder="0.00" className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
+        {hasContainer && (
+          <select value={mode} onChange={(e) => onMode(e.target.value)}
+                  className="border border-slate-300 rounded px-2 py-2 text-sm bg-slate-50">
+            <option value="base">por {baseUnit || "unidad"}</option>
+            <option value="container">por {containerLabel}</option>
+          </select>
+        )}
+      </div>
+      {hasContainer && raw && (
+        <p className="text-xs text-slate-500 mt-1">
+          {mode === "container"
+            ? <>= <strong>Q{perBase.toFixed(2)}</strong> / {baseUnit}</>
+            : <>= <strong>Q{perContainer.toFixed(2)}</strong> / {containerLabel}</>}
+        </p>
+      )}
+      {error && <p className="text-red-600 text-xs mt-1">{String(error)}</p>}
+    </div>
+  );
+}
+
 export default function ProductForm() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -50,6 +94,11 @@ export default function ProductForm() {
   const [units, setUnits] = useState([]);
   const [errors, setErrors] = useState({});
   const [busy, setBusy] = useState(false);
+  // Estado del selector de precio base/empaque
+  const [purchaseRaw, setPurchaseRaw] = useState("");
+  const [purchaseMode, setPurchaseMode] = useState("base");
+  const [saleRaw, setSaleRaw] = useState("");
+  const [saleMode, setSaleMode] = useState("base");
 
   useEffect(() => {
     api.get("/inventory/categories/?page_size=200").then((r) => setCategories(r.data.results || r.data));
@@ -59,19 +108,48 @@ export default function ProductForm() {
       api.get(`/inventory/products/${id}/`).then((r) => {
         const d = r.data;
         setForm({ ...EMPTY, ...Object.fromEntries(Object.entries(d).map(([k, v]) => [k, v === null ? "" : v])) });
+        // Inicializa los inputs de precio (en modo base = lo que viene de BD)
+        setPurchaseRaw(Number(d.purchase_price) > 0 ? String(d.purchase_price) : "");
+        setSaleRaw(Number(d.sale_price) > 0 ? String(d.sale_price) : "");
       });
     }
   }, [id]);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
+  const factor = parseFrac(form.container_factor);
+  const baseUnit = form.base_unit_label || "unidad";
+  const containerLabel = form.container_label;
+  const hasContainer = Boolean(containerLabel && factor > 0);
+
+  const perBaseOf = (raw, mode) => {
+    const v = parseFrac(raw);
+    return mode === "container" && factor > 0 ? v / factor : v;
+  };
+
+  const onPriceRaw = (field) => (raw) => {
+    const mode = field === "purchase" ? purchaseMode : saleMode;
+    (field === "purchase" ? setPurchaseRaw : setSaleRaw)(raw);
+    set(field === "purchase" ? "purchase_price" : "sale_price", String(perBaseOf(raw, mode)));
+  };
+
+  const onPriceMode = (field) => (newMode) => {
+    const raw = field === "purchase" ? purchaseRaw : saleRaw;
+    const oldMode = field === "purchase" ? purchaseMode : saleMode;
+    const perBase = perBaseOf(raw, oldMode);
+    const newRaw = newMode === "container" && factor > 0 ? perBase * factor : perBase;
+    (field === "purchase" ? setPurchaseMode : setSaleMode)(newMode);
+    (field === "purchase" ? setPurchaseRaw : setSaleRaw)(perBase ? String(newRaw) : "");
+    set(field === "purchase" ? "purchase_price" : "sale_price", String(perBase));
+  };
+
   const submit = async (e) => {
     e.preventDefault();
     setBusy(true); setErrors({});
     const payload = { ...form };
     ["category", "brand", "unit", "container_factor", "container_price", "wholesale_price",
-     "wholesale_min_quantity", "container_wholesale_price", "contractor_price",
-     "container_contractor_price", "measure_step", "container_label", "barcode", "sku"].forEach((k) => {
+     "wholesale_min_quantity", "container_wholesale_price", "measure_step",
+     "container_label", "barcode", "sku"].forEach((k) => {
       if (payload[k] === "") payload[k] = null;
     });
     try {
@@ -116,7 +194,7 @@ export default function ProductForm() {
         <div className="grid grid-cols-4 gap-4">
           <TextField label="Unidad base" name="base_unit_label" form={form} errors={errors} onChange={set} />
           <TextField label="Empaque" name="container_label" form={form} errors={errors} onChange={set} />
-          <TextField label="Factor de empaque" name="container_factor" form={form} errors={errors} onChange={set} type="number" />
+          <TextField label="Factor de empaque" name="container_factor" form={form} errors={errors} onChange={set} />
           <TextField label="Precio por empaque" name="container_price" form={form} errors={errors} onChange={set} type="number" />
         </div>
       </section>
@@ -124,8 +202,12 @@ export default function ProductForm() {
       <section className="bg-white rounded-lg shadow p-5">
         <h3 className="font-semibold mb-3">Precios e impuesto</h3>
         <div className="grid grid-cols-2 gap-4">
-          <TextField label="Precio de compra" name="purchase_price" form={form} errors={errors} onChange={set} type="number" />
-          <TextField label="Precio de venta" name="sale_price" form={form} errors={errors} onChange={set} type="number" />
+          <PriceField label="Precio de compra" raw={purchaseRaw} mode={purchaseMode}
+                      onRaw={onPriceRaw("purchase")} onMode={onPriceMode("purchase")} error={errors.purchase_price}
+                      hasContainer={hasContainer} factor={factor} baseUnit={baseUnit} containerLabel={containerLabel} />
+          <PriceField label="Precio de venta" raw={saleRaw} mode={saleMode}
+                      onRaw={onPriceRaw("sale")} onMode={onPriceMode("sale")} error={errors.sale_price}
+                      hasContainer={hasContainer} factor={factor} baseUnit={baseUnit} containerLabel={containerLabel} />
         </div>
         <div className="mt-4">
           <label className="block text-sm font-medium mb-1">Impuesto</label>
@@ -141,8 +223,6 @@ export default function ProductForm() {
           <TextField label="Precio mayorista" name="wholesale_price" form={form} errors={errors} onChange={set} type="number" />
           <TextField label="Cant. mín. mayorista" name="wholesale_min_quantity" form={form} errors={errors} onChange={set} type="number" />
           <TextField label="Precio empaque mayorista" name="container_wholesale_price" form={form} errors={errors} onChange={set} type="number" />
-          <TextField label="Precio constructor" name="contractor_price" form={form} errors={errors} onChange={set} type="number" />
-          <TextField label="Precio empaque constructor" name="container_contractor_price" form={form} errors={errors} onChange={set} type="number" />
         </div>
       </section>
 
