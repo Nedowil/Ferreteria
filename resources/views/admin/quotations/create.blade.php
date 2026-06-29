@@ -1,3 +1,9 @@
+@php
+    $customersList = $customers->map(function ($c) {
+        $taxIdPart = $c->tax_id ? ' ('.$c->tax_id.')' : '';
+        return ['id' => $c->id, 'label' => $c->name.$taxIdPart];
+    })->values()->all();
+@endphp
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">Nueva cotizacion</h2>
@@ -162,10 +168,7 @@
         function quotationForm() {
             return {
                 products: @json($products),
-                customers: @json($customers->map(function ($c) {
-                    $taxIdPart = $c->tax_id ? ' ('.$c->tax_id.')' : '';
-                    return ['id' => $c->id, 'label' => $c->name.$taxIdPart];
-                })),
+                customers: @json($customersList),
                 customer_id: '',
                 customerSearch: '',
                 customerOpen: false,

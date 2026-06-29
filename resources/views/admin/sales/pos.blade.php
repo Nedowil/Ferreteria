@@ -1,3 +1,23 @@
+@php
+    // Pre-construimos la lista de clientes para el JS del POS aqui en vez de
+    // dentro de @json(...). Blade no respeta los limites de string ni los
+    // bloques { } al matchear parentesis del @json, asi que cualquier closure
+    // con match/return/multilinea adentro lo rompe.
+    $posCustomers = $customers->map(function ($c) {
+        $badge = match ($c->customer_type) {
+            'wholesale' => ' 🏗',
+            'contractor' => ' 👷',
+            default => '',
+        };
+        $taxIdPart = $c->tax_id ? ' ('.$c->tax_id.')' : '';
+        return [
+            'id' => $c->id,
+            'label' => $c->name.$taxIdPart.$badge,
+            'customer_type' => $c->customer_type,
+            'wholesale_discount_percent' => (float) $c->wholesale_discount_percent,
+        ];
+    })->values()->all();
+@endphp
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">Punto de Venta</h2>
@@ -1761,20 +1781,7 @@
                 query: '',
                 results: [],
                 items: [],
-                customers: @json($customers->map(function ($c) {
-                    $badge = match ($c->customer_type) {
-                        'wholesale' => ' 🏗',
-                        'contractor' => ' 👷',
-                        default => '',
-                    };
-                    $taxIdPart = $c->tax_id ? ' ('.$c->tax_id.')' : '';
-                    return [
-                        'id' => $c->id,
-                        'label' => $c->name.$taxIdPart.$badge,
-                        'customer_type' => $c->customer_type,
-                        'wholesale_discount_percent' => (float) $c->wholesale_discount_percent,
-                    ];
-                })),
+                customers: @json($posCustomers),
                 customer_id: '',
                 customerIsWholesale: false,
                 customerCustomerType: 'retail',

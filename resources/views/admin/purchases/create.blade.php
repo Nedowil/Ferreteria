@@ -1,3 +1,9 @@
+@php
+    $suppliersList = $suppliers->map(function ($s) {
+        $taxIdPart = $s->tax_id ? ' ('.$s->tax_id.')' : '';
+        return ['id' => $s->id, 'label' => $s->name.$taxIdPart];
+    })->values()->all();
+@endphp
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">Nueva compra</h2>
@@ -190,10 +196,7 @@
         function purchaseForm() {
             return {
                 products: @json($products),
-                suppliers: @json($suppliers->map(function ($s) {
-                    $taxIdPart = $s->tax_id ? ' ('.$s->tax_id.')' : '';
-                    return ['id' => $s->id, 'label' => $s->name.$taxIdPart];
-                })),
+                suppliers: @json($suppliersList),
                 supplier_id: '',
                 supplierSearch: '',
                 supplierOpen: false,
