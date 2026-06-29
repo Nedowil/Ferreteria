@@ -51,6 +51,9 @@
                                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">{{ old('description', $product->description) }}</textarea>
                     </div>
 
+                    {{-- Categoria / Marca / Unidad: ocultos del form porque no se usan
+                         en este negocio. Los campos siguen en BD (nullable) y los
+                         valores existentes se conservan. Para reactivar, descomentar.
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <x-input-label for="category_id" value="Categoria" />
@@ -82,6 +85,8 @@
                                 @endforeach
                             </select>
                         </div>
+                    --}}
+                    <div class="hidden">
                     </div>
 
                     <!-- UNIDAD BASE Y EMPAQUE -->
