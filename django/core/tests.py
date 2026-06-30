@@ -17,7 +17,8 @@ class ApiTestBase(APITestCase):
         self.User = get_user_model()
         self.branch = Branch.objects.create(name="Matriz", code="M", is_main=True)
         self.user = self.User.objects.create_user(
-            username="admin", email="admin@test.com", password="secret123", name="Admin"
+            username="admin", email="admin@test.com", password="secret123", name="Admin",
+            is_superuser=True, is_staff=True,
         )
         # Login JWT
         r = self.client.post("/api/auth/token/", {"email": "admin@test.com", "password": "secret123"}, format="json")
