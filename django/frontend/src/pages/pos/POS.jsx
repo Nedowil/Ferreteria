@@ -130,6 +130,160 @@ function MeasureModal({ product, customer, available, onAdd, onClose }) {
   );
 }
 
+// Selector de cliente con búsqueda (nombre/NIT/teléfono) — escala con miles.
+function CustomerPicker({ customers, value, onChange, onAddNew }) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const ref = useRef(null);
+  const selected = customers.find((c) => String(c.id) === String(value));
+
+  useEffect(() => {
+    const onDoc = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  const ql = q.trim().toLowerCase();
+  const filtered = (ql
+    ? customers.filter((c) =>
+        (c.name || "").toLowerCase().includes(ql) ||
+        (c.tax_id || "").toLowerCase().includes(ql) ||
+        (c.phone || "").toLowerCase().includes(ql))
+    : customers).slice(0, 60);
+
+  const pick = (id) => { onChange(id); setOpen(false); setQ(""); };
+
+  return (
+    <div className="relative" ref={ref}>
+      <div className="flex gap-2">
+        <button type="button" onClick={() => setOpen((o) => !o)}
+                className="flex-1 min-w-0 text-left border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white flex items-center justify-between gap-2 outline-none focus:ring-2 focus:ring-blue-500">
+          <span className="truncate">{selected ? `${selected.name}${selected.customer_type === "wholesale" ? " (mayorista)" : ""}` : "Consumidor final"}</span>
+          <span className="text-slate-400 shrink-0">▾</span>
+        </button>
+        <button type="button" onClick={onAddNew} title="Nuevo cliente"
+                className="shrink-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-3 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">
+          + Nuevo
+        </button>
+      </div>
+      {open && (
+        <div className="absolute z-30 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden">
+          <div className="p-2 border-b border-slate-100">
+            <input autoFocus value={q} onChange={(e) => setQ(e.target.value)}
+                   placeholder="Buscar por nombre, NIT o teléfono…"
+                   className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div className="max-h-64 overflow-auto text-sm">
+            <button type="button" onClick={() => pick("")}
+                    className="block w-full text-left px-3 py-2 hover:bg-blue-50 transition">Consumidor final</button>
+            {filtered.map((c) => (
+              <button key={c.id} type="button" onClick={() => pick(c.id)}
+                      className="block w-full text-left px-3 py-2 hover:bg-blue-50 border-t border-slate-50 transition">
+                <div className="font-medium text-slate-800">{c.name}
+                  {c.customer_type === "wholesale" && <span className="text-xs text-blue-600"> (mayorista)</span>}</div>
+                {(c.tax_id || c.phone) && (
+                  <div className="text-xs text-slate-400">
+                    {c.tax_id || ""}{c.tax_id && c.phone ? " · " : ""}{c.phone || ""}
+                  </div>
+                )}
+              </button>
+            ))}
+            {filtered.length === 0 && <div className="px-3 py-4 text-center text-slate-400">Sin coincidencias.</div>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Alta rápida de cliente desde el POS (solo nombre obligatorio; NIT con SAT).
+function QuickCustomerModal({ onClose, onCreated }) {
+  const [form, setForm] = useState({ name: "", tax_id: "", phone: "", customer_type: "retail" });
+  const [busy, setBusy] = useState(false);
+  const [satBusy, setSatBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+
+  const lookupSat = async () => {
+    const nit = form.tax_id.trim();
+    if (!nit) { setMsg("Escribí un NIT primero."); return; }
+    setSatBusy(true); setMsg("");
+    try {
+      const { data } = await api.get("/fel/lookup-nit/", { params: { tax_id: nit } });
+      setForm((p) => ({ ...p, name: data.name || p.name }));
+      setMsg(data.simulated ? "✓ Datos de la SAT (simulado)" : "✓ Datos traídos de la SAT");
+    } catch (e) {
+      setMsg(e.response?.data?.error || "No se encontró el NIT en la SAT.");
+    } finally { setSatBusy(false); }
+  };
+
+  const save = async () => {
+    if (!form.name.trim()) { setErr("El nombre es obligatorio."); return; }
+    setBusy(true); setErr("");
+    try {
+      const { data } = await api.post("/customers/", {
+        name: form.name.trim(), customer_type: form.customer_type,
+        tax_id: form.tax_id.trim() || null, phone: form.phone.trim() || null,
+      });
+      onCreated(data);
+    } catch (e) {
+      setErr(e.response?.data?.detail || "No se pudo guardar el cliente.");
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-4">
+          <div className="text-lg font-bold">Nuevo cliente</div>
+        </div>
+        <div className="p-5 space-y-3">
+          {err && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2">{err}</div>}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">NIT (opcional)</label>
+            <div className="flex gap-2">
+              <input value={form.tax_id} onChange={(e) => setForm({ ...form, tax_id: e.target.value })}
+                     placeholder="CF o NIT" className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+              <button type="button" onClick={lookupSat} disabled={satBusy}
+                      className="shrink-0 border border-slate-300 rounded-lg px-3 py-2 text-sm hover:bg-slate-50 transition disabled:opacity-50">
+                {satBusy ? "…" : "🔍 SAT"}
+              </button>
+            </div>
+            {msg && <div className="text-xs text-slate-500 mt-1">{msg}</div>}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Nombre *</label>
+            <input autoFocus value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
+                   placeholder="Nombre del cliente" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Teléfono</label>
+              <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                     placeholder="0000-0000" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Tipo</label>
+              <select value={form.customer_type} onChange={(e) => setForm({ ...form, customer_type: e.target.value })}
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="retail">Público</option>
+                <option value="wholesale">Mayorista</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex gap-2 pt-1">
+            <button onClick={onClose} className="flex-1 border border-slate-300 text-slate-600 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 transition">Cancelar</button>
+            <button onClick={save} disabled={busy || !form.name.trim()}
+                    className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg py-2.5 text-sm font-semibold shadow hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 transition">
+              {busy ? "Guardando…" : "Guardar y usar"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function POS() {
   const navigate = useNavigate();
   const [cashOpen, setCashOpen] = useState(null); // null=cargando, false=cerrada, obj=abierta
@@ -145,6 +299,7 @@ export default function POS() {
   const [busy, setBusy] = useState(false);
   const [companyName, setCompanyName] = useState("Ferretería");
   const [picking, setPicking] = useState(null); // producto en la ventana flotante
+  const [addingCustomer, setAddingCustomer] = useState(false);
   const searchRef = useRef(null);
 
   useEffect(() => {
@@ -350,11 +505,8 @@ export default function POS() {
         <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5 space-y-4 h-fit sticky top-20">
           <div>
             <label className="block text-sm font-medium mb-1">Cliente</label>
-            <select value={customerId} onChange={(e) => setCustomerId(e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="">Consumidor final</option>
-              {customers.map((c) => <option key={c.id} value={c.id}>{c.name} {c.customer_type === "wholesale" ? "(mayorista)" : ""}</option>)}
-            </select>
+            <CustomerPicker customers={customers} value={customerId}
+                            onChange={setCustomerId} onAddNew={() => setAddingCustomer(true)} />
           </div>
 
           <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-xl px-4 py-3">
@@ -421,6 +573,15 @@ export default function POS() {
       {picking && (
         <MeasureModal product={picking} customer={customer} available={availableFor(picking)}
                       onAdd={addMeasure} onClose={() => setPicking(null)} />
+      )}
+
+      {addingCustomer && (
+        <QuickCustomerModal onClose={() => setAddingCustomer(false)}
+          onCreated={(c) => {
+            setCustomers((prev) => [c, ...prev]);
+            setCustomerId(String(c.id));
+            setAddingCustomer(false);
+          }} />
       )}
     </div>
   );
