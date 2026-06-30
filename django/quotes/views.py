@@ -6,6 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from core.api_utils import BranchContextMixin
+from core.permissions import PermissionByActionMixin
 from sales.serializers import SaleDetailSerializer
 from sales.services import SaleError
 from .models import Quotation
@@ -17,7 +18,13 @@ from .serializers import (
 from . import services
 
 
-class QuotationViewSet(BranchContextMixin, viewsets.ModelViewSet):
+class QuotationViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.ModelViewSet):
+    perms_map = {
+        "list": "cotizaciones.ver", "retrieve": "cotizaciones.ver",
+        "create": "cotizaciones.crear", "update": "cotizaciones.crear",
+        "partial_update": "cotizaciones.crear", "destroy": "cotizaciones.cancelar",
+        "cancel": "cotizaciones.cancelar", "convert": "cotizaciones.convertir",
+    }
     queryset = (
         Quotation.objects.select_related("customer", "user", "branch", "converted_sale")
         .prefetch_related("items").order_by("-date", "-id")

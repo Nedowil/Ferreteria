@@ -10,6 +10,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from core.api_utils import BranchContextMixin
+from core.permissions import PermissionByActionMixin
 from .models import Sale
 from .serializers import (
     PaymentWriteSerializer,
@@ -21,7 +22,13 @@ from .serializers import (
 from . import services
 
 
-class SaleViewSet(BranchContextMixin, viewsets.ModelViewSet):
+class SaleViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.ModelViewSet):
+    perms_map = {
+        "list": "ventas.ver", "retrieve": "ventas.ver", "receivable": "ventas.ver",
+        "create": "ventas.crear",
+        "cancel": "ventas.cancelar",
+        "payments": {"GET": "ventas.ver", "POST": "ventas.crear"},
+    }
     queryset = (
         Sale.objects.select_related("customer", "branch", "user")
         .prefetch_related("items", "payments")

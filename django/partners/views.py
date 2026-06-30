@@ -3,11 +3,17 @@
 from django.utils import timezone
 from rest_framework import filters, viewsets
 
+from core.permissions import PermissionByActionMixin
 from .models import Customer, Supplier
 from .serializers import CustomerSerializer, SupplierSerializer
 
 
-class SupplierViewSet(viewsets.ModelViewSet):
+class SupplierViewSet(PermissionByActionMixin, viewsets.ModelViewSet):
+    perms_map = {
+        "list": "proveedores.ver", "retrieve": "proveedores.ver",
+        "create": "proveedores.crear", "update": "proveedores.editar",
+        "partial_update": "proveedores.editar", "destroy": "proveedores.eliminar",
+    }
     serializer_class = SupplierSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["name", "tax_id", "contact_name", "phone", "email"]
@@ -29,7 +35,12 @@ class SupplierViewSet(viewsets.ModelViewSet):
             instance.delete()
 
 
-class CustomerViewSet(viewsets.ModelViewSet):
+class CustomerViewSet(PermissionByActionMixin, viewsets.ModelViewSet):
+    perms_map = {
+        "list": "clientes.ver", "retrieve": "clientes.ver",
+        "create": "clientes.crear", "update": "clientes.editar",
+        "partial_update": "clientes.editar", "destroy": "clientes.eliminar",
+    }
     serializer_class = CustomerSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["name", "tax_id", "phone", "email"]

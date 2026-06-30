@@ -14,7 +14,7 @@ import base64
 
 from core.api_utils import BranchContextMixin, get_request_branch
 from core.models import CompanySetting
-from core.permissions import HasPermission
+from core.permissions import HasPermission, PermissionByActionMixin
 from . import labels
 from .models import Brand, Category, InventoryMovement, Product, ProductPresentation, Unit
 from .serializers import (
@@ -31,7 +31,16 @@ from .services import InventoryError, apply_movement
 from .utils import generate_barcode, generate_sku
 
 
-class CategoryViewSet(viewsets.ModelViewSet):
+# Leer catálogos requiere ver productos; modificarlos requiere gestionar catálogos.
+CATALOG_PERMS = {
+    "list": "productos.ver", "retrieve": "productos.ver",
+    "create": "catalogos.gestionar", "update": "catalogos.gestionar",
+    "partial_update": "catalogos.gestionar", "destroy": "catalogos.gestionar",
+}
+
+
+class CategoryViewSet(PermissionByActionMixin, viewsets.ModelViewSet):
+    perms_map = CATALOG_PERMS
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
@@ -49,7 +58,8 @@ class BrandViewSet(CategoryViewSet):
     serializer_class = BrandSerializer
 
 
-class UnitViewSet(viewsets.ModelViewSet):
+class UnitViewSet(PermissionByActionMixin, viewsets.ModelViewSet):
+    perms_map = CATALOG_PERMS
     queryset = Unit.objects.all()
     serializer_class = UnitSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
@@ -109,7 +119,15 @@ def _deliver_zpl(company, data):
     })
 
 
-class ProductViewSet(BranchContextMixin, viewsets.ModelViewSet):
+class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.ModelViewSet):
+    perms_map = {
+        "list": "productos.ver", "retrieve": "productos.ver",
+        "low_stock": "productos.ver", "label": "productos.ver",
+        "create": "productos.crear", "update": "productos.editar",
+        "partial_update": "productos.editar", "destroy": "productos.eliminar",
+        "movements": {"GET": "productos.ver", "POST": "inventario.ajustar"},
+        "zebra_test": "configuracion.gestionar",
+    }
     queryset = (
         Product.objects.filter(deleted_at__isnull=True)
         .select_related("category", "brand", "unit")
@@ -246,6 +264,8 @@ class ProductViewSet(BranchContextMixin, viewsets.ModelViewSet):
 
 class StockCountView(APIView):
     """Conteo físico masivo: aplica ajustes para los productos con diferencia."""
+
+    permission_classes = [HasPermission.require("inventario.ajustar")]
 
     def post(self, request):
         from django.utils import timezone

@@ -14,15 +14,18 @@ from django.db.models.functions import Coalesce, TruncDate
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from core.permissions import HasPermission
 from cashbox.models import CashSession
 from inventory.models import Product
 from purchasing.models import Purchase
 from sales.models import Sale, SaleItem
 
 DEC = DecimalField(max_digits=20, decimal_places=4)
+
+# Todos los reportes requieren el permiso de ver reportes.
+_PERM = HasPermission.require("reportes.ver")
 
 # Costo por partida: usa el costo capturado al momento de la venta; si falta,
 # cae al precio de compra actual del producto * units_factor.
@@ -49,7 +52,7 @@ def _completed_items(f, t):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([_PERM])
 def sales(request):
     """Ventas por periodo: por día, por método de pago y KPIs."""
     f, t = resolve_range(request, days=30)
@@ -82,7 +85,7 @@ def sales(request):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([_PERM])
 def top_products(request):
     """Productos más vendidos por ingreso."""
     f, t = resolve_range(request, days=30)
@@ -97,7 +100,7 @@ def top_products(request):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([_PERM])
 def profit(request):
     """Utilidad bruta: ingreso − costo, por producto y por día."""
     f, t = resolve_range(request, days=30)
@@ -131,7 +134,7 @@ def profit(request):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([_PERM])
 def top_customers(request):
     """Clientes con más compras (por ingreso)."""
     f, t = resolve_range(request, days=90)
@@ -147,7 +150,7 @@ def top_customers(request):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([_PERM])
 def top_suppliers(request):
     """Proveedores con mayor gasto (compras recibidas)."""
     f, t = resolve_range(request, days=180)
@@ -161,7 +164,7 @@ def top_suppliers(request):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([_PERM])
 def dead_stock(request):
     """Productos activos con stock sin salidas en los últimos N días."""
     days = max(1, int(request.query_params.get("days", 60)))
@@ -182,7 +185,7 @@ def dead_stock(request):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([_PERM])
 def daily_cash(request):
     """Corte diario: cajas cerradas en un día."""
     day = parse_date(request.query_params.get("day") or "") or timezone.localdate()
@@ -203,7 +206,7 @@ def daily_cash(request):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([_PERM])
 def by_seller(request):
     """Ventas por vendedor."""
     f, t = resolve_range(request, days=30)
@@ -223,7 +226,7 @@ def by_seller(request):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([_PERM])
 def by_category(request):
     """Ventas y utilidad por categoría."""
     f, t = resolve_range(request, days=30)
@@ -246,7 +249,7 @@ def by_category(request):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([_PERM])
 def inventory_value(request):
     """Valor del inventario a costo y a precio de venta."""
     products = (Product.objects.filter(active=True, stock__gt=0, deleted_at__isnull=True)

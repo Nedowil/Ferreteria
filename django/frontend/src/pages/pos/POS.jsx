@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/client";
 import { publishDisplay, openCustomerDisplay } from "../../pos/customerDisplay";
+import { useAuth } from "../../auth/AuthContext";
 import ReturnModal from "./ReturnModal";
 
 // Elige el precio base según el nivel del cliente (público o mayorista).
@@ -418,6 +419,7 @@ function SaleDoneModal({ sale, onPrint, onView, onNew }) {
 
 export default function POS() {
   const navigate = useNavigate();
+  const { can } = useAuth();
   const [cashOpen, setCashOpen] = useState(null); // null=cargando, false=cerrada, obj=abierta
   const [search, setSearch] = useState("");
   const [products, setProducts] = useState([]);
@@ -565,10 +567,12 @@ export default function POS() {
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">🛒 Punto de venta</h1>
         <div className="flex items-center gap-3">
-          <button onClick={() => setReturning(true)}
-                  className="text-sm border border-amber-300 text-amber-700 bg-amber-50 rounded-lg px-3 py-1.5 hover:bg-amber-100 transition">
-            ↩️ Devolución
-          </button>
+          {can("ventas.crear") && (
+            <button onClick={() => setReturning(true)}
+                    className="text-sm border border-amber-300 text-amber-700 bg-amber-50 rounded-lg px-3 py-1.5 hover:bg-amber-100 transition">
+              ↩️ Devolución
+            </button>
+          )}
           <button onClick={openCustomerDisplay}
                   className="text-sm border border-slate-300 rounded-lg px-3 py-1.5 hover:bg-slate-50 transition">
             🖥️ Pantalla cliente
@@ -595,10 +599,12 @@ export default function POS() {
                        value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={onSearchKey}
                        className="w-full border border-slate-300 rounded-lg pl-10 pr-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" />
               </div>
-              <button type="button" onClick={() => setAddingProduct(true)} title="Nuevo producto"
-                      className="shrink-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition whitespace-nowrap">
-                + Producto
-              </button>
+              {can("productos.crear") && (
+                <button type="button" onClick={() => setAddingProduct(true)} title="Nuevo producto"
+                        className="shrink-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition whitespace-nowrap">
+                  + Producto
+                </button>
+              )}
             </div>
 
             <div className="mt-4 max-h-[28rem] overflow-auto border border-slate-100 rounded-xl divide-y divide-slate-100">

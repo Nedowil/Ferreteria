@@ -5,7 +5,7 @@ ContentType (el del modelo Branch), con el codename estilo 'ventas.crear'. Los
 roles son Groups de Django.
 """
 
-from rest_framework.permissions import BasePermission
+from rest_framework.permissions import BasePermission, IsAuthenticated
 
 # (codename, etiqueta legible, grupo) — el grupo es solo para agrupar en la UI.
 PERMISSIONS = [
@@ -142,3 +142,25 @@ class HasPermission(BasePermission):
         if user.is_superuser:
             return True
         return self.required in user_permission_codenames(user)
+
+
+class PermissionByActionMixin:
+    """Mixin para ViewSets: exige un permiso según la acción.
+
+    Definir `perms_map = {accion: codename}` donde accion es 'list', 'create',
+    'update', 'partial_update', 'destroy', 'retrieve' o el nombre de una @action.
+    El valor puede ser un codename (str) o un dict por método HTTP, p. ej.
+    {"GET": "x.ver", "POST": "x.crear"}. Las acciones no mapeadas usan
+    `default_permission` (o solo autenticación si es None).
+    """
+
+    perms_map = {}
+    default_permission = None
+
+    def get_permissions(self):
+        entry = self.perms_map.get(self.action, self.default_permission)
+        if isinstance(entry, dict):
+            entry = entry.get(self.request.method, self.default_permission)
+        if not entry:
+            return [IsAuthenticated()]
+        return [HasPermission.require(entry)()]

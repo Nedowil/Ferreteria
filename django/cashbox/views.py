@@ -5,6 +5,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from core.api_utils import get_request_branch
+from core.permissions import PermissionByActionMixin
 from .models import CashSession
 from .serializers import (
     CashSessionDetailSerializer,
@@ -16,8 +17,13 @@ from .serializers import (
 from . import services
 
 
-class CashSessionViewSet(viewsets.ReadOnlyModelViewSet):
+class CashSessionViewSet(PermissionByActionMixin, viewsets.ReadOnlyModelViewSet):
     """Sesiones de caja. Un usuario no admin solo ve las suyas."""
+
+    perms_map = {
+        "list": "caja.ver", "retrieve": "caja.ver", "current": "caja.ver",
+        "open": "caja.abrir", "close": "caja.cerrar", "movement": "caja.movimientos",
+    }
 
     def get_queryset(self):
         qs = CashSession.objects.select_related("user", "branch").order_by("-opened_at")

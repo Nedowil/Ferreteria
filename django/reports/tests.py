@@ -16,6 +16,13 @@ class ReportsTests(APITestCase):
         User = get_user_model()
         self.branch = Branch.objects.create(name="Matriz", code="M", is_main=True)
         self.user = User.objects.create_user(username="v", email="v@test.com", password="x", name="Vendedor")
+        # El usuario necesita el permiso de ver reportes.
+        from django.contrib.auth.models import Group
+        from core.permissions import sync_permissions
+        perms = sync_permissions()
+        grp = Group.objects.create(name="reportes")
+        grp.permissions.add(perms["reportes.ver"])
+        self.user.groups.add(grp)
         r = self.client.post("/api/auth/token/", {"email": "v@test.com", "password": "x"}, format="json")
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {r.json()['access']}", HTTP_X_BRANCH_ID=str(self.branch.id))
 

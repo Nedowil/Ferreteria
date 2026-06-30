@@ -9,6 +9,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from core.api_utils import BranchContextMixin
+from core.permissions import PermissionByActionMixin
 from .models import Purchase
 from .serializers import (
     PaymentWriteSerializer,
@@ -27,7 +28,14 @@ from .services import (
 )
 
 
-class PurchaseViewSet(BranchContextMixin, viewsets.ModelViewSet):
+class PurchaseViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.ModelViewSet):
+    perms_map = {
+        "list": "compras.ver", "retrieve": "compras.ver", "payable": "compras.ver",
+        "create": "compras.crear", "update": "compras.crear", "partial_update": "compras.crear",
+        "destroy": "compras.cancelar", "cancel": "compras.cancelar",
+        "receive": "compras.recibir",
+        "payments": {"GET": "compras.ver", "POST": "compras.crear"},
+    }
     queryset = (
         Purchase.objects.select_related("supplier", "branch", "user")
         .prefetch_related("items", "payments")
