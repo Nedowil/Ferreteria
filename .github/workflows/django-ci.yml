@@ -1,0 +1,94 @@
+name: Django CI
+
+# Corre los tests del backend (contra PostgreSQL, como en producción) y compila
+# el SPA en cada push/PR que toque el proyecto Django.
+
+on:
+  push:
+    paths:
+      - "django/**"
+      - ".github/workflows/django-ci.yml"
+  pull_request:
+    paths:
+      - "django/**"
+      - ".github/workflows/django-ci.yml"
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: django
+
+jobs:
+  backend:
+    name: Backend (tests + checks)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: ferreteria
+          POSTGRES_USER: ferreteria
+          POSTGRES_PASSWORD: ferreteria
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ferreteria"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DEBUG: "False"
+      SECRET_KEY: ci-secret-key-not-for-production-0123456789abcdef
+      DB_ENGINE: postgresql
+      DB_NAME: ferreteria
+      DB_USER: ferreteria
+      DB_PASSWORD: ferreteria
+      DB_HOST: localhost
+      DB_PORT: "5432"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: django/requirements.txt
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Verificar migraciones al día
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Comprobaciones del sistema
+        run: python manage.py check
+
+      - name: Tests
+        run: python manage.py test --verbosity=2
+
+  frontend:
+    name: Frontend (build del SPA)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: django/frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: django/frontend/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Compilar
+        run: npm run build
