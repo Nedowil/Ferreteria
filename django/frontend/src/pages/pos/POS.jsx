@@ -284,6 +284,97 @@ function QuickCustomerModal({ onClose, onCreated }) {
   );
 }
 
+// Alta rápida de producto desde el POS (solo nombre obligatorio).
+function QuickProductModal({ onClose, onCreated }) {
+  const [form, setForm] = useState({
+    name: "", base_unit_label: "", sale_price: "", purchase_price: "",
+    initial_stock: "", tax_type: "iva",
+  });
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const save = async () => {
+    if (!form.name.trim()) { setErr("El nombre es obligatorio."); return; }
+    setBusy(true); setErr("");
+    try {
+      const { data } = await api.post("/inventory/products/", {
+        name: form.name.trim(),
+        base_unit_label: form.base_unit_label.trim() || "unidad",
+        sale_price: form.sale_price || "0",
+        purchase_price: form.purchase_price || "0",
+        initial_stock: form.initial_stock || "0",
+        stock_input_mode: "base",
+        tax_type: form.tax_type,
+      });
+      onCreated(data);
+    } catch (e) {
+      const d = e.response?.data;
+      setErr(d?.detail || (d && typeof d === "object" ? Object.values(d).flat()[0] : null) || "No se pudo guardar el producto.");
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-4">
+          <div className="text-lg font-bold">Nuevo producto</div>
+          <div className="text-xs text-blue-100">El SKU y el código de barras se generan solos.</div>
+        </div>
+        <div className="p-5 space-y-3">
+          {err && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2">{err}</div>}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Nombre *</label>
+            <input autoFocus value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
+                   placeholder="Ej. Clavos de 2 pulgadas"
+                   className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Unidad base</label>
+              <input value={form.base_unit_label} onChange={(e) => setForm({ ...form, base_unit_label: e.target.value })}
+                     placeholder="unidad / libra / metro"
+                     className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Impuesto</label>
+              <select value={form.tax_type} onChange={(e) => setForm({ ...form, tax_type: e.target.value })}
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="iva">Gravado con IVA</option>
+                <option value="exento">Exento</option>
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Precio de venta</label>
+              <input type="number" step="any" value={form.sale_price} onChange={(e) => setForm({ ...form, sale_price: e.target.value })}
+                     placeholder="0.00" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Precio de compra</label>
+              <input type="number" step="any" value={form.purchase_price} onChange={(e) => setForm({ ...form, purchase_price: e.target.value })}
+                     placeholder="0.00" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Existencia actual (en {form.base_unit_label.trim() || "unidad"})</label>
+            <input type="number" step="any" value={form.initial_stock} onChange={(e) => setForm({ ...form, initial_stock: e.target.value })}
+                   placeholder="0" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+            <div className="text-xs text-slate-400 mt-1">Cantidad que ya tenés en bodega. Las presentaciones (caja, media libra…) se agregan luego en la ficha del producto.</div>
+          </div>
+          <div className="flex gap-2 pt-1">
+            <button onClick={onClose} className="flex-1 border border-slate-300 text-slate-600 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 transition">Cancelar</button>
+            <button onClick={save} disabled={busy || !form.name.trim()}
+                    className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg py-2.5 text-sm font-semibold shadow hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 transition">
+              {busy ? "Guardando…" : "Guardar y vender"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function POS() {
   const navigate = useNavigate();
   const [cashOpen, setCashOpen] = useState(null); // null=cargando, false=cerrada, obj=abierta
@@ -300,7 +391,12 @@ export default function POS() {
   const [companyName, setCompanyName] = useState("Ferretería");
   const [picking, setPicking] = useState(null); // producto en la ventana flotante
   const [addingCustomer, setAddingCustomer] = useState(false);
+  const [addingProduct, setAddingProduct] = useState(false);
   const searchRef = useRef(null);
+
+  const reloadProducts = () =>
+    api.get("/inventory/products/", { params: { page_size: 500, active: 1 } })
+       .then((r) => r.data.results || r.data);
 
   useEffect(() => {
     api.get("/cashbox/cash-sessions/current/").then((r) => setCashOpen(r.data.session || false));
@@ -436,11 +532,17 @@ export default function POS() {
         {/* Catálogo + carrito */}
         <div className="lg:col-span-2 space-y-4">
           <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4">
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
-              <input ref={searchRef} autoFocus placeholder="Buscar o escanear producto (nombre, SKU o código)…"
-                     value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={onSearchKey}
-                     className="w-full border border-slate-300 rounded-lg pl-10 pr-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" />
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+                <input ref={searchRef} autoFocus placeholder="Buscar o escanear producto (nombre, SKU o código)…"
+                       value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={onSearchKey}
+                       className="w-full border border-slate-300 rounded-lg pl-10 pr-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" />
+              </div>
+              <button type="button" onClick={() => setAddingProduct(true)} title="Nuevo producto"
+                      className="shrink-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition whitespace-nowrap">
+                + Producto
+              </button>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-4 max-h-[28rem] overflow-auto">
@@ -581,6 +683,17 @@ export default function POS() {
             setCustomers((prev) => [c, ...prev]);
             setCustomerId(String(c.id));
             setAddingCustomer(false);
+          }} />
+      )}
+
+      {addingProduct && (
+        <QuickProductModal onClose={() => setAddingProduct(false)}
+          onCreated={async (created) => {
+            setAddingProduct(false);
+            const list = await reloadProducts();
+            setProducts(list);
+            const fresh = list.find((p) => p.id === created.id);
+            if (fresh) setPicking(fresh); // abre la medida para venderlo de una vez
           }} />
       )}
     </div>
