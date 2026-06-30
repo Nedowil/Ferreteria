@@ -227,6 +227,8 @@ FEL_INFILE_ALIAS = os.getenv("FEL_INFILE_ALIAS", "")             # usuario FEL (
 FEL_INFILE_NIT_EMISOR = os.getenv("FEL_INFILE_NIT_EMISOR", "")
 FEL_INFILE_CORREO_COPIA = os.getenv("FEL_INFILE_CORREO_COPIA", "")
 FEL_INFILE_IDENTIFICADOR_PREFIX = os.getenv("FEL_INFILE_IDENTIFICADOR_PREFIX", "FERRE")
+FEL_INFILE_LOOKUP_URL = os.getenv(
+    "FEL_INFILE_LOOKUP_URL", "https://consultareceptor.feel.com.gt/rest/action")
 
 
 # ---------------------------------------------------------------------------

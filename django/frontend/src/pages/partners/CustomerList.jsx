@@ -13,6 +13,21 @@ export default function CustomerList() {
   const [search, setSearch] = useState("");
   const [type, setType] = useState("");
   const [editing, setEditing] = useState(null);
+  const [satBusy, setSatBusy] = useState(false);
+  const [satMsg, setSatMsg] = useState("");
+
+  const lookupSat = async () => {
+    const nit = (editing.tax_id || "").trim();
+    if (!nit) { setSatMsg("Escribí un NIT primero."); return; }
+    setSatBusy(true); setSatMsg("");
+    try {
+      const { data } = await api.get("/fel/lookup-nit/", { params: { tax_id: nit } });
+      setEditing((p) => ({ ...p, name: data.name || p.name, address: data.address || p.address }));
+      setSatMsg(data.simulated ? "✓ Datos de la SAT (simulado)" : "✓ Datos traídos de la SAT");
+    } catch (e) {
+      setSatMsg(e.response?.data?.error || "No se encontró el NIT en la SAT.");
+    } finally { setSatBusy(false); }
+  };
 
   const load = () => {
     const params = { page_size: 200 };
@@ -39,7 +54,7 @@ export default function CustomerList() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-lg font-semibold">Clientes</h1>
-        <button onClick={() => setEditing(BLANK)} className="bg-blue-600 text-white rounded px-4 py-2 text-sm font-medium">+ Nuevo cliente</button>
+        <button onClick={() => { setSatMsg(""); setEditing(BLANK); }} className="bg-blue-600 text-white rounded px-4 py-2 text-sm font-medium">+ Nuevo cliente</button>
       </div>
       <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white rounded-lg shadow p-4 mb-4 flex gap-2 items-end">
         <input placeholder="Buscar por nombre, NIT…" value={search} onChange={(e) => setSearch(e.target.value)}
@@ -65,7 +80,7 @@ export default function CustomerList() {
                 <td className="px-4 py-2 text-slate-500">{c.phone || "—"}</td>
                 <td className="px-4 py-2 text-right">Q{c.credit_balance}</td>
                 <td className="px-4 py-2 text-right">
-                  <button onClick={() => setEditing(c)} className="text-blue-600 hover:underline">Editar</button>
+                  <button onClick={() => { setSatMsg(""); setEditing(c); }} className="text-blue-600 hover:underline">Editar</button>
                   <button onClick={() => remove(c.id)} className="text-red-600 hover:underline ml-3">Eliminar</button>
                 </td>
               </tr>
@@ -87,8 +102,15 @@ export default function CustomerList() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">NIT</label>
-                <input value={editing.tax_id || ""} onChange={(e) => setEditing({ ...editing, tax_id: e.target.value })}
-                       className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
+                <div className="flex gap-1">
+                  <input value={editing.tax_id || ""} onChange={(e) => setEditing({ ...editing, tax_id: e.target.value })}
+                         className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
+                  <button type="button" onClick={lookupSat} disabled={satBusy} title="Buscar en la SAT"
+                          className="shrink-0 bg-slate-700 hover:bg-slate-800 text-white rounded px-3 text-sm disabled:opacity-50">
+                    {satBusy ? "…" : "🔍 SAT"}
+                  </button>
+                </div>
+                {satMsg && <p className="text-xs text-slate-500 mt-1">{satMsg}</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Tipo</label>

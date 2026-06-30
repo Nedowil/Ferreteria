@@ -125,6 +125,15 @@ def printer_test(request):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+def lookup_nit(request):
+    """Consulta un NIT/DPI ante la SAT y devuelve el nombre/dirección."""
+    tax_id = request.query_params.get("tax_id", "")
+    result = services.lookup_tax_id(tax_id)
+    return Response(result, status=status.HTTP_200_OK if result.get("success") else status.HTTP_404_NOT_FOUND)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def fel_config(request):
     """Configuración FEL actual (solo lectura; las credenciales viven en el entorno)."""
     infile_required = ["FEL_INFILE_USUARIO", "FEL_INFILE_LLAVE_WS",

@@ -29,3 +29,30 @@ class StubCertifier(FelCertifier):
             ok=True, uuid=str(uuidlib.uuid4()).upper(),
             payload={"simulado": True, "anulacion": True, "motivo": reason},
         )
+
+    def lookup_tax_id(self, tax_id: str) -> dict:
+        """Simula la consulta de NIT/DPI a la SAT (algunos conocidos + genérico)."""
+        import re
+
+        tid = (tax_id or "").strip().upper()
+        if not tid:
+            return {"success": False, "error": "Indicá el NIT o DPI a buscar."}
+        known = {
+            "CF": {"name": "Consumidor Final", "address": "Ciudad", "regime": "PEQ"},
+            "12345678": {"name": "Constructora del Valle SA", "address": "Zona 4, Guatemala", "regime": "GEN"},
+            "46851372": {"name": "Ferretería Central", "address": "Uspantán, Quiché", "regime": "PEQ"},
+        }
+        if tid in known:
+            k = known[tid]
+            return {"success": True, "tax_id": tid, "simulated": True, **k}
+        if re.match(r"^[0-9]{7,13}-?[0-9]?$", tid):
+            return {
+                "success": True, "tax_id": tid, "simulated": True,
+                "name": f"Contribuyente {tid}",
+                "address": "Dirección no disponible (modo simulado)", "regime": "GEN",
+            }
+        return {
+            "success": False,
+            "error": f"NIT/DPI '{tid}' no válido o no encontrado. Configurá FEL_DRIVER=infile "
+                     "con tu certificador para consultar a la SAT real.",
+        }

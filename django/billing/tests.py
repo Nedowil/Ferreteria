@@ -397,3 +397,37 @@ def build_sample_dte(pequeno=False):
         }],
         "totales": {"gran_total": "112.00", "total_iva": "0" if pequeno else "12.00"},
     }
+
+
+class NitLookupTests(TestCase):
+    """Consulta de NIT a la SAT (stub)."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="n", email="n@test.com", password="x123", is_superuser=True)
+        self.branch = Branch.objects.create(name="Matriz", code="M", is_main=True)
+
+    def _client(self):
+        c = APIClient()
+        r = c.post("/api/auth/token/", {"email": "n@test.com", "password": "x123"}, format="json")
+        c.credentials(HTTP_AUTHORIZATION=f"Bearer {r.json()['access']}", HTTP_X_BRANCH_ID=str(self.branch.id))
+        return c
+
+    def test_nit_conocido(self):
+        r = self._client().get("/api/fel/lookup-nit/", {"tax_id": "46851372"})
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(r.json()["success"])
+        self.assertEqual(r.json()["name"], "Ferretería Central")
+
+    def test_nit_formato_valido_generico(self):
+        r = self._client().get("/api/fel/lookup-nit/", {"tax_id": "9999999"})
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("Contribuyente", r.json()["name"])
+
+    def test_nit_invalido_404(self):
+        r = self._client().get("/api/fel/lookup-nit/", {"tax_id": "ABC"})
+        self.assertEqual(r.status_code, 404)
+        self.assertFalse(r.json()["success"])
+
+    def test_requiere_autenticacion(self):
+        r = APIClient().get("/api/fel/lookup-nit/", {"tax_id": "CF"})
+        self.assertEqual(r.status_code, 401)

@@ -99,6 +99,11 @@ def cancel_invoice(invoice, reason, *, user=None):
     return invoice
 
 
+def lookup_tax_id(tax_id):
+    """Consulta un NIT/DPI ante la SAT a través del certificador configurado."""
+    return get_certifier().lookup_tax_id(tax_id or "")
+
+
 def build_ticket(sale):
     """Datos estructurados para imprimir el ticket/comprobante de una venta."""
     company = CompanySetting.current()

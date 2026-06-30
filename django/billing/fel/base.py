@@ -31,6 +31,11 @@ class FelCertifier:
     def cancel(self, invoice, reason: str) -> CertificationResult:  # pragma: no cover
         raise NotImplementedError
 
+    def lookup_tax_id(self, tax_id: str) -> dict:  # pragma: no cover - interfaz
+        """Consulta el NIT/DPI ante la SAT. Devuelve
+        {success, name, address?, regime?} o {success: False, error}."""
+        raise NotImplementedError
+
 
 def build_dte(sale, company):
     """Construye la estructura del DTE (Documento Tributario Electrónico).

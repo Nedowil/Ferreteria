@@ -240,6 +240,30 @@ class InfileCertifier(FelCertifier):
         except Exception as e:  # red, timeout, JSON inválido…
             return CertificationResult(ok=False, error=f"Error de comunicación con Infile: {e}")
 
+    def lookup_tax_id(self, tax_id: str) -> dict:
+        """Consulta el NIT/DPI ante la SAT vía Infile (consultareceptor)."""
+        tid = (tax_id or "").strip().upper()
+        if tid == "CF":
+            return {"success": True, "tax_id": "CF", "name": "Consumidor Final"}
+        if not tid:
+            return {"success": False, "error": "Indicá el NIT o DPI a buscar."}
+        if not _cfg("FEL_INFILE_USUARIO") or not _cfg("FEL_INFILE_LLAVE_WS"):
+            return {"success": False, "error": "Faltan credenciales de Infile para consultar la SAT."}
+        url = _cfg("FEL_INFILE_LOOKUP_URL", "https://consultareceptor.feel.com.gt/rest/action")
+        tipo = "cui" if (tid.isdigit() and len(tid) == 13) else "nit"
+        body = {"nit_proveedor": _cfg("FEL_INFILE_NIT_EMISOR"), "codigo": tid, "tipo": tipo}
+        headers = {"USUARIO": _cfg("FEL_INFILE_USUARIO"), "LLAVE": _cfg("FEL_INFILE_LLAVE_WS")}
+        try:
+            res = self._post_json(url, body, headers)
+            if res.get("nombre"):
+                return {
+                    "success": True, "tax_id": tid, "name": res["nombre"],
+                    "address": res.get("direccion"), "regime": res.get("regimen"),
+                }
+            return {"success": False, "error": res.get("mensaje") or "NIT/CUI no encontrado en SAT."}
+        except Exception as e:
+            return {"success": False, "error": f"Error consultando la SAT: {e}"}
+
     def cancel(self, invoice, reason: str) -> CertificationResult:
         missing = self._require_credentials()
         if missing:

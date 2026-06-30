@@ -13,5 +13,6 @@ urlpatterns = [
     path("sales/<int:sale_id>/ticket/", views.sale_ticket, name="sale-ticket"),
     path("sales/<int:sale_id>/print/", views.print_ticket, name="print-ticket"),
     path("printer/test/", views.printer_test, name="printer-test"),
+    path("fel/lookup-nit/", views.lookup_nit, name="lookup-nit"),
     path("fel/config/", views.fel_config, name="fel-config"),
 ] + router.urls
