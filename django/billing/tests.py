@@ -188,6 +188,7 @@ class FelApiTests(TestCase):
 
 INFILE_CREDS = dict(
     FEL_DRIVER="infile",
+    FEL_INFILE_MODE="twostep",
     FEL_INFILE_USUARIO="USR123",
     FEL_INFILE_LLAVE_WS="LLAVE-WS",
     FEL_INFILE_LLAVE_FIRMA="LLAVE-FIRMA",
@@ -231,6 +232,31 @@ class InfileCertifierTests(TestCase):
         self.assertEqual(res.serie, "A1")
         self.assertEqual(res.numero, "55")
         self.assertEqual(m.call_count, 2)  # firma + certificación
+
+    def test_certifica_proceso_unificado(self):
+        """Modo unificado: una sola llamada XML con los 5 headers de Infile."""
+        from unittest.mock import patch
+        from django.test import override_settings
+        captured = {}
+
+        def fake_post_xml(self_, url, xml, headers=None):
+            captured["url"] = url
+            captured["headers"] = headers
+            return {"resultado": True, "uuid": "UNI-UUID", "serie": "FACE1",
+                    "numero": 7, "xml_certificado": "<dte certificado/>"}
+
+        creds = dict(INFILE_CREDS, FEL_INFILE_MODE="unified",
+                     FEL_INFILE_USUARIO_FIRMA="USR123")
+        with override_settings(**creds), \
+                patch.object(type(self.cert), "_post_xml", new=fake_post_xml):
+            res = self.cert.certify(self.dte)
+        self.assertTrue(res.ok, res.error)
+        self.assertEqual(res.uuid, "UNI-UUID")
+        self.assertEqual(res.numero, "7")
+        # Verifica que se envíen los 5 headers del proceso unificado.
+        self.assertEqual(set(captured["headers"]),
+                         {"usuario", "llave", "identificador", "usuariofirma", "llavefirma"})
+        self.assertEqual(captured["headers"]["usuariofirma"], "USR123")
 
     def test_error_de_certificacion_se_propaga(self):
         from unittest.mock import patch

@@ -179,11 +179,46 @@ class InfileCertifier(FelCertifier):
         with urllib.request.urlopen(req, timeout=self.TIMEOUT) as resp:
             return json.loads(resp.read().decode("utf-8"))
 
+    def _post_xml(self, url, xml, headers=None):
+        """POST XML crudo (proceso unificado de Infile) → dict JSON de respuesta."""
+        data = xml.encode("utf-8")
+        hdrs = {"Content-Type": "application/xml"}
+        hdrs.update(headers or {})
+        req = urllib.request.Request(url, data=data, headers=hdrs, method="POST")
+        with urllib.request.urlopen(req, timeout=self.TIMEOUT) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+
+    def _unified_headers(self):
+        # Proceso unificado: firma + certificación en una sola llamada.
+        return {
+            "usuario": _cfg("FEL_INFILE_USUARIO"),
+            "llave": _cfg("FEL_INFILE_LLAVE_WS"),
+            "identificador": self._identificador(),
+            "usuariofirma": _cfg("FEL_INFILE_USUARIO_FIRMA") or _cfg("FEL_INFILE_USUARIO"),
+            "llavefirma": _cfg("FEL_INFILE_LLAVE_FIRMA"),
+        }
+
+    def _certify_unified(self, xml: str) -> CertificationResult:
+        url = _cfg("FEL_INFILE_UNIFICADO_URL",
+                   "https://certificador.feel.com.gt/fel/procesounificado/transaccion/v2/xml")
+        res = self._post_xml(url, xml, self._unified_headers())
+        if not res.get("resultado"):
+            return CertificationResult(ok=False, error=_cert_error(res))
+        return CertificationResult(
+            ok=True,
+            uuid=res.get("uuid"),
+            serie=res.get("serie"),
+            numero=str(res.get("numero")) if res.get("numero") is not None else None,
+            xml_signed=res.get("xml_certificado"),
+            payload=res,
+        )
+
     def _require_credentials(self):
-        missing = [k for k in ("FEL_INFILE_USUARIO", "FEL_INFILE_LLAVE_WS",
-                               "FEL_INFILE_LLAVE_FIRMA", "FEL_INFILE_ALIAS",
-                               "FEL_INFILE_NIT_EMISOR") if not _cfg(k)]
-        return missing
+        required = ["FEL_INFILE_USUARIO", "FEL_INFILE_LLAVE_WS",
+                    "FEL_INFILE_LLAVE_FIRMA", "FEL_INFILE_NIT_EMISOR"]
+        if _cfg("FEL_INFILE_MODE", "unified") != "unified":
+            required.append("FEL_INFILE_ALIAS")  # alias de firma (flujo de dos pasos)
+        return [k for k in required if not _cfg(k)]
 
     def _sign(self, xml: str, *, es_anulacion=False):
         url = _cfg("FEL_INFILE_FIRMA_URL", "https://signer-emisores.feel.com.gt/sign_solicitud_firmas/firma_xml")
@@ -210,6 +245,11 @@ class InfileCertifier(FelCertifier):
             )
         try:
             xml = build_invoice_xml(dte)
+            # Proceso unificado (recomendado por Infile): una sola llamada.
+            if _cfg("FEL_INFILE_MODE", "unified") == "unified":
+                return self._certify_unified(xml)
+
+            # Flujo clásico de dos pasos (firma + certificación).
             firma = self._sign(xml)
             if not firma.get("resultado"):
                 return CertificationResult(ok=False, error=_firma_error(firma))
@@ -273,6 +313,15 @@ class InfileCertifier(FelCertifier):
             )
         try:
             xml = build_cancel_xml(invoice, reason)
+            # Proceso unificado: la anulación se envía al mismo endpoint (XML crudo).
+            if _cfg("FEL_INFILE_MODE", "unified") == "unified":
+                url = _cfg("FEL_INFILE_UNIFICADO_URL",
+                           "https://certificador.feel.com.gt/fel/procesounificado/transaccion/v2/xml")
+                res = self._post_xml(url, xml, self._unified_headers())
+                if not res.get("resultado"):
+                    return CertificationResult(ok=False, error=_cert_error(res))
+                return CertificationResult(ok=True, uuid=res.get("uuid"), payload=res)
+
             firma = self._sign(xml, es_anulacion=True)
             if not firma.get("resultado"):
                 return CertificationResult(ok=False, error=_firma_error(firma))

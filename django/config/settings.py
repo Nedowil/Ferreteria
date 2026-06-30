@@ -222,21 +222,28 @@ if not DEBUG:
 
 # Credenciales del certificador Infile/FEEL. Vacías por defecto: el driver
 # 'infile' aborta con un mensaje claro hasta que se configuren (sandbox).
+# Modo de certificación: "unified" (proceso unificado, una sola llamada) o
+# "twostep" (firma + certificación por separado).
+FEL_INFILE_MODE = os.getenv("FEL_INFILE_MODE", "unified")
+FEL_INFILE_UNIFICADO_URL = os.getenv(
+    "FEL_INFILE_UNIFICADO_URL",
+    "https://certificador.feel.com.gt/fel/procesounificado/transaccion/v2/xml")
 FEL_INFILE_FIRMA_URL = os.getenv(
     "FEL_INFILE_FIRMA_URL", "https://signer-emisores.feel.com.gt/sign_solicitud_firmas/firma_xml")
 FEL_INFILE_CERT_URL = os.getenv(
     "FEL_INFILE_CERT_URL", "https://certificador.feel.com.gt/fel/certificacion/v2/dte/")
 FEL_INFILE_ANUL_URL = os.getenv(
     "FEL_INFILE_ANUL_URL", "https://certificador.feel.com.gt/fel/anulacion/v2/dte/")
-FEL_INFILE_USUARIO = os.getenv("FEL_INFILE_USUARIO", "")          # header USUARIO
-FEL_INFILE_LLAVE_WS = os.getenv("FEL_INFILE_LLAVE_WS", "")        # header LLAVE (certificación)
-FEL_INFILE_LLAVE_FIRMA = os.getenv("FEL_INFILE_LLAVE_FIRMA", "")  # token de firma
-FEL_INFILE_ALIAS = os.getenv("FEL_INFILE_ALIAS", "")             # usuario FEL (alias de firma)
+FEL_INFILE_USUARIO = os.getenv("FEL_INFILE_USUARIO", "")            # usuario API
+FEL_INFILE_LLAVE_WS = os.getenv("FEL_INFILE_LLAVE_WS", "")          # llave API (web service)
+FEL_INFILE_USUARIO_FIRMA = os.getenv("FEL_INFILE_USUARIO_FIRMA", "")  # usuario de firma
+FEL_INFILE_LLAVE_FIRMA = os.getenv("FEL_INFILE_LLAVE_FIRMA", "")    # llave de firma
+FEL_INFILE_ALIAS = os.getenv("FEL_INFILE_ALIAS", "")               # alias de firma (flujo de dos pasos)
 FEL_INFILE_NIT_EMISOR = os.getenv("FEL_INFILE_NIT_EMISOR", "")
 FEL_INFILE_CORREO_COPIA = os.getenv("FEL_INFILE_CORREO_COPIA", "")
 FEL_INFILE_IDENTIFICADOR_PREFIX = os.getenv("FEL_INFILE_IDENTIFICADOR_PREFIX", "FERRE")
 FEL_INFILE_LOOKUP_URL = os.getenv(
-    "FEL_INFILE_LOOKUP_URL", "https://consultareceptor.feel.com.gt/rest/action")
+    "FEL_INFILE_LOOKUP_URL", "https://consultareceptores.feel.com.gt/rest/action")
 
 
 # ---------------------------------------------------------------------------
@@ -276,6 +283,10 @@ import sys  # noqa: E402
 if "test" in sys.argv:
     for _scope in ("anon", "login", "password_reset"):
         REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"][_scope] = None
+    # En pruebas usamos siempre el certificador simulado (sin red), aunque el
+    # .env tenga credenciales reales de Infile. Los tests que prueban Infile
+    # activan el driver con override_settings.
+    FEL_DRIVER = "stub"
 
 from datetime import timedelta  # noqa: E402
 
