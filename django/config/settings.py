@@ -163,6 +163,22 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# ---------------------------------------------------------------------------
+# Email. Por defecto imprime en consola (desarrollo); en producción configurar
+# EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend + EMAIL_HOST/USER/…
+# ---------------------------------------------------------------------------
+EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
+EMAIL_HOST = os.getenv("EMAIL_HOST", "")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
+EMAIL_USE_SSL = env_bool("EMAIL_USE_SSL", False)
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "Ferretería <no-reply@ferreteria.local>")
+
+# URL pública del SPA, para armar los enlaces de los correos (reseteo de clave).
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+
 # Datos de la empresa por defecto (se sobreescriben con CompanySetting en BD)
 COMPANY_DEFAULT_TAX_RATE = float(os.getenv("COMPANY_DEFAULT_TAX_RATE", "12"))
 # True = los precios de venta YA incluyen IVA (precio al público); el IVA se
@@ -230,7 +246,26 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_PAGINATION_CLASS": "config.pagination.DefaultPagination",
     "PAGE_SIZE": 15,
+    # Rate-limiting: protege los endpoints anónimos (login, reseteo, catálogo).
+    # Los usuarios autenticados (POS/staff) no se limitan globalmente para no
+    # interferir con el uso intensivo; el login y el reseteo tienen su propio tope.
+    "DEFAULT_THROTTLE_CLASSES": (
+        "rest_framework.throttling.AnonRateThrottle",
+    ),
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": os.getenv("THROTTLE_ANON", "60/min"),
+        "login": os.getenv("THROTTLE_LOGIN", "10/min"),
+        "password_reset": os.getenv("THROTTLE_PASSWORD_RESET", "5/min"),
+    },
 }
+
+# Durante los tests se desactiva el rate-limiting para que el estado de la caché
+# no se filtre entre casos (cada test que hace login compartiría el contador).
+import sys  # noqa: E402
+
+if "test" in sys.argv:
+    for _scope in ("anon", "login", "password_reset"):
+        REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"][_scope] = None
 
 from datetime import timedelta  # noqa: E402
 

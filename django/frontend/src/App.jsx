@@ -48,6 +48,9 @@ import ImportData from "./pages/admin/ImportData";
 import Backups from "./pages/admin/Backups";
 import PublicCatalog from "./pages/public/PublicCatalog";
 import CustomerDisplay from "./pages/pos/CustomerDisplay";
+import ForgotPassword from "./pages/auth/ForgotPassword";
+import ResetPassword from "./pages/auth/ResetPassword";
+import ChangePassword from "./pages/auth/ChangePassword";
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
@@ -60,6 +63,8 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/recuperar-contrasena" element={<ForgotPassword />} />
+      <Route path="/restablecer-contrasena" element={<ResetPassword />} />
       <Route path="/catalogo" element={<PublicCatalog />} />
       <Route path="/pantalla-cliente" element={<CustomerDisplay />} />
       <Route path="/" element={<Protected><Dashboard /></Protected>} />
@@ -111,6 +116,7 @@ export default function App() {
       <Route path="/admin/auditoria" element={<Protected><AuditLog /></Protected>} />
       <Route path="/facturas" element={<Protected><Invoices /></Protected>} />
       <Route path="/admin/empresa" element={<Protected><CompanySettings /></Protected>} />
+      <Route path="/cambiar-contrasena" element={<Protected><ChangePassword /></Protected>} />
       <Route path="/admin/importar" element={<Protected><ImportData /></Protected>} />
       <Route path="/admin/respaldos" element={<Protected><Backups /></Protected>} />
       <Route path="*" element={<Navigate to="/" replace />} />

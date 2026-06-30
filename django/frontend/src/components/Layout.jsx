@@ -53,7 +53,8 @@ export default function Layout({ children }) {
           )}
         </nav>
         <div className="px-5 py-3 border-t border-slate-700 text-xs text-slate-400">
-          {user?.name || user?.email}
+          <div>{user?.name || user?.email}</div>
+          <NavLink to="/cambiar-contrasena" className="text-slate-400 hover:text-white">Cambiar contraseña</NavLink>
         </div>
       </aside>
 

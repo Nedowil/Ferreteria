@@ -228,3 +228,90 @@ class BackupApiTests(APITestCase):
     def test_descarga_inexistente_404(self):
         r = self._client("a@test.com").get("/api/backups/ferreteria-9999-99-99_000000.zip/download/")
         self.assertEqual(r.status_code, 404)
+
+
+class AuthPasswordTests(APITestCase):
+    """Cambio y reseteo de contraseña."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        self.User = get_user_model()
+        self.user = self.User.objects.create_user(
+            username="u", email="u@test.com", password="OldPass123!", name="U")
+
+    def _login(self, pwd):
+        return self.client.post("/api/auth/token/", {"email": "u@test.com", "password": pwd}, format="json")
+
+    def test_cambio_de_contrasena(self):
+        r = self._login("OldPass123!")
+        self.assertEqual(r.status_code, 200)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {r.json()['access']}")
+        r = self.client.post("/api/auth/change-password/",
+                             {"current_password": "OldPass123!", "new_password": "NewPass456!"}, format="json")
+        self.assertEqual(r.status_code, 200, r.content)
+        self.client.credentials()
+        self.assertEqual(self._login("OldPass123!").status_code, 401)
+        self.assertEqual(self._login("NewPass456!").status_code, 200)
+
+    def test_cambio_con_actual_incorrecta(self):
+        r = self._login("OldPass123!")
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {r.json()['access']}")
+        r = self.client.post("/api/auth/change-password/",
+                             {"current_password": "incorrecta", "new_password": "NewPass456!"}, format="json")
+        self.assertEqual(r.status_code, 400)
+
+    def test_cambio_rechaza_contrasena_debil(self):
+        r = self._login("OldPass123!")
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {r.json()['access']}")
+        r = self.client.post("/api/auth/change-password/",
+                             {"current_password": "OldPass123!", "new_password": "123"}, format="json")
+        self.assertEqual(r.status_code, 400)
+
+    def test_reseteo_envia_correo_y_no_revela_existencia(self):
+        from django.core import mail
+        r = self.client.post("/api/auth/password-reset/", {"email": "u@test.com"}, format="json")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("restablecer-contrasena", mail.outbox[0].body)
+        # Correo inexistente: mismo 200, sin correo nuevo
+        r = self.client.post("/api/auth/password-reset/", {"email": "noexiste@test.com"}, format="json")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_reseteo_confirma_con_token_valido(self):
+        from django.contrib.auth.tokens import default_token_generator
+        from django.utils.encoding import force_bytes
+        from django.utils.http import urlsafe_base64_encode
+        uid = urlsafe_base64_encode(force_bytes(self.user.pk))
+        token = default_token_generator.make_token(self.user)
+        r = self.client.post("/api/auth/password-reset/confirm/",
+                             {"uid": uid, "token": token, "new_password": "Reseted789!"}, format="json")
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertEqual(self._login("Reseted789!").status_code, 200)
+
+    def test_reseteo_rechaza_token_invalido(self):
+        from django.utils.encoding import force_bytes
+        from django.utils.http import urlsafe_base64_encode
+        uid = urlsafe_base64_encode(force_bytes(self.user.pk))
+        r = self.client.post("/api/auth/password-reset/confirm/",
+                             {"uid": uid, "token": "token-malo", "new_password": "Reseted789!"}, format="json")
+        self.assertEqual(r.status_code, 400)
+
+
+class ThrottleTests(APITestCase):
+    """Límite de intentos de login (anti fuerza bruta)."""
+
+    def test_login_se_limita(self):
+        from django.core.cache import cache
+        from core.throttling import LoginRateThrottle
+        cache.clear()
+        original = LoginRateThrottle.THROTTLE_RATES
+        LoginRateThrottle.THROTTLE_RATES = {**original, "login": "2/min"}
+        try:
+            creds = {"email": "x@x.com", "password": "malo"}
+            codes = [self.client.post("/api/auth/token/", creds, format="json").status_code
+                     for _ in range(3)]
+            self.assertEqual(codes[-1], 429, codes)  # el 3er intento se bloquea
+        finally:
+            LoginRateThrottle.THROTTLE_RATES = original
+            cache.clear()

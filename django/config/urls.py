@@ -6,9 +6,9 @@ from django.http import HttpResponse
 from django.urls import include, path, re_path
 from django.views.static import serve as static_serve
 from rest_framework.routers import DefaultRouter
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.views import TokenRefreshView
 
-from core import backup_views, views as core_views
+from core import auth_views, backup_views, views as core_views
 from inventory import public as public_views
 
 router = DefaultRouter()
@@ -21,9 +21,12 @@ api_patterns = [
     path("public/catalog/", public_views.PublicCatalogView.as_view(), name="public-catalog"),
     path("public/catalog/info/", public_views.public_catalog_info, name="public-catalog-info"),
     # Autenticación JWT
-    path("auth/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
+    path("auth/token/", auth_views.ThrottledTokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("auth/me/", core_views.me, name="me"),
+    path("auth/change-password/", auth_views.change_password, name="change-password"),
+    path("auth/password-reset/", auth_views.password_reset_request, name="password-reset"),
+    path("auth/password-reset/confirm/", auth_views.password_reset_confirm, name="password-reset-confirm"),
     # Núcleo
     path("dashboard/", core_views.dashboard, name="dashboard"),
     path("permissions/", core_views.permission_catalog, name="permission-catalog"),

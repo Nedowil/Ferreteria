@@ -16,6 +16,8 @@ arquitectura **desacoplada**:
 | Módulo | API | SPA |
 |--------|-----|-----|
 | Auth JWT + perfil + roles | ✅ | ✅ |
+| Contraseñas: cambio propio + reseteo por correo | ✅ | ✅ |
+| Rate-limiting (login y reseteo) y email/SMTP configurable | ✅ | — |
 | Multi-sucursal (header `X-Branch-Id`) | ✅ | ✅ |
 | Inventario: productos, categorías, marcas, unidades | ✅ | ✅ |
 | Inventario: movimientos, stock bajo, conteo físico | ✅ | ✅ |
@@ -116,6 +118,9 @@ DEBUG=False .venv/bin/gunicorn config.wsgi:application --bind 0.0.0.0:8000 --wor
 - TLS por un proxy/balanceador delante; opcionalmente `SECURE_SSL_REDIRECT=True`
   y `SECURE_HSTS_SECONDS` (la app ya respeta `X-Forwarded-Proto`).
 - Crear el primer admin con `DJANGO_SUPERUSER_EMAIL`/`DJANGO_SUPERUSER_PASSWORD`.
+- Email (para el reseteo de contraseña): definir `EMAIL_BACKEND=…smtp…` y las
+  variables `EMAIL_*` + `FRONTEND_URL`. Sin SMTP, los correos se imprimen en la
+  consola del servidor. Los límites de intentos se ajustan con `THROTTLE_*`.
 - Respaldos automáticos: programar `manage.py backup_run --keep=14` por cron
   (los respaldos quedan en el volumen `backups`).
 - FEL: poner `FEL_DRIVER=infile` y las credenciales `FEL_INFILE_*` cuando estén.
@@ -138,9 +143,12 @@ activa viaja en el header `X-Branch-Id`.
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| POST | `/api/auth/token/` | Login → `{access, refresh}` |
+| POST | `/api/auth/token/` | Login → `{access, refresh}` (limitado: `THROTTLE_LOGIN`) |
 | POST | `/api/auth/token/refresh/` | Renovar access token |
 | GET | `/api/auth/me/` | Usuario actual + sucursal |
+| POST | `/api/auth/change-password/` | Cambiar la propia contraseña (requiere la actual) |
+| POST | `/api/auth/password-reset/` | Solicitar enlace de reseteo por correo |
+| POST | `/api/auth/password-reset/confirm/` | Fijar nueva contraseña con uid+token |
 | GET | `/api/dashboard/` | KPIs del tablero |
 | GET | `/api/branches/` | Sucursales del usuario |
 | CRUD | `/api/inventory/products/` | Productos (filtros: `search`, `category`, `brand`, `low_stock`) |

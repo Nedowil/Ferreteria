@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
 export default function Login() {
@@ -21,8 +21,12 @@ export default function Login() {
     try {
       await login(email, password);
       navigate("/", { replace: true });
-    } catch {
-      setError("Credenciales inválidas.");
+    } catch (err) {
+      if (err.response?.status === 429) {
+        setError("Demasiados intentos. Espera un momento e inténtalo de nuevo.");
+      } else {
+        setError("Credenciales inválidas.");
+      }
     } finally {
       setBusy(false);
     }
@@ -47,6 +51,11 @@ export default function Login() {
                 className="w-full bg-slate-900 text-white rounded py-2 font-medium hover:bg-slate-800 disabled:opacity-50">
           {busy ? "Ingresando…" : "Ingresar"}
         </button>
+        <div className="text-center mt-4">
+          <Link to="/recuperar-contrasena" className="text-sm text-slate-500 hover:text-slate-800">
+            ¿Olvidaste tu contraseña?
+          </Link>
+        </div>
       </form>
     </div>
   );
