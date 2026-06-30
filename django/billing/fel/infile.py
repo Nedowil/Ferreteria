@@ -41,7 +41,9 @@ def _cfg(name, default=""):
 
 
 def _esc(value):
-    return escape(str(value if value is not None else ""))
+    # Escapa también comillas para que sea válido dentro de atributos XML
+    # (la SAT/Infile lo exige: &, <, >, ", ').
+    return escape(str(value if value is not None else ""), {'"': "&quot;", "'": "&apos;"})
 
 
 def build_invoice_xml(dte: dict) -> str:
