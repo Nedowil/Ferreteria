@@ -177,7 +177,9 @@ export default function ProductForm() {
   const [busy, setBusy] = useState(false);
   // Estado del selector de precio base/empaque
   const [purchaseRaw, setPurchaseRaw] = useState("");
-  const [purchaseMode, setPurchaseMode] = useState("base");
+  // Por defecto el precio de COMPRA se ingresa por empaque (uno compra por caja);
+  // así se escribe el precio de la caja y el sistema saca el costo por unidad base.
+  const [purchaseMode, setPurchaseMode] = useState("container");
   const [saleRaw, setSaleRaw] = useState("");
   const [saleMode, setSaleMode] = useState("base");
   const [presentations, setPresentations] = useState([]);
@@ -188,8 +190,14 @@ export default function ProductForm() {
       api.get(`/inventory/products/${id}/`).then((r) => {
         const d = r.data;
         setForm({ ...EMPTY, ...Object.fromEntries(Object.entries(d).map(([k, v]) => [k, v === null ? "" : v])) });
-        // Inicializa los inputs de precio (en modo base = lo que viene de BD)
-        setPurchaseRaw(Number(d.purchase_price) > 0 ? String(d.purchase_price) : "");
+        // En BD el precio se guarda por unidad base. Si hay empaque, el de COMPRA
+        // se muestra por empaque (precio_base × factor) para que cuadre el round-trip.
+        const cf = Number(d.container_factor) || 0;
+        const pmode = cf > 0 ? "container" : "base";
+        setPurchaseMode(pmode);
+        setPurchaseRaw(Number(d.purchase_price) > 0
+          ? String(pmode === "container" ? +(Number(d.purchase_price) * cf).toFixed(2) : d.purchase_price)
+          : "");
         setSaleRaw(Number(d.sale_price) > 0 ? String(d.sale_price) : "");
         setPresentations((d.presentations || []).map((p) => ({
           label: p.label, units_factor: String(Number(p.units_factor)),
