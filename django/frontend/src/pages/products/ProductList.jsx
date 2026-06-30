@@ -34,6 +34,26 @@ export default function ProductList() {
     load();
   };
 
+  const printLabel = async (p) => {
+    const copies = Number(prompt(`¿Cuántas etiquetas de "${p.name}"?`, "1"));
+    if (!copies || copies < 1) return;
+    try {
+      const { data } = await api.post(`/inventory/products/${p.id}/label/`, { copies });
+      if (data.status === "sent") {
+        alert("Etiqueta enviada a la Zebra.");
+        return;
+      }
+      const bytes = Uint8Array.from(atob(data.zpl_base64), (ch) => ch.charCodeAt(0));
+      const url = URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" }));
+      const a = document.createElement("a");
+      a.href = url; a.download = `etiqueta-${p.sku}.zpl`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert(e.response?.data?.detail || "No se pudo imprimir la etiqueta.");
+    }
+  };
+
   const totalPages = Math.ceil(data.count / 15) || 1;
 
   return (
@@ -85,7 +105,8 @@ export default function ProductList() {
                 <td className="px-4 py-2 text-right">Q{p.sale_price}</td>
                 <td className={"px-4 py-2 text-right " + (p.is_low_stock ? "text-red-600 font-medium" : "")}>{p.stock_display}</td>
                 <td className="px-4 py-2 text-right whitespace-nowrap">
-                  <Link to={`/productos/${p.id}/inventario`} className="text-slate-600 hover:underline">Inventario</Link>
+                  <button onClick={() => printLabel(p)} className="text-slate-600 hover:underline" title="Imprimir etiqueta Zebra">🏷️</button>
+                  <Link to={`/productos/${p.id}/inventario`} className="text-slate-600 hover:underline ml-2">Inventario</Link>
                   <Link to={`/productos/${p.id}/editar`} className="text-blue-600 hover:underline ml-2">Editar</Link>
                   <button onClick={() => remove(p.id)} className="text-red-600 hover:underline ml-2">Eliminar</button>
                 </td>

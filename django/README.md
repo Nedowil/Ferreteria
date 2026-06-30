@@ -35,6 +35,7 @@ arquitectura **desacoplada**:
 | Configuración de empresa (datos fiscales, IVA, FEL, impresoras) | ✅ | ✅ |
 | Facturación / FEL Guatemala (emisión, anulación, cupo, ticket) | ✅ | ✅ |
 | Impresión de tickets en térmica (ESC/POS: red 9100 / sistema) | ✅ | ✅ |
+| Etiquetas de producto en Zebra (ZPL: nombre, código de barras, precio) | ✅ | ✅ |
 | Catálogo público en línea (sin login, precios condicionales, WhatsApp) | ✅ | ✅ |
 | Importación CSV (productos, clientes, ventas históricas) | ✅ | ✅ |
 | Respaldos (ZIP de BD + media, descarga/borrado, cron) | ✅ | ✅ |
@@ -190,6 +191,8 @@ activa viaja en el header `X-Branch-Id`.
 | GET | `/api/fel/config/` | Configuración del certificador FEL activo |
 | POST | `/api/sales/{id}/print/` | Imprime el ticket en la térmica (ESC/POS) |
 | POST | `/api/printer/test/` | Ticket de prueba de impresora (`configuracion.gestionar`) |
+| POST | `/api/inventory/products/{id}/label/` | Imprime etiqueta Zebra (ZPL) del producto |
+| POST | `/api/inventory/products/zebra-test/` | Etiqueta Zebra de prueba (`configuracion.gestionar`) |
 | GET | `/api/public/catalog/` · `/info/` | Catálogo público (sin auth) — productos visibles y encabezado |
 | GET | `/api/imports/template/{tipo}/` | Plantilla CSV (`productos`/`clientes`/`ventas`) |
 | POST | `/api/imports/products/` · `/customers/` · `/sales/` | Importar CSV (`imports.gestionar`) |
@@ -230,6 +233,16 @@ a partir de los mismos datos del comprobante. Según `CompanySetting.printer_mod
 
 El ancho (`printer_width` 58/80 mm) ajusta las columnas; los acentos y la ñ se
 codifican en CP850. Hay un endpoint de **impresión de prueba** (`/api/printer/test/`).
+
+### Etiquetas de producto (Zebra / ZPL)
+
+`inventory/labels.py` genera el **ZPL** de la etiqueta (nombre, SKU, código de
+barras y precio) según `CompanySetting.zebra_*` (ancho/alto en mm, DPI). Usa
+**EAN-13** (`^BE`) cuando el código tiene 13 dígitos, o **Code128** (`^BC`) en
+caso contrario. Igual que la térmica: en modo `network` envía por TCP al puerto
+9100; en `system` devuelve el ZPL en base64 (el SPA descarga un `.zpl`). Desde
+**Productos** cada fila tiene un botón 🏷️ que pide la cantidad de copias, y la
+configuración de empresa incluye una **etiqueta de prueba**.
 
 ### Pantalla de cliente (POS)
 

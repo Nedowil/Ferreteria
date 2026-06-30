@@ -10,7 +10,12 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+import base64
+
 from core.api_utils import BranchContextMixin, get_request_branch
+from core.models import CompanySetting
+from core.permissions import HasPermission
+from . import labels
 from .models import Brand, Category, InventoryMovement, Product, Unit
 from .serializers import (
     BrandSerializer,
@@ -55,6 +60,24 @@ class UnitViewSet(viewsets.ModelViewSet):
         if instance.products.exists():
             raise ValidationError("No se puede eliminar: tiene productos asociados.")
         instance.delete()
+
+
+def _deliver_zpl(company, data):
+    """Envía el ZPL a la Zebra de red, o lo devuelve (base64) en modo sistema."""
+    if company.zebra_mode == "network":
+        if not company.zebra_ip:
+            return Response({"detail": "Configura la IP de la impresora Zebra."},
+                            status=status.HTTP_400_BAD_REQUEST)
+        try:
+            labels.send_to_network_printer(company.zebra_ip, company.zebra_port, data)
+        except OSError as e:
+            return Response({"detail": f"No se pudo conectar con la Zebra: {e}"},
+                            status=status.HTTP_502_BAD_GATEWAY)
+        return Response({"status": "sent", "mode": "network"})
+    return Response({
+        "status": "raw", "mode": company.zebra_mode,
+        "zpl_base64": base64.b64encode(data).decode("ascii"),
+    })
 
 
 class ProductViewSet(BranchContextMixin, viewsets.ModelViewSet):
@@ -148,6 +171,23 @@ class ProductViewSet(BranchContextMixin, viewsets.ModelViewSet):
         except InventoryError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(MovementSerializer(movement).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["post"])
+    def label(self, request, pk=None):
+        """Imprime la etiqueta Zebra (ZPL) del producto."""
+        product = self.get_object()
+        company = CompanySetting.current()
+        copies = request.data.get("copies", 1)
+        show_price = request.data.get("show_price", True)
+        data = labels.build_label_zpl(product, company, show_price=bool(show_price), copies=copies)
+        return _deliver_zpl(company, data)
+
+    @action(detail=False, methods=["post"], url_path="zebra-test",
+            permission_classes=[HasPermission.require("configuracion.gestionar")])
+    def zebra_test(self, request):
+        """Imprime una etiqueta de prueba en la impresora Zebra."""
+        company = CompanySetting.current()
+        return _deliver_zpl(company, labels.build_test_zpl(company))
 
     @action(detail=False, methods=["get"], url_path="low-stock")
     def low_stock(self, request):

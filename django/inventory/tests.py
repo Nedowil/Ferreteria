@@ -158,3 +158,96 @@ class PublicCatalogTests(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.json()["title"], "Mi Tienda")
         self.assertEqual(r.json()["whatsapp_link"], "https://wa.me/50255551234")
+
+
+class ZebraLabelTests(TestCase):
+    """Etiquetas Zebra (ZPL): generación y endpoints de impresión."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from django.contrib.auth.models import Group
+        from core.models import CompanySetting
+        from core.permissions import ROLE_MATRIX, sync_permissions
+        self.User = get_user_model()
+        self.company = CompanySetting.current()
+        self.branch = Branch.objects.create(name="Matriz", code="M", is_main=True)
+        self.product = Product.objects.create(
+            sku="MAR-0001", name="Martillo", barcode="2001234567894",
+            sale_price=Decimal("75"), stock=Decimal("10"),
+        )
+        perms = sync_permissions()
+        for role, codes in ROLE_MATRIX.items():
+            g, _ = Group.objects.get_or_create(name=role)
+            g.permissions.set([perms[c] for c in codes if c in perms])
+        self.admin = self.User.objects.create_user(username="a", email="a@test.com", password="x123", is_superuser=True)
+        self.seller = self.User.objects.create_user(username="s", email="s@test.com", password="x123")
+        self.seller.groups.add(Group.objects.get(name="vendedor"))
+
+    def _client(self, email):
+        from rest_framework.test import APIClient
+        c = APIClient()
+        r = c.post("/api/auth/token/", {"email": email, "password": "x123"}, format="json")
+        c.credentials(HTTP_AUTHORIZATION=f"Bearer {r.json()['access']}", HTTP_X_BRANCH_ID=str(self.branch.id))
+        return c
+
+    def test_build_label_zpl(self):
+        from inventory.labels import build_label_zpl
+        zpl = build_label_zpl(self.product, self.company, copies=3).decode()
+        self.assertTrue(zpl.startswith("^XA"))
+        self.assertTrue(zpl.rstrip().endswith("^XZ"))
+        self.assertIn("MAR-0001", zpl)
+        self.assertIn("^PQ3", zpl)
+        self.assertIn("Q 75.00", zpl)
+
+    def test_ean13_usa_codigo_BE(self):
+        from inventory.labels import build_label_zpl
+        zpl = build_label_zpl(self.product, self.company).decode()
+        self.assertIn("^BEN", zpl)  # EAN-13
+
+    def test_no_ean_usa_code128(self):
+        from inventory.labels import build_label_zpl
+        p = Product.objects.create(sku="TORN-1", name="Tornillo", barcode="ABC-123", sale_price=Decimal("2"))
+        zpl = build_label_zpl(p, self.company).decode()
+        self.assertIn("^BCN", zpl)  # Code128
+
+    def test_label_modo_system_devuelve_base64(self):
+        import base64
+        self.company.zebra_mode = "system"
+        self.company.save()
+        r = self._client("a@test.com").post(f"/api/inventory/products/{self.product.id}/label/", {"copies": 2}, format="json")
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertEqual(r.json()["status"], "raw")
+        self.assertIn(b"^XA", base64.b64decode(r.json()["zpl_base64"]))
+
+    def test_label_modo_network_envia(self):
+        from unittest.mock import patch
+        self.company.zebra_mode = "network"
+        self.company.zebra_ip = "192.168.0.70"
+        self.company.save()
+        with patch("inventory.labels.send_to_network_printer") as send:
+            r = self._client("a@test.com").post(f"/api/inventory/products/{self.product.id}/label/")
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertEqual(r.json()["status"], "sent")
+        send.assert_called_once()
+
+    def test_label_network_sin_ip_da_400(self):
+        self.company.zebra_mode = "network"
+        self.company.zebra_ip = ""
+        self.company.save()
+        r = self._client("a@test.com").post(f"/api/inventory/products/{self.product.id}/label/")
+        self.assertEqual(r.status_code, 400)
+
+    def test_label_network_falla_da_502(self):
+        from unittest.mock import patch
+        self.company.zebra_mode = "network"
+        self.company.zebra_ip = "10.0.0.9"
+        self.company.save()
+        with patch("inventory.labels.send_to_network_printer", side_effect=OSError("timeout")):
+            r = self._client("a@test.com").post(f"/api/inventory/products/{self.product.id}/label/")
+        self.assertEqual(r.status_code, 502)
+
+    def test_zebra_test_requiere_permiso(self):
+        self.company.zebra_mode = "system"
+        self.company.save()
+        self.assertEqual(self._client("a@test.com").post("/api/inventory/products/zebra-test/").status_code, 200)
+        self.assertEqual(self._client("s@test.com").post("/api/inventory/products/zebra-test/").status_code, 403)

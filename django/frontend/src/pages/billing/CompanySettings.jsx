@@ -66,6 +66,26 @@ export default function CompanySettings() {
     }
   };
 
+  const testZebra = async () => {
+    setMsg(""); setErr("");
+    try {
+      const { data } = await api.post("/inventory/products/zebra-test/");
+      if (data.status === "sent") {
+        setMsg("Etiqueta de prueba enviada a la Zebra.");
+        return;
+      }
+      const bytes = Uint8Array.from(atob(data.zpl_base64), (ch) => ch.charCodeAt(0));
+      const url = URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" }));
+      const a = document.createElement("a");
+      a.href = url; a.download = "prueba.zpl";
+      a.click();
+      URL.revokeObjectURL(url);
+      setMsg("Modo no-red: se descargó la etiqueta ZPL de prueba.");
+    } catch (e2) {
+      setErr(e2.response?.data?.detail || "No se pudo imprimir la prueba Zebra.");
+    }
+  };
+
   if (!c) return <div className="text-slate-400">Cargando…</div>;
 
   return (
@@ -167,6 +187,43 @@ export default function CompanySettings() {
           <div className="sm:col-span-2">
             <button type="button" onClick={testPrinter} className="text-sm border border-slate-300 rounded px-4 py-2 hover:bg-slate-50">
               Imprimir prueba
+            </button>
+            <span className="ml-2 text-xs text-slate-500">Guarda los cambios antes de probar.</span>
+          </div>
+        </Section>
+
+        <Section title="Impresora Zebra (etiquetas)">
+          <Field label="Modo">
+            <select className={input} value={c.zebra_mode} onChange={(e) => set("zebra_mode", e.target.value)}>
+              <option value="system">Sistema</option>
+              <option value="network">Red (IP)</option>
+            </select>
+          </Field>
+          <Field label="DPI">
+            <select className={input} value={c.zebra_dpi} onChange={(e) => set("zebra_dpi", e.target.value)}>
+              <option value="203">203 dpi</option>
+              <option value="300">300 dpi</option>
+            </select>
+          </Field>
+          <Field label="Ancho de etiqueta (mm)">
+            <input type="number" className={input} value={c.zebra_label_width} onChange={(e) => set("zebra_label_width", e.target.value)} />
+          </Field>
+          <Field label="Alto de etiqueta (mm)">
+            <input type="number" className={input} value={c.zebra_label_height} onChange={(e) => set("zebra_label_height", e.target.value)} />
+          </Field>
+          {c.zebra_mode === "network" && (
+            <>
+              <Field label="IP de la Zebra">
+                <input className={input} value={c.zebra_ip || ""} onChange={(e) => set("zebra_ip", e.target.value)} />
+              </Field>
+              <Field label="Puerto">
+                <input type="number" className={input} value={c.zebra_port} onChange={(e) => set("zebra_port", e.target.value)} />
+              </Field>
+            </>
+          )}
+          <div className="sm:col-span-2">
+            <button type="button" onClick={testZebra} className="text-sm border border-slate-300 rounded px-4 py-2 hover:bg-slate-50">
+              Imprimir etiqueta de prueba
             </button>
             <span className="ml-2 text-xs text-slate-500">Guarda los cambios antes de probar.</span>
           </div>
