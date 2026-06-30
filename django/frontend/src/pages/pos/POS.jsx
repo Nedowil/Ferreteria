@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/client";
 import { publishDisplay, openCustomerDisplay } from "../../pos/customerDisplay";
+import ReturnModal from "./ReturnModal";
 
 // Elige el precio base según el nivel del cliente (público o mayorista).
 function basePriceFor(product, qty, customer) {
@@ -433,6 +434,7 @@ export default function POS() {
   const [addingCustomer, setAddingCustomer] = useState(false);
   const [addingProduct, setAddingProduct] = useState(false);
   const [lastSale, setLastSale] = useState(null); // venta recién cobrada (modal)
+  const [returning, setReturning] = useState(false);
   const searchRef = useRef(null);
 
   const reloadProducts = () =>
@@ -560,6 +562,10 @@ export default function POS() {
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">🛒 Punto de venta</h1>
         <div className="flex items-center gap-3">
+          <button onClick={() => setReturning(true)}
+                  className="text-sm border border-amber-300 text-amber-700 bg-amber-50 rounded-lg px-3 py-1.5 hover:bg-amber-100 transition">
+            ↩️ Devolución
+          </button>
           <button onClick={openCustomerDisplay}
                   className="text-sm border border-slate-300 rounded-lg px-3 py-1.5 hover:bg-slate-50 transition">
             🖥️ Pantalla cliente
@@ -732,6 +738,8 @@ export default function POS() {
             setAddingCustomer(false);
           }} />
       )}
+
+      {returning && <ReturnModal onClose={() => setReturning(false)} />}
 
       {lastSale && (
         <SaleDoneModal sale={lastSale}
