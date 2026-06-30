@@ -242,9 +242,11 @@ export default function ProductForm() {
     const payload = { ...form };
     ["category", "brand", "unit", "container_factor", "container_price", "wholesale_price",
      "wholesale_min_quantity", "container_wholesale_price", "measure_step",
-     "container_label", "barcode", "sku"].forEach((k) => {
+     "container_label", "barcode"].forEach((k) => {
       if (payload[k] === "") payload[k] = null;
     });
+    // SKU: si va vacío se omite (el backend lo autogenera; no acepta null).
+    if (payload.sku === "" || payload.sku == null) delete payload.sku;
     // Stock vacío = 0 (estos campos no aceptan null en el backend).
     ["min_stock", "initial_stock"].forEach((k) => {
       if (payload[k] === "" || payload[k] == null) payload[k] = "0";
