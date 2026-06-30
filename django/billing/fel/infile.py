@@ -280,29 +280,69 @@ class InfileCertifier(FelCertifier):
         except Exception as e:  # red, timeout, JSON inválido…
             return CertificationResult(ok=False, error=f"Error de comunicación con Infile: {e}")
 
+    def _post_form(self, url, fields, headers=None):
+        """POST multipart/form-data (login/consulta de CUI) → dict JSON."""
+        boundary = "----ferre" + uuidlib.uuid4().hex
+        parts = [
+            f'--{boundary}\r\nContent-Disposition: form-data; name="{k}"\r\n\r\n{v}\r\n'
+            for k, v in fields.items()
+        ]
+        body = ("".join(parts) + f"--{boundary}--\r\n").encode("utf-8")
+        hdrs = {"Content-Type": f"multipart/form-data; boundary={boundary}"}
+        hdrs.update(headers or {})
+        req = urllib.request.Request(url, data=body, headers=hdrs, method="POST")
+        with urllib.request.urlopen(req, timeout=self.TIMEOUT) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+
     def lookup_tax_id(self, tax_id: str) -> dict:
-        """Consulta el NIT/DPI ante la SAT vía Infile (consultareceptor)."""
-        tid = (tax_id or "").strip().upper()
+        """Consulta el NIT (consultareceptores) o el DPI/CUI (API con token) en SAT."""
+        tid = (tax_id or "").strip().upper().replace("-", "")
         if tid == "CF":
             return {"success": True, "tax_id": "CF", "name": "Consumidor Final"}
         if not tid:
             return {"success": False, "error": "Indicá el NIT o DPI a buscar."}
         if not _cfg("FEL_INFILE_USUARIO") or not _cfg("FEL_INFILE_LLAVE_WS"):
             return {"success": False, "error": "Faltan credenciales de Infile para consultar la SAT."}
-        url = _cfg("FEL_INFILE_LOOKUP_URL", "https://consultareceptor.feel.com.gt/rest/action")
-        tipo = "cui" if (tid.isdigit() and len(tid) == 13) else "nit"
-        body = {"nit_proveedor": _cfg("FEL_INFILE_NIT_EMISOR"), "codigo": tid, "tipo": tipo}
-        headers = {"USUARIO": _cfg("FEL_INFILE_USUARIO"), "LLAVE": _cfg("FEL_INFILE_LLAVE_WS")}
+        if tid.isdigit() and len(tid) == 13:
+            return self._lookup_cui(tid)
+        return self._lookup_nit(tid)
+
+    def _lookup_nit(self, nit: str) -> dict:
+        # Body JSON: {emisor_codigo, emisor_clave, nit_consulta} → {nit, nombre, mensaje}
+        url = _cfg("FEL_INFILE_LOOKUP_URL", "https://consultareceptores.feel.com.gt/rest/action")
+        body = {
+            "emisor_codigo": _cfg("FEL_INFILE_USUARIO"),
+            "emisor_clave": _cfg("FEL_INFILE_LLAVE_WS"),
+            "nit_consulta": nit,
+        }
         try:
-            res = self._post_json(url, body, headers)
-            if res.get("nombre"):
-                return {
-                    "success": True, "tax_id": tid, "name": res["nombre"],
-                    "address": res.get("direccion"), "regime": res.get("regimen"),
-                }
-            return {"success": False, "error": res.get("mensaje") or "NIT/CUI no encontrado en SAT."}
+            res = self._post_json(url, body)
         except Exception as e:
             return {"success": False, "error": f"Error consultando la SAT: {e}"}
+        if res.get("nombre"):
+            return {"success": True, "tax_id": nit, "name": res["nombre"].strip()}
+        return {"success": False, "error": res.get("mensaje") or "NIT no encontrado en SAT."}
+
+    def _lookup_cui(self, cui: str) -> dict:
+        # 1) login (form-data prefijo/llave) → token; 2) consulta cui con Bearer.
+        login_url = _cfg("FEL_INFILE_CUI_LOGIN_URL",
+                         "https://certificador.feel.com.gt/api/v2/servicios/externos/login")
+        cui_url = _cfg("FEL_INFILE_CUI_URL",
+                       "https://certificador.feel.com.gt/api/v2/servicios/externos/cui")
+        try:
+            login = self._post_form(login_url, {
+                "prefijo": _cfg("FEL_INFILE_USUARIO"), "llave": _cfg("FEL_INFILE_LLAVE_WS"),
+            })
+            token = login.get("token")
+            if not token:
+                return {"success": False, "error": login.get("descripcion") or "No se pudo autenticar para consultar el DPI."}
+            res = self._post_form(cui_url, {"cui": cui}, {"Authorization": f"Bearer {token}"})
+            data = res.get("cui") or {}
+            if res.get("resultado") and data.get("nombre"):
+                return {"success": True, "tax_id": cui, "name": data["nombre"].strip()}
+            return {"success": False, "error": res.get("descripcion") or "DPI no encontrado en SAT."}
+        except Exception as e:
+            return {"success": False, "error": f"Error consultando el DPI: {e}"}
 
     def cancel(self, invoice, reason: str) -> CertificationResult:
         missing = self._require_credentials()

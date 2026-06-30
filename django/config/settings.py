@@ -244,6 +244,11 @@ FEL_INFILE_CORREO_COPIA = os.getenv("FEL_INFILE_CORREO_COPIA", "")
 FEL_INFILE_IDENTIFICADOR_PREFIX = os.getenv("FEL_INFILE_IDENTIFICADOR_PREFIX", "FERRE")
 FEL_INFILE_LOOKUP_URL = os.getenv(
     "FEL_INFILE_LOOKUP_URL", "https://consultareceptores.feel.com.gt/rest/action")
+# Consulta de DPI/CUI (flujo con token JWT): login + consulta.
+FEL_INFILE_CUI_LOGIN_URL = os.getenv(
+    "FEL_INFILE_CUI_LOGIN_URL", "https://certificador.feel.com.gt/api/v2/servicios/externos/login")
+FEL_INFILE_CUI_URL = os.getenv(
+    "FEL_INFILE_CUI_URL", "https://certificador.feel.com.gt/api/v2/servicios/externos/cui")
 
 
 # ---------------------------------------------------------------------------

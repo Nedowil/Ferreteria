@@ -258,6 +258,42 @@ class InfileCertifierTests(TestCase):
                          {"usuario", "llave", "identificador", "usuariofirma", "llavefirma"})
         self.assertEqual(captured["headers"]["usuariofirma"], "USR123")
 
+    def test_lookup_nit_infile(self):
+        """Consulta de NIT: body {emisor_codigo, emisor_clave, nit_consulta} → nombre."""
+        from unittest.mock import patch
+        from django.test import override_settings
+        captured = {}
+
+        def fake_post_json(self_, url, payload, headers=None):
+            captured["url"] = url
+            captured["payload"] = payload
+            return {"nit": "12521337", "nombre": "INFILE, SOCIEDAD ANONIMA", "mensaje": ""}
+
+        with override_settings(**INFILE_CREDS), \
+                patch.object(type(self.cert), "_post_json", new=fake_post_json):
+            res = self.cert.lookup_tax_id("12521337")
+        self.assertTrue(res["success"])
+        self.assertEqual(res["name"], "INFILE, SOCIEDAD ANONIMA")
+        self.assertEqual(set(captured["payload"]), {"emisor_codigo", "emisor_clave", "nit_consulta"})
+
+    def test_lookup_cui_infile(self):
+        """Consulta de DPI/CUI (13 dígitos): login con token → consulta cui."""
+        from unittest.mock import patch
+        from django.test import override_settings
+
+        def fake_post_form(self_, url, fields, headers=None):
+            if url.endswith("/login"):
+                return {"resultado": True, "token": "JWT-TOKEN"}
+            assert headers and headers.get("Authorization") == "Bearer JWT-TOKEN"
+            return {"resultado": True, "cui": {"cui": fields["cui"],
+                    "nombre": "NOE RECINOS", "fallecido": "NO"}}
+
+        with override_settings(**INFILE_CREDS), \
+                patch.object(type(self.cert), "_post_form", new=fake_post_form):
+            res = self.cert.lookup_tax_id("1924044582106")
+        self.assertTrue(res["success"])
+        self.assertEqual(res["name"], "NOE RECINOS")
+
     def test_error_de_certificacion_se_propaga(self):
         from unittest.mock import patch
         from django.test import override_settings
