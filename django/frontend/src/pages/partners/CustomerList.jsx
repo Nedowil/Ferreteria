@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import api from "../../api/client";
 
 const BLANK = { name: "", tax_id: "", email: "", phone: "", address: "", notes: "",
-  active: true, customer_type: "retail", wholesale_discount_percent: "", credit_limit: "0", credit_enabled: false };
+  active: true, customer_type: "retail", wholesale_discount_percent: "", credit_limit: "", credit_enabled: false };
 
 // Solo se usan Público y Mayorista. El tipo 'contractor' sigue en BD pero no
 // se ofrece en la UI (igual que en la app Laravel).
@@ -41,6 +41,7 @@ export default function CustomerList() {
     e.preventDefault();
     const payload = { ...editing };
     if (payload.wholesale_discount_percent === "") payload.wholesale_discount_percent = null;
+    if (payload.credit_limit === "" || payload.credit_limit == null) payload.credit_limit = "0";
     if (editing.id) await api.put(`/customers/${editing.id}/`, payload);
     else await api.post("/customers/", payload);
     setEditing(null); load();
@@ -136,7 +137,7 @@ export default function CustomerList() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Límite de crédito</label>
-                <input type="number" value={editing.credit_limit ?? "0"} onChange={(e) => setEditing({ ...editing, credit_limit: e.target.value })}
+                <input type="number" value={editing.credit_limit ?? ""} placeholder="0" onChange={(e) => setEditing({ ...editing, credit_limit: e.target.value })}
                        className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
               </div>
             </div>

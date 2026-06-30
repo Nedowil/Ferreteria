@@ -8,9 +8,9 @@ const EMPTY = {
   base_unit_label: "unidad", container_label: "", container_factor: "", container_price: "",
   tax_type: "iva", purchase_price: "0", sale_price: "0",
   wholesale_price: "", wholesale_min_quantity: "", container_wholesale_price: "",
-  min_stock: "0", sells_by_measure: false, measure_step: "",
+  min_stock: "", sells_by_measure: false, measure_step: "",
   active: true, public_visible: true,
-  initial_stock: "0", stock_input_mode: "base",
+  initial_stock: "", stock_input_mode: "base",
 };
 
 // Parsea "1/2", "0,5", "10" -> número (0 si inválido)
@@ -27,11 +27,12 @@ function parseFrac(s) {
 }
 
 // Campos a nivel de módulo (identidad estable → no pierden el foco al escribir)
-function TextField({ label, name, form, errors, onChange, type = "text", hint }) {
+function TextField({ label, name, form, errors, onChange, type = "text", hint, placeholder }) {
   return (
     <div>
       <label className="block text-sm font-medium mb-1">{label}</label>
-      <input type={type} value={form[name] ?? ""} onChange={(e) => onChange(name, e.target.value)}
+      <input type={type} value={form[name] ?? ""} placeholder={placeholder}
+             onChange={(e) => onChange(name, e.target.value)}
              className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
       {hint && <p className="text-xs text-slate-400 mt-1">{hint}</p>}
       {errors[name] && <p className="text-red-600 text-xs mt-1">{String(errors[name])}</p>}
@@ -244,6 +245,10 @@ export default function ProductForm() {
      "container_label", "barcode", "sku"].forEach((k) => {
       if (payload[k] === "") payload[k] = null;
     });
+    // Stock vacío = 0 (estos campos no aceptan null en el backend).
+    ["min_stock", "initial_stock"].forEach((k) => {
+      if (payload[k] === "" || payload[k] == null) payload[k] = "0";
+    });
     // Presentaciones: solo las que tienen etiqueta (el factor se parsea en el backend).
     payload.presentations_input = presentations
       .filter((p) => p.label.trim())
@@ -289,7 +294,7 @@ export default function ProductForm() {
           <TextField label="Unidad base" name="base_unit_label" form={form} errors={errors} onChange={set} />
           <TextField label="Empaque" name="container_label" form={form} errors={errors} onChange={set} />
           <TextField label="Factor de empaque" name="container_factor" form={form} errors={errors} onChange={set} />
-          <TextField label="Precio por empaque" name="container_price" form={form} errors={errors} onChange={set} type="number" />
+          <TextField label="Precio por empaque" name="container_price" form={form} errors={errors} onChange={set} type="number" placeholder="0" />
         </div>
       </section>
 
@@ -314,9 +319,9 @@ export default function ProductForm() {
           </div>
         </div>
         <div className="grid grid-cols-3 gap-4 mt-4">
-          <TextField label="Precio mayorista" name="wholesale_price" form={form} errors={errors} onChange={set} type="number" />
-          <TextField label="Cant. mín. mayorista" name="wholesale_min_quantity" form={form} errors={errors} onChange={set} type="number" />
-          <TextField label="Precio empaque mayorista" name="container_wholesale_price" form={form} errors={errors} onChange={set} type="number" />
+          <TextField label="Precio mayorista" name="wholesale_price" form={form} errors={errors} onChange={set} type="number" placeholder="0" />
+          <TextField label="Cant. mín. mayorista" name="wholesale_min_quantity" form={form} errors={errors} onChange={set} type="number" placeholder="0" />
+          <TextField label="Precio empaque mayorista" name="container_wholesale_price" form={form} errors={errors} onChange={set} type="number" placeholder="0" />
         </div>
       </section>
 
@@ -324,7 +329,7 @@ export default function ProductForm() {
         <h3 className="font-semibold mb-3">Inventario</h3>
         {!editing ? (
           <div className="grid grid-cols-3 gap-4 mb-4">
-            <TextField label="Stock inicial" name="initial_stock" form={form} errors={errors} onChange={set} type="number" />
+            <TextField label="Stock inicial" name="initial_stock" form={form} errors={errors} onChange={set} type="number" placeholder="0" />
             <SelectField label="Modo" name="stock_input_mode" form={form} onChange={set}
                          options={[{ id: "base", name: "Unidad base" }, { id: "container", name: "Empaque" }]} empty="" />
           </div>
@@ -332,13 +337,13 @@ export default function ProductForm() {
           <p className="text-sm text-slate-500 mb-4">El stock se ajusta desde <b>Inventario</b> del producto.</p>
         )}
         <div className="grid grid-cols-3 gap-4">
-          <TextField label="Stock mínimo" name="min_stock" form={form} errors={errors} onChange={set} type="number" />
+          <TextField label="Stock mínimo" name="min_stock" form={form} errors={errors} onChange={set} type="number" placeholder="0" />
         </div>
         <div className="flex gap-6 mt-4 text-sm items-end">
           <label className="flex items-center gap-2">
             <input type="checkbox" checked={form.sells_by_measure} onChange={(e) => set("sells_by_measure", e.target.checked)} /> Se vende por medida
           </label>
-          <TextField label="Paso de medida" name="measure_step" form={form} errors={errors} onChange={set} type="number" />
+          <TextField label="Paso de medida" name="measure_step" form={form} errors={errors} onChange={set} type="number" placeholder="0" />
         </div>
       </section>
 
