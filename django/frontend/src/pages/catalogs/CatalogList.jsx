@@ -43,36 +43,36 @@ export default function CatalogList({ kind }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-lg font-semibold">{cfg.title}</h1>
-        <button onClick={() => setEditing(blank)} className="bg-blue-600 text-white rounded px-4 py-2 text-sm font-medium">+ Nuevo</button>
+        <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">🗂️ {cfg.title}</h1>
+        <button onClick={() => setEditing(blank)} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nuevo</button>
       </div>
 
       {!cfg.isUnit && (
-        <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white rounded-lg shadow p-4 mb-4 flex gap-2">
+        <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 mb-4 flex gap-2">
           <input placeholder="Buscar…" value={search} onChange={(e) => setSearch(e.target.value)}
-                 className="border border-slate-300 rounded px-3 py-2 text-sm" />
-          <button className="bg-slate-700 text-white rounded px-4 text-sm">Buscar</button>
+                 className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+          <button className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition">Buscar</button>
         </form>
       )}
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-slate-500 text-left">
+          <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">
             <tr>
-              <th className="px-5 py-2">Nombre</th>
-              {cfg.isUnit && <th className="px-5 py-2">Abreviatura</th>}
-              {cfg.hasDescription && <th className="px-5 py-2">Descripción</th>}
-              {cfg.hasDescription && <th className="px-5 py-2">Activa</th>}
-              <th className="px-5 py-2 text-right">Acciones</th>
+              <th className="px-5 py-2.5">Nombre</th>
+              {cfg.isUnit && <th className="px-5 py-2.5">Abreviatura</th>}
+              {cfg.hasDescription && <th className="px-5 py-2.5">Descripción</th>}
+              {cfg.hasDescription && <th className="px-5 py-2.5">Activa</th>}
+              <th className="px-5 py-2.5 text-right">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {items.map((o) => (
-              <tr key={o.id} className="border-t">
-                <td className="px-5 py-2 font-medium">{o.name}</td>
+              <tr key={o.id} className="border-t border-slate-100 hover:bg-slate-50/70 transition">
+                <td className="px-5 py-2 font-medium text-slate-800">{o.name}</td>
                 {cfg.isUnit && <td className="px-5 py-2">{o.abbreviation}</td>}
                 {cfg.hasDescription && <td className="px-5 py-2 text-slate-500">{o.description || "—"}</td>}
-                {cfg.hasDescription && <td className="px-5 py-2">{o.active ? <span className="text-green-600">Sí</span> : <span className="text-slate-400">No</span>}</td>}
+                {cfg.hasDescription && <td className="px-5 py-2">{o.active ? <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700">Sí</span> : <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-slate-100 text-slate-600">No</span>}</td>}
                 <td className="px-5 py-2 text-right">
                   <button onClick={() => setEditing(o)} className="text-blue-600 hover:underline">Editar</button>
                   <button onClick={() => remove(o.id)} className="text-red-600 hover:underline ml-3">Eliminar</button>

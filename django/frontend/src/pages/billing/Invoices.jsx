@@ -8,7 +8,7 @@ const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionD
 const statusBadge = {
   certificada: "bg-green-100 text-green-700",
   anulada: "bg-red-100 text-red-700",
-  pendiente: "bg-slate-200 text-slate-600",
+  pendiente: "bg-slate-100 text-slate-600",
   error: "bg-amber-100 text-amber-700",
 };
 
@@ -55,7 +55,7 @@ export default function Invoices() {
   return (
     <div className="max-w-5xl">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-lg font-semibold">Facturación electrónica (FEL)</h1>
+        <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">📑 Facturación electrónica (FEL)</h1>
         {cfg?.is_stub ? (
           <span className="text-xs bg-indigo-100 text-indigo-700 rounded px-2 py-1">
             Certificador de pruebas (simulado)
@@ -72,7 +72,7 @@ export default function Invoices() {
       </div>
 
       {quota && (
-        <div className="bg-white rounded-lg shadow p-4 mb-4 flex flex-wrap gap-6 text-sm">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 mb-4 flex flex-wrap gap-6 text-sm">
           <div><span className="text-slate-500">DTE emitidos en el ciclo:</span> <b>{quota.used}</b></div>
           <div><span className="text-slate-500">Cupo:</span> <b>{quota.quota > 0 ? quota.quota : "Sin límite"}</b></div>
           {quota.remaining !== null && (
@@ -96,27 +96,27 @@ export default function Invoices() {
       </div>
 
       {tab === "emitidas" && (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-slate-500 text-left">
+            <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">
               <tr>
-                <th className="px-4 py-2">Venta</th><th className="px-4 py-2">Cliente</th>
-                <th className="px-4 py-2">Tipo</th><th className="px-4 py-2">Serie-Número</th>
-                <th className="px-4 py-2">Autorización SAT</th><th className="px-4 py-2 text-right">Total</th>
-                <th className="px-4 py-2">Estado</th><th className="px-4 py-2"></th>
+                <th className="px-4 py-2.5">Venta</th><th className="px-4 py-2.5">Cliente</th>
+                <th className="px-4 py-2.5">Tipo</th><th className="px-4 py-2.5">Serie-Número</th>
+                <th className="px-4 py-2.5">Autorización SAT</th><th className="px-4 py-2.5 text-right">Total</th>
+                <th className="px-4 py-2.5">Estado</th><th className="px-4 py-2.5"></th>
               </tr>
             </thead>
             <tbody>
               {invoices.map((i) => (
-                <tr key={i.id} className="border-t">
+                <tr key={i.id} className="border-t border-slate-100 hover:bg-slate-50/70 transition">
                   <td className="px-4 py-2"><Link to={`/ventas/${i.sale}`} className="text-blue-600">{i.sale_folio}</Link></td>
-                  <td className="px-4 py-2">{i.customer_name || "Consumidor final"}</td>
+                  <td className="px-4 py-2 font-medium text-slate-800">{i.customer_name || "Consumidor final"}</td>
                   <td className="px-4 py-2">{i.document_type}</td>
                   <td className="px-4 py-2 font-mono text-xs">{i.serie ? `${i.serie}-${i.numero}` : "—"}</td>
                   <td className="px-4 py-2 font-mono text-xs truncate max-w-[180px]" title={i.uuid}>{i.uuid || "—"}</td>
-                  <td className="px-4 py-2 text-right">{Q(i.total)}</td>
+                  <td className="px-4 py-2 text-right font-semibold text-slate-700">{Q(i.total)}</td>
                   <td className="px-4 py-2">
-                    <span className={"text-xs px-2 py-0.5 rounded " + (statusBadge[i.status] || "")}>{i.status_display}</span>
+                    <span className={"inline-block rounded-full px-2 py-0.5 text-xs font-medium " + (statusBadge[i.status] || "")}>{i.status_display}</span>
                   </td>
                   <td className="px-4 py-2 text-right">
                     {i.status === "certificada" && can("facturas.anular") && (
@@ -132,22 +132,22 @@ export default function Invoices() {
       )}
 
       {tab === "pendientes" && (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-slate-500 text-left">
+            <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">
               <tr>
-                <th className="px-4 py-2">Folio</th><th className="px-4 py-2">Fecha</th>
-                <th className="px-4 py-2">Cliente</th><th className="px-4 py-2 text-right">Total</th>
-                <th className="px-4 py-2"></th>
+                <th className="px-4 py-2.5">Folio</th><th className="px-4 py-2.5">Fecha</th>
+                <th className="px-4 py-2.5">Cliente</th><th className="px-4 py-2.5 text-right">Total</th>
+                <th className="px-4 py-2.5"></th>
               </tr>
             </thead>
             <tbody>
               {pending.map((s) => (
-                <tr key={s.id} className="border-t">
+                <tr key={s.id} className="border-t border-slate-100 hover:bg-slate-50/70 transition">
                   <td className="px-4 py-2"><Link to={`/ventas/${s.id}`} className="text-blue-600">{s.folio}</Link></td>
                   <td className="px-4 py-2">{new Date(s.date).toLocaleDateString()}</td>
-                  <td className="px-4 py-2">{s.customer}</td>
-                  <td className="px-4 py-2 text-right">{Q(s.total)}</td>
+                  <td className="px-4 py-2 font-medium text-slate-800">{s.customer}</td>
+                  <td className="px-4 py-2 text-right font-semibold text-slate-700">{Q(s.total)}</td>
                   <td className="px-4 py-2 text-right">
                     {can("facturas.emitir") && (
                       <button onClick={() => emit(s.id)} className="text-xs bg-blue-600 text-white rounded px-3 py-1">Facturar</button>

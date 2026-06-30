@@ -58,28 +58,28 @@ export default function Users() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-lg font-semibold">Usuarios</h1>
-        <button onClick={() => setEditing(blank)} className="bg-blue-600 text-white rounded px-4 py-2 text-sm font-medium">+ Nuevo usuario</button>
+        <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">👤 Usuarios</h1>
+        <button onClick={() => setEditing(blank)} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nuevo usuario</button>
       </div>
-      <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white rounded-lg shadow p-4 mb-4 flex gap-2">
+      <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 mb-4 flex gap-2">
         <input placeholder="Buscar por nombre o correo" value={search} onChange={(e) => setSearch(e.target.value)}
-               className="border border-slate-300 rounded px-3 py-2 text-sm w-64" />
-        <button className="bg-slate-700 text-white rounded px-4 text-sm">Buscar</button>
+               className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-64" />
+        <button className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition">Buscar</button>
       </form>
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-slate-500 text-left">
-            <tr><th className="px-4 py-2">Nombre</th><th className="px-4 py-2">Correo</th><th className="px-4 py-2">Rol</th>
-                <th className="px-4 py-2">Sucursales</th><th className="px-4 py-2">Activo</th><th className="px-4 py-2 text-right">Acciones</th></tr>
+          <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">
+            <tr><th className="px-4 py-2.5">Nombre</th><th className="px-4 py-2.5">Correo</th><th className="px-4 py-2.5">Rol</th>
+                <th className="px-4 py-2.5">Sucursales</th><th className="px-4 py-2.5">Activo</th><th className="px-4 py-2.5 text-right">Acciones</th></tr>
           </thead>
           <tbody>
             {users.map((u) => (
-              <tr key={u.id} className="border-t">
-                <td className="px-4 py-2 font-medium">{u.name}</td>
+              <tr key={u.id} className="border-t border-slate-100 hover:bg-slate-50/70 transition">
+                <td className="px-4 py-2 font-medium text-slate-800">{u.name}</td>
                 <td className="px-4 py-2 text-slate-500">{u.email}</td>
-                <td className="px-4 py-2">{u.roles.map((r) => <span key={r} className="text-xs bg-slate-100 rounded px-2 py-0.5 mr-1">{r}</span>)}</td>
+                <td className="px-4 py-2">{u.roles.map((r) => <span key={r} className="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-slate-100 text-slate-600 mr-1">{r}</span>)}</td>
                 <td className="px-4 py-2 text-slate-500">{u.branches.map((b) => b.name).join(", ") || "—"}</td>
-                <td className="px-4 py-2">{u.is_active ? <span className="text-green-600">Sí</span> : <span className="text-slate-400">No</span>}</td>
+                <td className="px-4 py-2">{u.is_active ? <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700">Sí</span> : <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-red-100 text-red-700">No</span>}</td>
                 <td className="px-4 py-2 text-right">
                   <button onClick={() => openEdit(u)} className="text-blue-600 hover:underline">Editar</button>
                   <button onClick={() => remove(u.id)} className="text-red-600 hover:underline ml-3">Eliminar</button>
@@ -93,7 +93,7 @@ export default function Users() {
 
       {editing && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4" onClick={() => setEditing(null)}>
-          <form onClick={(e) => e.stopPropagation()} onSubmit={save} className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-auto">
+          <form onClick={(e) => e.stopPropagation()} onSubmit={save} className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 w-full max-w-lg max-h-[90vh] overflow-auto">
             <h3 className="font-semibold mb-4">{editing.id ? "Editar" : "Nuevo"} usuario</h3>
             {error && <div className="bg-red-100 text-red-800 rounded px-3 py-2 text-xs mb-3">{error}</div>}
             <div className="grid grid-cols-2 gap-3">

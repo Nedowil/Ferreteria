@@ -25,45 +25,45 @@ export default function AuditLog() {
 
   return (
     <div>
-      <h1 className="text-lg font-semibold mb-4">Bitácora de auditoría</h1>
+      <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2 mb-4">🕵️ Auditoría</h1>
       {summary && (
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-4">
           {[["Total", summary.counts.total, ""], ["Creados", summary.counts.created, "text-green-600"],
             ["Actualizados", summary.counts.updated, "text-blue-600"], ["Eliminados", summary.counts.deleted, "text-red-600"],
             ["Hoy", summary.counts.today, ""]].map(([l, v, c]) => (
-            <div key={l} className="bg-white rounded-lg shadow p-3">
+            <div key={l} className="bg-white rounded-xl shadow-sm border border-slate-100 p-3">
               <div className="text-xs text-slate-500">{l}</div>
               <div className={"text-xl font-bold " + c}>{v}</div>
             </div>
           ))}
         </div>
       )}
-      <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white rounded-lg shadow p-4 mb-4 flex flex-wrap gap-2 items-end">
-        <select value={filters.event} onChange={(e) => setFilters({ ...filters, event: e.target.value })} className="border border-slate-300 rounded px-2 py-2 text-sm">
+      <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 mb-4 flex flex-wrap gap-2 items-end">
+        <select value={filters.event} onChange={(e) => setFilters({ ...filters, event: e.target.value })} className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
           <option value="">Todos los eventos</option><option value="created">Creado</option><option value="updated">Actualizado</option><option value="deleted">Eliminado</option>
         </select>
-        <select value={filters.type} onChange={(e) => setFilters({ ...filters, type: e.target.value })} className="border border-slate-300 rounded px-2 py-2 text-sm">
+        <select value={filters.type} onChange={(e) => setFilters({ ...filters, type: e.target.value })} className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
           <option value="">Todos los recursos</option>
           {summary?.types.map((t) => <option key={t} value={t}>{t}</option>)}
         </select>
-        <input placeholder="Buscar (ID/desc)" value={filters.q} onChange={(e) => setFilters({ ...filters, q: e.target.value })} className="border border-slate-300 rounded px-3 py-2 text-sm w-40" />
-        <input type="date" value={filters.from} onChange={(e) => setFilters({ ...filters, from: e.target.value })} className="border border-slate-300 rounded px-2 py-2 text-sm" />
-        <input type="date" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} className="border border-slate-300 rounded px-2 py-2 text-sm" />
-        <button className="bg-slate-700 text-white rounded px-4 py-2 text-sm">Filtrar</button>
+        <input placeholder="Buscar (ID/desc)" value={filters.q} onChange={(e) => setFilters({ ...filters, q: e.target.value })} className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-40" />
+        <input type="date" value={filters.from} onChange={(e) => setFilters({ ...filters, from: e.target.value })} className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+        <input type="date" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+        <button className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition">Filtrar</button>
       </form>
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-slate-500 text-left">
-            <tr><th className="px-4 py-2">Fecha</th><th className="px-4 py-2">Usuario</th><th className="px-4 py-2">Evento</th>
-                <th className="px-4 py-2">Recurso</th><th className="px-4 py-2">ID</th><th className="px-4 py-2"></th></tr>
+          <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">
+            <tr><th className="px-4 py-2.5">Fecha</th><th className="px-4 py-2.5">Usuario</th><th className="px-4 py-2.5">Evento</th>
+                <th className="px-4 py-2.5">Recurso</th><th className="px-4 py-2.5">ID</th><th className="px-4 py-2.5"></th></tr>
           </thead>
           <tbody>
             {data.results.map((l) => (
               <Fragment key={l.id}>
-                <tr className="border-t">
+                <tr className="border-t border-slate-100 hover:bg-slate-50/70 transition">
                   <td className="px-4 py-2 text-xs text-slate-500">{new Date(l.created_at).toLocaleString()}</td>
-                  <td className="px-4 py-2">{l.user_name || "—"}</td>
-                  <td className="px-4 py-2"><span className={"text-xs px-2 py-0.5 rounded " + EVENT_BADGE[l.event]}>{l.event_display}</span></td>
+                  <td className="px-4 py-2 font-medium text-slate-800">{l.user_name || "—"}</td>
+                  <td className="px-4 py-2"><span className={"inline-block rounded-full px-2 py-0.5 text-xs font-medium " + EVENT_BADGE[l.event]}>{l.event_display}</span></td>
                   <td className="px-4 py-2 font-mono text-xs">{l.auditable_type}</td>
                   <td className="px-4 py-2 font-mono text-xs">{l.auditable_id}</td>
                   <td className="px-4 py-2 text-right"><button onClick={() => setExpanded(expanded === l.id ? null : l.id)} className="text-blue-600 hover:underline text-xs">{expanded === l.id ? "ocultar" : "ver cambios"}</button></td>

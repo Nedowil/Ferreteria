@@ -44,24 +44,24 @@ export default function SupplierList() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-lg font-semibold">Proveedores</h1>
-        <button onClick={() => { setSatMsg(""); setEditing(BLANK); }} className="bg-blue-600 text-white rounded px-4 py-2 text-sm font-medium">+ Nuevo proveedor</button>
+        <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">🚚 Proveedores</h1>
+        <button onClick={() => { setSatMsg(""); setEditing(BLANK); }} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nuevo proveedor</button>
       </div>
-      <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white rounded-lg shadow p-4 mb-4 flex gap-2">
+      <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 mb-4 flex gap-2">
         <input placeholder="Buscar por nombre, NIT, teléfono…" value={search} onChange={(e) => setSearch(e.target.value)}
-               className="border border-slate-300 rounded px-3 py-2 text-sm w-72" />
-        <button className="bg-slate-700 text-white rounded px-4 text-sm">Buscar</button>
+               className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-72" />
+        <button className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition">Buscar</button>
       </form>
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-slate-500 text-left">
-            <tr><th className="px-4 py-2">Nombre</th><th className="px-4 py-2">NIT</th><th className="px-4 py-2">Contacto</th>
-                <th className="px-4 py-2">Teléfono</th><th className="px-4 py-2 text-right">Compras</th><th className="px-4 py-2 text-right">Acciones</th></tr>
+          <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">
+            <tr><th className="px-4 py-2.5">Nombre</th><th className="px-4 py-2.5">NIT</th><th className="px-4 py-2.5">Contacto</th>
+                <th className="px-4 py-2.5">Teléfono</th><th className="px-4 py-2.5 text-right">Compras</th><th className="px-4 py-2.5 text-right">Acciones</th></tr>
           </thead>
           <tbody>
             {items.map((s) => (
-              <tr key={s.id} className="border-t">
-                <td className="px-4 py-2 font-medium">{s.name}</td>
+              <tr key={s.id} className="border-t border-slate-100 hover:bg-slate-50/70 transition">
+                <td className="px-4 py-2 font-medium text-slate-800">{s.name}</td>
                 <td className="px-4 py-2 text-slate-500">{s.tax_id || "—"}</td>
                 <td className="px-4 py-2 text-slate-500">{s.contact_name || "—"}</td>
                 <td className="px-4 py-2 text-slate-500">{s.phone || "—"}</td>

@@ -16,30 +16,30 @@ export default function ReturnsList() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-lg font-semibold">Devoluciones</h1>
-        <Link to="/devoluciones/nueva" className="bg-blue-600 text-white rounded px-4 py-2 text-sm font-medium">+ Nueva devolución</Link>
+        <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">↩️ Devoluciones</h1>
+        <Link to="/devoluciones/nueva" className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nueva devolución</Link>
       </div>
-      <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white rounded-lg shadow p-4 mb-4 flex gap-2">
+      <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 mb-4 flex gap-2">
         <input placeholder="Folio devolución o venta" value={search} onChange={(e) => setSearch(e.target.value)}
-               className="border border-slate-300 rounded px-3 py-2 text-sm w-64" />
-        <button className="bg-slate-700 text-white rounded px-4 py-2 text-sm">Buscar</button>
+               className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-64" />
+        <button className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition">Buscar</button>
       </form>
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-slate-500 text-left">
-            <tr><th className="px-4 py-2">Folio</th><th className="px-4 py-2">Venta</th><th className="px-4 py-2">Fecha</th>
-                <th className="px-4 py-2">Motivo</th><th className="px-4 py-2">Reembolso</th><th className="px-4 py-2 text-right">Total</th><th className="px-4 py-2">Estado</th><th></th></tr>
+          <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">
+            <tr><th className="px-4 py-2.5">Folio</th><th className="px-4 py-2.5">Venta</th><th className="px-4 py-2.5">Fecha</th>
+                <th className="px-4 py-2.5">Motivo</th><th className="px-4 py-2.5">Reembolso</th><th className="px-4 py-2.5 text-right">Total</th><th className="px-4 py-2.5">Estado</th><th></th></tr>
           </thead>
           <tbody>
             {data.results.map((r) => (
-              <tr key={r.id} className="border-t">
+              <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50/70 transition">
                 <td className="px-4 py-2 font-mono text-xs">{r.folio}</td>
                 <td className="px-4 py-2 font-mono text-xs">{r.sale_folio || "Sin ticket"}</td>
                 <td className="px-4 py-2 text-slate-500">{new Date(r.date).toLocaleDateString()}</td>
                 <td className="px-4 py-2 text-slate-500">{r.reason_display}</td>
                 <td className="px-4 py-2 text-slate-500">{r.refund_method}</td>
-                <td className="px-4 py-2 text-right">Q{r.total}</td>
-                <td className="px-4 py-2"><span className={"text-xs px-2 py-0.5 rounded " + (r.status === "procesada" ? "bg-green-100 text-green-700" : "bg-slate-200 text-slate-500")}>{r.status_display}</span></td>
+                <td className="px-4 py-2 text-right font-semibold text-slate-700">Q{r.total}</td>
+                <td className="px-4 py-2"><span className={"inline-block rounded-full px-2 py-0.5 text-xs font-medium " + (r.status === "procesada" ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-600")}>{r.status_display}</span></td>
                 <td className="px-4 py-2 text-right"><Link to={`/devoluciones/${r.id}`} className="text-blue-600 hover:underline">Ver</Link></td>
               </tr>
             ))}

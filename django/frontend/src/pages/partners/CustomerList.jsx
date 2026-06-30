@@ -54,32 +54,32 @@ export default function CustomerList() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-lg font-semibold">Clientes</h1>
-        <button onClick={() => { setSatMsg(""); setEditing(BLANK); }} className="bg-blue-600 text-white rounded px-4 py-2 text-sm font-medium">+ Nuevo cliente</button>
+        <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">👥 Clientes</h1>
+        <button onClick={() => { setSatMsg(""); setEditing(BLANK); }} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nuevo cliente</button>
       </div>
-      <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white rounded-lg shadow p-4 mb-4 flex gap-2 items-end">
+      <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 mb-4 flex gap-2 items-end">
         <input placeholder="Buscar por nombre, NIT…" value={search} onChange={(e) => setSearch(e.target.value)}
-               className="border border-slate-300 rounded px-3 py-2 text-sm w-64" />
-        <select value={type} onChange={(e) => setType(e.target.value)} className="border border-slate-300 rounded px-2 py-2 text-sm">
+               className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-64" />
+        <select value={type} onChange={(e) => setType(e.target.value)} className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
           <option value="">Todos los tipos</option>
           {TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </select>
-        <button className="bg-slate-700 text-white rounded px-4 py-2 text-sm">Filtrar</button>
+        <button className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition">Filtrar</button>
       </form>
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-slate-500 text-left">
-            <tr><th className="px-4 py-2">Nombre</th><th className="px-4 py-2">NIT</th><th className="px-4 py-2">Tipo</th>
-                <th className="px-4 py-2">Teléfono</th><th className="px-4 py-2 text-right">Saldo crédito</th><th className="px-4 py-2 text-right">Acciones</th></tr>
+          <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">
+            <tr><th className="px-4 py-2.5">Nombre</th><th className="px-4 py-2.5">NIT</th><th className="px-4 py-2.5">Tipo</th>
+                <th className="px-4 py-2.5">Teléfono</th><th className="px-4 py-2.5 text-right">Saldo crédito</th><th className="px-4 py-2.5 text-right">Acciones</th></tr>
           </thead>
           <tbody>
             {items.map((c) => (
-              <tr key={c.id} className="border-t">
-                <td className="px-4 py-2 font-medium">{c.name}</td>
+              <tr key={c.id} className="border-t border-slate-100 hover:bg-slate-50/70 transition">
+                <td className="px-4 py-2 font-medium text-slate-800">{c.name}</td>
                 <td className="px-4 py-2 text-slate-500">{c.tax_id || "—"}</td>
-                <td className="px-4 py-2"><span className="text-xs px-2 py-0.5 rounded bg-slate-100">{c.type_label}</span></td>
+                <td className="px-4 py-2"><span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-slate-100 text-slate-600">{c.type_label}</span></td>
                 <td className="px-4 py-2 text-slate-500">{c.phone || "—"}</td>
-                <td className="px-4 py-2 text-right">Q{c.credit_balance}</td>
+                <td className="px-4 py-2 text-right font-semibold text-slate-700">Q{c.credit_balance}</td>
                 <td className="px-4 py-2 text-right">
                   <button onClick={() => { setSatMsg(""); setEditing(c); }} className="text-blue-600 hover:underline">Editar</button>
                   <button onClick={() => remove(c.id)} className="text-red-600 hover:underline ml-3">Eliminar</button>

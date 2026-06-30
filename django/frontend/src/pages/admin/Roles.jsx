@@ -39,18 +39,18 @@ export default function Roles() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-lg font-semibold">Roles y permisos</h1>
-        <button onClick={() => setEditing({ name: "", permissions: [] })} className="bg-blue-600 text-white rounded px-4 py-2 text-sm font-medium">+ Nuevo rol</button>
+        <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">🛡️ Roles</h1>
+        <button onClick={() => setEditing({ name: "", permissions: [] })} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nuevo rol</button>
       </div>
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-slate-500 text-left">
-            <tr><th className="px-4 py-2">Rol</th><th className="px-4 py-2 text-right">Permisos</th><th className="px-4 py-2 text-right">Usuarios</th><th className="px-4 py-2 text-right">Acciones</th></tr>
+          <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">
+            <tr><th className="px-4 py-2.5">Rol</th><th className="px-4 py-2.5 text-right">Permisos</th><th className="px-4 py-2.5 text-right">Usuarios</th><th className="px-4 py-2.5 text-right">Acciones</th></tr>
           </thead>
           <tbody>
             {roles.map((r) => (
-              <tr key={r.id} className="border-t">
-                <td className="px-4 py-2 font-medium">{r.name} {SYSTEM.includes(r.name) && <span className="text-xs text-slate-400">(sistema)</span>}</td>
+              <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50/70 transition">
+                <td className="px-4 py-2 font-medium text-slate-800">{r.name} {SYSTEM.includes(r.name) && <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-slate-100 text-slate-600">sistema</span>}</td>
                 <td className="px-4 py-2 text-right">{r.permissions.length}</td>
                 <td className="px-4 py-2 text-right">{r.user_count}</td>
                 <td className="px-4 py-2 text-right">
