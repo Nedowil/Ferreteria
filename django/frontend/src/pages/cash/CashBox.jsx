@@ -54,7 +54,7 @@ export default function CashBox() {
         <form onSubmit={openCash} className="max-w-md bg-white rounded-lg shadow p-6">
           <h3 className="font-semibold mb-4">Abrir caja</h3>
           <label className="block text-sm font-medium mb-1">Monto inicial (fondo)</label>
-          <input type="number" step="any" required value={opening.opening_amount}
+          <input type="number" step="any" required value={opening.opening_amount} placeholder="0.00"
                  onChange={(e) => setOpening({ ...opening, opening_amount: e.target.value })}
                  className="w-full border border-slate-300 rounded px-3 py-2 text-sm mb-4" />
           <label className="block text-sm font-medium mb-1">Notas (opcional)</label>

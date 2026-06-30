@@ -71,7 +71,7 @@ export default function StockCount() {
                     <td className="px-4 py-2 font-medium">{p.name}</td>
                     <td className="px-4 py-2 text-right text-slate-500">{p.branch_stock ?? p.stock}</td>
                     <td className="px-4 py-2 text-right">
-                      <input type="number" step="any" value={val ?? ""}
+                      <input type="number" step="any" value={val ?? ""} placeholder={String(p.branch_stock ?? p.stock)}
                              onChange={(e) => setCounts({ ...counts, [p.id]: e.target.value })}
                              className="border border-slate-300 rounded px-2 py-1 text-sm w-24 text-right" />
                     </td>

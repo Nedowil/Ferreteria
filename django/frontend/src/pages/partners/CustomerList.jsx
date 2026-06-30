@@ -132,7 +132,7 @@ export default function CustomerList() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Descuento mayorista %</label>
-                <input type="number" value={editing.wholesale_discount_percent ?? ""} onChange={(e) => setEditing({ ...editing, wholesale_discount_percent: e.target.value })}
+                <input type="number" value={editing.wholesale_discount_percent ?? ""} placeholder="0" onChange={(e) => setEditing({ ...editing, wholesale_discount_percent: e.target.value })}
                        className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
               </div>
               <div>

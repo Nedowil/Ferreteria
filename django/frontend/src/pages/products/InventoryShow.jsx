@@ -63,7 +63,7 @@ export default function InventoryShow() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium mb-1">Cantidad</label>
-                <input type="number" step="any" value={form.quantity} required
+                <input type="number" step="any" value={form.quantity} required placeholder="0"
                        onChange={(e) => setForm({ ...form, quantity: e.target.value })}
                        className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
               </div>
