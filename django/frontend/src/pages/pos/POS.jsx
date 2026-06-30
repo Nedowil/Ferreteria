@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/client";
 import { publishDisplay, openCustomerDisplay } from "../../pos/customerDisplay";
 
-// Elige el precio según el nivel del cliente (público o mayorista).
-function priceFor(product, qty, customer) {
+// Elige el precio base según el nivel del cliente (público o mayorista).
+function basePriceFor(product, qty, customer) {
   const wholesale = Number(product.wholesale_price || 0);
   const minQty = Number(product.wholesale_min_quantity || 0);
   const isWholesale = customer && customer.customer_type === "wholesale";
@@ -14,11 +14,124 @@ function priceFor(product, qty, customer) {
   return Number(product.sale_price);
 }
 
+// Construye las medidas en que se puede vender un producto:
+// unidad base + empaque (si tiene) + presentaciones adicionales.
+function measuresFor(product, customer) {
+  const out = [];
+  const base = product.base_unit_label || "unidad";
+  out.push({
+    key: "base", label: base, units_factor: 1,
+    price: basePriceFor(product, 1, customer), is_base: true,
+  });
+  const cf = Number(product.container_factor || 0);
+  if (product.container_label && cf > 0) {
+    const cp = Number(product.container_price || 0) || Number(product.sale_price) * cf;
+    out.push({ key: "container", label: product.container_label, units_factor: cf, price: cp });
+  }
+  (product.presentations || []).filter((p) => p.active !== false).forEach((p) => {
+    out.push({
+      key: `pres-${p.id}`, label: p.label,
+      units_factor: Number(p.units_factor), price: Number(p.price),
+    });
+  });
+  return out;
+}
+
+const trim = (n) => {
+  const s = Number(n).toFixed(4).replace(/0+$/, "").replace(/\.$/, "");
+  return s || "0";
+};
+
+// Ventana flotante para elegir en qué medida se vende el producto.
+function MeasureModal({ product, customer, available, onAdd, onClose }) {
+  const measures = useMemo(() => measuresFor(product, customer), [product, customer]);
+  const [sel, setSel] = useState(measures[0]);
+  const [qty, setQty] = useState("1");
+  const qtyRef = useRef(null);
+
+  useEffect(() => { qtyRef.current?.focus(); qtyRef.current?.select(); }, []);
+
+  const n = Number(qty || 0);
+  const physical = n * Number(sel.units_factor);
+  const importe = n * Number(sel.price);
+  const exceeds = physical > Number(available) + 1e-6;
+
+  const confirm = () => {
+    if (!n || n <= 0) return;
+    onAdd(sel, n);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4"
+         onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+           onClick={(e) => e.stopPropagation()}>
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-4">
+          <div className="text-xs uppercase tracking-wide text-blue-100">Vender</div>
+          <div className="text-lg font-bold leading-tight">{product.name}</div>
+          <div className="text-xs text-blue-100 font-mono mt-0.5">{product.sku} · disponible {trim(available)} {product.base_unit_label || "u"}</div>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">¿En qué medida?</label>
+            <div className="grid grid-cols-2 gap-2">
+              {measures.map((m) => (
+                <button key={m.key} onClick={() => setSel(m)}
+                        className={"text-left rounded-xl border px-3 py-2 transition " +
+                          (sel.key === m.key
+                            ? "border-blue-500 bg-blue-50 ring-2 ring-blue-500/30"
+                            : "border-slate-200 hover:border-slate-300")}>
+                  <div className="text-sm font-semibold text-slate-800 capitalize">{m.label}</div>
+                  <div className="text-xs text-slate-500">Q{Number(m.price).toFixed(2)}
+                    {Number(m.units_factor) !== 1 && <span> · {trim(m.units_factor)} {product.base_unit_label || "u"}</span>}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-end gap-3">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Cantidad</label>
+              <input ref={qtyRef} type="number" step="any" min="0" value={qty}
+                     onChange={(e) => setQty(e.target.value)}
+                     onKeyDown={(e) => e.key === "Enter" && confirm()}
+                     className="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div className="text-right">
+              <div className="text-xs text-slate-500">Importe</div>
+              <div className="text-2xl font-bold text-slate-800">Q{importe.toFixed(2)}</div>
+            </div>
+          </div>
+
+          {exceeds && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-700 text-xs rounded-lg px-3 py-2">
+              ⚠️ Requiere {trim(physical)} {product.base_unit_label || "u"} y solo hay {trim(available)} disponibles.
+            </div>
+          )}
+
+          <div className="flex gap-2 pt-1">
+            <button onClick={onClose}
+                    className="flex-1 border border-slate-300 text-slate-600 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 transition">
+              Cancelar
+            </button>
+            <button onClick={confirm} disabled={!n || n <= 0}
+                    className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg py-2.5 text-sm font-semibold shadow hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 transition">
+              Agregar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function POS() {
   const navigate = useNavigate();
   const [cashOpen, setCashOpen] = useState(null); // null=cargando, false=cerrada, obj=abierta
   const [search, setSearch] = useState("");
-  const [results, setResults] = useState([]);
+  const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [customerId, setCustomerId] = useState("");
@@ -28,50 +141,74 @@ export default function POS() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [companyName, setCompanyName] = useState("Ferretería");
+  const [picking, setPicking] = useState(null); // producto en la ventana flotante
   const searchRef = useRef(null);
 
   useEffect(() => {
     api.get("/cashbox/cash-sessions/current/").then((r) => setCashOpen(r.data.session || false));
     api.get("/customers/?active=1&page_size=300").then((r) => setCustomers(r.data.results || r.data));
     api.get("/company-settings/").then((r) => setCompanyName(r.data.commercial_name || "Ferretería")).catch(() => {});
+    api.get("/inventory/products/", { params: { page_size: 500, active: 1 } })
+      .then((r) => setProducts(r.data.results || r.data));
   }, []);
 
   const customer = customers.find((c) => String(c.id) === String(customerId)) || null;
 
-  const doSearch = async (q) => {
-    setSearch(q);
-    if (q.length < 2) { setResults([]); return; }
-    const { data } = await api.get("/inventory/products/", { params: { search: q, page_size: 8 } });
-    setResults(data.results || data);
+  // Existencia disponible (base) descontando lo que ya está en el carrito.
+  const availableFor = (product) => {
+    const stock = Number(product.branch_stock ?? product.stock ?? 0);
+    const used = cart.filter((i) => i.product_id === product.id)
+      .reduce((s, i) => s + Number(i.quantity) * Number(i.units_factor), 0);
+    return stock - used;
   };
 
-  const addToCart = (p) => {
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return products;
+    return products.filter((p) =>
+      (p.name || "").toLowerCase().includes(q) ||
+      (p.sku || "").toLowerCase().includes(q) ||
+      (p.barcode || "").toLowerCase().includes(q));
+  }, [products, search]);
+
+  // Al escanear/Enter: si hay coincidencia exacta de código o un único resultado, abre la medida.
+  const onSearchKey = (e) => {
+    if (e.key !== "Enter") return;
+    const q = search.trim().toLowerCase();
+    if (!q) return;
+    const exact = products.find((p) =>
+      (p.barcode || "").toLowerCase() === q || (p.sku || "").toLowerCase() === q);
+    const target = exact || (filtered.length === 1 ? filtered[0] : null);
+    if (target) { setPicking(target); setSearch(""); }
+  };
+
+  const addMeasure = (measure, qty) => {
+    const p = picking;
     setCart((prev) => {
-      const existing = prev.find((i) => i.product_id === p.id);
-      if (existing) {
-        return prev.map((i) => i.product_id === p.id ? { ...i, quantity: i.quantity + 1 } : i);
+      const idx = prev.findIndex((i) => i.product_id === p.id && i.unit_label === measure.label
+        && Number(i.units_factor) === Number(measure.units_factor));
+      if (idx >= 0) {
+        return prev.map((it, i) => i === idx ? { ...it, quantity: Number(it.quantity) + qty } : it);
       }
       return [...prev, {
         product_id: p.id, name: p.name, sku: p.sku, product: p,
-        quantity: 1, unit_price: priceFor(p, 1, customer), tax_type: p.tax_type || "iva",
-        branch_stock: Number(p.branch_stock ?? p.stock),
+        quantity: qty, unit_price: Number(measure.price), units_factor: Number(measure.units_factor),
+        unit_label: measure.label, is_base: !!measure.is_base, tax_type: p.tax_type || "iva",
       }];
     });
-    setSearch(""); setResults([]);
+    setPicking(null);
     searchRef.current?.focus();
   };
 
-  const updateQty = (idx, qty) => setCart((c) => c.map((it, i) => {
-    if (i !== idx) return it;
-    const q = Number(qty);
-    return { ...it, quantity: qty, unit_price: priceFor(it.product, q, customer) };
-  }));
+  const updateQty = (idx, qty) => setCart((c) => c.map((it, i) => i === idx ? { ...it, quantity: qty } : it));
   const updatePrice = (idx, price) => setCart((c) => c.map((it, i) => i === idx ? { ...it, unit_price: price } : it));
   const removeItem = (idx) => setCart((c) => c.filter((_, i) => i !== idx));
 
-  // Recalcula precios al cambiar de cliente (nivel mayorista)
+  // Recalcula precio de las líneas base al cambiar de cliente (nivel mayorista).
   useEffect(() => {
-    setCart((c) => c.map((it) => ({ ...it, unit_price: priceFor(it.product, Number(it.quantity), customer) })));
+    setCart((c) => c.map((it) => it.is_base
+      ? { ...it, unit_price: basePriceFor(it.product, Number(it.quantity), customer) }
+      : it));
   }, [customerId]);
 
   const total = cart.reduce((s, i) => s + Number(i.quantity || 0) * Number(i.unit_price || 0), 0);
@@ -82,7 +219,10 @@ export default function POS() {
     publishDisplay({
       type: cart.length ? "cart" : "idle",
       company: companyName,
-      items: cart.map((i) => ({ name: i.name, quantity: i.quantity, unit_price: i.unit_price })),
+      items: cart.map((i) => ({
+        name: Number(i.units_factor) !== 1 ? `${i.name} (${i.unit_label})` : i.name,
+        quantity: i.quantity, unit_price: i.unit_price,
+      })),
       total,
     });
   }, [cart, total, companyName]);
@@ -99,15 +239,12 @@ export default function POS() {
         payment_status: credit ? "al_credito" : "pagada",
         paid_amount: credit ? (paid || 0) : (paymentMethod === "efectivo" ? (paid || total) : total),
         items: cart.map((i) => ({
-          product_id: i.product_id, quantity: i.quantity, unit_price: i.unit_price, tax_type: i.tax_type,
+          product_id: i.product_id, quantity: i.quantity, unit_price: i.unit_price,
+          units_factor: i.units_factor, unit_label: i.unit_label, tax_type: i.tax_type,
         })),
       };
       const { data } = await api.post("/sales/", payload);
-      // Muestra el agradecimiento y el vuelto en la pantalla de cliente.
-      publishDisplay({
-        type: "sale", company: companyName, total,
-        paid: payload.paid_amount, change,
-      });
+      publishDisplay({ type: "sale", company: companyName, total, paid: payload.paid_amount, change });
       navigate(`/ventas/${data.id}`);
     } catch (err) {
       setError(err.response?.data?.detail || "No se pudo completar la venta.");
@@ -137,26 +274,40 @@ export default function POS() {
       {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-2 text-sm mb-4">{error}</div>}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Carrito */}
+        {/* Catálogo + carrito */}
         <div className="lg:col-span-2 space-y-4">
-          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 relative">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4">
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
-              <input ref={searchRef} autoFocus placeholder="Buscar producto por nombre, SKU o código…"
-                     value={search} onChange={(e) => doSearch(e.target.value)}
+              <input ref={searchRef} autoFocus placeholder="Buscar o escanear producto (nombre, SKU o código)…"
+                     value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={onSearchKey}
                      className="w-full border border-slate-300 rounded-lg pl-10 pr-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" />
             </div>
-            {results.length > 0 && (
-              <div className="absolute z-10 bg-white border border-slate-200 rounded-lg shadow-lg w-[calc(100%-2rem)] mt-1 max-h-72 overflow-auto">
-                {results.map((p) => (
-                  <button key={p.id} onClick={() => addToCart(p)}
-                          className="block w-full text-left px-3 py-2 hover:bg-blue-50 text-sm border-b border-slate-100 last:border-0 transition">
-                    <span className="font-mono text-xs text-slate-400">{p.sku}</span> {p.name}
-                    <span className="float-right text-slate-500">Q{p.sale_price} · stock {p.branch_stock ?? p.stock}</span>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-4 max-h-[28rem] overflow-auto">
+              {filtered.map((p) => {
+                const avail = availableFor(p);
+                return (
+                  <button key={p.id} onClick={() => setPicking(p)}
+                          className="text-left rounded-xl border border-slate-200 hover:border-blue-400 hover:shadow-md p-3 transition group">
+                    <div className="text-sm font-semibold text-slate-800 line-clamp-2 group-hover:text-blue-700">{p.name}</div>
+                    <div className="text-[11px] font-mono text-slate-400 mt-0.5">{p.sku}</div>
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-blue-600 font-bold text-sm">Q{p.sale_price}</span>
+                      <span className={"text-[11px] rounded-full px-2 py-0.5 " +
+                        (avail <= 0 ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-500")}>
+                        {trim(avail)} {p.base_unit_label || "u"}
+                      </span>
+                    </div>
                   </button>
-                ))}
-              </div>
-            )}
+                );
+              })}
+              {filtered.length === 0 && (
+                <div className="col-span-full text-center text-slate-400 py-10 text-sm">
+                  {products.length === 0 ? "No hay productos registrados." : "Sin coincidencias."}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
@@ -168,8 +319,13 @@ export default function POS() {
               <tbody>
                 {cart.map((it, idx) => (
                   <tr key={idx} className="border-t border-slate-100 hover:bg-slate-50/70 transition">
-                    <td className="px-3 py-2"><div className="font-medium text-slate-800">{it.name}</div>
-                      <div className="text-xs font-mono text-slate-400">{it.sku} · stock {it.branch_stock}</div></td>
+                    <td className="px-3 py-2">
+                      <div className="font-medium text-slate-800">{it.name}</div>
+                      <div className="text-xs text-slate-400">
+                        <span className="font-mono">{it.sku}</span>
+                        <span className="ml-1 capitalize text-blue-600">· {it.unit_label}</span>
+                      </div>
+                    </td>
                     <td className="px-3 py-2"><input type="number" step="any" min="0" value={it.quantity}
                           onChange={(e) => updateQty(idx, e.target.value)}
                           className="border border-slate-300 rounded-lg px-2 py-1 text-sm w-20 text-right outline-none focus:ring-2 focus:ring-blue-500" /></td>
@@ -180,7 +336,7 @@ export default function POS() {
                     <td className="px-3 py-2 text-right"><button onClick={() => removeItem(idx)} className="text-red-500 hover:text-white hover:bg-red-500 rounded-full w-6 h-6 transition" title="Quitar">×</button></td>
                   </tr>
                 ))}
-                {cart.length === 0 && <tr><td colSpan="5" className="px-3 py-10 text-center text-slate-400">Busca productos para agregarlos al carrito.</td></tr>}
+                {cart.length === 0 && <tr><td colSpan="5" className="px-3 py-10 text-center text-slate-400">Toca un producto para agregarlo al carrito.</td></tr>}
               </tbody>
             </table>
           </div>
@@ -211,7 +367,7 @@ export default function POS() {
               <div>
                 <label className="block text-sm font-medium mb-1">Método de pago</label>
                 <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}
-                        className="w-full border border-slate-300 rounded px-3 py-2 text-sm">
+                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
                   <option value="efectivo">Efectivo</option>
                   <option value="tarjeta">Tarjeta</option>
                   <option value="transferencia">Transferencia</option>
@@ -221,7 +377,7 @@ export default function POS() {
                 <div>
                   <label className="block text-sm font-medium mb-1">Recibido</label>
                   <input type="number" step="any" value={paid} onChange={(e) => setPaid(e.target.value)}
-                         placeholder={total.toFixed(2)} className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
+                         placeholder={total.toFixed(2)} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
                   <div className="flex justify-between text-sm mt-2"><span className="text-slate-500">Vuelto</span><span className="font-semibold">Q{change.toFixed(2)}</span></div>
                 </div>
               )}
@@ -232,7 +388,7 @@ export default function POS() {
             <div>
               <label className="block text-sm font-medium mb-1">Abono inicial (opcional)</label>
               <input type="number" step="any" value={paid} onChange={(e) => setPaid(e.target.value)}
-                     placeholder="0" className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
+                     placeholder="0" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
           )}
 
@@ -242,6 +398,11 @@ export default function POS() {
           </button>
         </div>
       </div>
+
+      {picking && (
+        <MeasureModal product={picking} customer={customer} available={availableFor(picking)}
+                      onAdd={addMeasure} onClose={() => setPicking(null)} />
+      )}
     </div>
   );
 }

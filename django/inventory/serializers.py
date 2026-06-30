@@ -59,6 +59,7 @@ class ProductListSerializer(serializers.ModelSerializer):
     stock_display = serializers.CharField(source="format_stock_mixed", read_only=True)
     is_low_stock = serializers.BooleanField(read_only=True)
     branch_stock = serializers.SerializerMethodField()
+    presentations = ProductPresentationSerializer(many=True, read_only=True)
 
     class Meta:
         model = Product
@@ -66,8 +67,9 @@ class ProductListSerializer(serializers.ModelSerializer):
             "id", "sku", "barcode", "name", "category_name", "brand_name",
             "purchase_price", "sale_price", "wholesale_price", "wholesale_min_quantity",
             "tax_type", "sells_by_measure", "measure_step",
+            "base_unit_label", "container_label", "container_factor", "container_price",
             "stock", "branch_stock", "min_stock",
-            "stock_display", "is_low_stock", "active", "image",
+            "stock_display", "is_low_stock", "active", "image", "presentations",
         ]
 
     def get_branch_stock(self, obj):
