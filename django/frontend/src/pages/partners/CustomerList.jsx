@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
+import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 
 const BLANK = { name: "", tax_id: "", email: "", phone: "", address: "", notes: "",
   active: true, customer_type: "retail", wholesale_discount_percent: "", credit_limit: "", credit_enabled: false };
@@ -15,6 +16,25 @@ export default function CustomerList() {
   const [editing, setEditing] = useState(null);
   const [satBusy, setSatBusy] = useState(false);
   const [satMsg, setSatMsg] = useState("");
+  const [exporting, setExporting] = useState(false);
+
+  const exportExcel = async () => {
+    setExporting(true);
+    try {
+      const params = {};
+      if (search) params.search = search;
+      if (type) params.customer_type = type;
+      const rows = await fetchAll("/customers/", params);
+      exportToExcel("clientes", [
+        { header: "Nombre", value: (r) => r.name },
+        { header: "NIT", value: (r) => r.tax_id },
+        { header: "Tipo", value: (r) => r.type_label },
+        { header: "Teléfono", value: (r) => r.phone },
+        { header: "Email", value: (r) => r.email },
+        { header: "Saldo", value: (r) => Number(r.credit_balance) },
+      ], rows);
+    } finally { setExporting(false); }
+  };
 
   const lookupSat = async () => {
     const nit = (editing.tax_id || "").trim();
@@ -55,7 +75,10 @@ export default function CustomerList() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">👥 Clientes</h1>
-        <button onClick={() => { setSatMsg(""); setEditing(BLANK); }} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nuevo cliente</button>
+        <div className="flex gap-2">
+          <button onClick={exportExcel} disabled={exporting} className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-100 transition">{exporting ? "Exportando…" : "⬇️ Excel"}</button>
+          <button onClick={() => { setSatMsg(""); setEditing(BLANK); }} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nuevo cliente</button>
+        </div>
       </div>
       <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 mb-4 flex gap-2 items-end">
         <input placeholder="Buscar por nombre, NIT…" value={search} onChange={(e) => setSearch(e.target.value)}

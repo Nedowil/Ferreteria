@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../../api/client";
+import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 
 const STATUS_BADGE = {
   completada: "bg-green-100 text-green-700",
@@ -10,6 +11,7 @@ const STATUS_BADGE = {
 export default function SalesList() {
   const [data, setData] = useState({ results: [], count: 0 });
   const [filters, setFilters] = useState({ search: "", status: "", from: "", to: "" });
+  const [exporting, setExporting] = useState(false);
 
   const load = () => {
     const params = {};
@@ -18,11 +20,34 @@ export default function SalesList() {
   };
   useEffect(load, []);
 
+  const exportExcel = async () => {
+    const params = {};
+    Object.entries(filters).forEach(([k, v]) => { if (v) params[k] = v; });
+    setExporting(true);
+    try {
+      const rows = await fetchAll("/sales/", params);
+      exportToExcel("ventas", [
+        { header: "Folio", value: (s) => s.folio },
+        { header: "Cliente", value: (s) => s.customer_name || "Consumidor final" },
+        { header: "Fecha", value: (s) => new Date(s.date).toLocaleString("es-GT") },
+        { header: "Total", value: (s) => Number(s.total) },
+        { header: "Pago", value: (s) => s.payment_status_display },
+        { header: "Saldo", value: (s) => Number(s.balance) },
+        { header: "Estado", value: (s) => s.status_display },
+      ], rows);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">🧾 Ventas</h1>
-        <Link to="/pos" className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">Ir al POS</Link>
+        <div className="flex gap-2">
+          <button onClick={exportExcel} disabled={exporting} className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-100 transition">{exporting ? "Exportando…" : "⬇️ Excel"}</button>
+          <Link to="/pos" className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">Ir al POS</Link>
+        </div>
       </div>
       <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 mb-4 flex flex-wrap gap-2 items-end">
         <input placeholder="Folio o cliente" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })}

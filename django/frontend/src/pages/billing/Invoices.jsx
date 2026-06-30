@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
+import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 
 const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -21,6 +22,7 @@ export default function Invoices() {
   const [quota, setQuota] = useState(null);
   const [cfg, setCfg] = useState(null);
   const [err, setErr] = useState("");
+  const [exporting, setExporting] = useState(false);
 
   const load = () => {
     api.get("/invoices/").then((r) => setInvoices(r.data.results || r.data));
@@ -29,6 +31,24 @@ export default function Invoices() {
     api.get("/fel/config/").then((r) => setCfg(r.data));
   };
   useEffect(load, []);
+
+  const exportExcel = async () => {
+    setExporting(true);
+    try {
+      const rows = await fetchAll("/invoices/", {});
+      exportToExcel("facturas", [
+        { header: "Venta", value: (i) => i.sale_folio },
+        { header: "Cliente", value: (i) => i.customer_name || "Consumidor final" },
+        { header: "Tipo", value: (i) => i.document_type },
+        { header: "Serie-Número", value: (i) => (i.serie ? `${i.serie}-${i.numero}` : "") },
+        { header: "Autorización SAT", value: (i) => i.uuid || "" },
+        { header: "Total", value: (i) => Number(i.total) },
+        { header: "Estado", value: (i) => i.status_display },
+      ], rows);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const emit = async (saleId) => {
     setErr("");
@@ -56,19 +76,22 @@ export default function Invoices() {
     <div className="max-w-5xl">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">📑 Facturación electrónica (FEL)</h1>
-        {cfg?.is_stub ? (
-          <span className="text-xs bg-indigo-100 text-indigo-700 rounded px-2 py-1">
-            Certificador de pruebas (simulado)
-          </span>
-        ) : cfg?.infile_ready ? (
-          <span className="text-xs bg-green-100 text-green-700 rounded px-2 py-1">
-            Infile · {cfg.environment}
-          </span>
-        ) : cfg?.driver === "infile" ? (
-          <span className="text-xs bg-amber-100 text-amber-800 rounded px-2 py-1">
-            Infile sin credenciales{cfg.infile_missing?.length ? ` (${cfg.infile_missing.length})` : ""}
-          </span>
-        ) : null}
+        <div className="flex items-center gap-2">
+          {cfg?.is_stub ? (
+            <span className="text-xs bg-indigo-100 text-indigo-700 rounded px-2 py-1">
+              Certificador de pruebas (simulado)
+            </span>
+          ) : cfg?.infile_ready ? (
+            <span className="text-xs bg-green-100 text-green-700 rounded px-2 py-1">
+              Infile · {cfg.environment}
+            </span>
+          ) : cfg?.driver === "infile" ? (
+            <span className="text-xs bg-amber-100 text-amber-800 rounded px-2 py-1">
+              Infile sin credenciales{cfg.infile_missing?.length ? ` (${cfg.infile_missing.length})` : ""}
+            </span>
+          ) : null}
+          <button onClick={exportExcel} disabled={exporting} className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-100 transition">{exporting ? "Exportando…" : "⬇️ Excel"}</button>
+        </div>
       </div>
 
       {quota && (

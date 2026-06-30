@@ -1,14 +1,35 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../../api/client";
+import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 
 export default function LowStock() {
   const [rows, setRows] = useState([]);
+  const [exporting, setExporting] = useState(false);
   useEffect(() => { api.get("/inventory/products/low-stock/").then((r) => setRows(r.data)); }, []);
+
+  const exportExcel = async () => {
+    setExporting(true);
+    try {
+      const data = await fetchAll("/inventory/products/low-stock/", {});
+      exportToExcel("stock-bajo", [
+        { header: "SKU", value: (r) => r.sku },
+        { header: "Producto", value: (r) => r.name },
+        { header: "Stock actual", value: (r) => r.stock },
+        { header: "Mínimo", value: (r) => r.min_stock },
+        { header: "Sugerido", value: (r) => r.suggested },
+      ], data);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <div>
-      <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2 mb-4">⚠️ Productos con stock bajo</h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">⚠️ Productos con stock bajo</h1>
+        <button onClick={exportExcel} disabled={exporting} className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-100 transition">{exporting ? "Exportando…" : "⬇️ Excel"}</button>
+      </div>
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
+import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 
 const BLANK = { name: "", tax_id: "", contact_name: "", email: "", phone: "", address: "", notes: "", active: true };
 
@@ -9,6 +10,24 @@ export default function SupplierList() {
   const [editing, setEditing] = useState(null);
   const [satBusy, setSatBusy] = useState(false);
   const [satMsg, setSatMsg] = useState("");
+  const [exporting, setExporting] = useState(false);
+
+  const exportExcel = async () => {
+    setExporting(true);
+    try {
+      const params = {};
+      if (search) params.search = search;
+      const rows = await fetchAll("/suppliers/", params);
+      exportToExcel("proveedores", [
+        { header: "Nombre", value: (r) => r.name },
+        { header: "NIT", value: (r) => r.tax_id },
+        { header: "Contacto", value: (r) => r.contact_name },
+        { header: "Teléfono", value: (r) => r.phone },
+        { header: "Email", value: (r) => r.email },
+        { header: "Compras", value: (r) => r.purchase_count },
+      ], rows);
+    } finally { setExporting(false); }
+  };
 
   const load = () => {
     const params = { page_size: 200 };
@@ -45,7 +64,10 @@ export default function SupplierList() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">🚚 Proveedores</h1>
-        <button onClick={() => { setSatMsg(""); setEditing(BLANK); }} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nuevo proveedor</button>
+        <div className="flex gap-2">
+          <button onClick={exportExcel} disabled={exporting} className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-100 transition">{exporting ? "Exportando…" : "⬇️ Excel"}</button>
+          <button onClick={() => { setSatMsg(""); setEditing(BLANK); }} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nuevo proveedor</button>
+        </div>
       </div>
       <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 mb-4 flex gap-2">
         <input placeholder="Buscar por nombre, NIT, teléfono…" value={search} onChange={(e) => setSearch(e.target.value)}
