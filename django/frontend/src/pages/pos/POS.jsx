@@ -375,6 +375,46 @@ function QuickProductModal({ onClose, onCreated }) {
   );
 }
 
+// Ventana de confirmación tras cobrar: muestra el vuelto y opciones de ticket.
+function SaleDoneModal({ sale, onPrint, onView, onNew }) {
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+        <div className="bg-gradient-to-r from-emerald-500 to-green-600 text-white px-5 py-5 text-center">
+          <div className="text-4xl">✓</div>
+          <div className="text-lg font-bold mt-1">Venta registrada</div>
+          <div className="text-xs text-green-100">{sale.folio}</div>
+        </div>
+        <div className="p-5 space-y-4">
+          {!sale.credit && sale.method === "efectivo" && (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-center">
+              <div className="text-xs text-emerald-700 uppercase tracking-wide">Vuelto</div>
+              <div className="text-4xl font-extrabold text-emerald-700">Q{sale.change.toFixed(2)}</div>
+            </div>
+          )}
+          <div className="text-sm space-y-1">
+            <div className="flex justify-between"><span className="text-slate-500">Total</span><span className="font-semibold">Q{sale.total.toFixed(2)}</span></div>
+            {!sale.credit && (
+              <div className="flex justify-between"><span className="text-slate-500">Recibido</span><span className="font-semibold">Q{sale.paid.toFixed(2)}</span></div>
+            )}
+            {sale.credit && (
+              <div className="flex justify-between"><span className="text-slate-500">Saldo al crédito</span><span className="font-semibold text-amber-600">Q{(sale.total - sale.paid).toFixed(2)}</span></div>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={onPrint} className="border border-slate-300 text-slate-700 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 transition">🖨️ Ticket</button>
+            <button onClick={onView} className="border border-slate-300 text-slate-700 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 transition">🧾 Ver venta</button>
+          </div>
+          <button onClick={onNew} autoFocus
+                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg py-3 font-semibold shadow hover:from-blue-700 hover:to-indigo-700 transition">
+            + Nueva venta
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function POS() {
   const navigate = useNavigate();
   const [cashOpen, setCashOpen] = useState(null); // null=cargando, false=cerrada, obj=abierta
@@ -392,6 +432,7 @@ export default function POS() {
   const [picking, setPicking] = useState(null); // producto en la ventana flotante
   const [addingCustomer, setAddingCustomer] = useState(false);
   const [addingProduct, setAddingProduct] = useState(false);
+  const [lastSale, setLastSale] = useState(null); // venta recién cobrada (modal)
   const searchRef = useRef(null);
 
   const reloadProducts = () =>
@@ -500,7 +541,13 @@ export default function POS() {
       };
       const { data } = await api.post("/sales/", payload);
       publishDisplay({ type: "sale", company: companyName, total, paid: payload.paid_amount, change });
-      navigate(`/ventas/${data.id}`);
+      setLastSale({
+        id: data.id, folio: data.folio || `#${data.id}`,
+        total, paid: Number(payload.paid_amount || 0), change,
+        method: paymentMethod, credit,
+      });
+      // Limpia para la siguiente venta (la pantalla de cliente vuelve a "idle").
+      setCart([]); setPaid(""); setCredit(false); setCustomerId("");
     } catch (err) {
       setError(err.response?.data?.detail || "No se pudo completar la venta.");
     } finally {
@@ -684,6 +731,13 @@ export default function POS() {
             setCustomerId(String(c.id));
             setAddingCustomer(false);
           }} />
+      )}
+
+      {lastSale && (
+        <SaleDoneModal sale={lastSale}
+          onPrint={() => navigate(`/ventas/${lastSale.id}/ticket`)}
+          onView={() => navigate(`/ventas/${lastSale.id}`)}
+          onNew={() => { setLastSale(null); searchRef.current?.focus(); }} />
       )}
 
       {addingProduct && (
