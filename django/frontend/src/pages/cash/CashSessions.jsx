@@ -1,13 +1,41 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
+import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 
 export default function CashSessions() {
   const [data, setData] = useState({ results: [] });
+  const [exporting, setExporting] = useState(false);
   useEffect(() => { api.get("/cashbox/cash-sessions/").then((r) => setData(r.data)); }, []);
+
+  const exportExcel = async () => {
+    setExporting(true);
+    try {
+      const params = {};
+      const rows = await fetchAll("/cashbox/cash-sessions/", params);
+      exportToExcel("sesiones-caja", [
+        { header: "#", value: (r) => r.id },
+        { header: "Cajero", value: (r) => r.user_name },
+        { header: "Apertura", value: (r) => (r.opened_at ? new Date(r.opened_at).toLocaleString("es-GT") : "") },
+        { header: "Cierre", value: (r) => (r.closed_at ? new Date(r.closed_at).toLocaleString("es-GT") : "") },
+        { header: "Fondo", value: (r) => Number(r.opening_amount) },
+        { header: "Esperado", value: (r) => Number(r.expected_cash) },
+        { header: "Contado", value: (r) => (r.counted_cash != null ? Number(r.counted_cash) : "") },
+        { header: "Diferencia", value: (r) => (r.status === "cerrada" ? Number(r.difference) : "") },
+        { header: "Estado", value: (r) => r.status_display },
+      ], rows);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <div>
-      <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2 mb-4">💵 Historial de caja</h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">💵 Historial de caja</h1>
+        <div className="flex gap-2">
+          <button onClick={exportExcel} disabled={exporting} className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-100 transition">{exporting ? "Exportando…" : "⬇️ Excel"}</button>
+        </div>
+      </div>
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">

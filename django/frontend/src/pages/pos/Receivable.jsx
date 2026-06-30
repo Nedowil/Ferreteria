@@ -1,15 +1,36 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../../api/client";
+import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 
 export default function Receivable() {
   const [data, setData] = useState({ results: [], total_balance: 0 });
+  const [exporting, setExporting] = useState(false);
   useEffect(() => { api.get("/sales/receivable/").then((r) => setData(r.data)); }, []);
   const total = Number(data.total_balance || 0);
 
+  const exportExcel = async () => {
+    setExporting(true);
+    try {
+      const rows = await fetchAll("/sales/receivable/", {});
+      exportToExcel("cuentas-por-cobrar", [
+        { header: "Folio", value: (s) => s.folio },
+        { header: "Cliente", value: (s) => s.customer_name || "Consumidor final" },
+        { header: "Total", value: (s) => Number(s.total) },
+        { header: "Pagado", value: (s) => Number(s.paid_amount) },
+        { header: "Saldo", value: (s) => Number(s.balance) },
+      ], rows);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div>
-      <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2 mb-4">💳 Cuentas por cobrar</h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">💳 Cuentas por cobrar</h1>
+        <button onClick={exportExcel} disabled={exporting} className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-100 transition">{exporting ? "Exportando…" : "⬇️ Excel"}</button>
+      </div>
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5 mb-4 inline-block">
         <div className="text-sm text-slate-500">Saldo total por cobrar</div>
         <div className="text-2xl font-bold text-red-600">Q{total.toFixed(2)}</div>

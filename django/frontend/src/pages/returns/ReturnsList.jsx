@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../../api/client";
+import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 
 export default function ReturnsList() {
   const [data, setData] = useState({ results: [] });
   const [search, setSearch] = useState("");
+  const [exporting, setExporting] = useState(false);
 
   const load = () => {
     const params = {};
@@ -13,11 +15,34 @@ export default function ReturnsList() {
   };
   useEffect(load, []);
 
+  const exportExcel = async () => {
+    const params = {};
+    if (search) params.search = search;
+    setExporting(true);
+    try {
+      const rows = await fetchAll("/returns/", params);
+      exportToExcel("devoluciones", [
+        { header: "Folio", value: (r) => r.folio },
+        { header: "Venta", value: (r) => r.sale_folio || "Sin ticket" },
+        { header: "Fecha", value: (r) => new Date(r.date).toLocaleString("es-GT") },
+        { header: "Motivo", value: (r) => r.reason_display },
+        { header: "Reembolso", value: (r) => r.refund_method },
+        { header: "Total", value: (r) => Number(r.total) },
+        { header: "Estado", value: (r) => r.status_display },
+      ], rows);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">↩️ Devoluciones</h1>
-        <Link to="/devoluciones/nueva" className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nueva devolución</Link>
+        <div className="flex gap-2">
+          <button onClick={exportExcel} disabled={exporting} className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-100 transition">{exporting ? "Exportando…" : "⬇️ Excel"}</button>
+          <Link to="/devoluciones/nueva" className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nueva devolución</Link>
+        </div>
       </div>
       <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 mb-4 flex gap-2">
         <input placeholder="Folio devolución o venta" value={search} onChange={(e) => setSearch(e.target.value)}
