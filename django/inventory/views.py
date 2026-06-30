@@ -16,7 +16,7 @@ from core.api_utils import BranchContextMixin, get_request_branch
 from core.models import CompanySetting
 from core.permissions import HasPermission
 from . import labels
-from .models import Brand, Category, InventoryMovement, Product, Unit
+from .models import Brand, Category, InventoryMovement, Product, ProductPresentation, Unit
 from .serializers import (
     BrandSerializer,
     CategorySerializer,
@@ -60,6 +60,35 @@ class UnitViewSet(viewsets.ModelViewSet):
         if instance.products.exists():
             raise ValidationError("No se puede eliminar: tiene productos asociados.")
         instance.delete()
+
+
+def _sync_presentations(product, items):
+    """Reemplaza las presentaciones del producto con la lista recibida.
+
+    Cada item: {label, units_factor, price}. El factor admite decimal o
+    fracción ("1/16"). Items sin etiqueta o con factor inválido se ignoran.
+    """
+    from .utils import parse_fraction
+
+    product.presentations.all().delete()
+    if not items:
+        return
+    for i, it in enumerate(items):
+        label = (str(it.get("label") or "")).strip()
+        if not label:
+            continue
+        factor = parse_fraction(it.get("units_factor"))
+        if not factor or factor <= 0:
+            continue
+        price = it.get("price")
+        try:
+            price = Decimal(str(price)) if price not in (None, "") else Decimal("0")
+        except Exception:
+            price = Decimal("0")
+        ProductPresentation.objects.create(
+            product=product, label=label[:30], units_factor=factor,
+            price=price, display_order=i,
+        )
 
 
 def _deliver_zpl(company, data):
@@ -106,6 +135,7 @@ class ProductViewSet(BranchContextMixin, viewsets.ModelViewSet):
     def perform_create(self, serializer):
         initial_stock = serializer.validated_data.pop("initial_stock", Decimal("0"))
         input_mode = serializer.validated_data.pop("stock_input_mode", "base")
+        presentations = serializer.validated_data.pop("presentations_input", None)
 
         product = serializer.save(created_by=self.request.user, stock=Decimal("0"))
         if not product.sku:
@@ -113,6 +143,7 @@ class ProductViewSet(BranchContextMixin, viewsets.ModelViewSet):
         if not product.barcode:
             product.barcode = generate_barcode(Product)
         product.save(update_fields=["sku", "barcode"])
+        _sync_presentations(product, presentations)
 
         if initial_stock and initial_stock > 0:
             qty = initial_stock
@@ -127,12 +158,16 @@ class ProductViewSet(BranchContextMixin, viewsets.ModelViewSet):
     def perform_update(self, serializer):
         serializer.validated_data.pop("initial_stock", None)
         serializer.validated_data.pop("stock_input_mode", None)
+        presentations = serializer.validated_data.pop("presentations_input", None)
         product = serializer.save()
         if not product.sku:
             product.sku = generate_sku(product.name, Product)
         if not product.barcode:
             product.barcode = generate_barcode(Product)
         product.save(update_fields=["sku", "barcode"])
+        # Solo se reemplazan si el cliente envió la lista (None = no tocar).
+        if presentations is not None:
+            _sync_presentations(product, presentations)
 
     def perform_destroy(self, instance):
         from django.utils import timezone

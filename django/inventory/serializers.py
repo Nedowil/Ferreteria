@@ -86,6 +86,11 @@ class ProductSerializer(serializers.ModelSerializer):
     stock_display = serializers.CharField(source="format_stock_mixed", read_only=True)
     is_low_stock = serializers.BooleanField(read_only=True)
     presentations = ProductPresentationSerializer(many=True, read_only=True)
+    # Entrada de presentaciones: lista [{label, units_factor, price}]. El factor
+    # puede venir como decimal ("0.5") o fracción ("1/16"); se parsea en la vista.
+    presentations_input = serializers.ListField(
+        child=serializers.DictField(), required=False, write_only=True
+    )
 
     # Solo escritura: stock inicial al crear (aplicado vía InventoryService)
     initial_stock = serializers.DecimalField(
@@ -107,7 +112,7 @@ class ProductSerializer(serializers.ModelSerializer):
             "stock", "min_stock", "stock_display", "is_low_stock",
             "sells_by_measure", "measure_step",
             "image", "active", "public_visible",
-            "presentations",
+            "presentations", "presentations_input",
             "initial_stock", "stock_input_mode",
         ]
         read_only_fields = ["stock"]

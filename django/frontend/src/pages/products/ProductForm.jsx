@@ -84,6 +84,89 @@ function PriceField({ label, raw, mode, onRaw, onMode, error, hasContainer, fact
   );
 }
 
+const QUICK_EQUIV = [
+  { label: "Media (½)", value: "1/2" },
+  { label: "Cuarto (¼)", value: "1/4" },
+  { label: "Octavo (⅛)", value: "1/8" },
+  { label: "Onza si base es libra (1/16)", value: "1/16" },
+  { label: "Centímetro si base es metro (1/100)", value: "1/100" },
+];
+
+// Presentaciones adicionales (libra, caja, rollo…) con factor decimal o fracción.
+function PresentationsSection({ rows, setRows }) {
+  const update = (i, key, val) => setRows(rows.map((r, idx) => (idx === i ? { ...r, [key]: val } : r)));
+  const remove = (i) => setRows(rows.filter((_, idx) => idx !== i));
+  const add = () => setRows([...rows, { label: "", units_factor: "", price: "", reverseN: "" }]);
+  const reverse = (i) => {
+    const n = parseFloat(rows[i].reverseN);
+    if (n > 0) update(i, "units_factor", Number.isInteger(n) ? `1/${n}` : String(1 / n));
+  };
+
+  return (
+    <section className="bg-amber-50 border-l-4 border-amber-400 rounded-lg shadow p-5">
+      <div className="flex items-center justify-between mb-1">
+        <h3 className="font-semibold flex items-center gap-2">📦 Presentaciones adicionales (opcional)</h3>
+        <button type="button" onClick={add}
+                className="bg-amber-500 hover:bg-amber-600 text-white rounded px-4 py-2 text-sm font-medium">+ Agregar</button>
+      </div>
+      <p className="text-xs text-slate-500 mb-3">
+        Si este producto se vende también por <b>libra, media libra, caja, rollo, yarda, fardo, etc.</b>,
+        agregá cada presentación. Podés escribir el factor como decimal (<code>0.5</code>) o como
+        fracción (<code>1/2</code>, <code>1/16</code>), o usar los botones rápidos de cada fila.
+      </p>
+
+      {rows.length === 0 && (
+        <p className="text-sm text-slate-400">Sin presentaciones. Usá «+ Agregar» si vendés por libra, caja, etc.</p>
+      )}
+
+      <div className="space-y-4">
+        {rows.map((r, i) => (
+          <div key={i} className="bg-white rounded-lg border p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_1fr_auto] gap-3 items-end">
+              <div>
+                <label className="block text-xs text-slate-500 mb-1">Etiqueta</label>
+                <input value={r.label} onChange={(e) => update(i, "label", e.target.value)}
+                       placeholder="Ej. Libra, Media libra, Onza"
+                       className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-500 mb-1">Factor de stock</label>
+                <input value={r.units_factor} onChange={(e) => update(i, "units_factor", e.target.value)}
+                       placeholder="Ej. 0.5  o  1/16"
+                       className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-500 mb-1">Precio (Q)</label>
+                <input type="number" step="0.01" value={r.price} onChange={(e) => update(i, "price", e.target.value)}
+                       placeholder="0.00" className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
+              </div>
+              <button type="button" onClick={() => remove(i)}
+                      className="bg-red-500 hover:bg-red-600 text-white rounded px-3 py-2">✕</button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 mt-3 text-xs">
+              <span className="text-slate-500">📐 Equivalencias rápidas:</span>
+              {QUICK_EQUIV.map((q) => (
+                <button type="button" key={q.value} onClick={() => update(i, "units_factor", q.value)}
+                        className="bg-slate-100 hover:bg-slate-200 rounded px-2 py-1">{q.label}</button>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-slate-500">
+              🧮 O calculá al revés: En <b>1</b> unidad base hay
+              <input type="number" min="1" value={r.reverseN} onChange={(e) => update(i, "reverseN", e.target.value)}
+                     className="w-20 border border-slate-300 rounded px-2 py-1" />
+              presentaciones
+              <button type="button" onClick={() => reverse(i)}
+                      className="bg-blue-500 hover:bg-blue-600 text-white rounded px-3 py-1">→ Calcular</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export default function ProductForm() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -99,6 +182,7 @@ export default function ProductForm() {
   const [purchaseMode, setPurchaseMode] = useState("base");
   const [saleRaw, setSaleRaw] = useState("");
   const [saleMode, setSaleMode] = useState("base");
+  const [presentations, setPresentations] = useState([]);
 
   useEffect(() => {
     api.get("/inventory/categories/?page_size=200").then((r) => setCategories(r.data.results || r.data));
@@ -111,6 +195,10 @@ export default function ProductForm() {
         // Inicializa los inputs de precio (en modo base = lo que viene de BD)
         setPurchaseRaw(Number(d.purchase_price) > 0 ? String(d.purchase_price) : "");
         setSaleRaw(Number(d.sale_price) > 0 ? String(d.sale_price) : "");
+        setPresentations((d.presentations || []).map((p) => ({
+          label: p.label, units_factor: String(Number(p.units_factor)),
+          price: String(Number(p.price)), reverseN: "",
+        })));
       });
     }
   }, [id]);
@@ -152,6 +240,10 @@ export default function ProductForm() {
      "container_label", "barcode", "sku"].forEach((k) => {
       if (payload[k] === "") payload[k] = null;
     });
+    // Presentaciones: solo las que tienen etiqueta (el factor se parsea en el backend).
+    payload.presentations_input = presentations
+      .filter((p) => p.label.trim())
+      .map((p) => ({ label: p.label.trim(), units_factor: p.units_factor, price: p.price || 0 }));
     try {
       if (editing) await api.put(`/inventory/products/${id}/`, payload);
       else await api.post("/inventory/products/", payload);
@@ -247,6 +339,8 @@ export default function ProductForm() {
           <TextField label="Paso de medida" name="measure_step" form={form} errors={errors} onChange={set} type="number" />
         </div>
       </section>
+
+      <PresentationsSection rows={presentations} setRows={setPresentations} />
 
       <section className="bg-white rounded-lg shadow p-5">
         <h3 className="font-semibold mb-3">Estado</h3>

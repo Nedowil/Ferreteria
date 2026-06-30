@@ -403,3 +403,36 @@ class DashboardWidgetTests(APITestCase):
         self.assertIn("ventas_hoy", d)
         self.assertNotIn("ventas_mes", d)
         self.assertNotIn("productos_total", d)
+
+
+class ProductPresentationApiTests(ApiTestBase):
+    """Presentaciones adicionales del producto (libra, caja, fracciones)."""
+
+    def test_crear_producto_con_presentaciones(self):
+        r = self.client.post("/api/inventory/products/", {
+            "name": "Clavo de acero", "purchase_price": "1", "sale_price": "2",
+            "base_unit_label": "libra", "tax_type": "iva",
+            "presentations_input": [
+                {"label": "Media libra", "units_factor": "1/2", "price": "1.50"},
+                {"label": "Onza", "units_factor": "1/16", "price": "0.25"},
+                {"label": "", "units_factor": "1", "price": "0"},  # se ignora (sin etiqueta)
+            ],
+        }, format="json")
+        self.assertEqual(r.status_code, 201, r.content)
+        pres = r.json()["presentations"]
+        self.assertEqual(len(pres), 2)  # la vacía se descartó
+        media = next(p for p in pres if p["label"] == "Media libra")
+        self.assertEqual(Decimal(media["units_factor"]), Decimal("0.5"))  # 1/2 parseado
+
+    def test_editar_reemplaza_presentaciones(self):
+        from inventory.models import Product, ProductPresentation
+        p = Product.objects.create(sku="CLV-9", name="Clavo viejo", sale_price=Decimal("2"))
+        ProductPresentation.objects.create(product=p, label="Vieja", units_factor=Decimal("2"), price=Decimal("1"))
+        r = self.client.patch(f"/api/inventory/products/{p.id}/", {
+            "presentations_input": [{"label": "Caja", "units_factor": "50", "price": "90"}],
+        }, format="json")
+        self.assertEqual(r.status_code, 200, r.content)
+        pres = r.json()["presentations"]
+        self.assertEqual(len(pres), 1)
+        self.assertEqual(pres[0]["label"], "Caja")
+        self.assertEqual(Decimal(pres[0]["units_factor"]), Decimal("50"))
