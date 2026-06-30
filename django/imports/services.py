@@ -236,7 +236,8 @@ def import_sales(rows, *, branch=None, user=None):
                 tax = (subtotal * rate / 100).quantize(Decimal("0.01"))
                 total = subtotal + tax
 
-            folio = f"V-{(Sale.objects.count() + 1):06d}"
+            from core.folios import next_folio
+            folio = next_folio(Sale, "V")
             sale = Sale.objects.create(
                 folio=folio, branch=branch, customer=customer, user=user,
                 date=sale_dt, subtotal=subtotal, tax=tax, total=total,

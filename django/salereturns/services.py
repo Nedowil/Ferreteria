@@ -20,9 +20,8 @@ class ReturnError(Exception):
 
 
 def generate_folio():
-    last = SaleReturn.objects.order_by("-id").first()
-    nxt = (last.id if last else 0) + 1
-    return f"DEV-{nxt:06d}"
+    from core.folios import next_folio
+    return next_folio(SaleReturn, "DEV")
 
 
 def returned_quantity_for(sale_item):

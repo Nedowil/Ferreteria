@@ -18,9 +18,8 @@ class SaleError(Exception):
 
 
 def generate_folio():
-    last = Sale.objects.order_by("-id").first()
-    nxt = (last.id if last else 0) + 1
-    return f"V-{nxt:06d}"
+    from core.folios import next_folio
+    return next_folio(Sale, "V")
 
 
 @transaction.atomic

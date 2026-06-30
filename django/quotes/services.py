@@ -17,9 +17,8 @@ class QuotationError(Exception):
 
 
 def generate_folio():
-    last = Quotation.objects.order_by("-id").first()
-    nxt = (last.id if last else 0) + 1
-    return f"COT-{nxt:06d}"
+    from core.folios import next_folio
+    return next_folio(Quotation, "COT")
 
 
 @transaction.atomic

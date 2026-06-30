@@ -20,9 +20,8 @@ class PurchaseError(Exception):
 
 def generate_folio():
     """Folio correlativo tipo C-000123."""
-    last = Purchase.objects.order_by("-id").first()
-    nxt = (last.id if last else 0) + 1
-    return f"C-{nxt:06d}"
+    from core.folios import next_folio
+    return next_folio(Purchase, "C")
 
 
 @transaction.atomic
