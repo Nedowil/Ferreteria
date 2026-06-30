@@ -100,8 +100,16 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 
 
-# Database — PostgreSQL por defecto, SQLite si DB_ENGINE=sqlite
-if os.getenv("DB_ENGINE", "postgresql").lower() == "sqlite":
+# Database — prioridad: DATABASE_URL (hostings tipo Render/Railway) >
+# DB_ENGINE=sqlite > variables DB_* sueltas (PostgreSQL).
+if os.getenv("DATABASE_URL"):
+    import dj_database_url
+    DATABASES = {
+        "default": dj_database_url.parse(
+            os.environ["DATABASE_URL"], conn_max_age=600, ssl_require=env_bool("DB_SSL", True)
+        )
+    }
+elif os.getenv("DB_ENGINE", "postgresql").lower() == "sqlite":
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
