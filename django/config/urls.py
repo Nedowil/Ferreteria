@@ -73,7 +73,7 @@ def spa_index(request):
         return HttpResponse(
             "El SPA no está compilado. Ejecuta `npm run build` en frontend/ "
             "o usa el servidor de desarrollo de Vite (npm run dev).",
-            content_type="text/plain", status=200,
+            content_type="text/plain; charset=utf-8", status=200,
         )
     resp = HttpResponse(index.read_text(encoding="utf-8"))
     resp["Cache-Control"] = "no-cache"
