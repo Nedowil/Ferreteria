@@ -32,31 +32,81 @@ export default function Login() {
     }
   };
 
+  const year = new Date().getFullYear();
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-900 px-4">
-      <form onSubmit={submit} className="w-full max-w-sm bg-white rounded-xl shadow-lg p-8">
-        <div className="text-center mb-6">
-          <div className="text-3xl">🔧</div>
-          <h1 className="text-xl font-bold mt-2">Ferretería</h1>
-          <p className="text-sm text-slate-500">Sistema de gestión</p>
+    <div className="min-h-screen flex">
+      {/* Panel de marca (visible en pantallas grandes) */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-blue-900 text-white flex-col justify-between p-12">
+        <div className="relative z-10 flex items-center gap-2 text-2xl font-bold">
+          🔧 <span>Ferretería</span>
         </div>
-        {error && <div className="mb-4 bg-red-100 text-red-800 text-sm rounded px-3 py-2">{error}</div>}
-        <label className="block text-sm font-medium mb-1">Correo</label>
-        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
-               className="w-full border border-slate-300 rounded px-3 py-2 mb-4" />
-        <label className="block text-sm font-medium mb-1">Contraseña</label>
-        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
-               className="w-full border border-slate-300 rounded px-3 py-2 mb-6" />
-        <button disabled={busy}
-                className="w-full bg-slate-900 text-white rounded py-2 font-medium hover:bg-slate-800 disabled:opacity-50">
-          {busy ? "Ingresando…" : "Ingresar"}
-        </button>
-        <div className="text-center mt-4">
-          <Link to="/recuperar-contrasena" className="text-sm text-slate-500 hover:text-slate-800">
-            ¿Olvidaste tu contraseña?
-          </Link>
+        <div className="relative z-10">
+          <h1 className="text-4xl font-extrabold leading-tight">
+            Tu ferretería,<br />bajo control.
+          </h1>
+          <p className="mt-4 text-slate-300 max-w-md">
+            Inventario, ventas, caja, facturación electrónica (FEL) y reportes —
+            todo en un solo lugar.
+          </p>
+          <div className="mt-8 flex flex-wrap gap-2 text-sm">
+            {["Punto de venta", "Inventario", "FEL", "Reportes", "Multi-sucursal"].map((t) => (
+              <span key={t} className="bg-white/10 border border-white/10 rounded-full px-3 py-1">{t}</span>
+            ))}
+          </div>
         </div>
-      </form>
+        <div className="relative z-10 text-sm text-slate-400">© {year} · Sistema de gestión</div>
+
+        {/* Manchas decorativas */}
+        <div className="absolute -top-24 -right-24 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl" />
+        <div className="absolute -bottom-32 -left-16 w-80 h-80 bg-emerald-500/20 rounded-full blur-3xl" />
+      </div>
+
+      {/* Panel del formulario */}
+      <div className="flex-1 flex items-center justify-center bg-slate-50 px-4 py-10">
+        <form onSubmit={submit} className="w-full max-w-sm">
+          <div className="text-center mb-8">
+            <div className="inline-flex w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white text-3xl items-center justify-center shadow-lg shadow-blue-600/30">
+              🔧
+            </div>
+            <h2 className="text-2xl font-bold mt-4 text-slate-800">Bienvenido</h2>
+            <p className="text-sm text-slate-500">Ingresá a tu cuenta para continuar</p>
+          </div>
+
+          {error && (
+            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2">
+              {error}
+            </div>
+          )}
+
+          <label className="block text-sm font-medium text-slate-700 mb-1">Correo</label>
+          <div className="relative mb-4">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">✉️</span>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
+                   placeholder="tucorreo@ejemplo.com"
+                   className="w-full border border-slate-300 rounded-lg pl-10 pr-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" />
+          </div>
+
+          <label className="block text-sm font-medium text-slate-700 mb-1">Contraseña</label>
+          <div className="relative mb-6">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔒</span>
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
+                   placeholder="••••••••"
+                   className="w-full border border-slate-300 rounded-lg pl-10 pr-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" />
+          </div>
+
+          <button disabled={busy}
+                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg py-2.5 font-semibold shadow-lg shadow-blue-600/20 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 transition">
+            {busy ? "Ingresando…" : "Ingresar"}
+          </button>
+
+          <div className="text-center mt-5">
+            <Link to="/recuperar-contrasena" className="text-sm text-slate-500 hover:text-blue-600">
+              ¿Olvidaste tu contraseña?
+            </Link>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
