@@ -90,5 +90,8 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
 
+      - name: Tests (Vitest)
+        run: npm test
+
       - name: Compilar
         run: npm run build

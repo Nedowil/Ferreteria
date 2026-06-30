@@ -76,7 +76,8 @@ El SPA proxya `/api` y `/media` al backend (ver `vite.config.js`).
 
 ```bash
 cd django
-.venv/bin/python manage.py test
+.venv/bin/python manage.py test       # backend (Django)
+cd frontend && npm test               # frontend (Vitest)
 ```
 
 ## Despliegue (producción)
