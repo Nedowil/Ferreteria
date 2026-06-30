@@ -2,49 +2,132 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api/client";
 
+const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+
+const QUICK = [
+  { to: "/pos", label: "Nueva venta", icon: "🛒", color: "bg-emerald-500" },
+  { to: "/cotizaciones/nueva", label: "Cotizar", icon: "📝", color: "bg-blue-500" },
+  { to: "/compras/nueva", label: "Nueva compra", icon: "📥", color: "bg-violet-500" },
+  { to: "/productos/nuevo", label: "Nuevo producto", icon: "📦", color: "bg-orange-500" },
+  { to: "/clientes", label: "Nuevo cliente", icon: "👥", color: "bg-pink-500" },
+  { to: "/reportes", label: "Ver reportes", icon: "📊", color: "bg-cyan-500" },
+];
+
+function Kpi({ label, value, sub, icon, gradient }) {
+  return (
+    <div className={`rounded-2xl p-5 text-white shadow-lg bg-gradient-to-br ${gradient} relative overflow-hidden`}>
+      <div className="text-sm opacity-90">{label}</div>
+      <div className="text-4xl font-extrabold mt-1 drop-shadow-sm">{value}</div>
+      {sub && <div className="text-xs opacity-90 mt-1">{sub}</div>}
+      <div className="absolute right-4 top-1/2 -translate-y-1/2 text-5xl opacity-30 select-none">{icon}</div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const [data, setData] = useState(null);
   useEffect(() => { api.get("/dashboard/").then((r) => setData(r.data)); }, []);
   if (!data) return <div className="text-slate-400">Cargando…</div>;
 
-  return (
-    <div>
-      <h1 className="text-lg font-semibold mb-4">Tablero</h1>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <Card label="Productos activos" value={data.total_products} />
-        <Card label="Stock bajo" value={data.low_stock_count} accent="text-red-600" />
-      </div>
-      <div className="bg-white rounded-lg shadow">
-        <div className="px-5 py-3 border-b font-semibold">Stock bajo</div>
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-slate-500 text-left">
-            <tr><th className="px-5 py-2">SKU</th><th className="px-5 py-2">Producto</th>
-                <th className="px-5 py-2 text-right">Stock</th><th className="px-5 py-2 text-right">Mínimo</th></tr>
-          </thead>
-          <tbody>
-            {data.low_stock_products.map((p) => (
-              <tr key={p.id} className="border-t">
-                <td className="px-5 py-2 font-mono text-xs">{p.sku}</td>
-                <td className="px-5 py-2">{p.name}</td>
-                <td className="px-5 py-2 text-right text-red-600">{p.stock_display}</td>
-                <td className="px-5 py-2 text-right">{p.min_stock}</td>
-              </tr>
-            ))}
-            {data.low_stock_products.length === 0 && (
-              <tr><td colSpan="4" className="px-5 py-6 text-center text-slate-400">Sin stock bajo 🎉</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
+  const reponer = data.productos_reponer || [];
 
-function Card({ label, value, accent = "" }) {
   return (
-    <div className="bg-white rounded-lg shadow p-5">
-      <div className="text-sm text-slate-500">{label}</div>
-      <div className={`text-3xl font-bold mt-1 ${accent}`}>{value}</div>
+    <div className="space-y-6">
+      <h1 className="text-xl font-bold text-slate-800">Tablero</h1>
+
+      {/* KPIs */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        {data.ventas_hoy && (
+          <Kpi label="Ventas hoy" value={data.ventas_hoy.count} sub={Q(data.ventas_hoy.total)}
+               icon="💵" gradient="from-emerald-500 to-green-600" />
+        )}
+        {data.ventas_mes && (
+          <Kpi label="Ventas del mes" value={Q(data.ventas_mes.total)} sub={cap(data.ventas_mes.label)}
+               icon="📅" gradient="from-blue-500 to-indigo-600" />
+        )}
+        {data.productos_total !== undefined && (
+          <Kpi label="Productos registrados" value={data.productos_total} sub="en catálogo"
+               icon="📦" gradient="from-amber-500 to-orange-600" />
+        )}
+        {data.stock_bajo !== undefined && (
+          <Kpi label="Stock bajo" value={data.stock_bajo}
+               sub={data.stock_bajo > 0 ? "Reponer pronto" : "Todo en orden"}
+               icon="⚠️" gradient="from-rose-500 to-red-600" />
+        )}
+      </div>
+
+      {/* Accesos rápidos */}
+      {data.can_accesos_rapidos && (
+        <div>
+          <h2 className="text-base font-bold text-slate-700 mb-3">Accesos rápidos</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {QUICK.map((q) => (
+              <Link key={q.to} to={q.to}
+                    className="bg-white rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition p-4 flex flex-col items-center gap-2">
+                <span className={`w-12 h-12 rounded-xl ${q.color} text-white text-2xl flex items-center justify-center shadow`}>{q.icon}</span>
+                <span className="text-sm font-medium text-slate-700 text-center">{q.label}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Productos por reponer */}
+      {data.productos_reponer && (
+        <div className="bg-white rounded-2xl shadow overflow-hidden">
+          <div className="px-5 py-3 bg-gradient-to-r from-rose-500 to-red-600 text-white font-semibold flex items-center gap-2">
+            ⚠️ Productos por reponer
+          </div>
+          <div className="divide-y">
+            {reponer.map((p) => (
+              <div key={p.id} className="px-5 py-3 flex items-center justify-between">
+                <div>
+                  <div className="font-medium text-slate-800">{p.name}</div>
+                  <div className="text-xs font-mono text-slate-400">{p.sku}</div>
+                </div>
+                <div className="text-sm">
+                  <span className="text-red-600 font-bold text-lg">{p.stock_display}</span>
+                  <span className="text-slate-400"> / {p.min_stock} mín</span>
+                </div>
+              </div>
+            ))}
+            {reponer.length === 0 && (
+              <div className="px-5 py-8 text-center text-slate-400">Sin productos por reponer 🎉</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Sesión + Cajas */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-white rounded-2xl shadow p-5 border-t-4 border-orange-400 flex items-center gap-4">
+          <div className="w-14 h-14 rounded-full bg-orange-500 text-white text-xl font-bold flex items-center justify-center">
+            {(data.user?.name || "U").charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <div className="text-sm text-slate-500">Sesión iniciada como</div>
+            <div className="text-lg font-bold text-slate-800">{data.user?.name}</div>
+            {data.user?.roles?.length > 0 ? (
+              <span className="inline-block mt-1 text-xs bg-amber-100 text-amber-700 rounded px-2 py-0.5">
+                {cap(data.user.roles[0])}
+              </span>
+            ) : data.user?.is_superuser && (
+              <span className="inline-block mt-1 text-xs bg-amber-100 text-amber-700 rounded px-2 py-0.5">Admin</span>
+            )}
+          </div>
+        </div>
+
+        {data.cajas_abiertas !== undefined && (
+          <div className="bg-white rounded-2xl shadow p-5 border-t-4 border-emerald-400 flex items-center justify-between">
+            <div>
+              <div className="text-sm text-slate-500">Cajas abiertas</div>
+              <div className="text-4xl font-extrabold text-emerald-600">{data.cajas_abiertas}</div>
+            </div>
+            <Link to="/caja" className="text-sm text-orange-600 font-medium hover:underline">Ver cajas →</Link>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

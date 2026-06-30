@@ -1,7 +1,8 @@
 """API núcleo: perfil, sucursales, dashboard y administración."""
 
 from django.contrib.auth.models import Group
-from django.db.models import F
+from django.db.models import F, Sum
+from django.utils import timezone
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -53,17 +54,63 @@ def me(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def dashboard(request):
-    """KPIs básicos del tablero."""
+    """KPIs del tablero, filtrados por los permisos dashboard.* del usuario."""
+    from cashbox.models import CashSession
+    from sales.models import Sale
+
+    user = request.user
+    perms = set(user_permission_codenames(user))
+
+    def can(code):
+        return user.is_superuser or code in perms
+
+    today = timezone.localdate()
+    MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio",
+             "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+    data = {}
+
+    if can("dashboard.ventas_hoy"):
+        hoy = Sale.objects.filter(status=Sale.STATUS_COMPLETADA, date__date=today)
+        data["ventas_hoy"] = {
+            "count": hoy.count(),
+            "total": str(hoy.aggregate(t=Sum("total"))["t"] or 0),
+        }
+
+    if can("dashboard.ventas_mes"):
+        mes = Sale.objects.filter(
+            status=Sale.STATUS_COMPLETADA, date__year=today.year, date__month=today.month
+        )
+        data["ventas_mes"] = {
+            "total": str(mes.aggregate(t=Sum("total"))["t"] or 0),
+            "label": f"{MESES[today.month - 1]} {today.year}",
+        }
+
+    if can("dashboard.productos_total"):
+        data["productos_total"] = Product.objects.filter(active=True).count()
+
     low_stock_qs = Product.objects.filter(active=True, stock__lte=F("min_stock"))
-    return Response({
-        "total_products": Product.objects.filter(active=True).count(),
-        "low_stock_count": low_stock_qs.count(),
-        "low_stock_products": [
+    if can("dashboard.stock_bajo"):
+        data["stock_bajo"] = low_stock_qs.count()
+
+    if can("dashboard.productos_reponer"):
+        data["productos_reponer"] = [
             {"id": p.id, "sku": p.sku, "name": p.name,
-             "stock_display": p.format_stock_mixed(), "min_stock": p.min_stock}
+             "stock_display": p.format_stock_mixed(), "min_stock": str(p.min_stock)}
             for p in low_stock_qs.order_by("stock")[:10]
-        ],
-    })
+        ]
+
+    if can("dashboard.cajas_abiertas"):
+        data["cajas_abiertas"] = CashSession.objects.filter(
+            status=CashSession.STATUS_ABIERTA
+        ).count()
+
+    data["user"] = {
+        "name": user.name or user.email,
+        "roles": list(user.groups.values_list("name", flat=True)),
+        "is_superuser": user.is_superuser,
+    }
+    data["can_accesos_rapidos"] = can("dashboard.accesos_rapidos")
+    return Response(data)
 
 
 @api_view(["GET"])

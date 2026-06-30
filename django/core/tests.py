@@ -363,3 +363,43 @@ class HealthAndBackupS3Tests(APITestCase):
         with override_settings(BACKUP_S3_BUCKET="b"), \
                 patch("boto3.client", side_effect=Exception("sin credenciales")):
             self.assertIsNone(backups.upload_to_s3(Path("/tmp/x.zip")))
+
+
+class DashboardWidgetTests(APITestCase):
+    """El tablero devuelve los widgets ricos según permisos."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from django.contrib.auth.models import Group
+        from core.permissions import ROLE_MATRIX, sync_permissions
+        User = get_user_model()
+        self.branch = Branch.objects.create(name="Matriz", code="M", is_main=True)
+        perms = sync_permissions()
+        for role, codes in ROLE_MATRIX.items():
+            g, _ = Group.objects.get_or_create(name=role)
+            g.permissions.set([perms[c] for c in codes if c in perms])
+        self.admin = User.objects.create_user(username="a", email="a@test.com", password="x123", is_superuser=True)
+        self.seller = User.objects.create_user(username="s", email="s@test.com", password="x123")
+        self.seller.groups.add(Group.objects.get(name="vendedor"))
+
+    def _client(self, email):
+        from rest_framework.test import APIClient
+        c = APIClient()
+        r = c.post("/api/auth/token/", {"email": email, "password": "x123"}, format="json")
+        c.credentials(HTTP_AUTHORIZATION=f"Bearer {r.json()['access']}", HTTP_X_BRANCH_ID=str(self.branch.id))
+        return c
+
+    def test_admin_ve_todos_los_widgets(self):
+        d = self._client("a@test.com").get("/api/dashboard/").json()
+        for key in ["ventas_hoy", "ventas_mes", "productos_total", "stock_bajo",
+                    "productos_reponer", "cajas_abiertas", "user"]:
+            self.assertIn(key, d)
+        self.assertIn("count", d["ventas_hoy"])
+        self.assertTrue(d["can_accesos_rapidos"])
+
+    def test_vendedor_ve_solo_sus_widgets(self):
+        d = self._client("s@test.com").get("/api/dashboard/").json()
+        # El vendedor tiene dashboard.ventas_hoy y cajas_abiertas, pero no ventas_mes.
+        self.assertIn("ventas_hoy", d)
+        self.assertNotIn("ventas_mes", d)
+        self.assertNotIn("productos_total", d)
