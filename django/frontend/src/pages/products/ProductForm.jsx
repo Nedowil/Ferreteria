@@ -5,7 +5,7 @@ import api from "../../api/client";
 const EMPTY = {
   sku: "", barcode: "", name: "", description: "",
   category: "", brand: "", unit: "",
-  base_unit_label: "unidad", container_label: "", container_factor: "", container_price: "",
+  base_unit_label: "", container_label: "", container_factor: "", container_price: "",
   tax_type: "iva", purchase_price: "0", sale_price: "0",
   wholesale_price: "", wholesale_min_quantity: "", container_wholesale_price: "",
   min_stock: "", sells_by_measure: false, measure_step: "",
@@ -251,6 +251,10 @@ export default function ProductForm() {
     ["min_stock", "initial_stock"].forEach((k) => {
       if (payload[k] === "" || payload[k] == null) payload[k] = "0";
     });
+    // Unidad base vacía → "unidad" (valor por defecto del placeholder).
+    if (!payload.base_unit_label || !String(payload.base_unit_label).trim()) {
+      payload.base_unit_label = "unidad";
+    }
     // Presentaciones: solo las que tienen etiqueta (el factor se parsea en el backend).
     payload.presentations_input = presentations
       .filter((p) => p.label.trim())
@@ -293,7 +297,7 @@ export default function ProductForm() {
         <h3 className="font-semibold mb-1">Unidad y empaque</h3>
         <p className="text-xs text-slate-500 mb-3">Ej.: empaque "caja", factor 50 → 1 caja = 50 unidades base.</p>
         <div className="grid grid-cols-4 gap-4">
-          <TextField label="Unidad base" name="base_unit_label" form={form} errors={errors} onChange={set} />
+          <TextField label="Unidad base" name="base_unit_label" form={form} errors={errors} onChange={set} placeholder="unidad" />
           <TextField label="Empaque" name="container_label" form={form} errors={errors} onChange={set} />
           <TextField label="Factor de empaque" name="container_factor" form={form} errors={errors} onChange={set} />
           <TextField label="Precio por empaque" name="container_price" form={form} errors={errors} onChange={set} type="number" placeholder="0" />
