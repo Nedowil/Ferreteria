@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import logo from "../assets/logo.jpg";
 
 function NavItem({ to, icon, label, end }) {
   return (
@@ -28,9 +29,8 @@ export default function Layout({ children }) {
   return (
     <div className="min-h-screen flex bg-slate-50">
       <aside className="w-60 bg-gradient-to-b from-slate-900 to-slate-950 text-slate-200 flex flex-col fixed inset-y-0 shadow-xl">
-        <div className="px-5 py-4 flex items-center gap-2 border-b border-white/10">
-          <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-lg shadow-lg shadow-blue-600/30">🔧</span>
-          <span className="text-lg font-bold text-white">Ferretería</span>
+        <div className="px-4 py-4 border-b border-white/10">
+          <img src={logo} alt="Ferretería Central" className="w-full rounded-lg shadow-lg" />
         </div>
 
         <nav className="flex-1 overflow-y-auto py-2">

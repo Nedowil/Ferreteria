@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import QRCode from "qrcode";
 import api from "../../api/client";
+import logo from "../../assets/logo.jpg";
 
 const GREEN = "#159f73";
 const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -132,6 +133,7 @@ function TicketPaper({ company, sale, fel, qr, phrases }) {
   return (
     <div className="ticket-paper bg-white shadow rounded-lg mx-auto px-5 py-5 text-[12px] font-mono leading-tight text-slate-900" style={{ width: 320 }}>
       <div className="text-center">
+        <img src={logo} alt="" className="mx-auto mb-2 w-40 rounded" />
         <div className="font-bold text-[14px]">{company.name}</div>
         {company.legal_name && <div className="font-bold">{company.legal_name}</div>}
         <div className="font-bold">NIT: {company.tax_id}</div>
@@ -199,6 +201,7 @@ function CartaPaper({ company, sale, fel, qr, phrases, d, meses }) {
       {/* Encabezado */}
       <div className="grid grid-cols-2 gap-4 items-start">
         <div className="text-center">
+          <img src={logo} alt="" className="mx-auto mb-2 w-44 rounded" />
           <div className="font-bold text-[15px]">{company.name}</div>
           {company.legal_name && <div>{company.legal_name}</div>}
           <div>{company.address}</div>

@@ -75,7 +75,7 @@ class CompanySetting(models.Model):
     """Configuración de la empresa (singleton): datos fiscales, IVA, FEL e impresoras."""
 
     # Datos fiscales / emisor
-    commercial_name = models.CharField("nombre comercial", max_length=255, default="Mi Ferretería")
+    commercial_name = models.CharField("nombre comercial", max_length=255, default="Ferretería Central")
     legal_name = models.CharField("razón social", max_length=255, blank=True, null=True)
     tax_id = models.CharField("NIT", max_length=30, default="CF")
     tax_regime = models.CharField("régimen", max_length=40, default="PEQUENO_CONTRIBUYENTE")  # | GENERAL

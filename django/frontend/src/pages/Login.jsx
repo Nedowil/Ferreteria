@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import logo from "../assets/logo.jpg";
 
 export default function Login() {
   const { login, user } = useAuth();
@@ -38,8 +39,8 @@ export default function Login() {
     <div className="min-h-screen flex">
       {/* Panel de marca (visible en pantallas grandes) */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-blue-900 text-white flex-col justify-between p-12">
-        <div className="relative z-10 flex items-center gap-2 text-2xl font-bold">
-          🔧 <span>Ferretería</span>
+        <div className="relative z-10">
+          <img src={logo} alt="Ferretería Central" className="w-72 rounded-2xl shadow-2xl ring-1 ring-white/10" />
         </div>
         <div className="relative z-10">
           <h1 className="text-4xl font-extrabold leading-tight">
@@ -66,9 +67,7 @@ export default function Login() {
       <div className="flex-1 flex items-center justify-center bg-slate-50 px-4 py-10">
         <form onSubmit={submit} className="w-full max-w-sm">
           <div className="text-center mb-8">
-            <div className="inline-flex w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white text-3xl items-center justify-center shadow-lg shadow-blue-600/30">
-              🔧
-            </div>
+            <img src={logo} alt="Ferretería Central" className="w-48 mx-auto rounded-xl shadow-lg" />
             <h2 className="text-2xl font-bold mt-4 text-slate-800">Bienvenido</h2>
             <p className="text-sm text-slate-500">Ingresá a tu cuenta para continuar</p>
           </div>
