@@ -3,6 +3,7 @@
 from decimal import Decimal
 
 from rest_framework import serializers
+from core.serializer_fields import RoundingDecimalField
 
 from inventory.models import Product
 from .models import Purchase, PurchaseItem, PurchasePayment
@@ -21,8 +22,8 @@ class PurchaseItemSerializer(serializers.ModelSerializer):
 
 class PurchaseItemWriteSerializer(serializers.Serializer):
     product_id = serializers.IntegerField()
-    quantity = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0.01"))
-    unit_cost = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0"))
+    quantity = RoundingDecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0.01"))
+    unit_cost = RoundingDecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0"))
     tax_type = serializers.ChoiceField(choices=["iva", "exento"], required=False)
 
     def validate_product_id(self, value):
@@ -43,7 +44,7 @@ class PurchaseListSerializer(serializers.ModelSerializer):
     supplier_name = serializers.CharField(source="supplier.name", read_only=True)
     status_display = serializers.CharField(source="get_status_display", read_only=True)
     payment_status_display = serializers.CharField(source="get_payment_status_display", read_only=True)
-    balance = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True)
+    balance = RoundingDecimalField(max_digits=14, decimal_places=2, read_only=True)
 
     class Meta:
         model = Purchase
@@ -75,7 +76,7 @@ class PurchaseWriteSerializer(serializers.Serializer):
     date = serializers.DateField()
     invoice_number = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     notes = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    tax = serializers.DecimalField(max_digits=14, decimal_places=2, required=False, default=0)
+    tax = RoundingDecimalField(max_digits=14, decimal_places=2, required=False, default=0)
     payment_status = serializers.ChoiceField(
         choices=[c[0] for c in Purchase.PAY_CHOICES], required=False, default=Purchase.PAY_PAGADA
     )
@@ -89,7 +90,7 @@ class PurchaseWriteSerializer(serializers.Serializer):
 
 
 class PaymentWriteSerializer(serializers.Serializer):
-    amount = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0.01"))
+    amount = RoundingDecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0.01"))
     date = serializers.DateField(required=False)
     payment_method = serializers.CharField(required=False, default="efectivo")
     reference = serializers.CharField(required=False, allow_blank=True, allow_null=True)

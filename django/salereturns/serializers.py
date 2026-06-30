@@ -3,6 +3,7 @@
 from decimal import Decimal
 
 from rest_framework import serializers
+from core.serializer_fields import RoundingDecimalField
 
 from inventory.models import Product
 from sales.models import Sale, SaleItem
@@ -48,7 +49,7 @@ class SaleReturnDetailSerializer(SaleReturnListSerializer):
 
 class ReturnItemWriteSerializer(serializers.Serializer):
     sale_item_id = serializers.IntegerField()
-    quantity = serializers.DecimalField(max_digits=12, decimal_places=4, min_value=Decimal("0.0001"))
+    quantity = RoundingDecimalField(max_digits=12, decimal_places=4, min_value=Decimal("0.0001"))
 
 
 class ReturnWriteSerializer(serializers.Serializer):
@@ -73,8 +74,8 @@ class ReturnWriteSerializer(serializers.Serializer):
 
 class WithoutSaleItemWriteSerializer(serializers.Serializer):
     product_id = serializers.IntegerField()
-    quantity = serializers.DecimalField(max_digits=12, decimal_places=4, min_value=Decimal("0.0001"))
-    unit_price = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0"))
+    quantity = RoundingDecimalField(max_digits=12, decimal_places=4, min_value=Decimal("0.0001"))
+    unit_price = RoundingDecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0"))
     tax_type = serializers.ChoiceField(choices=["iva", "exento"], required=False)
 
     def validate_product_id(self, value):

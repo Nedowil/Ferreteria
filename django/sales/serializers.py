@@ -3,6 +3,7 @@
 from decimal import Decimal
 
 from rest_framework import serializers
+from core.serializer_fields import RoundingDecimalField
 
 from inventory.models import Product
 from .models import Sale, SaleItem, SalePayment
@@ -30,7 +31,7 @@ class SaleListSerializer(serializers.ModelSerializer):
     customer_name = serializers.CharField(source="customer.name", read_only=True, default=None)
     status_display = serializers.CharField(source="get_status_display", read_only=True)
     payment_status_display = serializers.CharField(source="get_payment_status_display", read_only=True)
-    balance = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True)
+    balance = RoundingDecimalField(max_digits=14, decimal_places=2, read_only=True)
 
     class Meta:
         model = Sale
@@ -58,10 +59,10 @@ class SaleDetailSerializer(SaleListSerializer):
 
 class SaleItemWriteSerializer(serializers.Serializer):
     product_id = serializers.IntegerField()
-    quantity = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0.01"))
-    unit_price = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0"))
-    discount = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0"), required=False, default=0)
-    units_factor = serializers.DecimalField(max_digits=12, decimal_places=4, min_value=Decimal("0.0001"), required=False, default=1)
+    quantity = RoundingDecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0.01"))
+    unit_price = RoundingDecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0"))
+    discount = RoundingDecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0"), required=False, default=0)
+    units_factor = RoundingDecimalField(max_digits=12, decimal_places=4, min_value=Decimal("0.0001"), required=False, default=1)
     unit_label = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=30)
     tax_type = serializers.ChoiceField(choices=["iva", "exento"], required=False)
 
@@ -71,8 +72,8 @@ class SaleWriteSerializer(serializers.Serializer):
     payment_method = serializers.ChoiceField(
         choices=["efectivo", "tarjeta", "transferencia", "credito"], default="efectivo"
     )
-    paid_amount = serializers.DecimalField(max_digits=14, decimal_places=2, min_value=Decimal("0"), default=0)
-    discount = serializers.DecimalField(max_digits=14, decimal_places=2, min_value=Decimal("0"), required=False, default=0)
+    paid_amount = RoundingDecimalField(max_digits=14, decimal_places=2, min_value=Decimal("0"), default=0)
+    discount = RoundingDecimalField(max_digits=14, decimal_places=2, min_value=Decimal("0"), required=False, default=0)
     payment_status = serializers.ChoiceField(
         choices=[c[0] for c in Sale.PAY_CHOICES], required=False
     )
@@ -88,7 +89,7 @@ class SaleWriteSerializer(serializers.Serializer):
 
 
 class PaymentWriteSerializer(serializers.Serializer):
-    amount = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0.01"))
+    amount = RoundingDecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0.01"))
     date = serializers.DateField(required=False)
     payment_method = serializers.CharField(required=False, default="efectivo")
     reference = serializers.CharField(required=False, allow_blank=True, allow_null=True)

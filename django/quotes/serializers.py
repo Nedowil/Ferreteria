@@ -3,6 +3,7 @@
 from decimal import Decimal
 
 from rest_framework import serializers
+from core.serializer_fields import RoundingDecimalField
 
 from inventory.models import Product
 from .models import Quotation, QuotationItem
@@ -44,9 +45,9 @@ class QuotationDetailSerializer(QuotationListSerializer):
 
 class QuotationItemWriteSerializer(serializers.Serializer):
     product_id = serializers.IntegerField()
-    quantity = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0.01"))
-    unit_price = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0"))
-    discount = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0"), required=False, default=0)
+    quantity = RoundingDecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0.01"))
+    unit_price = RoundingDecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0"))
+    discount = RoundingDecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0"), required=False, default=0)
     tax_type = serializers.ChoiceField(choices=["iva", "exento"], required=False)
 
     def validate_product_id(self, value):
@@ -59,7 +60,7 @@ class QuotationWriteSerializer(serializers.Serializer):
     customer_id = serializers.IntegerField(required=False, allow_null=True)
     date = serializers.DateField(required=False)
     valid_until = serializers.DateField(required=False, allow_null=True)
-    discount = serializers.DecimalField(max_digits=14, decimal_places=2, min_value=Decimal("0"), required=False, default=0)
+    discount = RoundingDecimalField(max_digits=14, decimal_places=2, min_value=Decimal("0"), required=False, default=0)
     notes = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     items = QuotationItemWriteSerializer(many=True)
 

@@ -3,6 +3,7 @@
 from decimal import Decimal
 
 from rest_framework import serializers
+from core.serializer_fields import RoundingDecimalField
 
 from inventory.models import Product
 from .models import BranchTransfer, BranchTransferItem
@@ -44,8 +45,8 @@ class TransferDetailSerializer(TransferListSerializer):
 
 class TransferItemWriteSerializer(serializers.Serializer):
     product_id = serializers.IntegerField()
-    quantity_input = serializers.DecimalField(max_digits=12, decimal_places=4, min_value=Decimal("0.0001"))
-    units_factor = serializers.DecimalField(max_digits=12, decimal_places=4, min_value=Decimal("0.0001"), required=False, default=1)
+    quantity_input = RoundingDecimalField(max_digits=12, decimal_places=4, min_value=Decimal("0.0001"))
+    units_factor = RoundingDecimalField(max_digits=12, decimal_places=4, min_value=Decimal("0.0001"), required=False, default=1)
     unit_label = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=30)
 
     def validate_product_id(self, value):

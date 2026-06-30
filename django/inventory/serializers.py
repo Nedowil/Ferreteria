@@ -3,6 +3,7 @@
 from decimal import Decimal
 
 from rest_framework import serializers
+from core.serializer_fields import RoundingDecimalField
 
 from .models import (
     Brand,
@@ -95,7 +96,7 @@ class ProductSerializer(serializers.ModelSerializer):
     )
 
     # Solo escritura: stock inicial al crear (aplicado vía InventoryService)
-    initial_stock = serializers.DecimalField(
+    initial_stock = RoundingDecimalField(
         max_digits=12, decimal_places=2, required=False, write_only=True, default=Decimal("0")
     )
     stock_input_mode = serializers.ChoiceField(
@@ -156,7 +157,7 @@ class MovementCreateSerializer(serializers.Serializer):
     """
 
     type = serializers.ChoiceField(choices=[c[0] for c in InventoryMovement.TYPE_CHOICES])
-    quantity = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0"))
+    quantity = RoundingDecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0"))
     input_mode = serializers.ChoiceField(choices=["base", "container"], required=False, default="base")
     reason = serializers.CharField(required=False, allow_blank=True, max_length=255)
 
@@ -170,7 +171,7 @@ class MovementCreateSerializer(serializers.Serializer):
 
 class StockCountItemSerializer(serializers.Serializer):
     product_id = serializers.IntegerField()
-    new_count = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0"))
+    new_count = RoundingDecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0"))
 
 
 class StockCountSerializer(serializers.Serializer):

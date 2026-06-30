@@ -3,6 +3,7 @@
 from decimal import Decimal
 
 from rest_framework import serializers
+from core.serializer_fields import RoundingDecimalField
 
 from .models import CashMovement, CashSession
 from .services import compute_expected, totals_by_payment_method
@@ -51,16 +52,16 @@ class CashSessionDetailSerializer(CashSessionListSerializer):
 
 
 class OpenSessionSerializer(serializers.Serializer):
-    opening_amount = serializers.DecimalField(max_digits=14, decimal_places=2, min_value=Decimal("0"))
+    opening_amount = RoundingDecimalField(max_digits=14, decimal_places=2, min_value=Decimal("0"))
     opening_notes = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
 
 class MovementWriteSerializer(serializers.Serializer):
     type = serializers.ChoiceField(choices=[CashMovement.INGRESO, CashMovement.EGRESO])
-    amount = serializers.DecimalField(max_digits=14, decimal_places=2, min_value=Decimal("0.01"))
+    amount = RoundingDecimalField(max_digits=14, decimal_places=2, min_value=Decimal("0.01"))
     description = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=255)
 
 
 class CloseSessionSerializer(serializers.Serializer):
-    counted_cash = serializers.DecimalField(max_digits=14, decimal_places=2, min_value=Decimal("0"))
+    counted_cash = RoundingDecimalField(max_digits=14, decimal_places=2, min_value=Decimal("0"))
     closing_notes = serializers.CharField(required=False, allow_blank=True, allow_null=True)
