@@ -37,6 +37,9 @@ function measuresFor(product, customer) {
   return out;
 }
 
+// Billetes comunes en Guatemala para cobro rápido en efectivo.
+const QUICK_CASH = [5, 10, 20, 50, 100, 200];
+
 const trim = (n) => {
   const s = Number(n).toFixed(4).replace(/0+$/, "").replace(/\.$/, "");
   return s || "0";
@@ -213,6 +216,7 @@ export default function POS() {
 
   const total = cart.reduce((s, i) => s + Number(i.quantity || 0) * Number(i.unit_price || 0), 0);
   const change = paymentMethod === "efectivo" && !credit ? Math.max(0, Number(paid || 0) - total) : 0;
+  const exactPaid = paid !== "" && Math.abs(Number(paid) - total) < 0.005 && total > 0;
 
   // Espeja el carrito a la pantalla de cliente (ventana/monitor secundario).
   useEffect(() => {
@@ -376,6 +380,21 @@ export default function POS() {
               {paymentMethod === "efectivo" && (
                 <div>
                   <label className="block text-sm font-medium mb-1">Recibido</label>
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    <button type="button" onClick={() => setPaid(total.toFixed(2))} disabled={total <= 0}
+                            className={"rounded-lg px-3 py-1.5 text-sm font-medium border transition disabled:opacity-40 " +
+                              (exactPaid
+                                ? "bg-emerald-600 text-white border-emerald-600"
+                                : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100")}>
+                      ✓ Pago exacto
+                    </button>
+                    {QUICK_CASH.filter((v) => v >= total).slice(0, 3).map((v) => (
+                      <button key={v} type="button" onClick={() => setPaid(String(v))}
+                              className="rounded-lg px-3 py-1.5 text-sm border border-slate-200 text-slate-600 hover:bg-slate-50 transition">
+                        Q{v}
+                      </button>
+                    ))}
+                  </div>
                   <input type="number" step="any" value={paid} onChange={(e) => setPaid(e.target.value)}
                          placeholder={total.toFixed(2)} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
                   <div className="flex justify-between text-sm mt-2"><span className="text-slate-500">Vuelto</span><span className="font-semibold">Q{change.toFixed(2)}</span></div>
