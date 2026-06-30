@@ -90,13 +90,15 @@ export default function Ticket() {
 
   return (
     <div className={mode === "carta" ? "max-w-4xl mx-auto" : "max-w-md mx-auto"}>
-      <style>{`@media print {
-        body * { visibility: hidden !important; }
-        #printable, #printable * { visibility: visible !important; }
-        #printable { position: absolute; left: 0; top: 0; width: 100%; }
-        .ticket-paper { width: 80mm !important; box-shadow: none !important; }
-        @page { margin: 8mm; }
-      }`}</style>
+      <style>{`
+        #printable, #printable * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        @media print {
+          body * { visibility: hidden !important; }
+          #printable, #printable * { visibility: visible !important; }
+          #printable { position: absolute; left: 0; top: 0; width: 100%; }
+          .ticket-paper { width: 80mm !important; box-shadow: none !important; }
+          @page { margin: 8mm; }
+        }`}</style>
 
       <div className="flex flex-wrap gap-2 justify-between mb-3 print:hidden">
         <button onClick={() => navigate(-1)} className="text-sm text-slate-500">← Volver</button>
