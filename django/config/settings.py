@@ -286,3 +286,51 @@ CORS_ALLOWED_ORIGINS = [
     ).split(",") if o.strip()
 ]
 CORS_ALLOW_HEADERS = list(default_cors_headers) + ["x-branch-id"]
+
+
+# ---------------------------------------------------------------------------
+# Logging (a consola; el orquestador/contenedor recoge stdout/stderr)
+# ---------------------------------------------------------------------------
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {"format": "{asctime} {levelname} {name}: {message}", "style": "{"},
+    },
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "verbose"},
+    },
+    "root": {"handlers": ["console"], "level": os.getenv("LOG_LEVEL", "INFO")},
+    "loggers": {
+        "django.request": {"handlers": ["console"], "level": "ERROR", "propagate": False},
+    },
+}
+
+# ---------------------------------------------------------------------------
+# Sentry (monitoreo de errores). Solo se inicializa si hay SENTRY_DSN.
+# ---------------------------------------------------------------------------
+SENTRY_DSN = os.getenv("SENTRY_DSN", "")
+if SENTRY_DSN:
+    try:
+        import sentry_sdk
+        from sentry_sdk.integrations.django import DjangoIntegration
+
+        sentry_sdk.init(
+            dsn=SENTRY_DSN,
+            integrations=[DjangoIntegration()],
+            traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0")),
+            send_default_pii=False,
+            environment=os.getenv("SENTRY_ENVIRONMENT", "production"),
+        )
+    except ImportError:
+        pass
+
+# ---------------------------------------------------------------------------
+# Respaldos fuera del servidor (S3-compatible). Opcional: solo si hay bucket.
+# ---------------------------------------------------------------------------
+BACKUP_S3_BUCKET = os.getenv("BACKUP_S3_BUCKET", "")
+BACKUP_S3_PREFIX = os.getenv("BACKUP_S3_PREFIX", "backups/")
+BACKUP_S3_ENDPOINT_URL = os.getenv("BACKUP_S3_ENDPOINT_URL", "")
+BACKUP_S3_ACCESS_KEY = os.getenv("BACKUP_S3_ACCESS_KEY", "")
+BACKUP_S3_SECRET_KEY = os.getenv("BACKUP_S3_SECRET_KEY", "")
+BACKUP_S3_REGION = os.getenv("BACKUP_S3_REGION", "")

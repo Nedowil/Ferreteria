@@ -315,3 +315,51 @@ class ThrottleTests(APITestCase):
         finally:
             LoginRateThrottle.THROTTLE_RATES = original
             cache.clear()
+
+
+class HealthAndBackupS3Tests(APITestCase):
+    """Healthchecks y subida de respaldos a S3 (mockeada)."""
+
+    def test_healthz(self):
+        r = self.client.get("/healthz")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["status"], "ok")
+
+    def test_readyz(self):
+        r = self.client.get("/readyz")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["database"], "ok")
+
+    def test_health_no_requiere_auth(self):
+        from rest_framework.test import APIClient
+        anon = APIClient()  # sin credenciales
+        self.assertEqual(anon.get("/healthz").status_code, 200)
+        self.assertEqual(anon.get("/readyz").status_code, 200)
+
+    def test_upload_to_s3_sin_bucket_devuelve_none(self):
+        from core import backups
+        from pathlib import Path
+        from django.test import override_settings
+        with override_settings(BACKUP_S3_BUCKET=""):
+            self.assertIsNone(backups.upload_to_s3(Path("/tmp/x.zip")))
+
+    def test_upload_to_s3_sube_cuando_configurado(self):
+        from unittest.mock import patch, MagicMock
+        from pathlib import Path
+        from django.test import override_settings
+        from core import backups
+        fake_client = MagicMock()
+        with override_settings(BACKUP_S3_BUCKET="mis-backups", BACKUP_S3_PREFIX="backups/"), \
+                patch("boto3.client", return_value=fake_client):
+            uri = backups.upload_to_s3(Path("/tmp/ferreteria-2026.zip"))
+        self.assertEqual(uri, "s3://mis-backups/backups/ferreteria-2026.zip")
+        fake_client.upload_file.assert_called_once()
+
+    def test_upload_to_s3_no_rompe_si_falla(self):
+        from unittest.mock import patch
+        from pathlib import Path
+        from django.test import override_settings
+        from core import backups
+        with override_settings(BACKUP_S3_BUCKET="b"), \
+                patch("boto3.client", side_effect=Exception("sin credenciales")):
+            self.assertIsNone(backups.upload_to_s3(Path("/tmp/x.zip")))

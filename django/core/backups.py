@@ -8,6 +8,7 @@ Espejo del BackupController/BackupRun de Laravel. Genera un ZIP con:
 Los respaldos se guardan en BACKUP_DIR y se conservan los últimos `keep`.
 """
 
+import logging
 import os
 import re
 import subprocess
@@ -17,6 +18,8 @@ from pathlib import Path
 
 from django.conf import settings
 from django.core.management import call_command
+
+logger = logging.getLogger(__name__)
 
 BACKUP_DIR = Path(settings.BASE_DIR) / "backups"
 FILENAME_RE = re.compile(r"^ferreteria-[0-9_\-]+\.zip$")
@@ -84,7 +87,42 @@ def create_backup(timestamp: str, *, keep: int = 14) -> dict:
         _add_database(zf)
         _add_media(zf)
     purge_old(keep)
-    return {"filename": filename, "size": path.stat().st_size}
+    result = {"filename": filename, "size": path.stat().st_size}
+    remote = upload_to_s3(path)
+    if remote:
+        result["remote"] = remote
+    return result
+
+
+def upload_to_s3(path: Path):
+    """Sube el respaldo a un almacenamiento S3-compatible si está configurado.
+
+    Devuelve la URI ``s3://bucket/clave`` o None. No interrumpe el respaldo si la
+    subida falla (solo registra el error).
+    """
+    bucket = getattr(settings, "BACKUP_S3_BUCKET", "")
+    if not bucket:
+        return None
+    try:
+        import boto3
+    except ImportError:
+        logger.warning("BACKUP_S3_BUCKET configurado pero boto3 no está instalado.")
+        return None
+    try:
+        client = boto3.client(
+            "s3",
+            endpoint_url=getattr(settings, "BACKUP_S3_ENDPOINT_URL", "") or None,
+            aws_access_key_id=getattr(settings, "BACKUP_S3_ACCESS_KEY", "") or None,
+            aws_secret_access_key=getattr(settings, "BACKUP_S3_SECRET_KEY", "") or None,
+            region_name=getattr(settings, "BACKUP_S3_REGION", "") or None,
+        )
+        prefix = getattr(settings, "BACKUP_S3_PREFIX", "backups/").strip("/")
+        key = f"{prefix}/{path.name}" if prefix else path.name
+        client.upload_file(str(path), bucket, key)
+        return f"s3://{bucket}/{key}"
+    except Exception as e:  # credenciales, red, permisos…
+        logger.error("No se pudo subir el respaldo a S3: %s", e)
+        return None
 
 
 def list_backups() -> list[dict]:

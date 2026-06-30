@@ -8,7 +8,7 @@ from django.views.static import serve as static_serve
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
 
-from core import auth_views, backup_views, views as core_views
+from core import auth_views, backup_views, health, views as core_views
 from inventory import public as public_views
 
 router = DefaultRouter()
@@ -81,6 +81,8 @@ def spa_index(request):
 
 
 urlpatterns = [
+    path("healthz", health.healthz, name="healthz"),
+    path("readyz", health.readyz, name="readyz"),
     path("django-admin/", admin.site.urls),
     path("api/", include(api_patterns)),
     # Archivos subidos (imágenes de productos, logos). En producción los sirve
@@ -88,5 +90,5 @@ urlpatterns = [
     re_path(r"^media/(?P<path>.*)$", static_serve, {"document_root": settings.MEDIA_ROOT}),
     # Fallback del SPA: cualquier ruta que no sea API, admin, estáticos o media
     # devuelve el index.html para que React Router maneje la navegación.
-    re_path(r"^(?!api/|django-admin/|static/|media/).*$", spa_index, name="spa"),
+    re_path(r"^(?!api/|django-admin/|static/|media/|healthz|readyz).*$", spa_index, name="spa"),
 ]
