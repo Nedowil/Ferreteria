@@ -10,7 +10,7 @@ const EMPTY = {
   wholesale_price: "", wholesale_min_quantity: "", container_wholesale_price: "",
   min_stock: "", sells_by_measure: false, measure_step: "",
   active: true, public_visible: true,
-  initial_stock: "", stock_input_mode: "base",
+  initial_stock: "", stock_input_mode: "container",
 };
 
 // Parsea "1/2", "0,5", "10" -> número (0 si inválido)
