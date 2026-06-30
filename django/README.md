@@ -116,7 +116,12 @@ DEBUG=False .venv/bin/gunicorn config.wsgi:application --bind 0.0.0.0:8000 --wor
 - `ALLOWED_HOSTS` con tu dominio y `CSRF_TRUSTED_ORIGINS=https://tu-dominio`.
 - Base de datos PostgreSQL (`DB_ENGINE=postgresql` + `DB_*`).
 - TLS por un proxy/balanceador delante; opcionalmente `SECURE_SSL_REDIRECT=True`
-  y `SECURE_HSTS_SECONDS` (la app ya respeta `X-Forwarded-Proto`).
+  y `SECURE_HSTS_SECONDS` (la app ya respeta `X-Forwarded-Proto`). Hay ejemplos
+  de **Caddy** (TLS automático) y **nginx** en [`deploy/`](deploy/README.md).
+- Healthchecks para el balanceador: `GET /healthz` (vivo) y `/readyz` (BD lista).
+- Observabilidad: `LOG_LEVEL` y, opcional, `SENTRY_DSN` para monitoreo de errores.
+- Respaldos fuera del servidor: definir `BACKUP_S3_BUCKET` (+ `BACKUP_S3_*`) y
+  el ZIP de cada respaldo se sube también a S3/MinIO/Backblaze.
 - Crear el primer admin con `DJANGO_SUPERUSER_EMAIL`/`DJANGO_SUPERUSER_PASSWORD`.
 - Email (para el reseteo de contraseña): definir `EMAIL_BACKEND=…smtp…` y las
   variables `EMAIL_*` + `FRONTEND_URL`. Sin SMTP, los correos se imprimen en la
