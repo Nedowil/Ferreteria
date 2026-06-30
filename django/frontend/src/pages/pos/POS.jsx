@@ -435,6 +435,8 @@ export default function POS() {
   const [addingProduct, setAddingProduct] = useState(false);
   const [lastSale, setLastSale] = useState(null); // venta recién cobrada (modal)
   const [returning, setReturning] = useState(false);
+  const todayStr = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; })();
+  const [saleDate, setSaleDate] = useState(todayStr);
   const searchRef = useRef(null);
 
   const reloadProducts = () =>
@@ -533,6 +535,7 @@ export default function POS() {
     try {
       const payload = {
         customer_id: customerId || null,
+        date: saleDate || null,
         payment_method: credit ? "credito" : paymentMethod,
         payment_status: credit ? "al_credito" : "pagada",
         paid_amount: credit ? (paid || 0) : (paymentMethod === "efectivo" ? (paid || total) : total),
@@ -549,7 +552,7 @@ export default function POS() {
         method: paymentMethod, credit,
       });
       // Limpia para la siguiente venta (la pantalla de cliente vuelve a "idle").
-      setCart([]); setPaid(""); setCredit(false); setCustomerId("");
+      setCart([]); setPaid(""); setCredit(false); setCustomerId(""); setSaleDate(todayStr);
     } catch (err) {
       setError(err.response?.data?.detail || "No se pudo completar la venta.");
     } finally {
@@ -662,6 +665,19 @@ export default function POS() {
             <label className="block text-sm font-medium mb-1">Cliente</label>
             <CustomerPicker customers={customers} value={customerId}
                             onChange={setCustomerId} onAddNew={() => setAddingCustomer(true)} />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Fecha de la venta</label>
+            <input type="date" value={saleDate} onChange={(e) => setSaleDate(e.target.value)}
+                   className={"w-full border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 " +
+                     (saleDate !== todayStr ? "border-amber-400 bg-amber-50 text-amber-800" : "border-slate-300")} />
+            {saleDate !== todayStr && (
+              <div className="text-xs text-amber-600 mt-1 flex items-center justify-between">
+                <span>⚠️ Venta con fecha distinta a hoy.</span>
+                <button type="button" onClick={() => setSaleDate(todayStr)} className="underline">usar hoy</button>
+              </div>
+            )}
           </div>
 
           <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-xl px-4 py-3">

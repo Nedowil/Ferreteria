@@ -77,6 +77,7 @@ class SaleWriteSerializer(serializers.Serializer):
         choices=[c[0] for c in Sale.PAY_CHOICES], required=False
     )
     due_date = serializers.DateField(required=False, allow_null=True)
+    date = serializers.DateField(required=False, allow_null=True)
     notes = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     items = SaleItemWriteSerializer(many=True)
 

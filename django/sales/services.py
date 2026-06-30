@@ -95,9 +95,17 @@ def create_sale(data, items, *, user=None, branch=None):
     if payment_method == "credito":
         payment_method = "efectivo"  # método real del enchufe; el crédito es payment_status
 
+    # Fecha de la venta: por defecto ahora; si se indica una fecha distinta,
+    # se conserva con la hora local actual.
+    sale_date = timezone.now()
+    custom_date = data.get("date")
+    if custom_date:
+        naive = datetime.combine(custom_date, timezone.localtime().time())
+        sale_date = timezone.make_aware(naive, timezone.get_current_timezone())
+
     sale = Sale.objects.create(
         folio=generate_folio(), branch=branch, customer_id=data.get("customer_id"),
-        user=user, date=timezone.now(),
+        user=user, date=sale_date,
         subtotal=subtotal, discount=total_discount, tax=tax, total=total,
         payment_method=payment_method, paid_amount=paid_amount, change_amount=change_amount,
         status=Sale.STATUS_COMPLETADA, payment_status=payment_status, due_date=due_date,
