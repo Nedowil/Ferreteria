@@ -172,9 +172,7 @@ export default function ProductForm() {
   const navigate = useNavigate();
   const editing = Boolean(id);
   const [form, setForm] = useState(EMPTY);
-  const [categories, setCategories] = useState([]);
   const [brands, setBrands] = useState([]);
-  const [units, setUnits] = useState([]);
   const [errors, setErrors] = useState({});
   const [busy, setBusy] = useState(false);
   // Estado del selector de precio base/empaque
@@ -185,9 +183,7 @@ export default function ProductForm() {
   const [presentations, setPresentations] = useState([]);
 
   useEffect(() => {
-    api.get("/inventory/categories/?page_size=200").then((r) => setCategories(r.data.results || r.data));
     api.get("/inventory/brands/?page_size=200").then((r) => setBrands(r.data.results || r.data));
-    api.get("/inventory/units/?page_size=200").then((r) => setUnits(r.data.results || r.data));
     if (editing) {
       api.get(`/inventory/products/${id}/`).then((r) => {
         const d = r.data;
@@ -274,9 +270,7 @@ export default function ProductForm() {
                     className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
         </div>
         <div className="grid grid-cols-3 gap-4 mt-4">
-          <SelectField label="Categoría" name="category" form={form} onChange={set} options={categories} empty="— Sin categoría —" />
           <SelectField label="Marca" name="brand" form={form} onChange={set} options={brands} empty="— Sin marca —" />
-          <SelectField label="Unidad" name="unit" form={form} onChange={set} options={units} empty="— Sin unidad —" />
         </div>
       </section>
 
