@@ -219,11 +219,14 @@ export default function ProductForm() {
     const v = parseFrac(raw);
     return mode === "container" && factor > 0 ? v / factor : v;
   };
+  // El precio se guarda como dinero (2 decimales); redondeamos para no enviar
+  // números larguísimos (p. ej. 800/108 = 7.407407…) que el backend rechaza.
+  const round2 = (n) => (Number.isFinite(n) ? Math.round(n * 100) / 100 : 0);
 
   const onPriceRaw = (field) => (raw) => {
     const mode = field === "purchase" ? purchaseMode : saleMode;
     (field === "purchase" ? setPurchaseRaw : setSaleRaw)(raw);
-    set(field === "purchase" ? "purchase_price" : "sale_price", String(perBaseOf(raw, mode)));
+    set(field === "purchase" ? "purchase_price" : "sale_price", String(round2(perBaseOf(raw, mode))));
   };
 
   const onPriceMode = (field) => (newMode) => {
@@ -232,8 +235,8 @@ export default function ProductForm() {
     const perBase = perBaseOf(raw, oldMode);
     const newRaw = newMode === "container" && factor > 0 ? perBase * factor : perBase;
     (field === "purchase" ? setPurchaseMode : setSaleMode)(newMode);
-    (field === "purchase" ? setPurchaseRaw : setSaleRaw)(perBase ? String(newRaw) : "");
-    set(field === "purchase" ? "purchase_price" : "sale_price", String(perBase));
+    (field === "purchase" ? setPurchaseRaw : setSaleRaw)(perBase ? String(round2(newRaw)) : "");
+    set(field === "purchase" ? "purchase_price" : "sale_price", String(round2(perBase)));
   };
 
   const submit = async (e) => {
