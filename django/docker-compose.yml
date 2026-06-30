@@ -37,6 +37,8 @@ services:
       DB_PORT: 5432
       DJANGO_SUPERUSER_EMAIL: ${DJANGO_SUPERUSER_EMAIL:-}
       DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD:-}
+      # Datos de demostración en el primer arranque (poner true para probar)
+      SEED_DEMO: ${SEED_DEMO:-false}
       # FEL (opcional)
       FEL_DRIVER: ${FEL_DRIVER:-stub}
       FEL_INFILE_USUARIO: ${FEL_INFILE_USUARIO:-}
