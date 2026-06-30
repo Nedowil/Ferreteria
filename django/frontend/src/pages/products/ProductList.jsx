@@ -59,8 +59,8 @@ export default function ProductList() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-lg font-semibold">Productos</h1>
-        <Link to="/productos/nuevo" className="bg-blue-600 text-white rounded px-4 py-2 text-sm font-medium">+ Nuevo producto</Link>
+        <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">📦 Productos</h1>
+        <Link to="/productos/nuevo" className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nuevo producto</Link>
       </div>
 
       <form onSubmit={applyFilters} className="bg-white rounded-lg shadow p-4 mb-4 flex flex-wrap gap-2 items-end">
@@ -84,28 +84,32 @@ export default function ProductList() {
         <button className="bg-slate-700 text-white rounded px-4 py-2 text-sm">Filtrar</button>
       </form>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-slate-500 text-left">
-            <tr><th className="px-4 py-2">SKU</th><th className="px-4 py-2">Producto</th>
-                <th className="px-4 py-2">Categoría</th><th className="px-4 py-2">Marca</th>
-                <th className="px-4 py-2 text-right">Precio</th><th className="px-4 py-2 text-right">Stock</th>
-                <th className="px-4 py-2 text-right">Acciones</th></tr>
+          <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">
+            <tr><th className="px-4 py-2.5">SKU</th><th className="px-4 py-2.5">Producto</th>
+                <th className="px-4 py-2.5">Categoría</th><th className="px-4 py-2.5">Marca</th>
+                <th className="px-4 py-2.5 text-right">Precio</th><th className="px-4 py-2.5 text-right">Stock</th>
+                <th className="px-4 py-2.5 text-right">Acciones</th></tr>
           </thead>
           <tbody>
             {data.results.map((p) => (
-              <tr key={p.id} className="border-t">
-                <td className="px-4 py-2 font-mono text-xs">{p.sku}</td>
+              <tr key={p.id} className="border-t border-slate-100 hover:bg-slate-50/70 transition">
+                <td className="px-4 py-2 font-mono text-xs text-slate-500">{p.sku}</td>
                 <td className="px-4 py-2">
-                  <div className="font-medium">{p.name}</div>
+                  <div className="font-medium text-slate-800">{p.name}</div>
                   {p.barcode && <div className="text-xs text-slate-400 font-mono">{p.barcode}</div>}
                 </td>
                 <td className="px-4 py-2 text-slate-500">{p.category_name || "—"}</td>
                 <td className="px-4 py-2 text-slate-500">{p.brand_name || "—"}</td>
-                <td className="px-4 py-2 text-right">Q{p.sale_price}</td>
-                <td className={"px-4 py-2 text-right " + (p.is_low_stock ? "text-red-600 font-medium" : "")}>{p.stock_display}</td>
+                <td className="px-4 py-2 text-right font-semibold text-slate-700">Q{p.sale_price}</td>
+                <td className="px-4 py-2 text-right">
+                  {p.is_low_stock
+                    ? <span className="inline-block bg-red-100 text-red-700 rounded-full px-2 py-0.5 text-xs font-medium">{p.stock_display}</span>
+                    : <span className="font-medium text-slate-700">{p.stock_display}</span>}
+                </td>
                 <td className="px-4 py-2 text-right whitespace-nowrap">
-                  <button onClick={() => printLabel(p)} className="text-slate-600 hover:underline" title="Imprimir etiqueta Zebra">🏷️</button>
+                  <button onClick={() => printLabel(p)} className="text-slate-600 hover:underline" title="Imprimir etiqueta Zebra">Etiqueta</button>
                   <Link to={`/productos/${p.id}/inventario`} className="text-slate-600 hover:underline ml-2">Inventario</Link>
                   <Link to={`/productos/${p.id}/editar`} className="text-blue-600 hover:underline ml-2">Editar</Link>
                   <button onClick={() => remove(p.id)} className="text-red-600 hover:underline ml-2">Eliminar</button>

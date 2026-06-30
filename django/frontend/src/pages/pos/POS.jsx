@@ -119,62 +119,65 @@ export default function POS() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-lg font-semibold">Punto de venta</h1>
+        <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">🛒 Punto de venta</h1>
         <div className="flex items-center gap-3">
           <button onClick={openCustomerDisplay}
-                  className="text-sm border border-slate-300 rounded px-3 py-1 hover:bg-slate-50">
+                  className="text-sm border border-slate-300 rounded-lg px-3 py-1.5 hover:bg-slate-50 transition">
             🖥️ Pantalla cliente
           </button>
           {cashOpen === false && (
-            <span className="text-sm text-amber-700 bg-amber-100 rounded px-3 py-1">
+            <span className="text-sm text-amber-700 bg-amber-100 rounded-full px-3 py-1">
               ⚠️ Caja cerrada — <button onClick={() => navigate("/caja")} className="underline">ábrela</button> para registrar el efectivo
             </span>
           )}
-          {cashOpen && <span className="text-sm text-green-700 bg-green-100 rounded px-3 py-1">Caja abierta</span>}
+          {cashOpen && <span className="text-sm text-green-700 bg-green-100 rounded-full px-3 py-1 font-medium">● Caja abierta</span>}
         </div>
       </div>
 
-      {error && <div className="bg-red-100 text-red-800 rounded px-4 py-2 text-sm mb-4">{error}</div>}
+      {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-2 text-sm mb-4">{error}</div>}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Carrito */}
         <div className="lg:col-span-2 space-y-4">
-          <div className="bg-white rounded-lg shadow p-4 relative">
-            <input ref={searchRef} autoFocus placeholder="Buscar producto por nombre, SKU o código…"
-                   value={search} onChange={(e) => doSearch(e.target.value)}
-                   className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
+          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 relative">
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+              <input ref={searchRef} autoFocus placeholder="Buscar producto por nombre, SKU o código…"
+                     value={search} onChange={(e) => doSearch(e.target.value)}
+                     className="w-full border border-slate-300 rounded-lg pl-10 pr-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" />
+            </div>
             {results.length > 0 && (
-              <div className="absolute z-10 bg-white border rounded shadow w-[calc(100%-2rem)] mt-1 max-h-72 overflow-auto">
+              <div className="absolute z-10 bg-white border border-slate-200 rounded-lg shadow-lg w-[calc(100%-2rem)] mt-1 max-h-72 overflow-auto">
                 {results.map((p) => (
                   <button key={p.id} onClick={() => addToCart(p)}
-                          className="block w-full text-left px-3 py-2 hover:bg-slate-100 text-sm border-b last:border-0">
+                          className="block w-full text-left px-3 py-2 hover:bg-blue-50 text-sm border-b border-slate-100 last:border-0 transition">
                     <span className="font-mono text-xs text-slate-400">{p.sku}</span> {p.name}
-                    <span className="float-right">Q{p.sale_price} · stock {p.branch_stock ?? p.stock}</span>
+                    <span className="float-right text-slate-500">Q{p.sale_price} · stock {p.branch_stock ?? p.stock}</span>
                   </button>
                 ))}
               </div>
             )}
           </div>
 
-          <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-slate-500 text-left">
-                <tr><th className="px-3 py-2">Producto</th><th className="px-3 py-2 w-24 text-right">Cant.</th>
-                    <th className="px-3 py-2 w-28 text-right">Precio</th><th className="px-3 py-2 w-28 text-right">Importe</th><th></th></tr>
+              <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">
+                <tr><th className="px-3 py-2.5">Producto</th><th className="px-3 py-2.5 w-24 text-right">Cant.</th>
+                    <th className="px-3 py-2.5 w-28 text-right">Precio</th><th className="px-3 py-2.5 w-28 text-right">Importe</th><th></th></tr>
               </thead>
               <tbody>
                 {cart.map((it, idx) => (
-                  <tr key={idx} className="border-t">
-                    <td className="px-3 py-2"><div className="font-medium">{it.name}</div>
+                  <tr key={idx} className="border-t border-slate-100 hover:bg-slate-50/70 transition">
+                    <td className="px-3 py-2"><div className="font-medium text-slate-800">{it.name}</div>
                       <div className="text-xs font-mono text-slate-400">{it.sku} · stock {it.branch_stock}</div></td>
                     <td className="px-3 py-2"><input type="number" step="any" min="0" value={it.quantity}
                           onChange={(e) => updateQty(idx, e.target.value)}
-                          className="border border-slate-300 rounded px-2 py-1 text-sm w-20 text-right" /></td>
+                          className="border border-slate-300 rounded-lg px-2 py-1 text-sm w-20 text-right outline-none focus:ring-2 focus:ring-blue-500" /></td>
                     <td className="px-3 py-2"><input type="number" step="any" value={it.unit_price}
                           onChange={(e) => updatePrice(idx, e.target.value)}
-                          className="border border-slate-300 rounded px-2 py-1 text-sm w-24 text-right" /></td>
-                    <td className="px-3 py-2 text-right">Q{(Number(it.quantity || 0) * Number(it.unit_price || 0)).toFixed(2)}</td>
-                    <td className="px-3 py-2 text-right"><button onClick={() => removeItem(idx)} className="text-red-600 text-xs hover:underline">×</button></td>
+                          className="border border-slate-300 rounded-lg px-2 py-1 text-sm w-24 text-right outline-none focus:ring-2 focus:ring-blue-500" /></td>
+                    <td className="px-3 py-2 text-right font-semibold text-slate-700">Q{(Number(it.quantity || 0) * Number(it.unit_price || 0)).toFixed(2)}</td>
+                    <td className="px-3 py-2 text-right"><button onClick={() => removeItem(idx)} className="text-red-500 hover:text-white hover:bg-red-500 rounded-full w-6 h-6 transition" title="Quitar">×</button></td>
                   </tr>
                 ))}
                 {cart.length === 0 && <tr><td colSpan="5" className="px-3 py-10 text-center text-slate-400">Busca productos para agregarlos al carrito.</td></tr>}
@@ -184,17 +187,20 @@ export default function POS() {
         </div>
 
         {/* Cobro */}
-        <div className="bg-white rounded-lg shadow p-5 space-y-4 h-fit sticky top-20">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5 space-y-4 h-fit sticky top-20">
           <div>
             <label className="block text-sm font-medium mb-1">Cliente</label>
             <select value={customerId} onChange={(e) => setCustomerId(e.target.value)}
-                    className="w-full border border-slate-300 rounded px-3 py-2 text-sm">
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
               <option value="">Consumidor final</option>
               {customers.map((c) => <option key={c.id} value={c.id}>{c.name} {c.customer_type === "wholesale" ? "(mayorista)" : ""}</option>)}
             </select>
           </div>
 
-          <div className="text-3xl font-bold text-right">Q{total.toFixed(2)}</div>
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-xl px-4 py-3">
+            <div className="text-xs text-slate-300 uppercase tracking-wide">Total a cobrar</div>
+            <div className="text-3xl font-bold text-right">Q{total.toFixed(2)}</div>
+          </div>
 
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={credit} onChange={(e) => setCredit(e.target.checked)} /> Venta al crédito
@@ -231,7 +237,7 @@ export default function POS() {
           )}
 
           <button disabled={busy || cart.length === 0} onClick={checkout}
-                  className="w-full bg-green-600 text-white rounded py-3 font-semibold text-lg disabled:opacity-50">
+                  className="w-full bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-lg py-3 font-semibold text-lg shadow-lg shadow-green-600/20 hover:from-emerald-600 hover:to-green-700 disabled:opacity-50 transition">
             {busy ? "Procesando…" : "Cobrar"}
           </button>
         </div>

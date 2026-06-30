@@ -1,79 +1,108 @@
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
-const linkClass = ({ isActive }) =>
-  "block px-5 py-2 hover:bg-slate-800 " + (isActive ? "bg-slate-800 text-white" : "");
+function NavItem({ to, icon, label, end }) {
+  return (
+    <NavLink to={to} end={end} className={({ isActive }) =>
+      "mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition " +
+      (isActive
+        ? "bg-white/10 text-white font-medium shadow-inner"
+        : "text-slate-300 hover:bg-white/5 hover:text-white")
+    }>
+      <span className="w-5 text-center text-base leading-none">{icon}</span>
+      <span>{label}</span>
+    </NavLink>
+  );
+}
+
+const Section = ({ title }) => (
+  <div className="px-6 pt-5 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">{title}</div>
+);
 
 export default function Layout({ children }) {
   const { user, branches, currentBranchId, setBranch, logout, can } = useAuth();
-  const showAdmin = can("usuarios.ver") || can("sucursales.gestionar") || can("transferencias.gestionar") || can("auditoria.ver") || can("configuracion.gestionar") || can("imports.gestionar") || can("backup.gestionar");
+  const showAdmin = can("usuarios.ver") || can("sucursales.gestionar") || can("transferencias.gestionar")
+    || can("auditoria.ver") || can("configuracion.gestionar") || can("imports.gestionar") || can("backup.gestionar");
+  const initial = (user?.name || user?.email || "U").charAt(0).toUpperCase();
+
   return (
-    <div className="min-h-screen flex">
-      <aside className="w-60 bg-slate-900 text-slate-200 flex flex-col fixed inset-y-0">
-        <div className="px-5 py-4 text-lg font-bold text-white border-b border-slate-700">
-          🔧 Ferretería
+    <div className="min-h-screen flex bg-slate-50">
+      <aside className="w-60 bg-gradient-to-b from-slate-900 to-slate-950 text-slate-200 flex flex-col fixed inset-y-0 shadow-xl">
+        <div className="px-5 py-4 flex items-center gap-2 border-b border-white/10">
+          <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-lg shadow-lg shadow-blue-600/30">🔧</span>
+          <span className="text-lg font-bold text-white">Ferretería</span>
         </div>
-        <nav className="flex-1 overflow-y-auto py-3 text-sm">
-          <NavLink to="/" end className={linkClass}>Tablero</NavLink>
-          <div className="px-5 pt-4 pb-1 text-xs uppercase text-slate-500">Ventas</div>
-          <NavLink to="/pos" className={linkClass}>Punto de venta</NavLink>
-          <NavLink to="/ventas" className={linkClass}>Ventas</NavLink>
-          <NavLink to="/caja" className={linkClass}>Caja</NavLink>
-          <NavLink to="/cotizaciones" className={linkClass}>Cotizaciones</NavLink>
-          <NavLink to="/devoluciones" className={linkClass}>Devoluciones</NavLink>
-          {can("facturas.ver") && <NavLink to="/facturas" className={linkClass}>Facturación (FEL)</NavLink>}
-          <NavLink to="/cuentas-por-cobrar" className={linkClass}>Cuentas por cobrar</NavLink>
-          <div className="px-5 pt-4 pb-1 text-xs uppercase text-slate-500">Inventario</div>
-          <NavLink to="/productos" className={linkClass}>Productos</NavLink>
-          <NavLink to="/categorias" className={linkClass}>Categorías</NavLink>
-          <NavLink to="/marcas" className={linkClass}>Marcas</NavLink>
-          <NavLink to="/unidades" className={linkClass}>Unidades</NavLink>
-          <NavLink to="/bajo-stock" className={linkClass}>Stock bajo</NavLink>
-          <NavLink to="/conteo" className={linkClass}>Conteo físico</NavLink>
-          <div className="px-5 pt-4 pb-1 text-xs uppercase text-slate-500">Reportes</div>
-          <NavLink to="/reportes" end className={linkClass}>Reportes</NavLink>
-          <div className="px-5 pt-4 pb-1 text-xs uppercase text-slate-500">Compras</div>
-          <NavLink to="/proveedores" className={linkClass}>Proveedores</NavLink>
-          <NavLink to="/compras" className={linkClass}>Compras</NavLink>
-          <NavLink to="/cuentas-por-pagar" className={linkClass}>Cuentas por pagar</NavLink>
-          <div className="px-5 pt-4 pb-1 text-xs uppercase text-slate-500">Clientes</div>
-          <NavLink to="/clientes" className={linkClass}>Clientes</NavLink>
+
+        <nav className="flex-1 overflow-y-auto py-2">
+          <NavItem to="/" end icon="📊" label="Tablero" />
+
+          <Section title="Ventas" />
+          <NavItem to="/pos" icon="🛒" label="Punto de venta" />
+          <NavItem to="/ventas" icon="🧾" label="Ventas" />
+          <NavItem to="/caja" icon="💵" label="Caja" />
+          <NavItem to="/cotizaciones" icon="📝" label="Cotizaciones" />
+          <NavItem to="/devoluciones" icon="↩️" label="Devoluciones" />
+          {can("facturas.ver") && <NavItem to="/facturas" icon="📑" label="Facturación (FEL)" />}
+          <NavItem to="/cuentas-por-cobrar" icon="💳" label="Cuentas por cobrar" />
+
+          <Section title="Inventario" />
+          <NavItem to="/productos" icon="📦" label="Productos" />
+          <NavItem to="/categorias" icon="🏷️" label="Categorías" />
+          <NavItem to="/marcas" icon="🔖" label="Marcas" />
+          <NavItem to="/unidades" icon="📏" label="Unidades" />
+          <NavItem to="/bajo-stock" icon="⚠️" label="Stock bajo" />
+          <NavItem to="/conteo" icon="🔢" label="Conteo físico" />
+
+          <Section title="Reportes" />
+          <NavItem to="/reportes" end icon="📈" label="Reportes" />
+
+          <Section title="Compras" />
+          <NavItem to="/proveedores" icon="🚚" label="Proveedores" />
+          <NavItem to="/compras" icon="📥" label="Compras" />
+          <NavItem to="/cuentas-por-pagar" icon="💰" label="Cuentas por pagar" />
+
+          <Section title="Clientes" />
+          <NavItem to="/clientes" icon="👥" label="Clientes" />
+
           {showAdmin && (
             <>
-              <div className="px-5 pt-4 pb-1 text-xs uppercase text-slate-500">Administración</div>
-              {can("transferencias.gestionar") && <NavLink to="/transferencias" className={linkClass}>Transferencias</NavLink>}
-              {can("usuarios.ver") && <NavLink to="/admin/usuarios" className={linkClass}>Usuarios</NavLink>}
-              {can("roles.gestionar") && <NavLink to="/admin/roles" className={linkClass}>Roles</NavLink>}
-              {can("sucursales.gestionar") && <NavLink to="/admin/sucursales" className={linkClass}>Sucursales</NavLink>}
-              {can("auditoria.ver") && <NavLink to="/admin/auditoria" className={linkClass}>Auditoría</NavLink>}
-              {can("configuracion.gestionar") && <NavLink to="/admin/empresa" className={linkClass}>Empresa</NavLink>}
-              {can("imports.gestionar") && <NavLink to="/admin/importar" className={linkClass}>Importar datos</NavLink>}
-              {can("backup.gestionar") && <NavLink to="/admin/respaldos" className={linkClass}>Respaldos</NavLink>}
+              <Section title="Administración" />
+              {can("transferencias.gestionar") && <NavItem to="/transferencias" icon="🔄" label="Transferencias" />}
+              {can("usuarios.ver") && <NavItem to="/admin/usuarios" icon="👤" label="Usuarios" />}
+              {can("roles.gestionar") && <NavItem to="/admin/roles" icon="🛡️" label="Roles" />}
+              {can("sucursales.gestionar") && <NavItem to="/admin/sucursales" icon="🏢" label="Sucursales" />}
+              {can("auditoria.ver") && <NavItem to="/admin/auditoria" icon="🕵️" label="Auditoría" />}
+              {can("configuracion.gestionar") && <NavItem to="/admin/empresa" icon="⚙️" label="Empresa" />}
+              {can("imports.gestionar") && <NavItem to="/admin/importar" icon="📂" label="Importar datos" />}
+              {can("backup.gestionar") && <NavItem to="/admin/respaldos" icon="💾" label="Respaldos" />}
             </>
           )}
         </nav>
-        <div className="px-5 py-3 border-t border-slate-700 text-xs text-slate-400">
-          <div>{user?.name || user?.email}</div>
-          <NavLink to="/cambiar-contrasena" className="text-slate-400 hover:text-white">Cambiar contraseña</NavLink>
+
+        <div className="px-4 py-3 border-t border-white/10 flex items-center gap-3">
+          <span className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white font-bold flex items-center justify-center shrink-0">{initial}</span>
+          <div className="min-w-0">
+            <div className="text-sm text-white truncate">{user?.name || user?.email}</div>
+            <NavLink to="/cambiar-contrasena" className="text-xs text-slate-400 hover:text-white">Cambiar contraseña</NavLink>
+          </div>
         </div>
       </aside>
 
-      <div className="flex-1 ml-60 flex flex-col">
-        <header className="bg-white border-b px-6 py-3 flex items-center justify-between sticky top-0 z-10">
-          <div className="text-sm text-slate-500">Sistema de gestión</div>
-          <div className="flex items-center gap-4">
+      <div className="flex-1 ml-60 flex flex-col min-h-screen">
+        <header className="bg-white/80 backdrop-blur border-b border-slate-200 px-6 py-3 flex items-center justify-between sticky top-0 z-10">
+          <div className="text-sm text-slate-400">Sistema de gestión</div>
+          <div className="flex items-center gap-3">
             {branches.length > 0 && (
-              <select
-                value={currentBranchId || ""}
-                onChange={(e) => setBranch(e.target.value)}
-                className="text-sm border border-slate-300 rounded px-2 py-1"
-              >
-                {branches.map((b) => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
-                ))}
-              </select>
+              <div className="flex items-center gap-1.5 text-sm">
+                <span className="text-slate-400">🏢</span>
+                <select value={currentBranchId || ""} onChange={(e) => setBranch(e.target.value)}
+                        className="text-sm border border-slate-300 rounded-lg px-2 py-1.5 bg-white outline-none focus:ring-2 focus:ring-blue-500">
+                  {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </select>
+              </div>
             )}
-            <button onClick={logout} className="text-sm text-slate-500 hover:text-red-600">
+            <button onClick={logout}
+                    className="text-sm text-slate-600 hover:text-white hover:bg-red-500 border border-slate-200 hover:border-red-500 rounded-lg px-3 py-1.5 transition">
               Salir
             </button>
           </div>
