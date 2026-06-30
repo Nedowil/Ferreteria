@@ -61,7 +61,7 @@ class SaleItemWriteSerializer(serializers.Serializer):
     quantity = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0.01"))
     unit_price = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0"))
     discount = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0"), required=False, default=0)
-    units_factor = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=Decimal("0.01"), required=False, default=1)
+    units_factor = serializers.DecimalField(max_digits=12, decimal_places=4, min_value=Decimal("0.0001"), required=False, default=1)
     unit_label = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=30)
     tax_type = serializers.ChoiceField(choices=["iva", "exento"], required=False)
 

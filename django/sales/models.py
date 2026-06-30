@@ -92,7 +92,7 @@ class SaleItem(models.Model):
     subtotal = models.DecimalField(max_digits=14, decimal_places=2)
     # Presentación vendida (p. ej. "Caja", factor 50)
     unit_label = models.CharField(max_length=30, blank=True, null=True)
-    units_factor = models.DecimalField(max_digits=10, decimal_places=2, default=1)
+    units_factor = models.DecimalField(max_digits=12, decimal_places=4, default=1)
     tax_type = models.CharField(max_length=20, default="iva")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

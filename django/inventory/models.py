@@ -127,8 +127,8 @@ class Product(models.Model):
         "precio empaque constructor", max_digits=12, decimal_places=2, null=True, blank=True
     )
 
-    stock = models.DecimalField("existencia", max_digits=12, decimal_places=2, default=0)
-    min_stock = models.DecimalField("existencia mínima", max_digits=12, decimal_places=2, default=0)
+    stock = models.DecimalField("existencia", max_digits=14, decimal_places=4, default=0)
+    min_stock = models.DecimalField("existencia mínima", max_digits=14, decimal_places=4, default=0)
 
     # Venta por medida (ej. cable cortado al metro)
     sells_by_measure = models.BooleanField("se vende por medida", default=False)
@@ -232,8 +232,8 @@ class ProductStock(models.Model):
 
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="stocks")
     branch = models.ForeignKey("core.Branch", on_delete=models.CASCADE, related_name="product_stocks")
-    stock = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    min_stock = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    stock = models.DecimalField(max_digits=14, decimal_places=4, default=0)
+    min_stock = models.DecimalField(max_digits=14, decimal_places=4, default=0)
     location = models.CharField("ubicación", max_length=60, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -308,8 +308,8 @@ class InventoryMovement(models.Model):
     )
     type = models.CharField("tipo", max_length=10, choices=TYPE_CHOICES)
     quantity = models.DecimalField("cantidad", max_digits=12, decimal_places=2)
-    previous_stock = models.DecimalField(max_digits=12, decimal_places=2)
-    new_stock = models.DecimalField(max_digits=12, decimal_places=2)
+    previous_stock = models.DecimalField(max_digits=14, decimal_places=4)
+    new_stock = models.DecimalField(max_digits=14, decimal_places=4)
     reason = models.CharField("motivo", max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
