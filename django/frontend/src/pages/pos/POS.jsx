@@ -598,26 +598,26 @@ export default function POS() {
               </button>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-4 max-h-[28rem] overflow-auto">
+            <div className="mt-4 max-h-[28rem] overflow-auto border border-slate-100 rounded-xl divide-y divide-slate-100">
               {filtered.map((p) => {
                 const avail = availableFor(p);
                 return (
                   <button key={p.id} onClick={() => setPicking(p)}
-                          className="text-left rounded-xl border border-slate-200 hover:border-blue-400 hover:shadow-md p-3 transition group">
-                    <div className="text-sm font-semibold text-slate-800 line-clamp-2 group-hover:text-blue-700">{p.name}</div>
-                    <div className="text-[11px] font-mono text-slate-400 mt-0.5">{p.sku}</div>
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-blue-600 font-bold text-sm">Q{p.sale_price}</span>
-                      <span className={"text-[11px] rounded-full px-2 py-0.5 " +
-                        (avail <= 0 ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-500")}>
-                        {trim(avail)} {p.base_unit_label || "u"}
-                      </span>
+                          className="w-full text-left flex items-center gap-3 px-3 py-2.5 hover:bg-blue-50 transition group">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium text-slate-800 truncate group-hover:text-blue-700">{p.name}</div>
+                      <div className="text-[11px] font-mono text-slate-400">{p.sku}</div>
                     </div>
+                    <span className={"text-[11px] rounded-full px-2 py-0.5 shrink-0 " +
+                      (avail <= 0 ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-500")}>
+                      {trim(avail)} {p.base_unit_label || "u"}
+                    </span>
+                    <span className="text-blue-600 font-bold text-sm w-20 text-right shrink-0">Q{p.sale_price}</span>
                   </button>
                 );
               })}
               {filtered.length === 0 && (
-                <div className="col-span-full text-center text-slate-400 py-10 text-sm">
+                <div className="text-center text-slate-400 py-10 text-sm">
                   {products.length === 0 ? "No hay productos registrados." : "Sin coincidencias."}
                 </div>
               )}
