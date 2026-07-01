@@ -346,6 +346,46 @@ class InfileCertifierTests(TestCase):
             self.assertIsInstance(get_certifier(), InfileCertifier)
 
 
+class ReceptorDteTests(TestCase):
+    """Receptor del DTE: Consumidor Final, NIT y DPI/CUI."""
+
+    def _xml_for_customer(self, **cust):
+        from core.models import CompanySetting
+        from partners.models import Customer
+        from .fel.base import build_dte
+        from .fel.infile import build_invoice_xml
+        company = CompanySetting.current()
+        sale = _make_sale(folio=f"V-{cust.get('tax_id') or 'CF'}")
+        if cust:
+            sale.customer = Customer.objects.create(**cust)
+            sale.save(update_fields=["customer"])
+        return build_invoice_xml(build_dte(sale, company))
+
+    def test_sin_cliente_es_consumidor_final(self):
+        xml = self._xml_for_customer()
+        self.assertIn('IDReceptor="CF"', xml)
+        self.assertIn('NombreReceptor="Consumidor Final"', xml)
+        self.assertNotIn("TipoEspecial", xml)
+
+    def test_nit_normal_sin_tipo_especial(self):
+        xml = self._xml_for_customer(name="Ferro S.A.", tax_id="1234567")
+        self.assertIn('IDReceptor="1234567"', xml)
+        self.assertIn('NombreReceptor="Ferro S.A."', xml)
+        self.assertNotIn("TipoEspecial", xml)
+
+    def test_dpi_cui_marca_tipo_especial(self):
+        # DPI de 13 dígitos → IDReceptor con los 13 dígitos y TipoEspecial="CUI".
+        xml = self._xml_for_customer(name="Nelson Lux", tax_id="1924044582106")
+        self.assertIn('IDReceptor="1924044582106"', xml)
+        self.assertIn('TipoEspecial="CUI"', xml)
+        self.assertIn('NombreReceptor="Nelson Lux"', xml)
+
+    def test_dpi_con_espacios_se_limpia(self):
+        xml = self._xml_for_customer(name="Nelson Lux", tax_id="1924 04458 2106")
+        self.assertIn('IDReceptor="1924044582106"', xml)
+        self.assertIn('TipoEspecial="CUI"', xml)
+
+
 class PrintingTests(TestCase):
     """Generación ESC/POS y endpoints de impresión térmica."""
 

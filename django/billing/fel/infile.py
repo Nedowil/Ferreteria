@@ -118,7 +118,8 @@ def build_invoice_xml(dte: dict) -> str:
         "</dte:DireccionEmisor>"
         "</dte:Emisor>"
         f'<dte:Receptor IDReceptor="{_esc(re["nit"])}" '
-        f'NombreReceptor="{_esc(re["nombre"])}" '
+        + (f'TipoEspecial="{_esc(re["tipo_especial"])}" ' if re.get("tipo_especial") else "")
+        + f'NombreReceptor="{_esc(re["nombre"])}" '
         f'CorreoReceptor="{_esc(re["correo"])}">'
         "<dte:DireccionReceptor>"
         f"<dte:Direccion>{_esc(re['direccion'])}</dte:Direccion>"

@@ -78,14 +78,25 @@ def build_dte(sale, company):
     local_dt = _tz.localtime(sale.date) if _tz.is_aware(sale.date) else sale.date
     fecha_emision = local_dt.replace(microsecond=0).isoformat()
 
-    # Receptor: si no hay NIT es Consumidor Final (CF) y el nombre DEBE ser
-    # exactamente "Consumidor Final" (regla SAT); con NIT va el nombre real.
-    receptor_nit = (customer.tax_id if customer and customer.tax_id else "CF")
-    if receptor_nit.upper() in ("CF", ""):
+    # Receptor. Reglas SAT:
+    #  - Sin identificación → Consumidor Final: IDReceptor="CF" y el nombre
+    #    DEBE ser exactamente "Consumidor Final".
+    #  - DPI/CUI (13 dígitos) → se identifica por documento de identidad:
+    #    IDReceptor = los 13 dígitos y el atributo TipoEspecial="CUI".
+    #  - En otro caso es un NIT normal.
+    raw_id = (customer.tax_id if customer and customer.tax_id else "").strip()
+    clean_id = raw_id.replace("-", "").replace(" ", "")
+    receptor_tipo_especial = None
+    if not clean_id or clean_id.upper() == "CF":
         receptor_nit = "CF"
         receptor_nombre = "Consumidor Final"
+    elif clean_id.isdigit() and len(clean_id) == 13:
+        receptor_nit = clean_id
+        receptor_nombre = customer.name
+        receptor_tipo_especial = "CUI"
     else:
-        receptor_nombre = (customer.name if customer else "Consumidor Final")
+        receptor_nit = raw_id
+        receptor_nombre = customer.name
 
     return {
         "tipo_documento": "FPEQ" if pequeno else "FACT",
@@ -107,6 +118,7 @@ def build_dte(sale, company):
         "receptor": {
             "nit": receptor_nit,
             "nombre": receptor_nombre,
+            "tipo_especial": receptor_tipo_especial,  # "CUI" si se identifica por DPI
             "correo": (customer.email if customer and customer.email else ""),
             "direccion": (customer.address if customer and customer.address else "Ciudad"),
             "pais": "GT",
