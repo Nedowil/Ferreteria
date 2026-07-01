@@ -607,9 +607,15 @@ export default function POS() {
               )}
             </div>
 
-            <div className="mt-4 max-h-[28rem] overflow-auto border border-slate-100 rounded-xl divide-y divide-slate-100">
+            <div className="flex items-center gap-3 px-3 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+              <span className="flex-1">Producto</span>
+              <span className="w-28 text-right shrink-0">Existencia</span>
+              <span className="w-24 text-right shrink-0">Precio venta</span>
+            </div>
+            <div className="max-h-[28rem] overflow-auto border border-slate-100 rounded-xl divide-y divide-slate-100">
               {filtered.map((p) => {
                 const avail = availableFor(p);
+                const unit = p.base_unit_label || "unidad";
                 return (
                   <button key={p.id} onClick={() => setPicking(p)}
                           className="w-full text-left flex items-center gap-3 px-3 py-2.5 hover:bg-blue-50 transition group">
@@ -617,11 +623,16 @@ export default function POS() {
                       <div className="text-sm font-medium text-slate-800 truncate group-hover:text-blue-700">{p.name}</div>
                       <div className="text-[11px] font-mono text-slate-400">{p.sku}</div>
                     </div>
-                    <span className={"text-[11px] rounded-full px-2 py-0.5 shrink-0 " +
-                      (avail <= 0 ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-500")}>
-                      {trim(avail)} {p.base_unit_label || "u"}
-                    </span>
-                    <span className="text-blue-600 font-bold text-sm w-20 text-right shrink-0">Q{p.sale_price}</span>
+                    <div className="w-28 text-right shrink-0">
+                      <span className={"text-[11px] rounded-full px-2 py-0.5 " +
+                        (avail <= 0 ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-500")}>
+                        {trim(avail)} {unit}
+                      </span>
+                    </div>
+                    <div className="w-24 text-right shrink-0">
+                      <div className="text-blue-600 font-bold text-sm">Q{p.sale_price}</div>
+                      <div className="text-[10px] text-slate-400">por {unit}</div>
+                    </div>
                   </button>
                 );
               })}
