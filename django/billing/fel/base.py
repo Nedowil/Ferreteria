@@ -71,10 +71,26 @@ def build_dte(sale, company):
         })
 
     customer = sale.customer
+    # SAT exige la fecha en hora local (America/Guatemala) y SIN microsegundos:
+    # AAAA-MM-DDThh:mm:ss±hh:mm. isoformat() sobre un datetime en UTC con
+    # microsegundos hace que Infile rechace o dé 500.
+    from django.utils import timezone as _tz
+    local_dt = _tz.localtime(sale.date) if _tz.is_aware(sale.date) else sale.date
+    fecha_emision = local_dt.replace(microsecond=0).isoformat()
+
+    # Receptor: si no hay NIT es Consumidor Final (CF) y el nombre DEBE ser
+    # exactamente "Consumidor Final" (regla SAT); con NIT va el nombre real.
+    receptor_nit = (customer.tax_id if customer and customer.tax_id else "CF")
+    if receptor_nit.upper() in ("CF", ""):
+        receptor_nit = "CF"
+        receptor_nombre = "Consumidor Final"
+    else:
+        receptor_nombre = (customer.name if customer else "Consumidor Final")
+
     return {
         "tipo_documento": "FPEQ" if pequeno else "FACT",
         "moneda": company.currency_code,
-        "fecha_emision": sale.date.isoformat(),
+        "fecha_emision": fecha_emision,
         "emisor": {
             "nit": company.tax_id,
             "nombre": company.legal_name or company.commercial_name,
@@ -89,8 +105,8 @@ def build_dte(sale, company):
             "afiliacion_iva": "PEQUENO" if pequeno else "GEN",
         },
         "receptor": {
-            "nit": (customer.tax_id if customer and customer.tax_id else "CF"),
-            "nombre": (customer.name if customer else "Consumidor Final"),
+            "nit": receptor_nit,
+            "nombre": receptor_nombre,
             "correo": (customer.email if customer and customer.email else ""),
             "direccion": (customer.address if customer and customer.address else "Ciudad"),
             "pais": "GT",

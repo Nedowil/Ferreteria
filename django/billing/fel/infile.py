@@ -24,6 +24,7 @@ conviene validarlos contra el sandbox antes de producción.
 
 import base64
 import json
+import urllib.error
 import urllib.request
 import uuid as uuidlib
 from xml.sax.saxutils import escape
@@ -171,6 +172,31 @@ class InfileCertifier(FelCertifier):
 
     TIMEOUT = 30
 
+    def _send(self, req):
+        """Ejecuta la petición y devuelve el dict JSON de respuesta.
+
+        Si Infile responde con un código de error HTTP (400/500…), su cuerpo
+        casi siempre trae el detalle real (JSON con ``descripcion_errores`` o
+        un mensaje). En ese caso se devuelve ese JSON para que el formateador
+        de errores lo muestre; si no es JSON, se levanta con el texto crudo,
+        para no perder la causa detrás de un opaco "HTTP Error 500".
+        """
+        try:
+            with urllib.request.urlopen(req, timeout=self.TIMEOUT) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            raw = ""
+            try:
+                raw = e.read().decode("utf-8", "replace")
+            except Exception:
+                pass
+            try:
+                return json.loads(raw)
+            except Exception:
+                detail = (raw or "").strip()
+                snippet = f": {detail[:300]}" if detail else ""
+                raise RuntimeError(f"HTTP {e.code} de Infile{snippet}") from None
+
     def _post_json(self, url, payload, headers=None):
         """POST JSON y devuelve el dict de respuesta. Aislado para poder
         mockearlo en pruebas (sin dependencias externas)."""
@@ -178,8 +204,7 @@ class InfileCertifier(FelCertifier):
         hdrs = {"Content-Type": "application/json"}
         hdrs.update(headers or {})
         req = urllib.request.Request(url, data=data, headers=hdrs, method="POST")
-        with urllib.request.urlopen(req, timeout=self.TIMEOUT) as resp:
-            return json.loads(resp.read().decode("utf-8"))
+        return self._send(req)
 
     def _post_xml(self, url, xml, headers=None):
         """POST XML crudo (proceso unificado de Infile) → dict JSON de respuesta."""
@@ -187,8 +212,7 @@ class InfileCertifier(FelCertifier):
         hdrs = {"Content-Type": "application/xml"}
         hdrs.update(headers or {})
         req = urllib.request.Request(url, data=data, headers=hdrs, method="POST")
-        with urllib.request.urlopen(req, timeout=self.TIMEOUT) as resp:
-            return json.loads(resp.read().decode("utf-8"))
+        return self._send(req)
 
     def _unified_headers(self):
         # Proceso unificado: firma + certificación en una sola llamada.
