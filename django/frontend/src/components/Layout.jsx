@@ -29,9 +29,15 @@ export default function Layout({ children }) {
   return (
     <div className="min-h-screen flex bg-slate-50">
       <aside className="w-60 bg-gradient-to-b from-slate-900 to-slate-950 text-slate-200 flex flex-col fixed inset-y-0 shadow-xl">
-        <div className="px-3 py-4 border-b border-white/10">
-          <div className="bg-white rounded-xl p-1.5 shadow-md ring-1 ring-black/5">
-            <img src={logo} alt="Ferretería Central" className="w-full rounded-lg block" />
+        <div className="px-4 py-4 border-b border-white/10">
+          <div className="flex items-center gap-3">
+            <div className="h-11 w-11 shrink-0 bg-white rounded-xl p-1 shadow ring-1 ring-black/5 flex items-center justify-center overflow-hidden">
+              <img src={logo} alt="Ferretería Central" className="max-h-full max-w-full object-contain rounded-md" />
+            </div>
+            <div className="min-w-0">
+              <div className="font-bold text-white leading-tight truncate">Ferretería Central</div>
+              <div className="text-[11px] text-slate-400 leading-tight truncate">Tu aliado en construcción</div>
+            </div>
           </div>
         </div>
 

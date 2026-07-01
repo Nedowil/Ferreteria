@@ -39,9 +39,13 @@ export default function Login() {
     <div className="min-h-screen flex">
       {/* Panel de marca (visible en pantallas grandes) */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-blue-900 text-white flex-col justify-between p-12">
-        <div className="relative z-10">
-          <div className="bg-white rounded-2xl p-2.5 shadow-2xl ring-1 ring-white/10 w-64">
-            <img src={logo} alt="Ferretería Central" className="w-full rounded-xl block" />
+        <div className="relative z-10 flex items-center gap-4">
+          <div className="h-16 w-16 shrink-0 bg-white rounded-2xl p-1.5 shadow-2xl ring-1 ring-white/10 flex items-center justify-center overflow-hidden">
+            <img src={logo} alt="Ferretería Central" className="max-h-full max-w-full object-contain rounded-xl" />
+          </div>
+          <div>
+            <div className="text-2xl font-extrabold leading-tight">Ferretería Central</div>
+            <div className="text-sm text-slate-300">Tu aliado en construcción</div>
           </div>
         </div>
         <div className="relative z-10">
@@ -69,10 +73,16 @@ export default function Login() {
       <div className="flex-1 flex items-center justify-center bg-slate-50 px-4 py-10">
         <form onSubmit={submit} className="w-full max-w-sm">
           <div className="text-center mb-8">
-            <div className="bg-white rounded-2xl p-2 shadow-lg ring-1 ring-slate-200 w-44 mx-auto">
-              <img src={logo} alt="Ferretería Central" className="w-full rounded-xl block" />
+            <div className="flex items-center justify-center gap-3 mb-5">
+              <div className="h-12 w-12 shrink-0 bg-white rounded-xl p-1 shadow ring-1 ring-slate-200 flex items-center justify-center overflow-hidden">
+                <img src={logo} alt="Ferretería Central" className="max-h-full max-w-full object-contain rounded-md" />
+              </div>
+              <div className="text-left">
+                <div className="font-bold text-slate-800 leading-tight">Ferretería Central</div>
+                <div className="text-xs text-slate-500">Tu aliado en construcción</div>
+              </div>
             </div>
-            <h2 className="text-2xl font-bold mt-4 text-slate-800">Bienvenido</h2>
+            <h2 className="text-2xl font-bold text-slate-800">Bienvenido</h2>
             <p className="text-sm text-slate-500">Ingresá a tu cuenta para continuar</p>
           </div>
 
