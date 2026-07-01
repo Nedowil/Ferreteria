@@ -40,7 +40,9 @@ export default function Login() {
       {/* Panel de marca (visible en pantallas grandes) */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-blue-900 text-white flex-col justify-between p-12">
         <div className="relative z-10">
-          <img src={logo} alt="Ferretería Central" className="w-72 rounded-2xl shadow-2xl ring-1 ring-white/10" />
+          <div className="bg-white rounded-2xl p-2.5 shadow-2xl ring-1 ring-white/10 w-64">
+            <img src={logo} alt="Ferretería Central" className="w-full rounded-xl block" />
+          </div>
         </div>
         <div className="relative z-10">
           <h1 className="text-4xl font-extrabold leading-tight">
@@ -67,7 +69,9 @@ export default function Login() {
       <div className="flex-1 flex items-center justify-center bg-slate-50 px-4 py-10">
         <form onSubmit={submit} className="w-full max-w-sm">
           <div className="text-center mb-8">
-            <img src={logo} alt="Ferretería Central" className="w-48 mx-auto rounded-xl shadow-lg" />
+            <div className="bg-white rounded-2xl p-2 shadow-lg ring-1 ring-slate-200 w-44 mx-auto">
+              <img src={logo} alt="Ferretería Central" className="w-full rounded-xl block" />
+            </div>
             <h2 className="text-2xl font-bold mt-4 text-slate-800">Bienvenido</h2>
             <p className="text-sm text-slate-500">Ingresá a tu cuenta para continuar</p>
           </div>

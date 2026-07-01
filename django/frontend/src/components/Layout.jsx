@@ -29,8 +29,10 @@ export default function Layout({ children }) {
   return (
     <div className="min-h-screen flex bg-slate-50">
       <aside className="w-60 bg-gradient-to-b from-slate-900 to-slate-950 text-slate-200 flex flex-col fixed inset-y-0 shadow-xl">
-        <div className="px-4 py-4 border-b border-white/10">
-          <img src={logo} alt="Ferretería Central" className="w-full rounded-lg shadow-lg" />
+        <div className="px-3 py-4 border-b border-white/10">
+          <div className="bg-white rounded-xl p-1.5 shadow-md ring-1 ring-black/5">
+            <img src={logo} alt="Ferretería Central" className="w-full rounded-lg block" />
+          </div>
         </div>
 
         <nav className="flex-1 overflow-y-auto py-2">
