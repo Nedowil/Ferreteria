@@ -71,6 +71,32 @@ class AdminPermissionTests(APITestCase):
         r = self._client("s@test.com").get("/api/audit-logs/")
         self.assertEqual(r.status_code, 403)
 
+    def test_vendedor_sin_reportes_recibe_403(self):
+        # El vendedor por defecto NO tiene reportes.ver → la API lo rechaza.
+        r = self._client("s@test.com").get("/api/reports/sales/")
+        self.assertEqual(r.status_code, 403)
+
+    def test_admin_si_ve_reportes(self):
+        r = self._client("a@test.com").get("/api/reports/sales/")
+        self.assertEqual(r.status_code, 200)
+
+    def test_usuario_restringido_bloqueado_en_caja_y_reportes(self):
+        # Usuario con SOLO productos.ver: ve productos pero no caja ni reportes.
+        from django.contrib.auth import get_user_model
+        from django.contrib.auth.models import Group
+        from core.permissions import sync_permissions
+        User = get_user_model()
+        perms = sync_permissions()
+        g, _ = Group.objects.get_or_create(name="solo_productos")
+        g.permissions.set([perms["productos.ver"]])
+        u = User.objects.create_user(username="r", email="r@test.com", password="x123")
+        u.groups.add(g)
+        c = self._client("r@test.com")
+        self.assertEqual(c.get("/api/inventory/products/").status_code, 200)
+        self.assertEqual(c.get("/api/reports/sales/").status_code, 403)
+        self.assertEqual(c.get("/api/cashbox/cash-sessions/current/").status_code, 403)
+        self.assertEqual(c.get("/api/customers/").status_code, 403)
+
     def test_crear_usuario_asigna_rol_y_sucursales(self):
         c = self._client("a@test.com")
         r = c.post("/api/users/", {

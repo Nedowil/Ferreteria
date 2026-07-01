@@ -22,6 +22,10 @@ const Section = ({ title }) => (
 
 export default function Layout({ children }) {
   const { user, branches, currentBranchId, setBranch, logout, can } = useAuth();
+  const showVentas = can("ventas.crear") || can("ventas.ver") || can("caja.ver")
+    || can("cotizaciones.ver") || can("facturas.ver");
+  const showInventario = can("productos.ver") || can("inventario.ajustar");
+  const showCompras = can("proveedores.ver") || can("compras.ver");
   const showAdmin = can("usuarios.ver") || can("sucursales.gestionar") || can("transferencias.gestionar")
     || can("auditoria.ver") || can("configuracion.gestionar") || can("imports.gestionar") || can("backup.gestionar");
   const initial = (user?.name || user?.email || "U").charAt(0).toUpperCase();
@@ -44,33 +48,53 @@ export default function Layout({ children }) {
         <nav className="flex-1 overflow-y-auto py-2">
           <NavItem to="/" end icon="📊" label="Tablero" />
 
-          <Section title="Ventas" />
-          <NavItem to="/pos" icon="🛒" label="Punto de venta" />
-          <NavItem to="/ventas" icon="🧾" label="Ventas" />
-          <NavItem to="/caja" icon="💵" label="Caja" />
-          <NavItem to="/cotizaciones" icon="📝" label="Cotizaciones" />
-          <NavItem to="/devoluciones" icon="↩️" label="Devoluciones" />
-          {can("facturas.ver") && <NavItem to="/facturas" icon="📑" label="Facturación (FEL)" />}
-          <NavItem to="/cuentas-por-cobrar" icon="💳" label="Cuentas por cobrar" />
+          {showVentas && (
+            <>
+              <Section title="Ventas" />
+              {can("ventas.crear") && <NavItem to="/pos" icon="🛒" label="Punto de venta" />}
+              {can("ventas.ver") && <NavItem to="/ventas" icon="🧾" label="Ventas" />}
+              {can("caja.ver") && <NavItem to="/caja" icon="💵" label="Caja" />}
+              {can("cotizaciones.ver") && <NavItem to="/cotizaciones" icon="📝" label="Cotizaciones" />}
+              {can("ventas.ver") && <NavItem to="/devoluciones" icon="↩️" label="Devoluciones" />}
+              {can("facturas.ver") && <NavItem to="/facturas" icon="📑" label="Facturación (FEL)" />}
+              {can("ventas.ver") && <NavItem to="/cuentas-por-cobrar" icon="💳" label="Cuentas por cobrar" />}
+            </>
+          )}
 
-          <Section title="Inventario" />
-          <NavItem to="/productos" icon="📦" label="Productos" />
-          <NavItem to="/categorias" icon="🏷️" label="Categorías" />
-          <NavItem to="/marcas" icon="🔖" label="Marcas" />
-          <NavItem to="/unidades" icon="📏" label="Unidades" />
-          <NavItem to="/bajo-stock" icon="⚠️" label="Stock bajo" />
-          <NavItem to="/conteo" icon="🔢" label="Conteo físico" />
+          {showInventario && (
+            <>
+              <Section title="Inventario" />
+              {can("productos.ver") && <NavItem to="/productos" icon="📦" label="Productos" />}
+              {can("productos.ver") && <NavItem to="/categorias" icon="🏷️" label="Categorías" />}
+              {can("productos.ver") && <NavItem to="/marcas" icon="🔖" label="Marcas" />}
+              {can("productos.ver") && <NavItem to="/unidades" icon="📏" label="Unidades" />}
+              {can("productos.ver") && <NavItem to="/bajo-stock" icon="⚠️" label="Stock bajo" />}
+              {can("inventario.ajustar") && <NavItem to="/conteo" icon="🔢" label="Conteo físico" />}
+            </>
+          )}
 
-          <Section title="Reportes" />
-          <NavItem to="/reportes" end icon="📈" label="Reportes" />
+          {can("reportes.ver") && (
+            <>
+              <Section title="Reportes" />
+              <NavItem to="/reportes" end icon="📈" label="Reportes" />
+            </>
+          )}
 
-          <Section title="Compras" />
-          <NavItem to="/proveedores" icon="🚚" label="Proveedores" />
-          <NavItem to="/compras" icon="📥" label="Compras" />
-          <NavItem to="/cuentas-por-pagar" icon="💰" label="Cuentas por pagar" />
+          {showCompras && (
+            <>
+              <Section title="Compras" />
+              {can("proveedores.ver") && <NavItem to="/proveedores" icon="🚚" label="Proveedores" />}
+              {can("compras.ver") && <NavItem to="/compras" icon="📥" label="Compras" />}
+              {can("compras.ver") && <NavItem to="/cuentas-por-pagar" icon="💰" label="Cuentas por pagar" />}
+            </>
+          )}
 
-          <Section title="Clientes" />
-          <NavItem to="/clientes" icon="👥" label="Clientes" />
+          {can("clientes.ver") && (
+            <>
+              <Section title="Clientes" />
+              <NavItem to="/clientes" icon="👥" label="Clientes" />
+            </>
+          )}
 
           {showAdmin && (
             <>
