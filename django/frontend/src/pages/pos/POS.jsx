@@ -47,6 +47,11 @@ const trim = (n) => {
   return s || "0";
 };
 
+// Normaliza texto para buscar sin importar tildes ni mayúsculas
+// ("María" ↔ "maria"). Quita los diacríticos con Unicode NFD.
+const norm = (s) =>
+  (s || "").toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
 // Ventana flotante para elegir en qué medida se vende el producto.
 function MeasureModal({ product, customer, available, onAdd, onClose }) {
   const measures = useMemo(() => measuresFor(product, customer), [product, customer]);
@@ -145,12 +150,12 @@ function CustomerPicker({ customers, value, onChange, onAddNew }) {
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
-  const ql = q.trim().toLowerCase();
+  const ql = norm(q.trim());
   const filtered = (ql
     ? customers.filter((c) =>
-        (c.name || "").toLowerCase().includes(ql) ||
-        (c.tax_id || "").toLowerCase().includes(ql) ||
-        (c.phone || "").toLowerCase().includes(ql))
+        norm(c.name).includes(ql) ||
+        norm(c.tax_id).includes(ql) ||
+        norm(c.phone).includes(ql))
     : customers).slice(0, 60);
 
   const pick = (id) => { onChange(id); setOpen(false); setQ(""); };
@@ -471,12 +476,12 @@ export default function POS() {
   };
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = norm(search.trim());
     if (!q) return products;
     return products.filter((p) =>
-      (p.name || "").toLowerCase().includes(q) ||
-      (p.sku || "").toLowerCase().includes(q) ||
-      (p.barcode || "").toLowerCase().includes(q));
+      norm(p.name).includes(q) ||
+      norm(p.sku).includes(q) ||
+      norm(p.barcode).includes(q));
   }, [products, search]);
 
   // Al escanear/Enter: si hay coincidencia exacta de código o un único resultado, abre la medida.
