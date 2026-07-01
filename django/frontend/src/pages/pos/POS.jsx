@@ -461,6 +461,7 @@ export default function POS() {
   const [customerId, setCustomerId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("efectivo");
   const [paid, setPaid] = useState("");
+  const [discount, setDiscount] = useState("");
   const [credit, setCredit] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -545,7 +546,9 @@ export default function POS() {
       : it));
   }, [customerId]);
 
-  const total = cart.reduce((s, i) => s + Number(i.quantity || 0) * Number(i.unit_price || 0), 0);
+  const subtotal = cart.reduce((s, i) => s + Number(i.quantity || 0) * Number(i.unit_price || 0), 0);
+  const discountNum = Math.min(Math.max(0, Number(discount || 0)), subtotal);
+  const total = Math.max(0, subtotal - discountNum);
   const change = paymentMethod === "efectivo" && !credit ? Math.max(0, Number(paid || 0) - total) : 0;
   const exactPaid = paid !== "" && Math.abs(Number(paid) - total) < 0.005 && total > 0;
 
@@ -571,6 +574,7 @@ export default function POS() {
       const payload = {
         customer_id: customerId || null,
         date: saleDate || null,
+        discount: discountNum || 0,
         payment_method: credit ? "credito" : paymentMethod,
         payment_status: credit ? "al_credito" : "pagada",
         paid_amount: credit ? (paid || 0) : (paymentMethod === "efectivo" ? (paid || total) : total),
@@ -587,7 +591,7 @@ export default function POS() {
         method: paymentMethod, credit,
       });
       // Limpia para la siguiente venta (la pantalla de cliente vuelve a "idle").
-      setCart([]); setPaid(""); setCredit(false); setCustomerId(""); setSaleDate(todayStr);
+      setCart([]); setPaid(""); setDiscount(""); setCredit(false); setCustomerId(""); setSaleDate(todayStr);
     } catch (err) {
       setError(err.response?.data?.detail || "No se pudo completar la venta.");
     } finally {
@@ -744,7 +748,34 @@ export default function POS() {
             )}
           </div>
 
+          <div>
+            <label className="block text-sm font-medium mb-1">Descuento (Q)</label>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {[5, 10, 15].map((pct) => (
+                <button key={pct} type="button" onClick={() => setDiscount((subtotal * pct / 100).toFixed(2))}
+                        disabled={subtotal <= 0}
+                        className="rounded-lg px-3 py-1.5 text-sm border border-slate-200 text-slate-600 hover:bg-slate-50 transition disabled:opacity-40">
+                  {pct}%
+                </button>
+              ))}
+              {discountNum > 0 && (
+                <button type="button" onClick={() => setDiscount("")}
+                        className="rounded-lg px-3 py-1.5 text-sm border border-red-200 text-red-600 hover:bg-red-50 transition">
+                  Quitar
+                </button>
+              )}
+            </div>
+            <input type="number" step="any" min="0" value={discount} onChange={(e) => setDiscount(e.target.value)}
+                   placeholder="0.00" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+
           <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-xl px-4 py-3">
+            {discountNum > 0 && (
+              <div className="text-xs space-y-0.5 mb-2 pb-2 border-b border-white/10">
+                <div className="flex justify-between text-slate-300"><span>Subtotal</span><span>Q{subtotal.toFixed(2)}</span></div>
+                <div className="flex justify-between text-emerald-300"><span>Descuento</span><span>− Q{discountNum.toFixed(2)}</span></div>
+              </div>
+            )}
             <div className="text-xs text-slate-300 uppercase tracking-wide">Total a cobrar</div>
             <div className="text-3xl font-bold text-right">Q{total.toFixed(2)}</div>
           </div>

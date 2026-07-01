@@ -53,6 +53,17 @@ class SaleServiceTests(TestCase):
         )
         self.assertEqual(sale.date.date().isoformat(), "2026-07-01")
 
+    def test_venta_con_descuento_global(self):
+        # Descuento global de Q55 sobre 3×85=255 → total 200 (IVA incluido).
+        sale = create_sale(
+            {"payment_method": "efectivo", "paid_amount": "200", "discount": "55"},
+            [{"product_id": self.prod.id, "quantity": "3", "unit_price": "85", "tax_type": "iva"}],
+            user=self.user, branch=self.branch,
+        )
+        self.assertEqual(sale.discount, Decimal("55.00"))
+        self.assertEqual(sale.total, Decimal("200.00"))
+        self.assertEqual(sale.change_amount, Decimal("0.00"))
+
     def test_descuenta_por_units_factor(self):
         # Vender 2 cajas con factor 10 -> descuenta 20 del stock físico
         create_sale(
