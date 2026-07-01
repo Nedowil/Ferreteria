@@ -619,7 +619,7 @@ export default function POS() {
               <span className="w-28 text-right shrink-0">Existencia</span>
               <span className="w-24 text-right shrink-0">Precio venta</span>
             </div>
-            <div className="max-h-[28rem] overflow-auto border border-slate-100 rounded-xl divide-y divide-slate-100">
+            <div className="max-h-[19rem] overflow-auto border border-slate-100 rounded-xl divide-y divide-slate-100">
               {filtered.map((p) => {
                 const avail = availableFor(p);
                 const unit = p.base_unit_label || "unidad";
@@ -652,6 +652,12 @@ export default function POS() {
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+            <div className="flex items-center justify-between bg-slate-50 border-b border-slate-100 px-3 py-2">
+              <span className="text-sm font-semibold text-slate-700">🧾 Detalle de la venta</span>
+              {cart.length > 0 && (
+                <span className="text-xs text-slate-500">{cart.length} {cart.length === 1 ? "línea" : "líneas"}</span>
+              )}
+            </div>
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">
                 <tr><th className="px-3 py-2.5">Producto</th><th className="px-3 py-2.5 w-24 text-right">Cant.</th>
