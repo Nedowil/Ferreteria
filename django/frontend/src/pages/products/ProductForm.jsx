@@ -184,12 +184,15 @@ export default function ProductForm() {
   const [saleRaw, setSaleRaw] = useState("");
   const [saleMode, setSaleMode] = useState("base");
   const [presentations, setPresentations] = useState([]);
+  const [imageFile, setImageFile] = useState(null);       // archivo nuevo a subir
+  const [imagePreview, setImagePreview] = useState("");    // URL para previsualizar
 
   useEffect(() => {
     api.get("/inventory/brands/?page_size=200").then((r) => setBrands(r.data.results || r.data));
     if (editing) {
       api.get(`/inventory/products/${id}/`).then((r) => {
         const d = r.data;
+        if (d.image) setImagePreview(d.image);
         setForm({ ...EMPTY, ...Object.fromEntries(Object.entries(d).map(([k, v]) => [k, v === null ? "" : v])) });
         // En BD el precio se guarda por unidad base. Si hay empaque, el de COMPRA
         // se muestra por empaque (precio_base × factor) para que cuadre el round-trip.
@@ -267,8 +270,20 @@ export default function ProductForm() {
       .filter((p) => p.label.trim())
       .map((p) => ({ label: p.label.trim(), units_factor: p.units_factor, price: p.price || 0 }));
     try {
-      if (editing) await api.put(`/inventory/products/${id}/`, payload);
-      else await api.post("/inventory/products/", payload);
+      let productId = id;
+      if (editing) {
+        await api.put(`/inventory/products/${id}/`, payload);
+      } else {
+        const { data } = await api.post("/inventory/products/", payload);
+        productId = data.id;
+      }
+      // La imagen se sube aparte (multipart), sin mezclarla con el JSON de las
+      // presentaciones. Solo si el usuario eligió un archivo nuevo.
+      if (imageFile) {
+        const fd = new FormData();
+        fd.append("image", imageFile);
+        await api.patch(`/inventory/products/${productId}/`, fd);
+      }
       navigate("/productos");
     } catch (err) {
       setErrors(err.response?.data || { detail: "Error al guardar" });
@@ -276,6 +291,16 @@ export default function ProductForm() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const onImagePick = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { setErrors({ image: "El archivo debe ser una imagen." }); return; }
+    if (file.size > 5 * 1024 * 1024) { setErrors({ image: "La imagen no debe superar 5 MB." }); return; }
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+    setErrors((prev) => { const { image, ...rest } = prev; return rest; });
   };
 
   return (
@@ -307,6 +332,29 @@ export default function ProductForm() {
         </div>
         <div className="grid grid-cols-3 gap-4 mt-4">
           <SelectField label="Marca" name="brand" form={form} onChange={set} options={brands} empty="— Sin marca —" />
+        </div>
+
+        <div className="mt-4">
+          <label className="block text-sm font-medium mb-1">Imagen del producto (opcional)</label>
+          <div className="flex items-center gap-4">
+            <div className="h-24 w-24 shrink-0 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden">
+              {imagePreview
+                ? <img src={imagePreview} alt="Vista previa" className="max-h-full max-w-full object-contain" />
+                : <span className="text-3xl text-slate-300">📦</span>}
+            </div>
+            <div className="text-sm">
+              <label className="inline-block cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg px-4 py-2 font-medium transition">
+                {imagePreview ? "Cambiar imagen" : "Subir imagen"}
+                <input type="file" accept="image/*" onChange={onImagePick} className="hidden" />
+              </label>
+              {imagePreview && (
+                <button type="button" onClick={() => { setImageFile(null); setImagePreview(""); }}
+                        className="ml-2 text-red-600 hover:underline">Quitar</button>
+              )}
+              <p className="text-xs text-slate-400 mt-1">JPG o PNG, hasta 5 MB.</p>
+              {errors.image && <p className="text-red-600 text-xs mt-1">{String(errors.image)}</p>}
+            </div>
+          </div>
         </div>
       </section>
 

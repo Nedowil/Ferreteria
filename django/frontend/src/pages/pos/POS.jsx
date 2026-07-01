@@ -486,6 +486,9 @@ export default function POS() {
   const [returning, setReturning] = useState(false);
   const todayStr = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; })();
   const [saleDate, setSaleDate] = useState(todayStr);
+  // Vista del catálogo: "list" (por defecto) o "grid" (con imágenes). Se recuerda.
+  const [catalogView, setCatalogView] = useState(() => localStorage.getItem("pos_catalog_view") || "list");
+  const setView = (v) => { setCatalogView(v); localStorage.setItem("pos_catalog_view", v); };
   const searchRef = useRef(null);
 
   const reloadProducts = () =>
@@ -670,41 +673,95 @@ export default function POS() {
               )}
             </div>
 
-            <div className="flex items-center gap-3 px-3 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-              <span className="flex-1">Producto</span>
-              <span className="w-28 text-right shrink-0">Existencia</span>
-              <span className="w-24 text-right shrink-0">Precio venta</span>
+            <div className="flex items-center justify-between px-1 pt-4 pb-2">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                {filtered.length} producto{filtered.length === 1 ? "" : "s"}
+              </span>
+              <div className="flex rounded-lg border border-slate-200 overflow-hidden text-sm">
+                <button type="button" onClick={() => setView("list")}
+                        className={"px-3 py-1 transition " + (catalogView === "list" ? "bg-slate-800 text-white" : "bg-white text-slate-500 hover:bg-slate-50")}>
+                  ☰ Lista
+                </button>
+                <button type="button" onClick={() => setView("grid")}
+                        className={"px-3 py-1 transition " + (catalogView === "grid" ? "bg-slate-800 text-white" : "bg-white text-slate-500 hover:bg-slate-50")}>
+                  🖼️ Imágenes
+                </button>
+              </div>
             </div>
-            <div className="max-h-[19rem] overflow-auto border border-slate-100 rounded-xl divide-y divide-slate-100">
-              {filtered.map((p) => {
-                const avail = availableFor(p);
-                const unit = p.base_unit_label || "unidad";
-                return (
-                  <button key={p.id} onClick={() => setPicking(p)}
-                          className="w-full text-left flex items-center gap-3 px-3 py-2.5 hover:bg-blue-50 transition group">
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium text-slate-800 truncate group-hover:text-blue-700">{p.name}</div>
-                      <div className="text-[11px] font-mono text-slate-400">{p.sku}</div>
-                    </div>
-                    <div className="w-28 text-right shrink-0">
-                      <span className={"text-[11px] rounded-full px-2 py-0.5 " +
-                        (avail <= 0 ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-500")}>
-                        {trim(avail)} {unit}
-                      </span>
-                    </div>
-                    <div className="w-24 text-right shrink-0">
-                      <div className="text-blue-600 font-bold text-sm">Q{p.sale_price}</div>
-                      <div className="text-[10px] text-slate-400">por {unit}</div>
-                    </div>
-                  </button>
-                );
-              })}
-              {filtered.length === 0 && (
-                <div className="text-center text-slate-400 py-10 text-sm">
-                  {products.length === 0 ? "No hay productos registrados." : "Sin coincidencias."}
+
+            {catalogView === "list" && (
+              <>
+                <div className="flex items-center gap-3 px-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                  <span className="flex-1">Producto</span>
+                  <span className="w-28 text-right shrink-0">Existencia</span>
+                  <span className="w-24 text-right shrink-0">Precio venta</span>
                 </div>
-              )}
-            </div>
+                <div className="max-h-[19rem] overflow-auto border border-slate-100 rounded-xl divide-y divide-slate-100">
+                  {filtered.map((p) => {
+                    const avail = availableFor(p);
+                    const unit = p.base_unit_label || "unidad";
+                    return (
+                      <button key={p.id} onClick={() => setPicking(p)}
+                              className="w-full text-left flex items-center gap-3 px-3 py-2.5 hover:bg-blue-50 transition group">
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-medium text-slate-800 truncate group-hover:text-blue-700">{p.name}</div>
+                          <div className="text-[11px] font-mono text-slate-400">{p.sku}</div>
+                        </div>
+                        <div className="w-28 text-right shrink-0">
+                          <span className={"text-[11px] rounded-full px-2 py-0.5 " +
+                            (avail <= 0 ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-500")}>
+                            {trim(avail)} {unit}
+                          </span>
+                        </div>
+                        <div className="w-24 text-right shrink-0">
+                          <div className="text-blue-600 font-bold text-sm">Q{p.sale_price}</div>
+                          <div className="text-[10px] text-slate-400">por {unit}</div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                  {filtered.length === 0 && (
+                    <div className="text-center text-slate-400 py-10 text-sm">
+                      {products.length === 0 ? "No hay productos registrados." : "Sin coincidencias."}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {catalogView === "grid" && (
+              <div className="max-h-[28rem] overflow-auto grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 p-1">
+                {filtered.map((p) => {
+                  const avail = availableFor(p);
+                  const unit = p.base_unit_label || "unidad";
+                  return (
+                    <button key={p.id} onClick={() => setPicking(p)}
+                            className="text-left rounded-xl border border-slate-200 hover:border-blue-400 hover:shadow-md transition overflow-hidden bg-white group">
+                      <div className="h-24 bg-slate-50 flex items-center justify-center overflow-hidden">
+                        {p.image
+                          ? <img src={p.image} alt={p.name} className="h-full w-full object-contain" loading="lazy" />
+                          : <span className="text-4xl text-slate-300">📦</span>}
+                      </div>
+                      <div className="p-2">
+                        <div className="text-sm font-medium text-slate-800 leading-tight line-clamp-2 group-hover:text-blue-700">{p.name}</div>
+                        <div className="flex items-center justify-between mt-1">
+                          <span className="text-blue-600 font-bold text-sm">Q{p.sale_price}</span>
+                          <span className={"text-[10px] rounded-full px-2 py-0.5 " +
+                            (avail <= 0 ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-500")}>
+                            {trim(avail)} {unit}
+                          </span>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+                {filtered.length === 0 && (
+                  <div className="col-span-full text-center text-slate-400 py-10 text-sm">
+                    {products.length === 0 ? "No hay productos registrados." : "Sin coincidencias."}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">

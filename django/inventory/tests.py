@@ -299,3 +299,21 @@ class ProductEditApiTests(TestCase):
         )
         self.assertEqual(r.status_code, 400)
         self.assertIn("image", r.json())
+
+    def test_subir_imagen_multipart(self):
+        # Sube una imagen real (PNG 1x1) por multipart y la guarda.
+        import io
+        from PIL import Image
+        buf = io.BytesIO()
+        Image.new("RGB", (1, 1), "red").save(buf, format="PNG")
+        buf.seek(0)
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        upload = SimpleUploadedFile("foto.png", buf.read(), content_type="image/png")
+        r = self._client().patch(
+            f"/api/inventory/products/{self.product.id}/",
+            {"image": upload}, format="multipart",
+        )
+        self.assertEqual(r.status_code, 200, r.content)
+        self.product.refresh_from_db()
+        self.assertTrue(self.product.image)
+        self.assertIn("products/", self.product.image.name)
