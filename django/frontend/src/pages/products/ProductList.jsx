@@ -3,6 +3,85 @@ import { Link } from "react-router-dom";
 import api from "../../api/client";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 
+// Ventana de dos pasos: cantidad de etiquetas → impresora de destino.
+function LabelPrintModal({ product, onClose }) {
+  const [step, setStep] = useState("qty");
+  const [copies, setCopies] = useState("1");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const next = () => {
+    if (!Number(copies) || Number(copies) < 1) { setErr("Indicá cuántas etiquetas."); return; }
+    setErr(""); setStep("printer");
+  };
+
+  const send = async (mode) => {
+    setBusy(true); setErr("");
+    try {
+      const { data } = await api.post(`/inventory/products/${product.id}/label/`,
+                                      { copies: Number(copies), mode });
+      if (data.status === "sent") { alert("Etiqueta(s) enviada(s) a la Zebra ZD421T."); onClose(); return; }
+      const bytes = Uint8Array.from(atob(data.zpl_base64), (c) => c.charCodeAt(0));
+      const url = URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" }));
+      const a = document.createElement("a");
+      a.href = url; a.download = `etiqueta-${product.sku}.zpl`;
+      a.click();
+      URL.revokeObjectURL(url);
+      onClose();
+    } catch (e) {
+      setErr(e.response?.data?.detail || "No se pudo imprimir la etiqueta.");
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-4">
+          <div className="text-lg font-bold">🏷️ Imprimir etiqueta</div>
+          <div className="text-xs text-blue-100 truncate">{product.name} · {product.sku}</div>
+        </div>
+        <div className="p-5 space-y-4">
+          {err && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2">{err}</div>}
+
+          {step === "qty" ? (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">¿Cuántas etiquetas?</label>
+                <input type="number" min="1" autoFocus value={copies}
+                       onChange={(e) => setCopies(e.target.value)}
+                       onKeyDown={(e) => e.key === "Enter" && next()}
+                       className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div className="flex gap-2">
+                <button onClick={onClose} className="flex-1 border border-slate-300 text-slate-600 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 transition">Cancelar</button>
+                <button onClick={next} className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg py-2.5 text-sm font-semibold shadow hover:from-blue-700 hover:to-indigo-700 transition">Siguiente</button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="text-sm text-slate-600">Elegí la impresora para <b>{copies}</b> etiqueta(s):</div>
+              <button onClick={() => send("network")} disabled={busy}
+                      className="w-full text-left rounded-xl border border-slate-200 hover:border-blue-400 hover:shadow-md p-3 transition disabled:opacity-50">
+                <div className="font-semibold text-slate-800">🖨️ Zebra ZD421T (red)</div>
+                <div className="text-xs text-slate-500">Envía directo a la impresora de etiquetas por su IP configurada.</div>
+              </button>
+              <button onClick={() => send("system")} disabled={busy}
+                      className="w-full text-left rounded-xl border border-slate-200 hover:border-blue-400 hover:shadow-md p-3 transition disabled:opacity-50">
+                <div className="font-semibold text-slate-800">⬇️ Descargar archivo ZPL</div>
+                <div className="text-xs text-slate-500">Para enviarlo a la Zebra por USB (utilidad de Zebra) o guardarlo.</div>
+              </button>
+              <div className="flex justify-between items-center pt-1">
+                <button onClick={() => setStep("qty")} className="text-sm text-slate-500 hover:text-slate-700">← Atrás</button>
+                {busy && <span className="text-xs text-slate-400">Enviando…</span>}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ProductList() {
   const [data, setData] = useState({ results: [], count: 0 });
   const [filters, setFilters] = useState({ search: "", category: "", brand: "", low_stock: false });
@@ -11,6 +90,7 @@ export default function ProductList() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [labeling, setLabeling] = useState(null); // producto a etiquetar (modal)
 
   useEffect(() => {
     api.get("/inventory/categories/?page_size=200").then((r) => setCategories(r.data.results || r.data));
@@ -36,25 +116,6 @@ export default function ProductList() {
     load();
   };
 
-  const printLabel = async (p) => {
-    const copies = Number(prompt(`¿Cuántas etiquetas de "${p.name}"?`, "1"));
-    if (!copies || copies < 1) return;
-    try {
-      const { data } = await api.post(`/inventory/products/${p.id}/label/`, { copies });
-      if (data.status === "sent") {
-        alert("Etiqueta enviada a la Zebra.");
-        return;
-      }
-      const bytes = Uint8Array.from(atob(data.zpl_base64), (ch) => ch.charCodeAt(0));
-      const url = URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" }));
-      const a = document.createElement("a");
-      a.href = url; a.download = `etiqueta-${p.sku}.zpl`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      alert(e.response?.data?.detail || "No se pudo imprimir la etiqueta.");
-    }
-  };
 
   const exportExcel = async () => {
     setExporting(true);
@@ -137,7 +198,7 @@ export default function ProductList() {
                     : <span className="font-medium text-slate-700">{p.stock_display}</span>}
                 </td>
                 <td className="px-4 py-2 text-right whitespace-nowrap">
-                  <button onClick={() => printLabel(p)} className="text-slate-600 hover:underline" title="Imprimir etiqueta Zebra">Etiqueta</button>
+                  <button onClick={() => setLabeling(p)} className="text-slate-600 hover:underline" title="Imprimir etiqueta Zebra">Etiqueta</button>
                   <Link to={`/productos/${p.id}/inventario`} className="text-slate-600 hover:underline ml-2">Inventario</Link>
                   <Link to={`/productos/${p.id}/editar`} className="text-blue-600 hover:underline ml-2">Editar</Link>
                   <button onClick={() => remove(p.id)} className="text-red-600 hover:underline ml-2">Eliminar</button>
@@ -158,6 +219,8 @@ export default function ProductList() {
           <button disabled={page >= totalPages} onClick={() => setPage(page + 1)} className="px-3 py-1 bg-white border rounded disabled:opacity-40">›</button>
         </div>
       )}
+
+      {labeling && <LabelPrintModal product={labeling} onClose={() => setLabeling(null)} />}
     </div>
   );
 }

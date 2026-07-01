@@ -101,9 +101,11 @@ def _sync_presentations(product, items):
         )
 
 
-def _deliver_zpl(company, data):
-    """Envía el ZPL a la Zebra de red, o lo devuelve (base64) en modo sistema."""
-    if company.zebra_mode == "network":
+def _deliver_zpl(company, data, mode_override=None):
+    """Envía el ZPL a la Zebra de red, o lo devuelve (base64) en modo sistema.
+    ``mode_override`` permite elegir el método al momento de imprimir."""
+    mode = mode_override or company.zebra_mode
+    if mode == "network":
         if not company.zebra_ip:
             return Response({"detail": "Configura la IP de la impresora Zebra."},
                             status=status.HTTP_400_BAD_REQUEST)
@@ -114,7 +116,7 @@ def _deliver_zpl(company, data):
                             status=status.HTTP_502_BAD_GATEWAY)
         return Response({"status": "sent", "mode": "network"})
     return Response({
-        "status": "raw", "mode": company.zebra_mode,
+        "status": "raw", "mode": mode,
         "zpl_base64": base64.b64encode(data).decode("ascii"),
     })
 
@@ -232,8 +234,9 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
         company = CompanySetting.current()
         copies = request.data.get("copies", 1)
         show_price = request.data.get("show_price", True)
+        mode = request.data.get("mode")  # 'network' | 'system' (opcional; elige el destino)
         data = labels.build_label_zpl(product, company, show_price=bool(show_price), copies=copies)
-        return _deliver_zpl(company, data)
+        return _deliver_zpl(company, data, mode_override=mode)
 
     @action(detail=False, methods=["post"], url_path="zebra-test",
             permission_classes=[HasPermission.require("configuracion.gestionar")])
