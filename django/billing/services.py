@@ -132,7 +132,7 @@ def build_ticket(sale):
             "payment_method": sale.payment_method,
             "payment_status": sale.payment_status,
             "items": [
-                {"name": it.product.name, "qty": str(it.quantity),
+                {"name": it.product.name, "code": it.product.sku, "qty": str(it.quantity),
                  "unit_price": str(it.unit_price), "subtotal": str(it.subtotal),
                  "unit_label": it.unit_label}
                 for it in sale.items.select_related("product")
@@ -141,6 +141,7 @@ def build_ticket(sale):
         "fel": ({
             "uuid": inv.uuid, "serie": inv.serie, "numero": inv.numero,
             "certificador": inv.certificador, "environment": inv.environment,
+            "certificador_nit": getattr(settings, "FEL_CERTIFICADOR_NIT", "12521337"),
             "fecha_certificacion": inv.fecha_certificacion.isoformat() if inv.fecha_certificacion else None,
             "status": inv.status,
         } if inv else None),

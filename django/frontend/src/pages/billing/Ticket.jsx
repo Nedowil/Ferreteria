@@ -266,14 +266,16 @@ function CartaPaper({ company, sale, fel, qr, phrases, d, meses }) {
       {/* Partidas */}
       <table className="w-full border-collapse mt-4">
         <thead><tr className="text-white font-bold text-[11px]" style={{ background: GREEN }}>
-          <th className={cell}>CANTIDAD</th><th className={cell}>DESCRIPCIÓN</th>
-          <th className={cell}>P. UNIT</th><th className={cell}>DESC</th>
+          <th className={cell}>CANTIDAD</th><th className={cell}>CÓDIGO</th><th className={cell}>UNIDAD</th>
+          <th className={cell}>DESCRIPCIÓN</th><th className={cell}>P. UNIT</th><th className={cell}>DESC</th>
           <th className={cell}>IMPUESTOS</th><th className={cell}>TOTAL</th>
         </tr></thead>
         <tbody>
           {sale.items.map((it, i) => (
             <tr key={i}>
-              <td className={cell + " text-center"}>{Number(it.qty)}{it.unit_label ? ` ${it.unit_label}` : ""}</td>
+              <td className={cell + " text-center"}>{Number(it.qty)}</td>
+              <td className={cell + " font-mono text-[10px]"}>{it.code}</td>
+              <td className={cell + " text-center"}>{it.unit_label || "Unidad"}</td>
               <td className={cell}>{it.name}</td>
               <td className={cell + " text-right"}>{Number(it.unit_price).toFixed(2)}</td>
               <td className={cell + " text-right"}>0.00</td>
@@ -312,11 +314,12 @@ function CartaPaper({ company, sale, fel, qr, phrases, d, meses }) {
       <div className="grid grid-cols-2 gap-4 mt-4 items-end">
         <div className="text-[11px] text-slate-600 space-y-1">
           {phrases.map((p, i) => <div key={i}>{typeof p === "string" ? p : Object.values(p).join(" ")}</div>)}
-          {fel && <div className="mt-2"><b>Certificador:</b> {fel.certificador || "—"}</div>}
+          {fel && <div className="mt-2"><b>Certificador:</b> {fel.certificador || "INFILE, S.A."} · <b>NIT:</b> {fel.certificador_nit || "12521337"}</div>}
           <div className="text-slate-400">Representación Impresa de la Factura Electrónica.</div>
         </div>
         <div className="text-right">
           {qr && <img src={qr} alt="QR" className="inline-block" style={{ width: 130, height: 130 }} />}
+          <div className="text-[10px] text-slate-500">Escanea el código QR</div>
           <div className="font-bold tracking-wide" style={{ color: GREEN }}>FEL · Factura Electrónica</div>
         </div>
       </div>
