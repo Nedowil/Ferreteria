@@ -251,3 +251,51 @@ class ZebraLabelTests(TestCase):
         self.company.save()
         self.assertEqual(self._client("a@test.com").post("/api/inventory/products/zebra-test/").status_code, 200)
         self.assertEqual(self._client("s@test.com").post("/api/inventory/products/zebra-test/").status_code, 403)
+
+
+class ProductEditApiTests(TestCase):
+    """Edición de producto vía API (regresión del bug de guardar sin efecto)."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        self.branch = Branch.objects.create(name="Matriz", code="M", is_main=True)
+        self.product = Product.objects.create(
+            sku="PIN-0001", name="Pintura Galón", sale_price=Decimal("120"),
+            purchase_price=Decimal("90"), stock=Decimal("5"), base_unit_label="galón",
+        )
+        self.admin = User.objects.create_user(
+            username="a", email="a@test.com", password="x123", is_superuser=True
+        )
+
+    def _client(self):
+        from rest_framework.test import APIClient
+        c = APIClient()
+        r = c.post("/api/auth/token/", {"email": "a@test.com", "password": "x123"}, format="json")
+        c.credentials(HTTP_AUTHORIZATION=f"Bearer {r.json()['access']}", HTTP_X_BRANCH_ID=str(self.branch.id))
+        return c
+
+    def test_editar_producto_sin_imagen(self):
+        # El detalle devuelve image=null; reenviar el objeto tal cual (sin la
+        # imagen) debe guardar sin romper el ImageField.
+        client = self._client()
+        detail = client.get(f"/api/inventory/products/{self.product.id}/").json()
+        payload = {k: v for k, v in detail.items() if k != "image"}
+        payload["name"] = "Pintura Galón Editada"
+        payload["sale_price"] = "135.00"
+        r = client.put(f"/api/inventory/products/{self.product.id}/", payload, format="json")
+        self.assertEqual(r.status_code, 200, r.content)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.name, "Pintura Galón Editada")
+        self.assertEqual(self.product.sale_price, Decimal("135.00"))
+
+    def test_editar_con_image_cadena_vacia_falla(self):
+        # Documenta el bug original: enviar image="" (texto) rompe el ImageField.
+        client = self._client()
+        r = client.put(
+            f"/api/inventory/products/{self.product.id}/",
+            {"name": "X", "sale_price": "120", "base_unit_label": "galón", "image": ""},
+            format="json",
+        )
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("image", r.json())

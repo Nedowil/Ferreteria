@@ -243,9 +243,13 @@ export default function ProductForm() {
     e.preventDefault();
     setBusy(true); setErrors({});
     const payload = { ...form };
+    // La imagen no se edita en este formulario (envío JSON, no multipart). Al
+    // editar llega como URL o "" desde la API; enviarla como texto rompe el
+    // ImageField ("no era un archivo"). Se omite siempre.
+    delete payload.image;
     ["category", "brand", "unit", "container_factor", "container_price", "wholesale_price",
      "wholesale_min_quantity", "container_wholesale_price", "measure_step",
-     "container_label", "barcode"].forEach((k) => {
+     "container_label", "barcode", "contractor_price", "container_contractor_price"].forEach((k) => {
       if (payload[k] === "") payload[k] = null;
     });
     // SKU: si va vacío se omite (el backend lo autogenera; no acepta null).
@@ -278,6 +282,16 @@ export default function ProductForm() {
     <form onSubmit={submit} className="max-w-4xl space-y-5">
       <h1 className="text-lg font-semibold">{editing ? "Editar producto" : "Nuevo producto"}</h1>
       {errors.detail && <div className="bg-red-100 text-red-800 rounded px-4 py-2 text-sm">{errors.detail}</div>}
+      {!errors.detail && Object.keys(errors).length > 0 && (
+        <div className="bg-red-100 text-red-800 rounded px-4 py-2 text-sm">
+          No se pudo guardar. Revisá los campos marcados:
+          <ul className="list-disc ml-5 mt-1">
+            {Object.entries(errors).map(([field, msg]) => (
+              <li key={field}><b>{field}</b>: {Array.isArray(msg) ? msg.join(" ") : String(msg)}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <section className="bg-white rounded-lg shadow p-5">
         <h3 className="font-semibold mb-3">Identificación</h3>
