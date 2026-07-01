@@ -200,7 +200,7 @@ function CustomerPicker({ customers, value, onChange, onAddNew }) {
 
 // Alta rápida de cliente desde el POS (solo nombre obligatorio; NIT con SAT).
 function QuickCustomerModal({ onClose, onCreated }) {
-  const [form, setForm] = useState({ name: "", tax_id: "", phone: "", customer_type: "retail" });
+  const [form, setForm] = useState({ name: "", tax_id: "", phone: "", address: "", customer_type: "retail" });
   const [busy, setBusy] = useState(false);
   const [satBusy, setSatBusy] = useState(false);
   const [msg, setMsg] = useState("");
@@ -226,6 +226,7 @@ function QuickCustomerModal({ onClose, onCreated }) {
       const { data } = await api.post("/customers/", {
         name: form.name.trim(), customer_type: form.customer_type,
         tax_id: form.tax_id.trim() || null, phone: form.phone.trim() || null,
+        address: form.address.trim() || null,
       });
       onCreated(data);
     } catch (e) {
@@ -272,6 +273,12 @@ function QuickCustomerModal({ onClose, onCreated }) {
                 <option value="wholesale">Mayorista</option>
               </select>
             </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Dirección (opcional)</label>
+            <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })}
+                   placeholder="Dirección del cliente"
+                   className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div className="flex gap-2 pt-1">
             <button onClick={onClose} className="flex-1 border border-slate-300 text-slate-600 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 transition">Cancelar</button>
