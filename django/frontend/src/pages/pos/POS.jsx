@@ -427,6 +427,18 @@ function SaleDoneModal({ sale, onPrint, onView, onNew }) {
               <div className="text-4xl font-extrabold text-emerald-700">Q{sale.change.toFixed(2)}</div>
             </div>
           )}
+          {sale.fel && sale.fel.ok && (
+            <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-2 text-center">
+              <div className="text-xs text-blue-700 uppercase tracking-wide">Factura electrónica (FEL)</div>
+              <div className="text-sm font-semibold text-blue-800">{sale.fel.serie ? `${sale.fel.serie}-` : ""}{sale.fel.numero || "certificada"}</div>
+              {sale.fel.uuid && <div className="text-[10px] text-blue-500 font-mono break-all">{sale.fel.uuid}</div>}
+            </div>
+          )}
+          {sale.fel && !sale.fel.ok && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2 text-xs text-amber-700">
+              ⚠️ La venta quedó registrada, pero la factura FEL no se emitió: {sale.fel.error} Podés emitirla luego en <b>Facturación</b>.
+            </div>
+          )}
           <div className="text-sm space-y-1">
             <div className="flex justify-between"><span className="text-slate-500">Total</span><span className="font-semibold">Q{sale.total.toFixed(2)}</span></div>
             {!sale.credit && (
@@ -462,6 +474,7 @@ export default function POS() {
   const [paymentMethod, setPaymentMethod] = useState("efectivo");
   const [paid, setPaid] = useState("");
   const [discount, setDiscount] = useState("");
+  const [wantFel, setWantFel] = useState(false); // emitir factura electrónica (FEL)
   const [credit, setCredit] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -584,14 +597,27 @@ export default function POS() {
         })),
       };
       const { data } = await api.post("/sales/", payload);
+
+      // Si se pidió factura electrónica, se emite tras crear la venta. Si falla,
+      // la venta igual queda registrada y se avisa (se puede emitir luego).
+      let fel = null;
+      if (wantFel) {
+        try {
+          const { data: inv } = await api.post(`/sales/${data.id}/emit-invoice/`);
+          fel = { ok: true, numero: inv.numero, serie: inv.serie, uuid: inv.uuid };
+        } catch (e) {
+          fel = { ok: false, error: e.response?.data?.detail || "No se pudo emitir la factura FEL." };
+        }
+      }
+
       publishDisplay({ type: "sale", company: companyName, total, paid: payload.paid_amount, change });
       setLastSale({
         id: data.id, folio: data.folio || `#${data.id}`,
         total, paid: Number(payload.paid_amount || 0), change,
-        method: paymentMethod, credit,
+        method: paymentMethod, credit, fel,
       });
       // Limpia para la siguiente venta (la pantalla de cliente vuelve a "idle").
-      setCart([]); setPaid(""); setDiscount(""); setCredit(false); setCustomerId(""); setSaleDate(todayStr);
+      setCart([]); setPaid(""); setDiscount(""); setWantFel(false); setCredit(false); setCustomerId(""); setSaleDate(todayStr);
     } catch (err) {
       setError(err.response?.data?.detail || "No se pudo completar la venta.");
     } finally {
@@ -768,6 +794,33 @@ export default function POS() {
             <input type="number" step="any" min="0" value={discount} onChange={(e) => setDiscount(e.target.value)}
                    placeholder="0.00" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
+
+          {can("facturas.emitir") && (
+            <div>
+              <label className="block text-sm font-medium mb-1">Comprobante</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => setWantFel(false)}
+                        className={"rounded-lg py-2 text-sm font-medium border transition " +
+                          (!wantFel ? "bg-slate-800 text-white border-slate-800"
+                                    : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50")}>
+                  🧾 Recibo
+                </button>
+                <button type="button" onClick={() => setWantFel(true)}
+                        className={"rounded-lg py-2 text-sm font-medium border transition " +
+                          (wantFel ? "bg-blue-600 text-white border-blue-600"
+                                   : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50")}>
+                  📑 Factura FEL
+                </button>
+              </div>
+              {wantFel && (
+                <p className="text-xs text-slate-500 mt-1">
+                  {customer && customer.tax_id
+                    ? <>Se facturará a NIT <b>{customer.tax_id}</b>.</>
+                    : <>Sin NIT del cliente se factura como <b>Consumidor Final (CF)</b>.</>}
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-xl px-4 py-3">
             {discountNum > 0 && (
