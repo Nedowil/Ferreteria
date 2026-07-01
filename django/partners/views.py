@@ -4,8 +4,21 @@ from django.utils import timezone
 from rest_framework import filters, viewsets
 
 from core.permissions import PermissionByActionMixin
-from .models import Customer, Supplier
+from .models import Customer, Supplier, normalize_search
 from .serializers import CustomerSerializer, SupplierSerializer
+
+
+def apply_search(qs, term):
+    """Filtra por el índice sin tildes; cada palabra debe estar presente.
+
+    Busca contra `search_index` (normalizado sin diacríticos), así funciona
+    igual en SQLite y PostgreSQL y escala a miles de registros.
+    """
+    if not term:
+        return qs
+    for word in normalize_search(term).split():
+        qs = qs.filter(search_index__contains=word)
+    return qs
 
 
 class SupplierViewSet(PermissionByActionMixin, viewsets.ModelViewSet):
@@ -15,15 +28,14 @@ class SupplierViewSet(PermissionByActionMixin, viewsets.ModelViewSet):
         "partial_update": "proveedores.editar", "destroy": "proveedores.eliminar",
     }
     serializer_class = SupplierSerializer
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ["name", "tax_id", "contact_name", "phone", "email"]
+    filter_backends = [filters.OrderingFilter]
     ordering = ["name"]
 
     def get_queryset(self):
         qs = Supplier.objects.filter(deleted_at__isnull=True)
         if self.request.query_params.get("active") in ("1", "true", "True"):
             qs = qs.filter(active=True)
-        return qs
+        return apply_search(qs, self.request.query_params.get("search"))
 
     def perform_destroy(self, instance):
         # Soft-delete si tiene compras; borrado real si no.
@@ -42,8 +54,7 @@ class CustomerViewSet(PermissionByActionMixin, viewsets.ModelViewSet):
         "partial_update": "clientes.editar", "destroy": "clientes.eliminar",
     }
     serializer_class = CustomerSerializer
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ["name", "tax_id", "phone", "email"]
+    filter_backends = [filters.OrderingFilter]
     ordering = ["name"]
 
     def get_queryset(self):
@@ -53,7 +64,7 @@ class CustomerViewSet(PermissionByActionMixin, viewsets.ModelViewSet):
             qs = qs.filter(customer_type=ctype)
         if self.request.query_params.get("active") in ("1", "true", "True"):
             qs = qs.filter(active=True)
-        return qs
+        return apply_search(qs, self.request.query_params.get("search"))
 
     def perform_destroy(self, instance):
         instance.deleted_at = timezone.now()

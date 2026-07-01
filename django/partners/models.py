@@ -1,6 +1,28 @@
 """Modelos de Proveedores y Clientes."""
 
+import unicodedata
+
 from django.db import models
+
+
+def normalize_search(*parts):
+    """Texto normalizado para búsquedas sin importar tildes ni mayúsculas.
+
+    Une las partes, quita los diacríticos (NFKD) y pasa a minúsculas, de modo
+    que "María" y "maria" coincidan. Se guarda denormalizado en `search_index`
+    para poder buscar en la base de datos aunque haya miles de registros.
+    """
+    text = " ".join(str(p) for p in parts if p)
+    text = unicodedata.normalize("NFKD", text)
+    text = "".join(c for c in text if not unicodedata.combining(c))
+    return text.lower().strip()
+
+
+def _merge_update_fields(kwargs):
+    """Asegura que search_index se persista aunque se use update_fields."""
+    uf = kwargs.get("update_fields")
+    if uf is not None and "search_index" not in uf:
+        kwargs["update_fields"] = list(uf) + ["search_index"]
 
 
 class Supplier(models.Model):
@@ -12,6 +34,8 @@ class Supplier(models.Model):
     address = models.CharField("dirección", max_length=255, blank=True, null=True)
     notes = models.TextField("notas", blank=True, null=True)
     active = models.BooleanField("activo", default=True)
+    # Índice de búsqueda sin tildes (nombre, NIT, contacto, teléfono, correo).
+    search_index = models.CharField(max_length=600, blank=True, default="", db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     deleted_at = models.DateTimeField(null=True, blank=True)  # soft delete
@@ -20,6 +44,13 @@ class Supplier(models.Model):
         verbose_name = "proveedor"
         verbose_name_plural = "proveedores"
         ordering = ["name"]
+
+    def save(self, *args, **kwargs):
+        self.search_index = normalize_search(
+            self.name, self.tax_id, self.contact_name, self.phone, self.email
+        )
+        _merge_update_fields(kwargs)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name
@@ -54,6 +85,9 @@ class Customer(models.Model):
     )
     credit_enabled = models.BooleanField("crédito habilitado", default=False)
 
+    # Índice de búsqueda sin tildes (nombre, NIT, teléfono, correo).
+    search_index = models.CharField(max_length=600, blank=True, default="", db_index=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     deleted_at = models.DateTimeField(null=True, blank=True)  # soft delete
@@ -62,6 +96,11 @@ class Customer(models.Model):
         verbose_name = "cliente"
         verbose_name_plural = "clientes"
         ordering = ["name"]
+
+    def save(self, *args, **kwargs):
+        self.search_index = normalize_search(self.name, self.tax_id, self.phone, self.email)
+        _merge_update_fields(kwargs)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name

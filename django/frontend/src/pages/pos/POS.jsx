@@ -137,10 +137,13 @@ function MeasureModal({ product, customer, available, onAdd, onClose }) {
   );
 }
 
-// Selector de cliente con búsqueda (nombre/NIT/teléfono) — escala con miles.
+// Selector de cliente con búsqueda en el servidor (nombre/NIT/teléfono),
+// sin importar tildes — escala a miles de clientes.
 function CustomerPicker({ customers, value, onChange, onAddNew }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
+  const [results, setResults] = useState(null); // null = mostrar lista inicial
+  const [loading, setLoading] = useState(false);
   const ref = useRef(null);
   const selected = customers.find((c) => String(c.id) === String(value));
 
@@ -150,15 +153,30 @@ function CustomerPicker({ customers, value, onChange, onAddNew }) {
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
-  const ql = norm(q.trim());
-  const filtered = (ql
-    ? customers.filter((c) =>
-        norm(c.name).includes(ql) ||
-        norm(c.tax_id).includes(ql) ||
-        norm(c.phone).includes(ql))
-    : customers).slice(0, 60);
+  // Búsqueda en el servidor con retardo (debounce) para no saturar la API.
+  useEffect(() => {
+    const ql = q.trim();
+    if (!ql) { setResults(null); setLoading(false); return; }
+    setLoading(true);
+    const t = setTimeout(async () => {
+      try {
+        const { data } = await api.get("/customers/", {
+          params: { active: 1, search: ql, page_size: 40 },
+        });
+        setResults(data.results || data);
+      } catch {
+        setResults([]);
+      } finally {
+        setLoading(false);
+      }
+    }, 250);
+    return () => clearTimeout(t);
+  }, [q]);
 
-  const pick = (id) => { onChange(id); setOpen(false); setQ(""); };
+  // Sin texto: lista inicial precargada. Con texto: resultados del servidor.
+  const filtered = (results !== null ? results : customers).slice(0, 60);
+
+  const pick = (id, obj) => { onChange(id, obj); setOpen(false); setQ(""); setResults(null); };
 
   return (
     <div className="relative" ref={ref}>
@@ -181,10 +199,10 @@ function CustomerPicker({ customers, value, onChange, onAddNew }) {
                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div className="max-h-64 overflow-auto text-sm">
-            <button type="button" onClick={() => pick("")}
+            <button type="button" onClick={() => pick("", null)}
                     className="block w-full text-left px-3 py-2 hover:bg-blue-50 transition">Consumidor final</button>
             {filtered.map((c) => (
-              <button key={c.id} type="button" onClick={() => pick(c.id)}
+              <button key={c.id} type="button" onClick={() => pick(c.id, c)}
                       className="block w-full text-left px-3 py-2 hover:bg-blue-50 border-t border-slate-50 transition">
                 <div className="font-medium text-slate-800">{c.name}
                   {c.customer_type === "wholesale" && <span className="text-xs text-blue-600"> (mayorista)</span>}</div>
@@ -195,7 +213,10 @@ function CustomerPicker({ customers, value, onChange, onAddNew }) {
                 )}
               </button>
             ))}
-            {filtered.length === 0 && <div className="px-3 py-4 text-center text-slate-400">Sin coincidencias.</div>}
+            {loading && <div className="px-3 py-4 text-center text-slate-400">Buscando…</div>}
+            {!loading && filtered.length === 0 && (
+              <div className="px-3 py-4 text-center text-slate-400">Sin coincidencias.</div>
+            )}
           </div>
         </div>
       )}
@@ -699,7 +720,15 @@ export default function POS() {
           <div>
             <label className="block text-sm font-medium mb-1">Cliente</label>
             <CustomerPicker customers={customers} value={customerId}
-                            onChange={setCustomerId} onAddNew={() => setAddingCustomer(true)} />
+                            onChange={(id, obj) => {
+                              setCustomerId(id);
+                              // El cliente puede venir de una búsqueda en el servidor y no
+                              // estar en la lista precargada; lo agregamos para que el precio
+                              // mayorista y los datos queden disponibles al instante.
+                              if (obj) setCustomers((prev) =>
+                                prev.some((c) => String(c.id) === String(obj.id)) ? prev : [obj, ...prev]);
+                            }}
+                            onAddNew={() => setAddingCustomer(true)} />
           </div>
 
           <div>
