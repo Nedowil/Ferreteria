@@ -1,10 +1,11 @@
 """Lógica de negocio de Ventas / POS (SaleService de Laravel)."""
 
 from decimal import Decimal
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from django.db import transaction
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 
 from cashbox import services as cash
 from core.pricing import compute_totals as _compute_totals, money as _money
@@ -99,6 +100,8 @@ def create_sale(data, items, *, user=None, branch=None):
     # se conserva con la hora local actual.
     sale_date = timezone.now()
     custom_date = data.get("date")
+    if isinstance(custom_date, str):
+        custom_date = parse_date(custom_date)
     if custom_date:
         naive = datetime.combine(custom_date, timezone.localtime().time())
         sale_date = timezone.make_aware(naive, timezone.get_current_timezone())

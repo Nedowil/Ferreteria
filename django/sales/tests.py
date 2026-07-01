@@ -44,6 +44,15 @@ class SaleServiceTests(TestCase):
         self.prod.refresh_from_db()
         self.assertEqual(self.prod.stock, Decimal("97.00"))
 
+    def test_venta_con_fecha_personalizada(self):
+        # Regresión: una fecha explícita no debe romper la creación de la venta.
+        sale = create_sale(
+            {"payment_method": "efectivo", "paid_amount": "300", "date": "2026-07-01"},
+            [{"product_id": self.prod.id, "quantity": "1", "unit_price": "85"}],
+            user=self.user, branch=self.branch,
+        )
+        self.assertEqual(sale.date.date().isoformat(), "2026-07-01")
+
     def test_descuenta_por_units_factor(self):
         # Vender 2 cajas con factor 10 -> descuenta 20 del stock físico
         create_sale(
