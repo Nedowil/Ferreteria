@@ -537,6 +537,41 @@ export default function POS() {
     if (target) { setPicking(target); setSearch(""); }
   };
 
+  // Escaneo GLOBAL: el lector actúa como teclado rápido que termina en Enter.
+  // Captura el código en cualquier parte del POS, aunque el foco no esté en la
+  // barra de búsqueda. Ignora si hay un modal abierto o si se escribe en otro
+  // campo de texto (para no interferir con la edición manual).
+  useEffect(() => {
+    let buffer = "";
+    let last = 0;
+    const onKey = (e) => {
+      if (picking || addingCustomer || addingProduct || returning || lastSale) return;
+      const el = document.activeElement;
+      if (el === searchRef.current) return; // la barra ya lo maneja (onSearchKey)
+      const tag = (el?.tagName || "").toLowerCase();
+      const enOtroCampo = tag === "input" || tag === "textarea" || tag === "select";
+      const now = Date.now();
+      if (now - last > 80) buffer = ""; // pausa larga = tecleo humano, reinicia
+      last = now;
+      if (e.key === "Enter") {
+        const code = buffer.trim(); buffer = "";
+        if (code.length >= 3) {
+          const q = code.toLowerCase();
+          const exact = products.find((p) =>
+            (p.barcode || "").toLowerCase() === q || (p.sku || "").toLowerCase() === q);
+          if (exact) { e.preventDefault(); setPicking(exact); setSearch(""); }
+        }
+        return;
+      }
+      if (e.key.length === 1) {
+        if (enOtroCampo) { buffer = ""; return; } // no secuestrar la edición manual
+        buffer += e.key;
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [products, picking, addingCustomer, addingProduct, returning, lastSale]);
+
   const addMeasure = (measure, qty) => {
     const p = picking;
     setCart((prev) => {
