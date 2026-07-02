@@ -160,14 +160,19 @@ function TicketPaper({ company, sale, fel, qr, phrases }) {
           <div className="grid grid-cols-3">
             <span>{Number(it.qty)}</span>
             <span className="text-center">{Number(it.unit_price).toFixed(2)}</span>
-            <span className="text-right">{Number(it.subtotal).toFixed(2)}</span>
+            <span className="text-right">{Number(it.gross ?? it.subtotal).toFixed(2)}</span>
           </div>
         </div>
       ))}
 
       <div className="border-t border-dashed border-slate-400 my-2" />
+      {Number(sale.discount) > 0 && (
+        <>
+          <div className="flex justify-between"><span>Subtotal:</span><span>{Q(sale.subtotal)}</span></div>
+          <div className="flex justify-between"><span>Descuento:</span><span>−{Q(sale.discount)}</span></div>
+        </>
+      )}
       <div className="text-center font-bold text-[15px]">Total Venta: {Q(sale.total)}</div>
-      {Number(sale.discount) > 0 && <div className="flex justify-between"><span>Descuento:</span><span>−{Q(sale.discount)}</span></div>}
       <div className="font-bold mt-1">Métodos de Pago:</div>
       <div className="flex justify-between"><span>{metodoLabel(sale.payment_method)}:</span><span>{Q(sale.paid)}</span></div>
       <div className="text-center font-bold my-1">Impuesto Total: {Q(sale.tax)}</div>
@@ -278,7 +283,7 @@ function CartaPaper({ company, sale, fel, qr, phrases, d, meses }) {
               <td className={cell + " text-center"}>{it.unit_label || "Unidad"}</td>
               <td className={cell}>{it.name}</td>
               <td className={cell + " text-right"}>{Number(it.unit_price).toFixed(2)}</td>
-              <td className={cell + " text-right"}>0.00</td>
+              <td className={cell + " text-right"}>{Number(it.discount || 0).toFixed(2)}</td>
               <td className={cell + " text-right"}>IVA {Number(company.tax_rate || 12)}%</td>
               <td className={cell + " text-right"}>{Number(it.subtotal).toFixed(2)}</td>
             </tr>

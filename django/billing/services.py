@@ -171,8 +171,31 @@ def lookup_tax_id(tax_id):
 
 def build_ticket(sale):
     """Datos estructurados para imprimir el ticket/comprobante de una venta."""
+    from decimal import Decimal
+    from core.pricing import money
+    from .fel.base import _distribute_discount
     company = CompanySetting.current()
     inv = getattr(sale, "electronic_invoice", None)
+
+    # El descuento global se reparte por línea, igual que en el XML certificado,
+    # para que la representación impresa coincida con el DTE (requisito SAT).
+    sale_items = list(sale.items.select_related("product"))
+    grosses = [money(Decimal(it.quantity) * Decimal(it.unit_price)) for it in sale_items]
+    line_discs = [Decimal(it.discount or 0) for it in sale_items]
+    extra = Decimal(sale.discount or 0) - sum(line_discs, Decimal("0"))
+    if extra < 0:
+        extra = Decimal("0")
+    extras = _distribute_discount(grosses, extra)
+    items = []
+    for it, gross, ld, ed in zip(sale_items, grosses, line_discs, extras):
+        disc = ld + ed
+        items.append({
+            "name": it.product.name, "code": it.product.sku, "qty": str(it.quantity),
+            "unit_price": str(it.unit_price), "unit_label": it.unit_label,
+            "gross": str(gross), "discount": str(disc),
+            "subtotal": str(money(gross - disc)),  # total de la línea (con descuento)
+        })
+
     return {
         "company": {
             "name": company.commercial_name, "legal_name": company.legal_name,
@@ -196,12 +219,7 @@ def build_ticket(sale):
             "paid": str(sale.paid_amount), "change": str(sale.change_amount),
             "payment_method": sale.payment_method,
             "payment_status": sale.payment_status,
-            "items": [
-                {"name": it.product.name, "code": it.product.sku, "qty": str(it.quantity),
-                 "unit_price": str(it.unit_price), "subtotal": str(it.subtotal),
-                 "unit_label": it.unit_label}
-                for it in sale.items.select_related("product")
-            ],
+            "items": items,
         },
         "fel": ({
             "uuid": inv.uuid, "serie": inv.serie, "numero": inv.numero,
