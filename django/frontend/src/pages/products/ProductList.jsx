@@ -176,7 +176,7 @@ export default function ProductList() {
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">
-            <tr><th className="px-4 py-2.5">SKU</th><th className="px-4 py-2.5">Producto</th>
+            <tr><th className="px-4 py-2.5 w-14"></th><th className="px-4 py-2.5">SKU</th><th className="px-4 py-2.5">Producto</th>
                 <th className="px-4 py-2.5">Categoría</th><th className="px-4 py-2.5">Marca</th>
                 <th className="px-4 py-2.5 text-right">Precio</th><th className="px-4 py-2.5 text-right">Stock</th>
                 <th className="px-4 py-2.5 text-right">Acciones</th></tr>
@@ -184,6 +184,13 @@ export default function ProductList() {
           <tbody>
             {data.results.map((p) => (
               <tr key={p.id} className="border-t border-slate-100 hover:bg-slate-50/70 transition">
+                <td className="px-4 py-2">
+                  <div className="h-10 w-10 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden">
+                    {p.image
+                      ? <img src={p.image} alt={p.name} className="h-full w-full object-contain" loading="lazy" />
+                      : <span className="text-lg text-slate-300">📦</span>}
+                  </div>
+                </td>
                 <td className="px-4 py-2 font-mono text-xs text-slate-500">{p.sku}</td>
                 <td className="px-4 py-2">
                   <div className="font-medium text-slate-800">{p.name}</div>
@@ -206,7 +213,7 @@ export default function ProductList() {
               </tr>
             ))}
             {!loading && data.results.length === 0 && (
-              <tr><td colSpan="7" className="px-5 py-10 text-center text-slate-400">No hay productos.</td></tr>
+              <tr><td colSpan="8" className="px-5 py-10 text-center text-slate-400">No hay productos.</td></tr>
             )}
           </tbody>
         </table>
