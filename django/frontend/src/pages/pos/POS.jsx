@@ -488,6 +488,15 @@ export default function POS() {
   const todayStr = fmtDate(new Date());
   // La SAT permite emitir FEL solo hasta 5 días hacia atrás.
   const minFelDate = (() => { const d = new Date(); d.setDate(d.getDate() - 5); return fmtDate(d); })();
+  // Días válidos para FEL (hoy y los 5 anteriores) para resaltarlos visualmente.
+  const felDays = (() => {
+    const out = [];
+    for (let i = 0; i <= 5; i++) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      out.push({ value: fmtDate(d), label: i === 0 ? "Hoy" : `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}` });
+    }
+    return out;
+  })();
   const [saleDate, setSaleDate] = useState(todayStr);
   const felDateInvalid = wantFel && (saleDate < minFelDate || saleDate > todayStr);
   // Vista del catálogo: "list" (por defecto) o "grid" (con imágenes). Se recuerda.
@@ -873,10 +882,26 @@ export default function POS() {
                 <span>⚠️ La factura electrónica solo admite los últimos 5 días.</span>
                 <button type="button" onClick={() => setSaleDate(todayStr)} className="underline">usar hoy</button>
               </div>
-            ) : saleDate !== todayStr && (
+            ) : !wantFel && saleDate !== todayStr && (
               <div className="text-xs text-amber-600 mt-1 flex items-center justify-between">
                 <span>⚠️ Venta con fecha distinta a hoy.</span>
                 <button type="button" onClick={() => setSaleDate(todayStr)} className="underline">usar hoy</button>
+              </div>
+            )}
+            {wantFel && (
+              <div className="mt-2">
+                <div className="text-[11px] text-blue-700 mb-1">📅 Días permitidos para factura electrónica (últimos 5):</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {felDays.map((d) => (
+                    <button key={d.value} type="button" onClick={() => setSaleDate(d.value)}
+                            className={"rounded-lg px-2.5 py-1 text-xs font-medium border transition " +
+                              (saleDate === d.value
+                                ? "bg-blue-600 text-white border-blue-600"
+                                : "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100")}>
+                      {d.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>
