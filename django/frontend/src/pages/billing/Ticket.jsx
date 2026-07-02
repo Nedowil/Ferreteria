@@ -141,8 +141,8 @@ function TicketPaper({ company, sale, fel, qr, phrases }) {
         <div>{[company.phone && `Tel: ${company.phone}`, company.email].filter(Boolean).join("  ")}</div>
       </div>
 
-      <div className="mt-2 font-bold">DOCUMENTO TRIBUTARIO ELECTRÓNICO</div>
-      <div className="font-bold">Factura # {fel?.numero || sale.folio}</div>
+      <div className="mt-2 font-bold">{fel ? "DOCUMENTO TRIBUTARIO ELECTRÓNICO" : "COMPROBANTE DE VENTA"}</div>
+      <div className="font-bold">{fel ? `Factura # ${fel.numero}` : `Recibo No. ${sale.folio}`}</div>
       {fel?.uuid && <div className="break-all">{fel.uuid}</div>}
       <div className="font-bold">Fecha: {new Date(sale.date).toLocaleString("es-GT")}</div>
       <div className="font-bold">Cliente: {sale.customer}</div>
@@ -215,18 +215,24 @@ function CartaPaper({ company, sale, fel, qr, phrases, d, meses }) {
           {company.email && <div className="text-blue-600">{company.email}</div>}
         </div>
         <div>
-          <div className="text-right text-[13px] text-slate-600 mb-1">DOCUMENTO TRIBUTARIO ELECTRÓNICO</div>
+          <div className="text-right text-[13px] text-slate-600 mb-1">
+            {fel ? "DOCUMENTO TRIBUTARIO ELECTRÓNICO" : "COMPROBANTE DE VENTA"}
+          </div>
           <div className="border border-slate-300">
             <div className="text-white text-center font-bold py-1" style={{ background: GREEN }}>
-              Factura Electrónica # {fel?.numero || "—"}
+              {fel ? `Factura Electrónica # ${fel.numero || "—"}` : `Recibo No. ${sale.folio}`}
             </div>
-            <div className="text-white text-center text-[11px] py-0.5" style={{ background: GREEN }}>
-              {regimeLabel(company.regime)}
-            </div>
-            <div className="text-center text-[11px] py-1 font-semibold">
-              <div>Serie: {fel?.serie || "—"}</div>
-              <div>No: {fel?.numero || "—"}</div>
-            </div>
+            {fel && (
+              <>
+                <div className="text-white text-center text-[11px] py-0.5" style={{ background: GREEN }}>
+                  {regimeLabel(company.regime)}
+                </div>
+                <div className="text-center text-[11px] py-1 font-semibold">
+                  <div>Serie: {fel.serie || "—"}</div>
+                  <div>No: {fel.numero || "—"}</div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -303,29 +309,41 @@ function CartaPaper({ company, sale, fel, qr, phrases, d, meses }) {
         </div>
       </div>
 
-      {/* Autorización / certificación */}
-      <div className="border border-slate-300 mt-4 text-[11px]">
-        <div className="grid grid-cols-[200px_1fr] border-b border-slate-300">
-          <div className="px-2 py-1 border-r border-slate-300">NÚMERO DE AUTORIZACIÓN:</div>
-          <div className="px-2 py-1 break-all">{fel?.uuid || "—"}</div>
+      {/* Autorización / certificación (solo FEL) */}
+      {fel && (
+        <div className="border border-slate-300 mt-4 text-[11px]">
+          <div className="grid grid-cols-[200px_1fr] border-b border-slate-300">
+            <div className="px-2 py-1 border-r border-slate-300">NÚMERO DE AUTORIZACIÓN:</div>
+            <div className="px-2 py-1 break-all">{fel.uuid || "—"}</div>
+          </div>
+          <div className="grid grid-cols-[200px_1fr]">
+            <div className="px-2 py-1 border-r border-slate-300">FECHA DE CERTIFICACIÓN:</div>
+            <div className="px-2 py-1">{fel.fecha_certificacion ? new Date(fel.fecha_certificacion).toLocaleString("es-GT") : "—"}</div>
+          </div>
         </div>
-        <div className="grid grid-cols-[200px_1fr]">
-          <div className="px-2 py-1 border-r border-slate-300">FECHA DE CERTIFICACIÓN:</div>
-          <div className="px-2 py-1">{fel?.fecha_certificacion ? new Date(fel.fecha_certificacion).toLocaleString("es-GT") : "—"}</div>
-        </div>
-      </div>
+      )}
 
       {/* Pie: frases + QR */}
       <div className="grid grid-cols-2 gap-4 mt-4 items-end">
         <div className="text-[11px] text-slate-600 space-y-1">
-          {phrases.map((p, i) => <div key={i}>{typeof p === "string" ? p : Object.values(p).join(" ")}</div>)}
-          {fel && <div className="mt-2"><b>Certificador:</b> {fel.certificador || "INFILE, S.A."} · <b>NIT:</b> {fel.certificador_nit || "12521337"}</div>}
-          <div className="text-slate-400">Representación Impresa de la Factura Electrónica.</div>
+          {fel && phrases.map((p, i) => <div key={i}>{typeof p === "string" ? p : Object.values(p).join(" ")}</div>)}
+          {fel ? (
+            <>
+              <div className="mt-2"><b>Certificador:</b> {fel.certificador || "INFILE, S.A."} · <b>NIT:</b> {fel.certificador_nit || "12521337"}</div>
+              <div className="text-slate-400">Representación Impresa de la Factura Electrónica.</div>
+            </>
+          ) : (
+            <div className="text-slate-400">Comprobante de venta — no es una factura electrónica.</div>
+          )}
         </div>
         <div className="text-right">
-          {qr && <img src={qr} alt="QR" className="inline-block" style={{ width: 130, height: 130 }} />}
-          <div className="text-[10px] text-slate-500">Escanea el código QR</div>
-          <div className="font-bold tracking-wide" style={{ color: GREEN }}>FEL · Factura Electrónica</div>
+          {fel && qr && (
+            <>
+              <img src={qr} alt="QR" className="inline-block" style={{ width: 130, height: 130 }} />
+              <div className="text-[10px] text-slate-500">Escanea el código QR</div>
+              <div className="font-bold tracking-wide" style={{ color: GREEN }}>FEL · Factura Electrónica</div>
+            </>
+          )}
         </div>
       </div>
 
