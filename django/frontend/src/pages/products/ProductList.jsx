@@ -1,7 +1,59 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import JsBarcode from "jsbarcode";
 import api from "../../api/client";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
+
+// Genera un <svg> de código de barras (EAN-13 si son 13 dígitos, si no Code128)
+// y devuelve su HTML. Igual criterio que la etiqueta Zebra del backend.
+function barcodeSvg(code) {
+  const value = String(code || "").trim();
+  if (!value) return "";
+  const isEan13 = /^\d{13}$/.test(value);
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  try {
+    JsBarcode(svg, value, {
+      format: isEan13 ? "EAN13" : "CODE128",
+      width: 2, height: 45, fontSize: 14, margin: 4, displayValue: true,
+    });
+  } catch {
+    return `<div style="font-family:monospace;font-size:12px">${value}</div>`;
+  }
+  return svg.outerHTML;
+}
+
+// Abre una ventana imprimible con las etiquetas (para "Guardar como PDF").
+function printLabelsPdf(product, copies) {
+  const price = Number(product.sale_price) > 0 ? `Q ${Number(product.sale_price).toFixed(2)}` : "";
+  const one = `
+    <div class="label">
+      <div class="name">${(product.name || "").replace(/</g, "&lt;")}</div>
+      ${price ? `<div class="price">${price}</div>` : ""}
+      <div class="bc">${barcodeSvg(product.barcode || product.sku)}</div>
+      <div class="sku">${(product.sku || "").replace(/</g, "&lt;")}</div>
+    </div>`;
+  const labels = Array.from({ length: Math.max(1, Number(copies) || 1) }, () => one).join("");
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Etiquetas ${product.sku}</title>
+    <style>
+      @page { margin: 6mm; }
+      body { font-family: Arial, sans-serif; margin: 0; }
+      .sheet { display: flex; flex-wrap: wrap; gap: 6mm; }
+      .label { width: 50mm; border: 1px dashed #bbb; border-radius: 4px; padding: 4px 6px;
+               text-align: center; page-break-inside: avoid; }
+      .name { font-size: 12px; font-weight: 700; line-height: 1.1; margin-bottom: 2px;
+              max-height: 2.4em; overflow: hidden; }
+      .price { font-size: 18px; font-weight: 800; }
+      .bc svg { max-width: 100%; height: auto; }
+      .sku { font-family: monospace; font-size: 11px; color: #444; }
+    </style></head>
+    <body><div class="sheet">${labels}</div>
+    <script>window.onload = function(){ setTimeout(function(){ window.print(); }, 200); };<\/script>
+    </body></html>`;
+  const w = window.open("", "_blank");
+  if (!w) { alert("Permití las ventanas emergentes para generar el PDF."); return; }
+  w.document.write(html);
+  w.document.close();
+}
 
 // Ventana de dos pasos: cantidad de etiquetas → impresora de destino.
 function LabelPrintModal({ product, onClose }) {
@@ -69,6 +121,11 @@ function LabelPrintModal({ product, onClose }) {
                       className="w-full text-left rounded-xl border border-slate-200 hover:border-blue-400 hover:shadow-md p-3 transition disabled:opacity-50">
                 <div className="font-semibold text-slate-800">⬇️ Descargar archivo ZPL</div>
                 <div className="text-xs text-slate-500">Para enviarlo a la Zebra por USB (utilidad de Zebra) o guardarlo.</div>
+              </button>
+              <button onClick={() => { printLabelsPdf(product, copies); onClose(); }} disabled={busy}
+                      className="w-full text-left rounded-xl border border-slate-200 hover:border-blue-400 hover:shadow-md p-3 transition disabled:opacity-50">
+                <div className="font-semibold text-slate-800">🧾 Descargar PDF / Imprimir</div>
+                <div className="text-xs text-slate-500">Genera las etiquetas con código de barras y elegí "Guardar como PDF" o cualquier impresora.</div>
               </button>
               <div className="flex justify-between items-center pt-1">
                 <button onClick={() => setStep("qty")} className="text-sm text-slate-500 hover:text-slate-700">← Atrás</button>
