@@ -19,6 +19,11 @@ User = get_user_model()
 
 
 def _make_sale(folio="V-FEL-1", status=Sale.STATUS_COMPLETADA):
+    from core.models import CompanySetting
+    company = CompanySetting.current()
+    if (company.tax_id or "").upper() in ("", "CF"):
+        company.tax_id = "12345678"
+        company.save()
     prod = Product.objects.create(
         sku=f"P-{folio}", name="Martillo", purchase_price=Decimal("80"),
         sale_price=Decimal("112"), stock=Decimal("50"), tax_type="iva",
@@ -406,6 +411,16 @@ class CreditNoteTests(TestCase):
         self.assertTrue(note.uuid)
         self.assertEqual(note.document_type, "NCRE")
         self.assertEqual(note.invoice_id, inv.id)
+
+    def test_emisor_sin_nit_da_error_claro(self):
+        from core.models import CompanySetting
+        sale = _make_sale(folio="V-NONIT")
+        c = CompanySetting.current()
+        c.tax_id = "CF"  # emisor sin NIT válido
+        c.save()
+        with self.assertRaises(services.FelError) as ctx:
+            services.emit_invoice(sale, user=None)
+        self.assertIn("NIT del emisor", str(ctx.exception))
 
     def test_credit_note_requiere_factura_certificada(self):
         from django.utils import timezone

@@ -16,6 +16,15 @@ class FelError(Exception):
     """Error de dominio en facturación electrónica."""
 
 
+def _require_emisor(company):
+    """El NIT del emisor debe estar configurado y no puede ser 'CF'."""
+    nit = (company.tax_id or "").strip().upper()
+    if not nit or nit == "CF":
+        raise FelError(
+            "Configurá el NIT del emisor en Administración → Empresa antes de facturar."
+        )
+
+
 def _cycle_start(company):
     """Inicio del ciclo del bolsón FEL (por defecto 1 de enero del año actual)."""
     today = timezone.localdate()
@@ -51,6 +60,7 @@ def emit_invoice(sale, *, user=None):
         raise FelError("La venta ya tiene una factura certificada.")
 
     company = CompanySetting.current()
+    _require_emisor(company)
     q = quota_status(company)
     if q["remaining"] is not None and q["remaining"] <= 0:
         raise FelError("Se agotó el cupo de DTEs del periodo.")
@@ -104,6 +114,7 @@ def emit_credit_note(sale_return, *, motivo=None, user=None):
         raise FelError("La devolución ya tiene una nota de crédito certificada.")
 
     company = CompanySetting.current()
+    _require_emisor(company)
     q = quota_status(company)
     if q["remaining"] is not None and q["remaining"] <= 0:
         raise FelError("Se agotó el cupo de DTEs del periodo.")
