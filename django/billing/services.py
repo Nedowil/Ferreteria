@@ -8,8 +8,8 @@ from django.utils import timezone
 
 from core.models import CompanySetting
 from .fel import get_certifier
-from .fel.base import build_dte
-from .models import ElectronicInvoice
+from .fel.base import build_credit_note_dte, build_dte
+from .models import CreditNote, ElectronicInvoice
 
 
 class FelError(Exception):
@@ -82,6 +82,60 @@ def emit_invoice(sale, *, user=None):
     invoice.error_message = None
     invoice.save()
     return invoice
+
+
+@transaction.atomic
+def emit_credit_note(sale_return, *, motivo=None, user=None):
+    """Emite/certifica una Nota de Crédito (NCRE) a partir de una devolución.
+
+    Requiere que la venta original tenga una factura electrónica certificada;
+    la NCRE la referencia mediante el complemento ReferenciasNota.
+    """
+    if not sale_return.sale_id:
+        raise FelError("La devolución no está ligada a una venta.")
+    invoice = getattr(sale_return.sale, "electronic_invoice", None)
+    if not invoice or invoice.status != ElectronicInvoice.STATUS_CERTIFICADA:
+        raise FelError("La venta no tiene factura electrónica certificada.")
+    if not sale_return.items.exists():
+        raise FelError("La devolución no tiene partidas.")
+
+    note = getattr(sale_return, "credit_note", None)
+    if note and note.status == CreditNote.STATUS_CERTIFICADA:
+        raise FelError("La devolución ya tiene una nota de crédito certificada.")
+
+    company = CompanySetting.current()
+    q = quota_status(company)
+    if q["remaining"] is not None and q["remaining"] <= 0:
+        raise FelError("Se agotó el cupo de DTEs del periodo.")
+
+    if note is None:
+        note = CreditNote(sale_return=sale_return, invoice=invoice)
+    note.invoice = invoice
+    note.environment = settings.FEL_ENVIRONMENT
+    note.certificador = settings.FEL_CERTIFICADOR
+    note.document_type = "NCRE"
+    note.motivo = motivo or sale_return.reason or "Devolución"
+
+    dte = build_credit_note_dte(sale_return, invoice, company, motivo=note.motivo)
+    note.xml_generated = str(dte)
+
+    result = get_certifier().certify(dte)
+    if not result.ok:
+        note.status = CreditNote.STATUS_ERROR
+        note.error_message = (result.error or "Error de certificación")[:500]
+        note.save()
+        raise FelError(note.error_message)
+
+    note.uuid = result.uuid
+    note.serie = result.serie
+    note.numero = result.numero
+    note.xml_signed = result.xml_signed
+    note.response_payload = result.payload
+    note.fecha_certificacion = timezone.now()
+    note.status = CreditNote.STATUS_CERTIFICADA
+    note.error_message = None
+    note.save()
+    return note
 
 
 @transaction.atomic

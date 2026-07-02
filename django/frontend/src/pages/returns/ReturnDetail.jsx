@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../api/client";
+import { useAuth } from "../../auth/AuthContext";
 
 export default function ReturnDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { can } = useAuth();
   const [r, setR] = useState(null);
   const [error, setError] = useState("");
+  const [emitting, setEmitting] = useState(false);
 
   const load = () => { api.get(`/returns/${id}/`).then((res) => setR(res.data)); };
   useEffect(load, [id]);
@@ -16,6 +19,16 @@ export default function ReturnDetail() {
     setError("");
     try { await api.post(`/returns/${id}/cancel/`, {}); load(); }
     catch (err) { setError(err.response?.data?.detail || "Error"); }
+  };
+
+  const emitCreditNote = async () => {
+    setEmitting(true); setError("");
+    try {
+      await api.post(`/returns/${id}/emit-credit-note/`, {});
+      load();
+    } catch (err) {
+      setError(err.response?.data?.detail || "No se pudo emitir la nota de crédito.");
+    } finally { setEmitting(false); }
   };
 
   if (!r) return <div className="text-slate-400">Cargando…</div>;
@@ -56,6 +69,23 @@ export default function ReturnDetail() {
           </tfoot>
         </table>
       </section>
+
+      {/* Nota de Crédito electrónica (FEL) */}
+      {r.credit_note && r.credit_note.status === "certificada" ? (
+        <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm">
+          <div className="font-semibold text-blue-800">📄 Nota de crédito electrónica emitida</div>
+          <div className="text-blue-700">{r.credit_note.serie ? `${r.credit_note.serie}-` : ""}{r.credit_note.numero}</div>
+          {r.credit_note.uuid && <div className="text-xs text-blue-500 font-mono break-all">{r.credit_note.uuid}</div>}
+        </div>
+      ) : r.status === "procesada" && r.sale_invoice_certified && can("facturas.emitir") ? (
+        <div className="mt-4">
+          <button onClick={emitCreditNote} disabled={emitting}
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-5 py-2.5 text-sm font-semibold shadow hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 transition">
+            {emitting ? "Emitiendo…" : "📄 Emitir nota de crédito (FEL)"}
+          </button>
+          <p className="text-xs text-slate-400 mt-1">La venta de origen tiene factura electrónica; se emitirá una nota de crédito que la referencia.</p>
+        </div>
+      ) : null}
 
       {r.status === "procesada" && (
         <div className="mt-4">

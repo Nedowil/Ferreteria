@@ -37,12 +37,26 @@ class SaleReturnDetailSerializer(SaleReturnListSerializer):
     items = SaleReturnItemSerializer(many=True, read_only=True)
     user_name = serializers.CharField(source="user.name", read_only=True, default=None)
     branch_name = serializers.CharField(source="branch.name", read_only=True, default=None)
+    # Info FEL: si la venta original tiene factura certificada y estado de la NCRE.
+    sale_invoice_certified = serializers.SerializerMethodField()
+    credit_note = serializers.SerializerMethodField()
 
     class Meta(SaleReturnListSerializer.Meta):
         fields = SaleReturnListSerializer.Meta.fields + [
             "sale", "user_name", "branch_name", "subtotal", "discount", "tax",
-            "reason", "notes", "items",
+            "reason", "notes", "items", "sale_invoice_certified", "credit_note",
         ]
+
+    def get_sale_invoice_certified(self, obj):
+        inv = getattr(obj.sale, "electronic_invoice", None) if obj.sale_id else None
+        return bool(inv and inv.status == "certificada")
+
+    def get_credit_note(self, obj):
+        note = getattr(obj, "credit_note", None)
+        if not note:
+            return None
+        return {"id": note.id, "uuid": note.uuid, "serie": note.serie,
+                "numero": note.numero, "status": note.status}
 
 
 # ---- Escritura: devolución normal (con venta) ----

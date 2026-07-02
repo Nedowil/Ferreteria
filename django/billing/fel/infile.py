@@ -47,6 +47,30 @@ def _esc(value):
     return escape(str(value if value is not None else ""), {'"': "&quot;", "'": "&apos;"})
 
 
+def _referencias_nota(ref) -> str:
+    """Complemento de referencia para Notas de Crédito/Débito (SAT face2).
+
+    ``ref``: {fecha_origen, motivo, uuid_origen, numero_origen, serie_origen}
+    apuntando a la factura FEL original. Devuelve "" si no aplica.
+    """
+    if not ref:
+        return ""
+    return (
+        "<dte:Complementos>"
+        '<dte:Complemento IDComplemento="Notas" NombreComplemento="Notas" '
+        'URIComplemento="http://www.sat.gob.gt/fel/notas.xsd">'
+        '<cno:ReferenciasNota '
+        'xmlns:cno="http://www.sat.gob.gt/face2/ComplementoReferenciaNota/0.1.0" '
+        f'FechaEmisionDocumentoOrigen="{_esc(ref["fecha_origen"])}" '
+        f'MotivoAjuste="{_esc(ref["motivo"])}" '
+        f'NumeroAutorizacionDocumentoOrigen="{_esc(ref["uuid_origen"])}" '
+        f'NumeroDocumentoOrigen="{_esc(ref["numero_origen"])}" '
+        f'SerieDocumentoOrigen="{_esc(ref["serie_origen"])}" '
+        'Version="0.0"/>'
+        "</dte:Complemento></dte:Complementos>"
+    )
+
+
 def build_invoice_xml(dte: dict) -> str:
     """Arma el XML SAT (GTDocumento) a partir del dict de ``build_dte``."""
     em = dte["emisor"]
@@ -72,10 +96,10 @@ def build_invoice_xml(dte: dict) -> str:
             f"<dte:UnidadMedida>{_esc(it['unidad_medida'])}</dte:UnidadMedida>"
             f"<dte:Descripcion>{_esc(it['descripcion'])}</dte:Descripcion>"
             f"<dte:PrecioUnitario>{_esc(it['precio_unitario'])}</dte:PrecioUnitario>"
-            f"<dte:Precio>{_esc(it['monto'])}</dte:Precio>"
+            f"<dte:Precio>{_esc(it['precio'])}</dte:Precio>"
             f"<dte:Descuento>{_esc(it['descuento'])}</dte:Descuento>"
             f"{impuestos}"
-            f"<dte:Total>{_esc(it['monto'])}</dte:Total>"
+            f"<dte:Total>{_esc(it['total'])}</dte:Total>"
             "</dte:Item>"
         )
 
@@ -135,6 +159,7 @@ def build_invoice_xml(dte: dict) -> str:
         f"{total_impuestos}"
         f"<dte:GranTotal>{_esc(dte['totales']['gran_total'])}</dte:GranTotal>"
         "</dte:Totales>"
+        f"{_referencias_nota(dte.get('referencia_nota'))}"
         "</dte:DatosEmision>"
         "</dte:DTE>"
         "</dte:SAT>"

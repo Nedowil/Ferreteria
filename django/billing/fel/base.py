@@ -37,95 +37,183 @@ class FelCertifier:
         raise NotImplementedError
 
 
-def build_dte(sale, company):
-    """Construye la estructura del DTE (Documento Tributario Electrónico).
-
-    Devuelve un dict con emisor, receptor, ítems y totales. El IVA por ítem se
-    calcula asumiendo precios con IVA incluido (caso típico GT) si así está
-    configurado; el monto de IVA total se toma de la venta.
-    """
-    rate = Decimal(company.default_tax_rate)
-    pequeno = company.tax_regime == "PEQUENO_CONTRIBUYENTE"
-    items = []
-    for i, it in enumerate(sale.items.select_related("product"), start=1):
-        gross = Decimal(it.subtotal)
-        # El pequeño contribuyente no desglosa IVA en los ítems.
-        if pequeno or it.tax_type == "exento" or rate <= 0:
-            iva = Decimal("0")
-        elif company.prices_include_tax:
-            iva = (gross - gross / (1 + rate / 100)).quantize(Decimal("0.01"))
-        else:
-            iva = (gross * rate / 100).quantize(Decimal("0.01"))
-        items.append({
-            "linea": i,
-            "descripcion": it.product.name,
-            "cantidad": str(it.quantity),
-            "unidad_medida": (it.unit_label or it.product.base_unit_label or "UNI")[:3].upper(),
-            "precio_unitario": str(it.unit_price),
-            "tipo": "B",  # B=bien
-            "gravado": it.tax_type != "exento",
-            "descuento": str(it.discount or 0),
-            "monto": str(gross),
-            "monto_gravable": str((gross - iva).quantize(Decimal("0.01"))),
-            "iva": str(iva),
-        })
-
-    customer = sale.customer
-    # SAT exige la fecha en hora local (America/Guatemala) y SIN microsegundos:
-    # AAAA-MM-DDThh:mm:ss±hh:mm. isoformat() sobre un datetime en UTC con
-    # microsegundos hace que Infile rechace o dé 500.
+def _fecha_emision(dt):
+    """Fecha local (America/Guatemala) SIN microsegundos: AAAA-MM-DDThh:mm:ss±hh:mm.
+    isoformat() en UTC con microsegundos hace que Infile rechace o dé 500."""
     from django.utils import timezone as _tz
-    local_dt = _tz.localtime(sale.date) if _tz.is_aware(sale.date) else sale.date
-    fecha_emision = local_dt.replace(microsecond=0).isoformat()
+    local_dt = _tz.localtime(dt) if _tz.is_aware(dt) else dt
+    return local_dt.replace(microsecond=0).isoformat()
 
-    # Receptor. Reglas SAT:
-    #  - Sin identificación → Consumidor Final: IDReceptor="CF" y el nombre
-    #    DEBE ser exactamente "Consumidor Final".
-    #  - DPI/CUI (13 dígitos) → se identifica por documento de identidad:
-    #    IDReceptor = los 13 dígitos y el atributo TipoEspecial="CUI".
-    #  - En otro caso es un NIT normal.
+
+def _emisor(company, pequeno):
+    return {
+        "nit": company.tax_id,
+        "nombre": company.legal_name or company.commercial_name,
+        "nombre_comercial": company.commercial_name,
+        "establecimiento": getattr(company, "establishment_code", None) or "1",
+        "correo": company.email or "",
+        "direccion": company.address or "Ciudad",
+        "municipio": company.municipality or "Guatemala",
+        "departamento": company.department or "Guatemala",
+        "codigo_postal": company.postal_code or "01001",
+        "pais": company.country_code or "GT",
+        "afiliacion_iva": "PEQUENO" if pequeno else "GEN",
+    }
+
+
+def _receptor(customer):
+    """Receptor según reglas SAT:
+      - Sin identificación → Consumidor Final (IDReceptor="CF", nombre exacto).
+      - DPI/CUI (13 dígitos) → IDReceptor con los 13 dígitos y TipoEspecial="CUI".
+      - En otro caso, NIT normal.
+    """
     raw_id = (customer.tax_id if customer and customer.tax_id else "").strip()
     clean_id = raw_id.replace("-", "").replace(" ", "")
-    receptor_tipo_especial = None
+    tipo_especial = None
     if not clean_id or clean_id.upper() == "CF":
-        receptor_nit = "CF"
-        receptor_nombre = "Consumidor Final"
+        nit, nombre = "CF", "Consumidor Final"
     elif clean_id.isdigit() and len(clean_id) == 13:
-        receptor_nit = clean_id
-        receptor_nombre = customer.name
-        receptor_tipo_especial = "CUI"
+        nit, nombre, tipo_especial = clean_id, customer.name, "CUI"
     else:
-        receptor_nit = raw_id
-        receptor_nombre = customer.name
+        nit, nombre = raw_id, customer.name
+    return {
+        "nit": nit, "nombre": nombre, "tipo_especial": tipo_especial,
+        "correo": (customer.email if customer and customer.email else ""),
+        "direccion": (customer.address if customer and customer.address else "Ciudad"),
+        "pais": "GT",
+    }
 
+
+CENTS = Decimal("0.01")
+
+
+def _q(v):
+    return Decimal(v).quantize(CENTS)
+
+
+def _distribute_discount(grosses, total_discount):
+    """Reparte un descuento global entre líneas, proporcional a su monto.
+    Garantiza que la suma de los descuentos sea exactamente total_discount
+    (el redondeo sobrante se ajusta en la última línea)."""
+    base = sum(grosses, Decimal("0"))
+    if base <= 0 or total_discount <= 0:
+        return [Decimal("0")] * len(grosses)
+    out, allocated = [], Decimal("0")
+    for idx, g in enumerate(grosses):
+        if idx == len(grosses) - 1:
+            d = total_discount - allocated
+        else:
+            d = _q(total_discount * g / base)
+            allocated += d
+        out.append(d)
+    return out
+
+
+def _item(i, *, name, quantity, unit_price, gross, descuento, unit_label,
+          base_unit_label, tax_type, company, rate, pequeno):
+    """Arma un ítem del DTE. SAT: Precio = bruto; Total = Precio − Descuento;
+    el IVA se calcula sobre el Total. GranTotal = Σ Total de los ítems."""
+    gross = _q(gross)
+    descuento = _q(descuento)
+    total = gross - descuento
+    if pequeno or tax_type == "exento" or rate <= 0:
+        iva = Decimal("0")
+    elif company.prices_include_tax:
+        iva = _q(total - total / (1 + rate / 100))
+    else:
+        iva = _q(total * rate / 100)
+    return {
+        "linea": i,
+        "descripcion": name,
+        "cantidad": str(quantity),
+        "unidad_medida": (unit_label or base_unit_label or "UNI")[:3].upper(),
+        "precio_unitario": str(unit_price),
+        "tipo": "B",
+        "gravado": tax_type != "exento",
+        "descuento": str(descuento),
+        "precio": str(gross),          # <dte:Precio> (bruto, antes de descuento)
+        "total": str(total),           # <dte:Total> (Precio − Descuento)
+        "monto_gravable": str(total - iva),
+        "iva": str(iva),
+    }
+
+
+def _items_and_totals(rows, discount_total, company, rate, pequeno):
+    """Construye la lista de ítems repartiendo el descuento global y devuelve
+    (items, gran_total, total_iva) con los totales exactos que exige SAT."""
+    grosses = [_q(Decimal(str(r["quantity"])) * Decimal(str(r["unit_price"]))) for r in rows]
+    line_discs = [Decimal(str(r.get("discount") or 0)) for r in rows]
+    extra = Decimal(str(discount_total or 0)) - sum(line_discs, Decimal("0"))
+    if extra < 0:
+        extra = Decimal("0")
+    extras = _distribute_discount(grosses, extra)
+    items = []
+    for i, (r, g, ld, ed) in enumerate(zip(rows, grosses, line_discs, extras), start=1):
+        items.append(_item(
+            i, name=r["name"], quantity=r["quantity"], unit_price=r["unit_price"],
+            gross=g, descuento=ld + ed, unit_label=r.get("unit_label"),
+            base_unit_label=r.get("base_unit_label"), tax_type=r.get("tax_type") or "iva",
+            company=company, rate=rate, pequeno=pequeno,
+        ))
+    gran_total = sum((Decimal(x["total"]) for x in items), Decimal("0"))
+    total_iva = sum((Decimal(x["iva"]) for x in items), Decimal("0"))
+    return items, gran_total, total_iva
+
+
+def build_dte(sale, company):
+    """Construye la estructura del DTE (Factura) a partir de una venta."""
+    rate = Decimal(company.default_tax_rate)
+    pequeno = company.tax_regime == "PEQUENO_CONTRIBUYENTE"
+    rows = [
+        {"name": it.product.name, "quantity": it.quantity, "unit_price": it.unit_price,
+         "discount": it.discount, "unit_label": it.unit_label,
+         "base_unit_label": it.product.base_unit_label, "tax_type": it.tax_type}
+        for it in sale.items.select_related("product")
+    ]
+    items, gran_total, total_iva = _items_and_totals(rows, sale.discount, company, rate, pequeno)
     return {
         "tipo_documento": "FPEQ" if pequeno else "FACT",
         "moneda": company.currency_code,
-        "fecha_emision": fecha_emision,
-        "emisor": {
-            "nit": company.tax_id,
-            "nombre": company.legal_name or company.commercial_name,
-            "nombre_comercial": company.commercial_name,
-            "establecimiento": getattr(company, "establishment_code", None) or "1",
-            "correo": company.email or "",
-            "direccion": company.address or "Ciudad",
-            "municipio": company.municipality or "Guatemala",
-            "departamento": company.department or "Guatemala",
-            "codigo_postal": company.postal_code or "01001",
-            "pais": company.country_code or "GT",
-            "afiliacion_iva": "PEQUENO" if pequeno else "GEN",
-        },
-        "receptor": {
-            "nit": receptor_nit,
-            "nombre": receptor_nombre,
-            "tipo_especial": receptor_tipo_especial,  # "CUI" si se identifica por DPI
-            "correo": (customer.email if customer and customer.email else ""),
-            "direccion": (customer.address if customer and customer.address else "Ciudad"),
-            "pais": "GT",
-        },
+        "fecha_emision": _fecha_emision(sale.date),
+        "emisor": _emisor(company, pequeno),
+        "receptor": _receptor(sale.customer),
         "items": items,
-        "totales": {
-            "gran_total": str(sale.total),
-            "total_iva": str(sale.tax),
+        "totales": {"gran_total": str(gran_total), "total_iva": str(total_iva)},
+    }
+
+
+def build_credit_note_dte(sale_return, invoice, company, *, motivo=None):
+    """Construye el DTE de una Nota de Crédito (NCRE) desde una devolución.
+
+    Referencia la factura FEL original (``invoice``) mediante el complemento
+    ReferenciasNota. Los ítems son las partidas devueltas.
+    """
+    rate = Decimal(company.default_tax_rate)
+    pequeno = company.tax_regime == "PEQUENO_CONTRIBUYENTE"
+    rows = [
+        {"name": it.product.name, "quantity": it.quantity, "unit_price": it.unit_price,
+         "discount": it.discount, "unit_label": it.unit_label,
+         "base_unit_label": it.product.base_unit_label, "tax_type": it.tax_type}
+        for it in sale_return.items.select_related("product")
+    ]
+    items, gran_total, total_iva = _items_and_totals(
+        rows, sale_return.discount, company, rate, pequeno)
+    sale = sale_return.sale
+    customer = sale_return.customer or (sale.customer if sale else None)
+    fecha_origen = _fecha_emision(sale.date)[:10] if sale else _fecha_emision(sale_return.date)[:10]
+    return {
+        "tipo_documento": "NCRE",
+        "moneda": company.currency_code,
+        "fecha_emision": _fecha_emision(sale_return.date),
+        "emisor": _emisor(company, pequeno),
+        "receptor": _receptor(customer),
+        "items": items,
+        "totales": {"gran_total": str(gran_total), "total_iva": str(total_iva)},
+        "referencia_nota": {
+            "fecha_origen": fecha_origen,
+            "motivo": (motivo or sale_return.reason or "Devolución")[:255],
+            "uuid_origen": invoice.uuid,
+            "numero_origen": invoice.numero,
+            "serie_origen": invoice.serie,
         },
     }

@@ -10,6 +10,7 @@ router.register("invoices", views.InvoiceViewSet, basename="invoice")
 
 urlpatterns = [
     path("sales/<int:sale_id>/emit-invoice/", views.emit_for_sale, name="emit-invoice"),
+    path("returns/<int:return_id>/emit-credit-note/", views.emit_credit_note, name="emit-credit-note"),
     path("sales/<int:sale_id>/ticket/", views.sale_ticket, name="sale-ticket"),
     path("sales/<int:sale_id>/print/", views.print_ticket, name="print-ticket"),
     path("printer/test/", views.printer_test, name="printer-test"),

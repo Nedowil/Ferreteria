@@ -70,6 +70,24 @@ def emit_for_sale(request, sale_id):
     return Response(InvoiceSerializer(invoice).data, status=status.HTTP_201_CREATED)
 
 
+@api_view(["POST"])
+@permission_classes([HasPermission.require("facturas.emitir")])
+def emit_credit_note(request, return_id):
+    """Emite/certifica la Nota de Crédito (NCRE) de una devolución."""
+    from salereturns.models import SaleReturn
+    sale_return = SaleReturn.objects.filter(pk=return_id, deleted_at__isnull=True).first()
+    if not sale_return:
+        return Response({"detail": "Devolución inexistente."}, status=status.HTTP_404_NOT_FOUND)
+    try:
+        note = services.emit_credit_note(sale_return, motivo=request.data.get("motivo"), user=request.user)
+    except services.FelError as e:
+        return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    return Response({
+        "id": note.id, "uuid": note.uuid, "serie": note.serie, "numero": note.numero,
+        "status": note.status, "document_type": note.document_type,
+    }, status=status.HTTP_201_CREATED)
+
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def sale_ticket(request, sale_id):

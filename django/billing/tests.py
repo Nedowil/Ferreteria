@@ -362,6 +362,114 @@ class InfileCertifierTests(TestCase):
             self.assertIsInstance(get_certifier(), InfileCertifier)
 
 
+class CreditNoteTests(TestCase):
+    """Nota de Crédito (NCRE): DTE con referencia a la factura y emisión."""
+
+    def _return_for(self, sale, invoice):
+        from decimal import Decimal
+        from django.utils import timezone
+        from salereturns.models import SaleReturn, SaleReturnItem
+        ret = SaleReturn.objects.create(
+            folio="D-1", sale=sale, date=timezone.now(),
+            subtotal=Decimal("112.00"), tax=Decimal("12.00"), total=Decimal("112.00"),
+            reason="Producto defectuoso",
+        )
+        item = sale.items.first()
+        SaleReturnItem.objects.create(
+            sale_return=ret, product=item.product, quantity=Decimal("1"),
+            unit_price=Decimal("112.00"), subtotal=Decimal("112.00"),
+            unit_label="Unidad", tax_type="iva",
+        )
+        return ret
+
+    def test_build_credit_note_dte_referencia_factura(self):
+        from .fel.base import build_credit_note_dte
+        from .fel.infile import build_invoice_xml
+        from core.models import CompanySetting
+        sale = _make_sale(folio="V-NC-1")
+        inv = services.emit_invoice(sale, user=None)  # certifica con stub
+        ret = self._return_for(sale, inv)
+        dte = build_credit_note_dte(ret, inv, CompanySetting.current(), motivo="Devolución total")
+        self.assertEqual(dte["tipo_documento"], "NCRE")
+        xml = build_invoice_xml(dte)
+        self.assertIn('Tipo="NCRE"', xml)
+        self.assertIn("ReferenciasNota", xml)
+        self.assertIn(f'NumeroAutorizacionDocumentoOrigen="{inv.uuid}"', xml)
+        self.assertIn('MotivoAjuste="Devolución total"', xml)
+
+    def test_emit_credit_note_certifica(self):
+        sale = _make_sale(folio="V-NC-2")
+        inv = services.emit_invoice(sale, user=None)
+        ret = self._return_for(sale, inv)
+        note = services.emit_credit_note(ret, motivo="Devolución", user=None)
+        self.assertEqual(note.status, "certificada")
+        self.assertTrue(note.uuid)
+        self.assertEqual(note.document_type, "NCRE")
+        self.assertEqual(note.invoice_id, inv.id)
+
+    def test_credit_note_requiere_factura_certificada(self):
+        from django.utils import timezone
+        from decimal import Decimal
+        from salereturns.models import SaleReturn
+        sale = _make_sale(folio="V-NC-3")  # sin factura
+        ret = SaleReturn.objects.create(folio="D-3", sale=sale, date=timezone.now(),
+                                        total=Decimal("112.00"))
+        with self.assertRaises(services.FelError):
+            services.emit_credit_note(ret, user=None)
+
+
+class DiscountDteTests(TestCase):
+    """El descuento global se reparte en los ítems: GranTotal = Σ Total ítems."""
+
+    def _sale_con_descuento(self):
+        from decimal import Decimal
+        from django.utils import timezone
+        from core.models import Branch, CompanySetting
+        from inventory.models import Product
+        from sales.models import Sale
+        c = CompanySetting.current()
+        c.tax_regime = "GENERAL"
+        c.default_tax_rate = Decimal("12")
+        c.prices_include_tax = True
+        c.save()
+        branch = Branch.objects.create(name="M", code="M", is_main=True)
+        prod = Product.objects.create(sku="P-D", name="Producto", purchase_price=Decimal("10"),
+                                      sale_price=Decimal("20"), stock=Decimal("50"), tax_type="iva")
+        # Producto Q20, descuento Q10 → total 10 (IVA incluido).
+        sale = Sale.objects.create(
+            folio="V-DESC", date=timezone.now(), subtotal=Decimal("20.00"),
+            discount=Decimal("10.00"), tax=Decimal("1.07"), total=Decimal("10.00"),
+            paid_amount=Decimal("10.00"), change_amount=Decimal("0"),
+            status=Sale.STATUS_COMPLETADA,
+        )
+        sale.items.create(product=prod, quantity=Decimal("1"), unit_price=Decimal("20.00"),
+                          discount=Decimal("0"), subtotal=Decimal("20.00"),
+                          unit_label="Unidad", tax_type="iva")
+        return sale
+
+    def test_grantotal_cuadra_con_descuento(self):
+        from decimal import Decimal
+        from core.models import CompanySetting
+        from .fel.base import build_dte
+        from .fel.infile import build_invoice_xml
+        sale = self._sale_con_descuento()
+        dte = build_dte(sale, CompanySetting.current())
+        # El ítem lleva Precio 20, Descuento 10, Total 10.
+        it = dte["items"][0]
+        self.assertEqual(it["precio"], "20.00")
+        self.assertEqual(it["descuento"], "10.00")
+        self.assertEqual(it["total"], "10.00")
+        # GranTotal = suma de Totales = 10 (lo que rechazaba Infile antes).
+        self.assertEqual(dte["totales"]["gran_total"], "10.00")
+        # IVA total = suma del IVA por ítem (sobre 10, incluido) = 1.07.
+        self.assertEqual(dte["totales"]["total_iva"], "1.07")
+        xml = build_invoice_xml(dte)
+        self.assertIn("<dte:Precio>20.00</dte:Precio>", xml)
+        self.assertIn("<dte:Descuento>10.00</dte:Descuento>", xml)
+        self.assertIn("<dte:Total>10.00</dte:Total>", xml)
+        self.assertIn("<dte:GranTotal>10.00</dte:GranTotal>", xml)
+
+
 class ReceptorDteTests(TestCase):
     """Receptor del DTE: Consumidor Final, NIT y DPI/CUI."""
 
@@ -511,7 +619,7 @@ def build_sample_dte(pequeno=False):
         "items": [{
             "linea": 1, "descripcion": "Martillo", "cantidad": "1", "unidad_medida": "UNI",
             "precio_unitario": "112.00", "tipo": "B", "gravado": True, "descuento": "0",
-            "monto": "112.00", "monto_gravable": "100.00", "iva": "12.00",
+            "precio": "112.00", "total": "112.00", "monto_gravable": "100.00", "iva": "12.00",
         }],
         "totales": {"gran_total": "112.00", "total_iva": "0" if pequeno else "12.00"},
     }
