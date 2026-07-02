@@ -137,7 +137,11 @@ def lookup_nit(request):
 def fel_config(request):
     """Configuración FEL actual (solo lectura; las credenciales viven en el entorno)."""
     infile_required = ["FEL_INFILE_USUARIO", "FEL_INFILE_LLAVE_WS",
-                       "FEL_INFILE_LLAVE_FIRMA", "FEL_INFILE_ALIAS", "FEL_INFILE_NIT_EMISOR"]
+                       "FEL_INFILE_LLAVE_FIRMA", "FEL_INFILE_NIT_EMISOR"]
+    # El alias de firma solo se usa en el flujo clásico de dos pasos; en el
+    # proceso unificado (recomendado) no hace falta.
+    if getattr(settings, "FEL_INFILE_MODE", "unified") != "unified":
+        infile_required.append("FEL_INFILE_ALIAS")
     infile_missing = [k for k in infile_required if not getattr(settings, k, "")]
     return Response({
         "driver": settings.FEL_DRIVER,

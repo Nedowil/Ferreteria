@@ -185,6 +185,20 @@ class FelApiTests(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertTrue(r.json()["is_stub"])
 
+    def test_fel_config_unificado_listo_sin_alias(self):
+        # En modo unificado el alias NO es requerido: con usuario, llaves y NIT
+        # debe reportar infile_ready=True (sin marcar el alias como faltante).
+        from django.test import override_settings
+        with override_settings(
+            FEL_DRIVER="infile", FEL_INFILE_MODE="unified",
+            FEL_INFILE_USUARIO="46851372", FEL_INFILE_LLAVE_WS="WS",
+            FEL_INFILE_LLAVE_FIRMA="FIRMA", FEL_INFILE_NIT_EMISOR="46851372",
+            FEL_INFILE_ALIAS="",
+        ):
+            data = self._client("a@test.com").get("/api/fel/config/").json()
+        self.assertTrue(data["infile_ready"])
+        self.assertEqual(data["infile_missing"], [])
+
 
 INFILE_CREDS = dict(
     FEL_DRIVER="infile",
