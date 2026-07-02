@@ -216,13 +216,17 @@ class InfileCertifier(FelCertifier):
         return self._send(req)
 
     def _unified_headers(self):
-        # Proceso unificado: firma + certificación en una sola llamada.
+        # Proceso unificado (firma + certificación en una sola llamada).
+        # Nombres EXACTOS según el "Manual WS Unificado" de Infile:
+        #   UsuarioFirma / LlaveFirma / UsuarioApi / LlaveApi / identificador.
+        # (UsuarioApi es el mismo usuario que UsuarioFirma.)
+        usuario = _cfg("FEL_INFILE_USUARIO_FIRMA") or _cfg("FEL_INFILE_USUARIO")
         return {
-            "usuario": _cfg("FEL_INFILE_USUARIO"),
-            "llave": _cfg("FEL_INFILE_LLAVE_WS"),
+            "UsuarioFirma": usuario,
+            "LlaveFirma": _cfg("FEL_INFILE_LLAVE_FIRMA"),
+            "UsuarioApi": _cfg("FEL_INFILE_USUARIO") or usuario,
+            "LlaveApi": _cfg("FEL_INFILE_LLAVE_WS"),
             "identificador": self._identificador(),
-            "usuariofirma": _cfg("FEL_INFILE_USUARIO_FIRMA") or _cfg("FEL_INFILE_USUARIO"),
-            "llavefirma": _cfg("FEL_INFILE_LLAVE_FIRMA"),
         }
 
     def _certify_unified(self, xml: str) -> CertificationResult:

@@ -267,10 +267,12 @@ class InfileCertifierTests(TestCase):
         self.assertTrue(res.ok, res.error)
         self.assertEqual(res.uuid, "UNI-UUID")
         self.assertEqual(res.numero, "7")
-        # Verifica que se envíen los 5 headers del proceso unificado.
+        # Nombres EXACTOS de los headers según el Manual WS Unificado de Infile.
         self.assertEqual(set(captured["headers"]),
-                         {"usuario", "llave", "identificador", "usuariofirma", "llavefirma"})
-        self.assertEqual(captured["headers"]["usuariofirma"], "USR123")
+                         {"UsuarioFirma", "LlaveFirma", "UsuarioApi", "LlaveApi", "identificador"})
+        self.assertEqual(captured["headers"]["UsuarioFirma"], "USR123")
+        self.assertEqual(captured["headers"]["LlaveApi"], INFILE_CREDS["FEL_INFILE_LLAVE_WS"])
+        self.assertEqual(captured["headers"]["LlaveFirma"], INFILE_CREDS["FEL_INFILE_LLAVE_FIRMA"])
 
     def test_lookup_nit_infile(self):
         """Consulta de NIT: body {emisor_codigo, emisor_clave, nit_consulta} → nombre."""
