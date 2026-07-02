@@ -167,14 +167,24 @@ def build_invoice_xml(dte: dict) -> str:
     )
 
 
+def _fecha_local(dt):
+    """AAAA-MM-DDThh:mm:ss-06:00 (hora local, sin microsegundos) que exige SAT."""
+    from django.utils import timezone as _tz
+    local = _tz.localtime(dt) if _tz.is_aware(dt) else dt
+    return local.replace(microsecond=0).isoformat()
+
+
 def build_cancel_xml(invoice, reason: str) -> str:
     """Arma el XML de anulación (GTAnulacionDocumento)."""
+    from django.utils import timezone as _tz
     sale = invoice.sale
     customer = getattr(sale, "customer", None)
     nit_receptor = customer.tax_id if customer and customer.tax_id else "CF"
     emisor_nit = _cfg("FEL_INFILE_NIT_EMISOR")
-    fecha_emision = sale.date.isoformat()
-    fecha_anulacion = invoice.fecha_certificacion.isoformat() if invoice.fecha_certificacion else fecha_emision
+    # La fecha de emisión del documento a anular debe coincidir con la del DTE
+    # original (hora local, sin microsegundos); la de anulación es "ahora".
+    fecha_emision = _fecha_local(sale.date)
+    fecha_anulacion = _fecha_local(_tz.now())
     return (
         '<?xml version="1.0" encoding="UTF-8"?>'
         f'<dte:GTAnulacionDocumento xmlns:dte="{NS_ANUL}" Version="0.1">'

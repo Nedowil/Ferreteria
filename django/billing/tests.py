@@ -412,6 +412,21 @@ class CreditNoteTests(TestCase):
         self.assertEqual(note.document_type, "NCRE")
         self.assertEqual(note.invoice_id, inv.id)
 
+    def test_cancel_xml_fecha_local_sin_microsegundos(self):
+        # El XML de anulación debe llevar la fecha en hora local (-06:00) y sin
+        # microsegundos; antes iba en UTC con microsegundos y SAT lo rechazaba.
+        import re
+        from .fel.infile import build_cancel_xml
+        sale = _make_sale(folio="V-ANUL")
+        inv = services.emit_invoice(sale, user=None)
+        xml = build_cancel_xml(inv, "Prueba de anulación")
+        for attr in ("FechaEmisionDocumentoAnular", "FechaHoraAnulacion"):
+            m = re.search(attr + r'="([^"]+)"', xml)
+            self.assertIsNotNone(m, f"falta {attr}")
+            val = m.group(1)
+            self.assertTrue(val.endswith("-06:00"), f"{attr}={val}")
+            self.assertNotIn(".", val.split("T")[1])  # sin microsegundos
+
     def test_emisor_sin_nit_da_error_claro(self):
         from core.models import CompanySetting
         sale = _make_sale(folio="V-NONIT")
