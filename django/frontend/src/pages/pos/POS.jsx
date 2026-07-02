@@ -484,8 +484,12 @@ export default function POS() {
   const [addingProduct, setAddingProduct] = useState(false);
   const [lastSale, setLastSale] = useState(null); // venta recién cobrada (modal)
   const [returning, setReturning] = useState(false);
-  const todayStr = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; })();
+  const fmtDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const todayStr = fmtDate(new Date());
+  // La SAT permite emitir FEL solo hasta 5 días hacia atrás.
+  const minFelDate = (() => { const d = new Date(); d.setDate(d.getDate() - 5); return fmtDate(d); })();
   const [saleDate, setSaleDate] = useState(todayStr);
+  const felDateInvalid = wantFel && (saleDate < minFelDate || saleDate > todayStr);
   // Vista del catálogo: "list" (por defecto) o "grid" (con imágenes). Se recuerda.
   const [catalogView, setCatalogView] = useState(() => localStorage.getItem("pos_catalog_view") || "list");
   const setView = (v) => { setCatalogView(v); localStorage.setItem("pos_catalog_view", v); };
@@ -585,6 +589,10 @@ export default function POS() {
     setError("");
     if (cart.length === 0) { setError("El carrito está vacío."); return; }
     if (credit && !customerId) { setError("Una venta al crédito requiere cliente."); return; }
+    if (felDateInvalid) {
+      setError("La factura electrónica solo se puede emitir con fecha dentro de los últimos 5 días (regla de la SAT). Cambiá la fecha o usá 'Recibo'.");
+      return;
+    }
     setBusy(true);
     try {
       const payload = {
@@ -821,9 +829,16 @@ export default function POS() {
           <div>
             <label className="block text-sm font-medium mb-1">Fecha de la venta</label>
             <input type="date" value={saleDate} onChange={(e) => setSaleDate(e.target.value)}
+                   max={todayStr} min={wantFel ? minFelDate : undefined}
                    className={"w-full border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 " +
-                     (saleDate !== todayStr ? "border-amber-400 bg-amber-50 text-amber-800" : "border-slate-300")} />
-            {saleDate !== todayStr && (
+                     (felDateInvalid ? "border-red-400 bg-red-50 text-red-700"
+                        : saleDate !== todayStr ? "border-amber-400 bg-amber-50 text-amber-800" : "border-slate-300")} />
+            {felDateInvalid ? (
+              <div className="text-xs text-red-600 mt-1 flex items-center justify-between">
+                <span>⚠️ La factura electrónica solo admite los últimos 5 días.</span>
+                <button type="button" onClick={() => setSaleDate(todayStr)} className="underline">usar hoy</button>
+              </div>
+            ) : saleDate !== todayStr && (
               <div className="text-xs text-amber-600 mt-1 flex items-center justify-between">
                 <span>⚠️ Venta con fecha distinta a hoy.</span>
                 <button type="button" onClick={() => setSaleDate(todayStr)} className="underline">usar hoy</button>
@@ -862,7 +877,8 @@ export default function POS() {
                                     : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50")}>
                   🧾 Recibo
                 </button>
-                <button type="button" onClick={() => setWantFel(true)}
+                <button type="button"
+                        onClick={() => { setWantFel(true); if (saleDate < minFelDate || saleDate > todayStr) setSaleDate(todayStr); }}
                         className={"rounded-lg py-2 text-sm font-medium border transition " +
                           (wantFel ? "bg-blue-600 text-white border-blue-600"
                                    : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50")}>
@@ -939,7 +955,7 @@ export default function POS() {
             </div>
           )}
 
-          <button disabled={busy || cart.length === 0} onClick={checkout}
+          <button disabled={busy || cart.length === 0 || felDateInvalid} onClick={checkout}
                   className="w-full bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-lg py-3 font-semibold text-lg shadow-lg shadow-green-600/20 hover:from-emerald-600 hover:to-green-700 disabled:opacity-50 transition">
             {busy ? "Procesando…" : "Cobrar"}
           </button>
