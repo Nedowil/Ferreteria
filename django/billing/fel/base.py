@@ -37,12 +37,18 @@ class FelCertifier:
         raise NotImplementedError
 
 
-def _fecha_emision(dt):
-    """Fecha local (America/Guatemala) SIN microsegundos: AAAA-MM-DDThh:mm:ss±hh:mm.
-    isoformat() en UTC con microsegundos hace que Infile rechace o dé 500."""
+def fecha_sat(dt):
+    """Formato de fecha/hora que exige la SAT para el DTE: hora local
+    (America/Guatemala), SIN microsegundos: AAAA-MM-DDThh:mm:ss±hh:mm.
+    isoformat() en UTC con microsegundos hace que Infile rechace o dé 500.
+    Único formateador de fechas FEL: usarlo en TODO lo que va a la SAT."""
     from django.utils import timezone as _tz
     local_dt = _tz.localtime(dt) if _tz.is_aware(dt) else dt
     return local_dt.replace(microsecond=0).isoformat()
+
+
+# Alias interno por compatibilidad.
+_fecha_emision = fecha_sat
 
 
 def _emisor(company, pequeno):
