@@ -141,8 +141,7 @@ function LabelPrintModal({ product, onClose }) {
 
 export default function ProductList() {
   const [data, setData] = useState({ results: [], count: 0 });
-  const [filters, setFilters] = useState({ search: "", category: "", brand: "", low_stock: false });
-  const [categories, setCategories] = useState([]);
+  const [filters, setFilters] = useState({ search: "", brand: "", low_stock: false });
   const [brands, setBrands] = useState([]);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -150,7 +149,6 @@ export default function ProductList() {
   const [labeling, setLabeling] = useState(null); // producto a etiquetar (modal)
 
   useEffect(() => {
-    api.get("/inventory/categories/?page_size=200").then((r) => setCategories(r.data.results || r.data));
     api.get("/inventory/brands/?page_size=200").then((r) => setBrands(r.data.results || r.data));
   }, []);
 
@@ -158,7 +156,6 @@ export default function ProductList() {
     setLoading(true);
     const params = { page };
     if (filters.search) params.search = filters.search;
-    if (filters.category) params.category = filters.category;
     if (filters.brand) params.brand = filters.brand;
     if (filters.low_stock) params.low_stock = 1;
     api.get("/inventory/products/", { params }).then((r) => setData(r.data)).finally(() => setLoading(false));
@@ -179,7 +176,6 @@ export default function ProductList() {
     try {
       const params = {};
       if (filters.search) params.search = filters.search;
-      if (filters.category) params.category = filters.category;
       if (filters.brand) params.brand = filters.brand;
       if (filters.low_stock) params.low_stock = 1;
       const rows = await fetchAll("/inventory/products/", params);
@@ -187,7 +183,6 @@ export default function ProductList() {
         { header: "SKU", value: (r) => r.sku },
         { header: "Código", value: (r) => r.barcode },
         { header: "Producto", value: (r) => r.name },
-        { header: "Categoría", value: (r) => r.category_name },
         { header: "Marca", value: (r) => r.brand_name },
         { header: "Precio", value: (r) => Number(r.sale_price) },
         { header: "Stock", value: (r) => r.stock_display ?? r.branch_stock ?? r.stock },
@@ -213,11 +208,6 @@ export default function ProductList() {
         <input placeholder="Nombre, SKU o código" value={filters.search}
                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
                className="border border-slate-300 rounded px-3 py-2 text-sm w-64" />
-        <select value={filters.category} onChange={(e) => setFilters({ ...filters, category: e.target.value })}
-                className="border border-slate-300 rounded px-2 py-2 text-sm">
-          <option value="">Todas las categorías</option>
-          {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
         <select value={filters.brand} onChange={(e) => setFilters({ ...filters, brand: e.target.value })}
                 className="border border-slate-300 rounded px-2 py-2 text-sm">
           <option value="">Todas las marcas</option>
@@ -234,7 +224,7 @@ export default function ProductList() {
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">
             <tr><th className="px-4 py-2.5 w-14"></th><th className="px-4 py-2.5">SKU</th><th className="px-4 py-2.5">Producto</th>
-                <th className="px-4 py-2.5">Categoría</th><th className="px-4 py-2.5">Marca</th>
+                <th className="px-4 py-2.5">Marca</th>
                 <th className="px-4 py-2.5 text-right">Precio</th><th className="px-4 py-2.5 text-right">Stock</th>
                 <th className="px-4 py-2.5 text-right">Acciones</th></tr>
           </thead>
@@ -253,7 +243,6 @@ export default function ProductList() {
                   <div className="font-medium text-slate-800">{p.name}</div>
                   {p.barcode && <div className="text-xs text-slate-400 font-mono">{p.barcode}</div>}
                 </td>
-                <td className="px-4 py-2 text-slate-500">{p.category_name || "—"}</td>
                 <td className="px-4 py-2 text-slate-500">{p.brand_name || "—"}</td>
                 <td className="px-4 py-2 text-right font-semibold text-slate-700">Q{p.sale_price}</td>
                 <td className="px-4 py-2 text-right">
@@ -270,7 +259,7 @@ export default function ProductList() {
               </tr>
             ))}
             {!loading && data.results.length === 0 && (
-              <tr><td colSpan="8" className="px-5 py-10 text-center text-slate-400">No hay productos.</td></tr>
+              <tr><td colSpan="7" className="px-5 py-10 text-center text-slate-400">No hay productos.</td></tr>
             )}
           </tbody>
         </table>

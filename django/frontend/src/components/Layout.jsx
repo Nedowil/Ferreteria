@@ -65,9 +65,7 @@ export default function Layout({ children }) {
             <>
               <Section title="Inventario" />
               {can("productos.ver") && <NavItem to="/productos" icon="📦" label="Productos" />}
-              {can("productos.ver") && <NavItem to="/categorias" icon="🏷️" label="Categorías" />}
               {can("productos.ver") && <NavItem to="/marcas" icon="🔖" label="Marcas" />}
-              {can("productos.ver") && <NavItem to="/unidades" icon="📏" label="Unidades" />}
               {can("productos.ver") && <NavItem to="/bajo-stock" icon="⚠️" label="Stock bajo" />}
               {can("inventario.ajustar") && <NavItem to="/conteo" icon="🔢" label="Conteo físico" />}
             </>
