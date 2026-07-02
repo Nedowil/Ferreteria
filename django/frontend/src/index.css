@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Ocultar las flechitas (spinners) de los campos numéricos en toda la app. */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 /* Al imprimir un comprobante, solo se muestra el ticket (#ticket). */
 @media print {
   body * { visibility: hidden; }
