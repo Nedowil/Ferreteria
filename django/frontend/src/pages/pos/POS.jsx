@@ -673,6 +673,8 @@ export default function POS() {
       });
       // Limpia para la siguiente venta (la pantalla de cliente vuelve a "idle").
       setCart([]); setPaid(""); setDiscount(""); setWantFel(false); setCredit(false); setCustomerId(""); setSaleDate(todayStr);
+      // Refresca el stock del catálogo sin recargar la página.
+      reloadProducts().then(setProducts).catch(() => {});
     } catch (err) {
       setError(err.response?.data?.detail || "No se pudo completar la venta.");
     } finally {
