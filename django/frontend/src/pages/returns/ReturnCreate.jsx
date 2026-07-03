@@ -92,7 +92,7 @@ export default function ReturnCreate() {
     } finally { setBusy(false); }
   };
 
-  const SaleItemsTable = () => (
+  const renderSaleItemsTable = () => (
     <div className="bg-white rounded-lg shadow overflow-hidden mt-4">
       <div className="px-5 py-3 border-b font-semibold text-sm">Venta {sale.folio} — {sale.customer_name || "Consumidor final"}</div>
       <table className="w-full text-sm">
@@ -189,7 +189,7 @@ export default function ReturnCreate() {
         </div>
       )}
 
-      {sale && mode !== "sin_ticket" && <SaleItemsTable />}
+      {sale && mode !== "sin_ticket" && renderSaleItemsTable()}
 
       <section className="bg-white rounded-lg shadow p-5 mt-4 grid grid-cols-2 gap-4">
         {mode !== "sin_ticket" && (
