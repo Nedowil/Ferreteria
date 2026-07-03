@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     "audit",
     "billing",
     "imports",
+    "supplierbills",
 ]
 
 MIDDLEWARE = [

@@ -60,6 +60,8 @@ api_patterns = [
     path("", include("billing.urls")),
     # Importación de datos (CSV)
     path("", include("imports.urls")),
+    # Facturas de proveedor (control de pagos, módulo aislado)
+    path("", include("supplierbills.urls")),
 ]
 
 def spa_index(request):

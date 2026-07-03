@@ -15,6 +15,7 @@ import PurchaseList from "./pages/purchases/PurchaseList";
 import PurchaseForm from "./pages/purchases/PurchaseForm";
 import PurchaseDetail from "./pages/purchases/PurchaseDetail";
 import Payable from "./pages/purchases/Payable";
+import SupplierBills from "./pages/supplierbills/SupplierBills";
 import POS from "./pages/pos/POS";
 import SalesList from "./pages/pos/SalesList";
 import SaleDetail from "./pages/pos/SaleDetail";
@@ -102,6 +103,7 @@ export default function App() {
       <Route path="/compras/nueva" element={<Protected perm="compras.crear"><PurchaseForm /></Protected>} />
       <Route path="/compras/:id" element={<Protected perm="compras.ver"><PurchaseDetail /></Protected>} />
       <Route path="/cuentas-por-pagar" element={<Protected perm="compras.ver"><Payable /></Protected>} />
+      <Route path="/facturas-proveedor" element={<Protected perm="facturas_prov.ver"><SupplierBills /></Protected>} />
       <Route path="/pos" element={<Protected perm="ventas.crear"><POS /></Protected>} />
       <Route path="/ventas" element={<Protected perm="ventas.ver"><SalesList /></Protected>} />
       <Route path="/ventas/:id" element={<Protected perm="ventas.ver"><SaleDetail /></Protected>} />

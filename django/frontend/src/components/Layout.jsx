@@ -25,7 +25,7 @@ export default function Layout({ children }) {
   const showVentas = can("ventas.crear") || can("ventas.ver") || can("caja.ver")
     || can("cotizaciones.ver") || can("facturas.ver");
   const showInventario = can("productos.ver") || can("inventario.ajustar");
-  const showCompras = can("proveedores.ver") || can("compras.ver");
+  const showCompras = can("proveedores.ver") || can("compras.ver") || can("facturas_prov.ver");
   const showAdmin = can("usuarios.ver") || can("sucursales.gestionar") || can("transferencias.gestionar")
     || can("auditoria.ver") || can("configuracion.gestionar") || can("imports.gestionar") || can("backup.gestionar");
   const initial = (user?.name || user?.email || "U").charAt(0).toUpperCase();
@@ -84,6 +84,7 @@ export default function Layout({ children }) {
               {can("proveedores.ver") && <NavItem to="/proveedores" icon="🚚" label="Proveedores" />}
               {can("compras.ver") && <NavItem to="/compras" icon="📥" label="Compras" />}
               {can("compras.ver") && <NavItem to="/cuentas-por-pagar" icon="💰" label="Cuentas por pagar" />}
+              {can("facturas_prov.ver") && <NavItem to="/facturas-proveedor" icon="🧾" label="Facturas de proveedor" />}
             </>
           )}
 
