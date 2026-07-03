@@ -8,8 +8,8 @@ from django.test import TestCase
 from core.models import Branch
 from .models import CashMovement, CashSession
 from .services import (
-    CashError, close_session, compute_expected, current_session_for,
-    open_session, register_movement,
+    CashError, active_session, close_session, compute_expected, current_session_for,
+    open_session, open_session_for_branch, register_movement,
 )
 
 User = get_user_model()
@@ -50,6 +50,19 @@ class CashServiceTests(TestCase):
         CashMovement.objects.create(session=s, type=CashMovement.VENTA, payment_method="tarjeta", amount=300)
         CashMovement.objects.create(session=s, type=CashMovement.EGRESO, payment_method="efectivo", amount=50)
         self.assertEqual(compute_expected(s), Decimal("250.00"))  # 100 + 200 - 50
+
+    def test_caja_compartida_por_sucursal(self):
+        # El admin abre la caja de la sucursal.
+        admin = User.objects.create_user(username="admin", email="a@test.com", password="x")
+        s = open_session(admin, 500, branch=self.branch)
+        # Un vendedor distinto opera en la MISMA sucursal: la caja activa es la del admin.
+        vendedor = self.user
+        self.assertEqual(active_session(branch=self.branch, user=vendedor).pk, s.pk)
+        # Y no puede abrir otra caja en la misma sucursal.
+        with self.assertRaises(CashError):
+            open_session(vendedor, 100, branch=self.branch)
+        # La caja de la sucursal se encuentra sin importar el usuario.
+        self.assertEqual(open_session_for_branch(self.branch).pk, s.pk)
 
     def test_cierre_calcula_diferencia(self):
         s = open_session(self.user, 500)

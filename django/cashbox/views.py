@@ -29,7 +29,11 @@ class CashSessionViewSet(PermissionByActionMixin, viewsets.ReadOnlyModelViewSet)
         qs = CashSession.objects.select_related("user", "branch").order_by("-opened_at")
         user = self.request.user
         if not (user.is_superuser or user.groups.filter(name="admin").exists()):
-            qs = qs.filter(user=user)
+            # Caja compartida por sucursal: un no-admin ve las cajas propias y
+            # las de las sucursales a las que pertenece (para operar la caja
+            # abierta por otro, p. ej. el admin).
+            from django.db.models import Q
+            qs = qs.filter(Q(user=user) | Q(branch__in=user.branches.all()))
         return qs
 
     def get_serializer_class(self):
@@ -37,8 +41,11 @@ class CashSessionViewSet(PermissionByActionMixin, viewsets.ReadOnlyModelViewSet)
 
     @action(detail=False, methods=["get"])
     def current(self, request):
-        """Sesión de caja abierta del usuario actual (en clave 'session', o null)."""
-        session = services.current_session_for(request.user)
+        """Caja abierta de la sucursal actual (compartida). Si no hay caja de
+        sucursal, cae a la del usuario. En clave 'session', o null."""
+        session = services.active_session(
+            branch=get_request_branch(request), user=request.user
+        )
         data = CashSessionDetailSerializer(session).data if session else None
         return Response({"session": data})
 

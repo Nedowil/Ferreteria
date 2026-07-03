@@ -24,10 +24,35 @@ def current_session_for(user, branch=None):
     return qs.order_by("-opened_at").first()
 
 
+def open_session_for_branch(branch):
+    """Caja abierta de una sucursal (sin importar quién la abrió), o None."""
+    if branch is None:
+        return None
+    return (CashSession.objects.filter(branch=branch, status=CashSession.STATUS_ABIERTA)
+            .order_by("-opened_at").first())
+
+
+def active_session(*, branch=None, user=None):
+    """Caja activa bajo el modelo de **caja compartida por sucursal**.
+
+    Si la sucursal tiene una caja abierta, se usa esa sin importar quién la
+    abrió (así todas las ventas de la sucursal entran a la misma caja). Si no
+    hay caja de sucursal, cae a la caja propia del usuario (compatibilidad).
+    """
+    session = open_session_for_branch(branch)
+    if session is None and user is not None:
+        session = current_session_for(user)
+    return session
+
+
 @transaction.atomic
 def open_session(user, opening_amount, *, notes=None, branch=None):
-    """Abre una sesión de caja. Falla si el usuario ya tiene una abierta."""
-    if current_session_for(user) is not None:
+    """Abre una sesión de caja. Con caja compartida, falla si la sucursal ya
+    tiene una caja abierta; sin sucursal, falla si el usuario ya tiene una."""
+    if branch is not None:
+        if open_session_for_branch(branch) is not None:
+            raise CashError("Ya hay una caja abierta en esta sucursal. Ciérrala antes de abrir otra.")
+    elif current_session_for(user) is not None:
         raise CashError("Ya tienes una caja abierta. Ciérrala antes de abrir otra.")
     opening_amount = Decimal(str(opening_amount))
     return CashSession.objects.create(
@@ -69,7 +94,7 @@ def register_sale(sale):
     movimiento de caja. Devuelve el CashMovement o None si no hay caja."""
     if not sale.user_id:
         return None
-    session = current_session_for(sale.user)
+    session = active_session(branch=sale.branch, user=sale.user)
     if session is None:
         return None
     sale.cash_session = session
@@ -138,12 +163,12 @@ def close_session(session, counted_cash, *, notes=None):
     return session
 
 
-def register_return_cash(user, amount, *, description=None):
-    """Registra una devolución en efectivo como egreso de la caja del usuario.
+def register_return_cash(user, amount, *, description=None, branch=None):
+    """Registra una devolución en efectivo como egreso de la caja de la sucursal.
 
-    Devuelve el CashMovement o None si el usuario no tiene caja abierta.
+    Devuelve el CashMovement o None si no hay caja abierta.
     """
-    session = current_session_for(user)
+    session = active_session(branch=branch, user=user)
     if session is None:
         return None
     mov = CashMovement.objects.create(
@@ -154,9 +179,9 @@ def register_return_cash(user, amount, *, description=None):
     return mov
 
 
-def register_return_cancellation_cash(user, amount, *, description=None):
+def register_return_cancellation_cash(user, amount, *, description=None, branch=None):
     """Reversa de una devolución en efectivo (ingreso) al cancelarla."""
-    session = current_session_for(user)
+    session = active_session(branch=branch, user=user)
     if session is None:
         return None
     mov = CashMovement.objects.create(

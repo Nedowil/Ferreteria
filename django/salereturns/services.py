@@ -144,7 +144,7 @@ def _create_items_and_restock(sret, prepared, *, sale_folio, user):
 
 def _maybe_cash_refund(sret, user):
     if sret.refund_method == "efectivo" and user is not None:
-        cash.register_return_cash(user, sret.total, description=f"Devolución {sret.folio}")
+        cash.register_return_cash(user, sret.total, description=f"Devolución {sret.folio}", branch=sret.branch)
 
 
 @transaction.atomic
@@ -165,7 +165,7 @@ def cancel_return(sret, *, user=None):
     sret.save(update_fields=["status", "updated_at"])
     if sret.refund_method == "efectivo" and user is not None:
         cash.register_return_cancellation_cash(
-            user, sret.total, description=f"Cancelación devolución {sret.folio}"
+            user, sret.total, description=f"Cancelación devolución {sret.folio}", branch=sret.branch
         )
     return sret
 
