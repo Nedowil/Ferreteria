@@ -9,6 +9,13 @@ from inventory.models import Product
 from .models import Sale, SaleItem, SalePayment
 
 
+def _is_admin(user):
+    """El dato del vendedor solo lo ve un admin (superusuario o rol 'admin')."""
+    return bool(user and user.is_authenticated and (
+        user.is_superuser or user.groups.filter(name="admin").exists()
+    ))
+
+
 class SaleItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source="product.name", read_only=True)
     product_sku = serializers.CharField(source="product.sku", read_only=True)
@@ -41,6 +48,13 @@ class SaleListSerializer(serializers.ModelSerializer):
             "status", "status_display", "payment_status", "payment_status_display",
             "paid_amount", "balance", "user_name",
         ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Si quien consulta no es admin, el vendedor ni siquiera se serializa.
+        request = self.context.get("request")
+        if not _is_admin(getattr(request, "user", None)):
+            self.fields.pop("user_name", None)
 
 
 class SaleDetailSerializer(SaleListSerializer):
