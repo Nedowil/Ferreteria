@@ -66,6 +66,7 @@ export default function ReturnCreate() {
     setSearch(""); setResults([]);
   };
   const updItem = (idx, f, v) => setItems(items.map((it, i) => i === idx ? { ...it, [f]: v } : it));
+  const removeItem = (idx) => setItems(items.filter((_, i) => i !== idx));
 
   const submit = async () => {
     setError(""); setBusy(true);
@@ -169,16 +170,20 @@ export default function ReturnCreate() {
             )}
           </div>
           <table className="w-full text-sm mt-3">
-            <thead className="text-slate-500 text-left"><tr><th className="py-1">Producto</th><th className="py-1 w-24 text-right">Cant.</th><th className="py-1 w-28 text-right">Precio</th></tr></thead>
+            <thead className="text-slate-500 text-left"><tr><th className="py-1">Producto</th><th className="py-1 w-24 text-right">Cant.</th><th className="py-1 w-28 text-right">Precio</th><th className="py-1 w-10"></th></tr></thead>
             <tbody>
               {items.map((it, idx) => (
                 <tr key={idx} className="border-t">
                   <td className="py-2"><div className="font-medium">{it.name}</div><div className="text-xs font-mono text-slate-400">{it.sku}</div></td>
                   <td className="py-2"><input type="number" step="any" value={it.quantity} onChange={(e) => updItem(idx, "quantity", e.target.value)} className="border border-slate-300 rounded px-2 py-1 text-sm w-24 text-right" /></td>
                   <td className="py-2"><input type="number" step="any" value={it.unit_price} onChange={(e) => updItem(idx, "unit_price", e.target.value)} className="border border-slate-300 rounded px-2 py-1 text-sm w-28 text-right" /></td>
+                  <td className="py-2 text-right">
+                    <button type="button" onClick={() => removeItem(idx)} title="Quitar producto"
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50 rounded p-1.5 transition">🗑️</button>
+                  </td>
                 </tr>
               ))}
-              {items.length === 0 && <tr><td colSpan="3" className="py-4 text-center text-slate-400">Agrega productos a reintegrar.</td></tr>}
+              {items.length === 0 && <tr><td colSpan="4" className="py-4 text-center text-slate-400">Agrega productos a reintegrar.</td></tr>}
             </tbody>
           </table>
         </div>
