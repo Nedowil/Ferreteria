@@ -32,13 +32,14 @@ class SaleListSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source="get_status_display", read_only=True)
     payment_status_display = serializers.CharField(source="get_payment_status_display", read_only=True)
     balance = RoundingDecimalField(max_digits=14, decimal_places=2, read_only=True)
+    user_name = serializers.CharField(source="user.name", read_only=True, default=None)
 
     class Meta:
         model = Sale
         fields = [
             "id", "folio", "customer_name", "date", "total", "payment_method",
             "status", "status_display", "payment_status", "payment_status_display",
-            "paid_amount", "balance",
+            "paid_amount", "balance", "user_name",
         ]
 
 

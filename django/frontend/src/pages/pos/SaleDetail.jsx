@@ -6,7 +6,8 @@ import { useAuth } from "../../auth/AuthContext";
 export default function SaleDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { can } = useAuth();
+  const { can, user } = useAuth();
+  const isAdmin = !!user && (user.is_superuser || (user.roles || []).includes("admin"));
   const [s, setS] = useState(null);
   const [invoice, setInvoice] = useState(null);
   const [pay, setPay] = useState({ amount: "", payment_method: "efectivo", reference: "" });
@@ -65,6 +66,7 @@ export default function SaleDetail() {
             <div><span className="text-slate-500">Fecha:</span> {new Date(s.date).toLocaleString()}</div>
             <div><span className="text-slate-500">Método:</span> {s.payment_method}</div>
             <div><span className="text-slate-500">Sucursal:</span> {s.branch_name || "—"}</div>
+            {isAdmin && <div><span className="text-slate-500">Vendedor:</span> <b>{s.user_name || "—"}</b></div>}
           </section>
 
           <section className="bg-white rounded-lg shadow overflow-hidden">
