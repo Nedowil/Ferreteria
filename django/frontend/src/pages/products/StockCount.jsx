@@ -38,7 +38,11 @@ export default function StockCount() {
 
   return (
     <div>
-      <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2 mb-4">🔢 Conteo físico</h1>
+      <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2 mb-1">🔢 Conteo físico</h1>
+      <p className="text-sm text-slate-500 mb-4">
+        El conteo se hace en la <b>unidad base</b> de cada producto (ej. libras, no cajas).
+        Escribí la cantidad total que tenés físicamente; el sistema ajusta la existencia a ese valor.
+      </p>
       <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 mb-4 flex gap-2 items-end">
         <input placeholder="Nombre, SKU o código" value={search} onChange={(e) => setSearch(e.target.value)}
                className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-64" />
@@ -68,12 +72,21 @@ export default function StockCount() {
                 return (
                   <tr key={p.id} className="border-t border-slate-100 hover:bg-slate-50/70 transition">
                     <td className="px-4 py-2 font-mono text-xs text-slate-500">{p.sku}</td>
-                    <td className="px-4 py-2 font-medium text-slate-800">{p.name}</td>
-                    <td className="px-4 py-2 text-right text-slate-500">{p.branch_stock ?? p.stock}</td>
+                    <td className="px-4 py-2">
+                      <div className="font-medium text-slate-800">{p.name}</div>
+                      <div className="text-xs text-slate-400">se cuenta en {p.base_unit_label || "unidad"}</div>
+                    </td>
+                    <td className="px-4 py-2 text-right text-slate-500">
+                      <div>{p.branch_stock ?? p.stock} {p.base_unit_label || ""}</div>
+                      {p.stock_display && <div className="text-xs text-slate-400">{p.stock_display}</div>}
+                    </td>
                     <td className="px-4 py-2 text-right">
-                      <input type="number" step="any" value={val ?? ""} placeholder={String(p.branch_stock ?? p.stock)}
-                             onChange={(e) => setCounts({ ...counts, [p.id]: e.target.value })}
-                             className="border border-slate-300 rounded-lg px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-24 text-right" />
+                      <div className="flex items-center justify-end gap-1">
+                        <input type="number" step="any" value={val ?? ""} placeholder={String(p.branch_stock ?? p.stock)}
+                               onChange={(e) => setCounts({ ...counts, [p.id]: e.target.value })}
+                               className="border border-slate-300 rounded-lg px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-24 text-right" />
+                        <span className="text-xs text-slate-400 w-12 text-left">{p.base_unit_label || ""}</span>
+                      </div>
                     </td>
                     <td className={"px-4 py-2 text-right text-xs " + (diff === null ? "text-slate-300" : diff > 0 ? "text-green-600" : diff < 0 ? "text-red-600" : "text-slate-400")}>
                       {diff === null ? "—" : (diff > 0 ? "+" : "") + diff}
