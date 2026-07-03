@@ -22,15 +22,30 @@ function barcodeSvg(code) {
   return svg.outerHTML;
 }
 
+// Precio a mostrar en la etiqueta: el del EMPAQUE si el producto lo tiene
+// (ej. "Q60.00 / CAJA"); si no, el de la unidad base.
+function labelPrice(product) {
+  const cf = Number(product.container_factor) || 0;
+  if (product.container_label && cf > 0) {
+    const p = Number(product.container_price) > 0
+      ? Number(product.container_price) : Number(product.sale_price) * cf;
+    return p > 0 ? `Q${p.toFixed(2)} / ${(product.container_label || "").toUpperCase()}` : "";
+  }
+  const p = Number(product.sale_price);
+  return p > 0 ? `Q${p.toFixed(2)} / ${(product.base_unit_label || "UNIDAD").toUpperCase()}` : "";
+}
+
 // Abre una ventana imprimible con las etiquetas (para "Guardar como PDF").
-function printLabelsPdf(product, copies) {
-  const price = Number(product.sale_price) > 0 ? `Q ${Number(product.sale_price).toFixed(2)}` : "";
+function printLabelsPdf(product, copies, companyName) {
+  const esc = (s) => (s || "").replace(/</g, "&lt;");
+  const price = labelPrice(product);
   const one = `
     <div class="label">
-      <div class="name">${(product.name || "").replace(/</g, "&lt;")}</div>
+      ${companyName ? `<div class="biz">${esc(companyName)}</div>` : ""}
+      <div class="name">${esc(product.name).toUpperCase()}</div>
       ${price ? `<div class="price">${price}</div>` : ""}
+      <div class="sku">${esc(product.sku)}</div>
       <div class="bc">${barcodeSvg(product.barcode || product.sku)}</div>
-      <div class="sku">${(product.sku || "").replace(/</g, "&lt;")}</div>
     </div>`;
   const labels = Array.from({ length: Math.max(1, Number(copies) || 1) }, () => one).join("");
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>Etiquetas ${product.sku}</title>
@@ -40,11 +55,12 @@ function printLabelsPdf(product, copies) {
       .sheet { display: flex; flex-wrap: wrap; gap: 6mm; }
       .label { width: 50mm; border: 1px dashed #bbb; border-radius: 4px; padding: 4px 6px;
                text-align: center; page-break-inside: avoid; }
-      .name { font-size: 12px; font-weight: 700; line-height: 1.1; margin-bottom: 2px;
+      .biz { font-size: 11px; font-weight: 700; color: #222; }
+      .name { font-size: 13px; font-weight: 800; line-height: 1.1; margin: 1px 0;
               max-height: 2.4em; overflow: hidden; }
-      .price { font-size: 18px; font-weight: 800; }
-      .bc svg { max-width: 100%; height: auto; }
+      .price { font-size: 16px; font-weight: 800; }
       .sku { font-family: monospace; font-size: 11px; color: #444; }
+      .bc svg { max-width: 100%; height: auto; }
     </style></head>
     <body><div class="sheet">${labels}</div>
     <script>window.onload = function(){ setTimeout(function(){ window.print(); }, 200); };<\/script>
@@ -56,7 +72,7 @@ function printLabelsPdf(product, copies) {
 }
 
 // Ventana de dos pasos: cantidad de etiquetas → impresora de destino.
-function LabelPrintModal({ product, onClose }) {
+function LabelPrintModal({ product, companyName, onClose }) {
   const [step, setStep] = useState("qty");
   const [copies, setCopies] = useState("1");
   const [busy, setBusy] = useState(false);
@@ -122,7 +138,7 @@ function LabelPrintModal({ product, onClose }) {
                 <div className="font-semibold text-slate-800">⬇️ Descargar archivo ZPL</div>
                 <div className="text-xs text-slate-500">Para enviarlo a la Zebra por USB (utilidad de Zebra) o guardarlo.</div>
               </button>
-              <button onClick={() => { printLabelsPdf(product, copies); onClose(); }} disabled={busy}
+              <button onClick={() => { printLabelsPdf(product, copies, companyName); onClose(); }} disabled={busy}
                       className="w-full text-left rounded-xl border border-slate-200 hover:border-blue-400 hover:shadow-md p-3 transition disabled:opacity-50">
                 <div className="font-semibold text-slate-800">🧾 Descargar PDF / Imprimir</div>
                 <div className="text-xs text-slate-500">Genera las etiquetas con código de barras y elegí "Guardar como PDF" o cualquier impresora.</div>
@@ -147,9 +163,11 @@ export default function ProductList() {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [labeling, setLabeling] = useState(null); // producto a etiquetar (modal)
+  const [companyName, setCompanyName] = useState("Ferretería Central");
 
   useEffect(() => {
     api.get("/inventory/brands/?page_size=200").then((r) => setBrands(r.data.results || r.data));
+    api.get("/company-settings/").then((r) => setCompanyName(r.data.commercial_name || "Ferretería Central")).catch(() => {});
   }, []);
 
   const load = () => {
@@ -273,7 +291,7 @@ export default function ProductList() {
         </div>
       )}
 
-      {labeling && <LabelPrintModal product={labeling} onClose={() => setLabeling(null)} />}
+      {labeling && <LabelPrintModal product={labeling} companyName={companyName} onClose={() => setLabeling(null)} />}
     </div>
   );
 }

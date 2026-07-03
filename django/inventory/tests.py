@@ -197,7 +197,25 @@ class ZebraLabelTests(TestCase):
         self.assertTrue(zpl.rstrip().endswith("^XZ"))
         self.assertIn("MAR-0001", zpl)
         self.assertIn("^PQ3", zpl)
-        self.assertIn("Q 75.00", zpl)
+        self.assertIn("Q75.00 / UNIDAD", zpl)  # precio por unidad base
+
+    def test_label_precio_por_empaque(self):
+        from decimal import Decimal
+        from inventory.labels import build_label_zpl
+        p = Product.objects.create(
+            sku="CLA-0001", name="Clavos", sale_price=Decimal("20"),
+            container_label="caja", container_factor=Decimal("3"),
+            container_price=Decimal("60"), base_unit_label="libra",
+        )
+        zpl = build_label_zpl(p, self.company).decode()
+        self.assertIn("Q60.00 / CAJA", zpl)  # precio del empaque
+
+    def test_label_incluye_nombre_negocio(self):
+        from inventory.labels import build_label_zpl
+        self.company.commercial_name = "Ferretería Central"
+        self.company.save()
+        zpl = build_label_zpl(self.product, self.company).decode()
+        self.assertIn("Ferretería Central", zpl)
 
     def test_ean13_usa_codigo_BE(self):
         from inventory.labels import build_label_zpl

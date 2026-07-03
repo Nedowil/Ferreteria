@@ -37,6 +37,22 @@ def _money(value):
         return "Q 0.00"
 
 
+def _label_price_text(product):
+    """Precio a mostrar en la etiqueta: el del EMPAQUE si el producto lo tiene
+    (ej. 'Q60.00 / CAJA'); si no, el de la unidad base."""
+    cf = product.container_factor or 0
+    if product.container_label and cf:
+        price = product.container_price or (Decimal(str(product.sale_price)) * Decimal(str(cf)))
+        label = product.container_label
+    else:
+        price = product.sale_price
+        label = product.base_unit_label or "unidad"
+    try:
+        return f"Q{Decimal(str(price)):,.2f} / {str(label).upper()}"
+    except Exception:
+        return _money(product.sale_price)
+
+
 def build_label_zpl(product, company, *, show_price=True, copies=1):
     """Construye el ZPL de la etiqueta de un producto."""
     dpi = company.zebra_dpi or 203
@@ -45,36 +61,39 @@ def build_label_zpl(product, company, *, show_price=True, copies=1):
     copies = max(1, int(copies or 1))
 
     margin = max(8, _dots(2, dpi))                 # ~2 mm de margen
+    biz = _zpl_escape((company.commercial_name or "")[:32])
     name = _zpl_escape(product.name)[:32]
     sku = _zpl_escape(product.sku)
     code = (product.barcode or product.sku or "").strip()
 
     # Tamaños de fuente proporcionales a la altura de la etiqueta.
+    f_biz = max(12, height // 12)
     f_name = max(18, height // 7)
     f_small = max(14, height // 10)
     bc_height = max(40, height // 3)
 
-    parts = [
-        "^XA",
-        "^CI28",                                   # UTF-8
-        f"^PW{width}",
-        f"^LL{height}",
-        f"^FO{margin},{margin}^A0N,{f_name},{f_name}^FB{width - 2 * margin},2,0,L^FD{name}^FS",
-        f"^FO{margin},{margin + f_name + 6}^A0N,{f_small},{f_small}^FD{sku}^FS",
-    ]
+    parts = ["^XA", "^CI28", f"^PW{width}", f"^LL{height}"]
+
+    y = margin
+    if biz:
+        parts.append(f"^FO{margin},{y}^A0N,{f_biz},{f_biz}^FD{biz}^FS")
+        y += f_biz + 4
+    parts.append(f"^FO{margin},{y}^A0N,{f_name},{f_name}^FB{width - 2 * margin},2,0,L^FD{name}^FS")
+    y += f_name + 6
+    parts.append(f"^FO{margin},{y}^A0N,{f_small},{f_small}^FD{sku}^FS")
+    y += f_small + 10
 
     # Código de barras (EAN-13 si aplica, si no Code128).
-    bc_y = margin + f_name + f_small + 14
     if _is_ean13(code):
-        parts.append(f"^FO{margin},{bc_y}^BY2^BEN,{bc_height},Y,N^FD{code[:12]}^FS")
+        parts.append(f"^FO{margin},{y}^BY2^BEN,{bc_height},Y,N^FD{code[:12]}^FS")
     elif code:
-        parts.append(f"^FO{margin},{bc_y}^BY2^BCN,{bc_height},Y,N,N^FD{_zpl_escape(code)}^FS")
+        parts.append(f"^FO{margin},{y}^BY2^BCN,{bc_height},Y,N,N^FD{_zpl_escape(code)}^FS")
 
     if show_price:
         price_f = max(24, height // 5)
         parts.append(
             f"^FO{margin},{height - price_f - margin}"
-            f"^A0N,{price_f},{price_f}^FD{_money(product.sale_price)}^FS"
+            f"^A0N,{price_f},{price_f}^FD{_zpl_escape(_label_price_text(product))}^FS"
         )
 
     parts.append(f"^PQ{copies}")
