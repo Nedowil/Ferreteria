@@ -35,14 +35,18 @@ def open_session_for_branch(branch):
 def active_session(*, branch=None, user=None):
     """Caja activa bajo el modelo de **caja compartida por sucursal**.
 
-    Si la sucursal tiene una caja abierta, se usa esa sin importar quién la
-    abrió (así todas las ventas de la sucursal entran a la misma caja). Si no
-    hay caja de sucursal, cae a la caja propia del usuario (compatibilidad).
+    Si se conoce la sucursal, la caja activa es EXCLUSIVAMENTE la caja abierta
+    de esa sucursal (sin importar quién la abrió), o None si no hay ninguna.
+    Nunca se cae a la caja de otra sucursal: cada sucursal está aislada.
+
+    Solo cuando no hay sucursal (instalaciones sin multi-sucursal) se usa la
+    caja propia del usuario, por compatibilidad.
     """
-    session = open_session_for_branch(branch)
-    if session is None and user is not None:
-        session = current_session_for(user)
-    return session
+    if branch is not None:
+        return open_session_for_branch(branch)
+    if user is not None:
+        return current_session_for(user)
+    return None
 
 
 @transaction.atomic

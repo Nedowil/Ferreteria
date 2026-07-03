@@ -63,6 +63,10 @@ class CashServiceTests(TestCase):
             open_session(vendedor, 100, branch=self.branch)
         # La caja de la sucursal se encuentra sin importar el usuario.
         self.assertEqual(open_session_for_branch(self.branch).pk, s.pk)
+        # Aislamiento: otra sucursal SIN caja no hereda la del admin.
+        otra = Branch.objects.create(name="Zona 2", code="Z2")
+        self.assertIsNone(active_session(branch=otra, user=admin))
+        self.assertIsNone(open_session_for_branch(otra))
 
     def test_cierre_calcula_diferencia(self):
         s = open_session(self.user, 500)
