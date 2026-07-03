@@ -1,9 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/client";
 import { publishDisplay, openCustomerDisplay } from "../../pos/customerDisplay";
 import { useAuth } from "../../auth/AuthContext";
 import ReturnModal from "./ReturnModal";
+import { useServerOnline } from "../../offline/net";
+import { saveCatalog, getCatalog, setMeta, getMeta, addPending, countPending } from "../../offline/db";
+import { syncPending } from "../../offline/sync";
+import { printOfflineReceipt } from "./offlineReceipt";
 
 // Elige el precio base según el nivel del cliente (público o mayorista).
 function basePriceFor(product, qty, customer) {
@@ -484,6 +488,14 @@ export default function POS() {
   const [addingProduct, setAddingProduct] = useState(false);
   const [lastSale, setLastSale] = useState(null); // venta recién cobrada (modal)
   const [returning, setReturning] = useState(false);
+  // ---- Modo offline --------------------------------------------------------
+  const [pendingCount, setPendingCount] = useState(0);   // ventas offline sin sincronizar
+  const [syncing, setSyncing] = useState(false);
+  const [offlineNote, setOfflineNote] = useState("");    // aviso temporal
+  const doSyncRef = useRef(() => {});
+  const onReconnect = useCallback(() => doSyncRef.current(), []);
+  const serverOnline = useServerOnline({ onReconnect });
+  const refreshPending = () => countPending().then(setPendingCount).catch(() => {});
   const fmtDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   const todayStr = fmtDate(new Date());
   // La SAT permite emitir FEL solo hasta 5 días hacia atrás.
@@ -509,11 +521,43 @@ export default function POS() {
        .then((r) => r.data.results || r.data);
 
   useEffect(() => {
-    api.get("/cashbox/cash-sessions/current/").then((r) => setCashOpen(r.data.session || false));
-    api.get("/customers/?active=1&page_size=300").then((r) => setCustomers(r.data.results || r.data));
-    api.get("/company-settings/").then((r) => setCompanyName(r.data.commercial_name || "Ferretería")).catch(() => {});
-    api.get("/inventory/products/", { params: { page_size: 500, active: 1 } })
-      .then((r) => setProducts(r.data.results || r.data));
+    let alive = true;
+    (async () => {
+      try {
+        // ONLINE: carga del servidor y guarda copia local para vender offline.
+        const [sess, custs, comp, prods] = await Promise.all([
+          api.get("/cashbox/cash-sessions/current/"),
+          api.get("/customers/?active=1&page_size=300"),
+          api.get("/company-settings/"),
+          api.get("/inventory/products/", { params: { page_size: 500, active: 1 } }),
+        ]);
+        if (!alive) return;
+        const productList = prods.data.results || prods.data;
+        const customerList = custs.data.results || custs.data;
+        const cname = comp.data.commercial_name || "Ferretería";
+        setCashOpen(sess.data.session || false);
+        setCustomers(customerList);
+        setCompanyName(cname);
+        setProducts(productList);
+        saveCatalog(productList).catch(() => {});
+        setMeta("customers", customerList).catch(() => {});
+        setMeta("company_name", cname).catch(() => {});
+        setMeta("cash_open", !!sess.data.session).catch(() => {});
+      } catch {
+        // OFFLINE: no hay servidor. Carga desde la copia local guardada.
+        if (!alive) return;
+        const [cat, custs, cname, casho] = await Promise.all([
+          getCatalog(), getMeta("customers"), getMeta("company_name"), getMeta("cash_open"),
+        ]);
+        setProducts(cat || []);
+        setCustomers(custs || []);
+        setCompanyName(cname || "Ferretería");
+        // Si la última vez había caja abierta, permitimos vender offline.
+        setCashOpen(casho ? { offline: true } : false);
+      }
+      refreshPending();
+    })();
+    return () => { alive = false; };
   }, []);
 
   const customer = customers.find((c) => String(c.id) === String(customerId)) || null;
@@ -629,6 +673,68 @@ export default function POS() {
     });
   }, [cart, total, companyName]);
 
+  // Descuenta el stock local (en memoria) para que la existencia mostrada siga
+  // siendo coherente tras una venta offline.
+  const decrementLocalStock = () => {
+    setProducts((prev) => prev.map((p) => {
+      const used = cart.filter((i) => i.product_id === p.id)
+        .reduce((s, i) => s + Number(i.quantity) * Number(i.units_factor), 0);
+      if (!used) return p;
+      const key = p.branch_stock != null ? "branch_stock" : "stock";
+      return { ...p, [key]: Number(p[key] ?? 0) - used };
+    }));
+  };
+
+  // Guarda la venta en la cola local (IndexedDB) para sincronizar luego.
+  const saveOffline = async (payload) => {
+    const uuid = (window.crypto?.randomUUID?.() || `off-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+    const display = {
+      folio: `OFF-${uuid.slice(0, 8).toUpperCase()}`,
+      customer: customer?.name || "Consumidor final",
+      total, paid: Number(payload.paid_amount || 0), change,
+      items: cart.map((i) => ({
+        name: Number(i.units_factor) !== 1 ? `${i.name} (${i.unit_label})` : i.name,
+        quantity: i.quantity, unit_price: i.unit_price,
+        subtotal: Number(i.quantity) * Number(i.unit_price),
+      })),
+    };
+    const record = {
+      offline_uuid: uuid, created_ms: Date.now(),
+      date: payload.date, customer_id: payload.customer_id,
+      payment_method: payload.payment_method, payment_status: payload.payment_status,
+      paid_amount: payload.paid_amount, discount: payload.discount, notes: payload.notes || null,
+      want_fel: wantFel, items: payload.items, _display: display,
+    };
+    try { await addPending(record); } catch { /* almacenamiento no disponible */ }
+    await refreshPending();
+    try { printOfflineReceipt(display, companyName); } catch { /* sin impresión */ }
+    decrementLocalStock();
+    publishDisplay({ type: "sale", company: companyName, total, paid: display.paid, change });
+    setOfflineNote(`Venta guardada OFFLINE (${display.folio}). Se sincronizará sola al volver el internet.`);
+    setCart([]); setPaid(""); setDiscount(""); setWantFel(false); setCredit(false); setCustomerId(""); setSaleDate(todayStr);
+  };
+
+  // Sincroniza la cola de ventas offline con el servidor.
+  const doSync = async () => {
+    if (syncing) return;
+    setSyncing(true);
+    try {
+      const r = await syncPending();
+      await refreshPending();
+      if (r.sent || r.duplicated || r.failed) {
+        let msg = "";
+        if (r.sent) msg += `Sincronizadas ${r.sent} venta(s). `;
+        if (r.felOk) msg += `${r.felOk} factura(s) certificada(s). `;
+        if (r.felFail) msg += `${r.felFail} factura(s) quedaron pendientes de emitir. `;
+        if (r.failed) msg += `${r.failed} con error (se reintentará). `;
+        setOfflineNote(msg.trim());
+        reloadProducts().then((list) => { setProducts(list); saveCatalog(list).catch(() => {}); }).catch(() => {});
+      }
+    } catch { /* sigue sin servidor */ }
+    finally { setSyncing(false); }
+  };
+  doSyncRef.current = doSync;
+
   const checkout = async () => {
     setError("");
     if (cart.length === 0) { setError("El carrito está vacío."); return; }
@@ -637,20 +743,26 @@ export default function POS() {
       setError("La factura electrónica solo se puede emitir con fecha dentro de los últimos 5 días (regla de la SAT). Cambiá la fecha o usá 'Recibo'.");
       return;
     }
+    const payload = {
+      customer_id: customerId || null,
+      date: saleDate || null,
+      discount: discountNum || 0,
+      payment_method: credit ? "credito" : paymentMethod,
+      payment_status: credit ? "al_credito" : "pagada",
+      paid_amount: credit ? (paid || 0) : (paymentMethod === "efectivo" ? (paid || total) : total),
+      items: cart.map((i) => ({
+        product_id: i.product_id, quantity: i.quantity, unit_price: i.unit_price,
+        units_factor: i.units_factor, unit_label: i.unit_label, tax_type: i.tax_type,
+      })),
+    };
     setBusy(true);
+    // Si ya sabemos que no hay servidor, guardamos offline directo.
+    if (!serverOnline) {
+      await saveOffline(payload);
+      setBusy(false);
+      return;
+    }
     try {
-      const payload = {
-        customer_id: customerId || null,
-        date: saleDate || null,
-        discount: discountNum || 0,
-        payment_method: credit ? "credito" : paymentMethod,
-        payment_status: credit ? "al_credito" : "pagada",
-        paid_amount: credit ? (paid || 0) : (paymentMethod === "efectivo" ? (paid || total) : total),
-        items: cart.map((i) => ({
-          product_id: i.product_id, quantity: i.quantity, unit_price: i.unit_price,
-          units_factor: i.units_factor, unit_label: i.unit_label, tax_type: i.tax_type,
-        })),
-      };
       const { data } = await api.post("/sales/", payload);
 
       // Si se pidió factura electrónica, se emite tras crear la venta. Si falla,
@@ -676,17 +788,33 @@ export default function POS() {
       // Refresca el stock del catálogo sin recargar la página.
       reloadProducts().then(setProducts).catch(() => {});
     } catch (err) {
-      setError(err.response?.data?.detail || "No se pudo completar la venta.");
+      // Sin respuesta del servidor = se cayó la conexión durante el cobro:
+      // guardamos la venta offline en vez de perderla.
+      if (!err.response) {
+        await saveOffline(payload);
+      } else {
+        setError(err.response?.data?.detail || "No se pudo completar la venta.");
+      }
     } finally {
       setBusy(false);
     }
   };
+
+  // El aviso de sincronización/offline se limpia solo a los 7 segundos.
+  useEffect(() => {
+    if (!offlineNote) return;
+    const t = setTimeout(() => setOfflineNote(""), 7000);
+    return () => clearTimeout(t);
+  }, [offlineNote]);
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">🛒 Punto de venta</h1>
         <div className="flex items-center gap-3">
+          {!serverOnline
+            ? <span className="text-sm text-white bg-red-500 rounded-full px-3 py-1 font-medium">● OFFLINE</span>
+            : <span className="text-sm text-green-700 bg-green-100 rounded-full px-3 py-1 font-medium">● En línea</span>}
           {can("ventas.crear") && (
             <button onClick={() => setReturning(true)}
                     className="text-sm border border-amber-300 text-amber-700 bg-amber-50 rounded-lg px-3 py-1.5 hover:bg-amber-100 transition">
@@ -705,6 +833,26 @@ export default function POS() {
           {cashOpen && <span className="text-sm text-green-700 bg-green-100 rounded-full px-3 py-1 font-medium">● Caja abierta</span>}
         </div>
       </div>
+
+      {/* Barra de estado offline / ventas pendientes de sincronizar */}
+      {(!serverOnline || pendingCount > 0) && (
+        <div className={"rounded-lg px-4 py-2 text-sm mb-4 flex items-center justify-between gap-3 " +
+          (!serverOnline ? "bg-red-50 border border-red-200 text-red-700" : "bg-amber-50 border border-amber-200 text-amber-800")}>
+          <div>
+            {!serverOnline
+              ? "Sin conexión al servidor. Podés seguir vendiendo: las ventas se guardan y se sincronizan solas al volver el internet."
+              : "Hay ventas hechas offline pendientes de sincronizar."}
+            {pendingCount > 0 && <b> ({pendingCount} pendiente{pendingCount === 1 ? "" : "s"})</b>}
+          </div>
+          {pendingCount > 0 && serverOnline && (
+            <button onClick={doSync} disabled={syncing}
+                    className="shrink-0 bg-amber-600 text-white rounded-lg px-3 py-1.5 text-sm font-medium hover:bg-amber-700 disabled:opacity-50">
+              {syncing ? "Sincronizando…" : "Sincronizar ahora"}
+            </button>
+          )}
+        </div>
+      )}
+      {offlineNote && <div className="bg-blue-50 border border-blue-200 text-blue-800 rounded-lg px-4 py-2 text-sm mb-4">{offlineNote}</div>}
 
       {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-2 text-sm mb-4">{error}</div>}
 

@@ -64,6 +64,18 @@ api_patterns = [
     path("", include("supplierbills.urls")),
 ]
 
+def service_worker(request):
+    """Sirve el service worker desde la RAÍZ (/sw.js) para que su alcance sea
+    toda la app (modo offline). Debe estar en la raíz, no bajo /static/."""
+    path = settings.SPA_DIR / "sw.js"
+    if not path.exists():
+        return HttpResponse("/* sw no compilado */", content_type="application/javascript")
+    resp = HttpResponse(path.read_text(encoding="utf-8"), content_type="application/javascript")
+    resp["Service-Worker-Allowed"] = "/"
+    resp["Cache-Control"] = "no-cache"
+    return resp
+
+
 def spa_index(request):
     """Sirve el index.html del SPA compilado (fallback de rutas del cliente).
 
@@ -85,6 +97,7 @@ def spa_index(request):
 urlpatterns = [
     path("healthz", health.healthz, name="healthz"),
     path("readyz", health.readyz, name="readyz"),
+    path("sw.js", service_worker, name="service-worker"),
     path("django-admin/", admin.site.urls),
     path("api/", include(api_patterns)),
     # Archivos subidos (imágenes de productos, logos). En producción los sirve
@@ -92,5 +105,5 @@ urlpatterns = [
     re_path(r"^media/(?P<path>.*)$", static_serve, {"document_root": settings.MEDIA_ROOT}),
     # Fallback del SPA: cualquier ruta que no sea API, admin, estáticos o media
     # devuelve el index.html para que React Router maneje la navegación.
-    re_path(r"^(?!api/|django-admin/|static/|media/|healthz|readyz).*$", spa_index, name="spa"),
+    re_path(r"^(?!api/|django-admin/|static/|media/|healthz|readyz|sw\.js).*$", spa_index, name="spa"),
 ]

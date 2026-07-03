@@ -24,7 +24,7 @@ def generate_folio():
 
 
 @transaction.atomic
-def create_sale(data, items, *, user=None, branch=None):
+def create_sale(data, items, *, user=None, branch=None, offline_uuid=None):
     """Crea una venta completada, descuenta stock y la vincula a la caja.
 
     `data`: customer_id, payment_method, paid_amount, discount, notes,
@@ -112,7 +112,7 @@ def create_sale(data, items, *, user=None, branch=None):
         subtotal=subtotal, discount=total_discount, tax=tax, total=total,
         payment_method=payment_method, paid_amount=paid_amount, change_amount=change_amount,
         status=Sale.STATUS_COMPLETADA, payment_status=payment_status, due_date=due_date,
-        notes=data.get("notes"),
+        notes=data.get("notes"), offline_uuid=offline_uuid or None,
     )
 
     for l in lines:
@@ -133,6 +133,39 @@ def create_sale(data, items, *, user=None, branch=None):
     # Vincular a la caja abierta del usuario (si la hay)
     cash.register_sale(sale)
     return sale
+
+
+def sync_offline_sale(entry, *, user=None, branch=None):
+    """Sincroniza UNA venta creada offline. Idempotente por `offline_uuid`.
+
+    Devuelve un dict con el resultado: {uuid, ok, id, folio, duplicate?, error?}.
+    Nunca lanza: los errores se devuelven en el dict para no frenar el lote.
+    """
+    uuid = (entry or {}).get("offline_uuid")
+    if not uuid:
+        return {"uuid": None, "ok": False, "error": "Falta offline_uuid."}
+
+    existing = Sale.objects.filter(offline_uuid=uuid).first()
+    if existing:
+        return {"uuid": uuid, "ok": True, "duplicate": True, "id": existing.id, "folio": existing.folio}
+
+    items = entry.get("items") or []
+    data = {
+        "customer_id": entry.get("customer_id"),
+        "date": entry.get("date"),
+        "discount": entry.get("discount") or 0,
+        "payment_method": entry.get("payment_method") or "efectivo",
+        "payment_status": entry.get("payment_status") or Sale.PAY_PAGADA,
+        "paid_amount": entry.get("paid_amount") or 0,
+        "notes": entry.get("notes"),
+    }
+    try:
+        sale = create_sale(data, items, user=user, branch=branch, offline_uuid=uuid)
+    except SaleError as e:
+        return {"uuid": uuid, "ok": False, "error": str(e)}
+    except Exception as e:  # noqa: BLE001 — no frenar el lote por un caso raro
+        return {"uuid": uuid, "ok": False, "error": f"Error inesperado: {e}"}
+    return {"uuid": uuid, "ok": True, "id": sale.id, "folio": sale.folio}
 
 
 @transaction.atomic

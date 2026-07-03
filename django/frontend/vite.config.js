@@ -12,6 +12,8 @@ export default defineConfig(({ mode }) => ({
     proxy: {
       "/api": "http://localhost:8000",
       "/media": "http://localhost:8000",
+      "/healthz": "http://localhost:8000",
+      "/readyz": "http://localhost:8000",
     },
   },
   test: {

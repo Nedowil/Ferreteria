@@ -11,7 +11,7 @@ from core.models import Branch
 from inventory.models import Product
 from partners.models import Customer
 from .models import Sale
-from .services import SaleError, cancel_sale, create_sale, register_payment
+from .services import SaleError, cancel_sale, create_sale, register_payment, sync_offline_sale
 
 User = get_user_model()
 
@@ -43,6 +43,27 @@ class SaleServiceTests(TestCase):
         self._venta_simple()
         self.prod.refresh_from_db()
         self.assertEqual(self.prod.stock, Decimal("97.00"))
+
+    def test_sync_offline_idempotente(self):
+        # Sincronizar la misma venta offline dos veces = una sola venta.
+        entry = {
+            "offline_uuid": "uuid-xyz", "payment_method": "efectivo",
+            "payment_status": "pagada", "paid_amount": "170",
+            "items": [{"product_id": self.prod.id, "quantity": "2", "unit_price": "85", "units_factor": "1"}],
+        }
+        r1 = sync_offline_sale(entry, user=self.user, branch=self.branch)
+        r2 = sync_offline_sale(entry, user=self.user, branch=self.branch)
+        self.assertTrue(r1["ok"])
+        self.assertNotIn("duplicate", r1)
+        self.assertTrue(r2["ok"] and r2["duplicate"])
+        self.assertEqual(r1["id"], r2["id"])
+        self.assertEqual(Sale.objects.filter(offline_uuid="uuid-xyz").count(), 1)
+        self.prod.refresh_from_db()
+        self.assertEqual(self.prod.stock, Decimal("98.00"))  # descuenta una sola vez
+
+    def test_sync_offline_sin_uuid(self):
+        r = sync_offline_sale({"items": []}, user=self.user, branch=self.branch)
+        self.assertFalse(r["ok"])
 
     def test_venta_con_fecha_personalizada(self):
         # Regresión: una fecha explícita no debe romper la creación de la venta.

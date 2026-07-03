@@ -59,6 +59,11 @@ class Sale(models.Model):
     cancelled_at = models.DateTimeField(null=True, blank=True)
     notes = models.TextField("notas", blank=True, null=True)
 
+    # Identificador generado por el cliente para ventas creadas OFFLINE. Sirve
+    # de clave de idempotencia al sincronizar: si ya existe una venta con este
+    # uuid, no se vuelve a crear (evita duplicados por reintentos de red).
+    offline_uuid = models.CharField(max_length=64, unique=True, null=True, blank=True, editable=False)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

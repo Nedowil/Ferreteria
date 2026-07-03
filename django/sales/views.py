@@ -26,6 +26,7 @@ class SaleViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.ModelVie
     perms_map = {
         "list": "ventas.ver", "retrieve": "ventas.ver", "receivable": "ventas.ver",
         "create": "ventas.crear",
+        "sync_offline": "ventas.crear",
         "cancel": "ventas.cancelar",
         "payments": {"GET": "ventas.ver", "POST": "ventas.crear"},
     }
@@ -69,6 +70,24 @@ class SaleViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.ModelVie
         except services.SaleError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(SaleDetailSerializer(sale).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=["post"], url_path="sync-offline")
+    def sync_offline(self, request):
+        """Sincroniza un lote de ventas creadas OFFLINE. Idempotente por
+        offline_uuid: cada venta se crea una sola vez aunque se reintente.
+
+        Body: {"sales": [ {offline_uuid, date, customer_id, payment_method,
+                payment_status, paid_amount, discount, items:[...]}, ... ]}
+        Respuesta: {"results": [ {uuid, ok, id?, folio?, duplicate?, error?} ]}
+        """
+        sales = request.data.get("sales")
+        if not isinstance(sales, list):
+            return Response({"detail": "Se espera 'sales' como lista."}, status=status.HTTP_400_BAD_REQUEST)
+        results = [
+            services.sync_offline_sale(entry, user=request.user, branch=self.branch)
+            for entry in sales
+        ]
+        return Response({"results": results})
 
     @action(detail=True, methods=["post"])
     def cancel(self, request, pk=None):
