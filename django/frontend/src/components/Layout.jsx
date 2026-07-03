@@ -46,7 +46,7 @@ export default function Layout({ children }) {
         </div>
 
         <nav className="flex-1 overflow-y-auto py-2">
-          <NavItem to="/" end icon="📊" label="Tablero" />
+          <NavItem to="/" end icon="📊" label="Dashboard" />
 
           {showVentas && (
             <>
