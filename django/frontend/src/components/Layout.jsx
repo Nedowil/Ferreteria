@@ -1,6 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-import logo from "../assets/logo.jpg";
+import logo from "../assets/logo.svg";
 
 function NavItem({ to, icon, label, end }) {
   return (

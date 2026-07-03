@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-import logo from "../assets/logo.jpg";
+import logo from "../assets/logo.svg";
 
 export default function Login() {
   const { login, user } = useAuth();
