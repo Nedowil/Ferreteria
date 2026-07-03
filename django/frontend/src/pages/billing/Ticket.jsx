@@ -277,7 +277,7 @@ function CartaPaper({ company, sale, fel, qr, phrases, d, meses }) {
       {/* Partidas */}
       <table className="w-full border-collapse mt-4">
         <thead><tr className="text-white font-bold text-[11px]" style={{ background: GREEN }}>
-          <th className={cell}>CANTIDAD</th><th className={cell}>CÓDIGO</th><th className={cell}>UNIDAD</th>
+          <th className={cell}>CANTIDAD</th><th className={cell}>UNIDAD</th>
           <th className={cell}>DESCRIPCIÓN</th><th className={cell}>P. UNIT</th><th className={cell}>DESC</th>
           <th className={cell}>IMPUESTOS</th><th className={cell}>TOTAL</th>
         </tr></thead>
@@ -285,7 +285,6 @@ function CartaPaper({ company, sale, fel, qr, phrases, d, meses }) {
           {sale.items.map((it, i) => (
             <tr key={i}>
               <td className={cell + " text-center"}>{Number(it.qty)}</td>
-              <td className={cell + " font-mono text-[10px]"}>{it.code}</td>
               <td className={cell + " text-center"}>{it.unit_label || "Unidad"}</td>
               <td className={cell}>{it.name}</td>
               <td className={cell + " text-right"}>{Number(it.unit_price).toFixed(2)}</td>
