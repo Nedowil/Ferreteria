@@ -23,6 +23,7 @@ export default function ReturnCreate() {
   const [folio, setFolio] = useState("");
   const [sale, setSale] = useState(null);
   const [qtys, setQtys] = useState({}); // sale_item_id -> qty
+  const [removed, setRemoved] = useState([]); // sale_item_id[] ocultos del listado
 
   // Modo producto: búsqueda
   const [prodQuery, setProdQuery] = useState("");
@@ -35,7 +36,12 @@ export default function ReturnCreate() {
 
   const loadSale = async (id) => {
     const { data } = await api.get(`/sales/${id}/`);
-    setSale(data); setQtys({}); setError("");
+    setSale(data); setQtys({}); setRemoved([]); setError("");
+  };
+
+  const removeSaleItem = (itemId) => {
+    setRemoved((prev) => [...prev, itemId]);
+    setQtys((prev) => { const n = { ...prev }; delete n[itemId]; return n; });
   };
 
   const findByFolio = async (e) => {
@@ -97,10 +103,10 @@ export default function ReturnCreate() {
       <div className="px-5 py-3 border-b font-semibold text-sm">Venta {sale.folio} — {sale.customer_name || "Consumidor final"}</div>
       <table className="w-full text-sm">
         <thead className="bg-slate-50 text-slate-500 text-left">
-          <tr><th className="px-4 py-2">Producto</th><th className="px-4 py-2 text-right">Comprado</th><th className="px-4 py-2 text-right">Precio</th><th className="px-4 py-2 text-right w-32">A devolver</th></tr>
+          <tr><th className="px-4 py-2">Producto</th><th className="px-4 py-2 text-right">Comprado</th><th className="px-4 py-2 text-right">Precio</th><th className="px-4 py-2 text-right w-32">A devolver</th><th className="px-4 py-2 w-10"></th></tr>
         </thead>
         <tbody>
-          {sale.items.map((it) => (
+          {sale.items.filter((it) => !removed.includes(it.id)).map((it) => (
             <tr key={it.id} className="border-t">
               <td className="px-4 py-2"><span className="font-mono text-xs text-slate-400">{it.product_sku}</span> {it.product_name}</td>
               <td className="px-4 py-2 text-right">{it.quantity}</td>
@@ -110,8 +116,15 @@ export default function ReturnCreate() {
                        onChange={(e) => setQtys({ ...qtys, [it.id]: e.target.value })}
                        className="border border-slate-300 rounded px-2 py-1 text-sm w-24 text-right" />
               </td>
+              <td className="px-4 py-2 text-right">
+                <button type="button" onClick={() => removeSaleItem(it.id)} title="Quitar de la devolución"
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50 rounded p-1.5 transition">🗑️</button>
+              </td>
             </tr>
           ))}
+          {sale.items.filter((it) => !removed.includes(it.id)).length === 0 && (
+            <tr><td colSpan="5" className="px-4 py-4 text-center text-slate-400">Quitaste todos los productos.</td></tr>
+          )}
         </tbody>
       </table>
     </div>
