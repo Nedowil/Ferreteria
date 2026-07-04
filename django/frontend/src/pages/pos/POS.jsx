@@ -523,34 +523,36 @@ export default function POS() {
   useEffect(() => {
     let alive = true;
     (async () => {
+      // Cada recurso se carga POR SEPARADO y tolerante a errores: así, si el
+      // vendedor no tiene permiso de clientes (o falla un endpoint), el
+      // catálogo de PRODUCTOS igual carga. Al fallar, se usa la copia local.
+
+      // Productos (lo esencial para vender).
       try {
-        // ONLINE: carga del servidor y guarda copia local para vender offline.
-        // (La caja se consulta aparte: no debe romper el POS si el vendedor
-        // no tiene permiso de caja.)
-        const [custs, comp, prods] = await Promise.all([
-          api.get("/customers/?active=1&page_size=300"),
-          api.get("/company-settings/"),
-          api.get("/inventory/products/", { params: { page_size: 500, active: 1 } }),
-        ]);
-        if (!alive) return;
-        const productList = prods.data.results || prods.data;
-        const customerList = custs.data.results || custs.data;
-        const cname = comp.data.commercial_name || "Ferretería";
-        setCustomers(customerList);
-        setCompanyName(cname);
-        setProducts(productList);
-        saveCatalog(productList).catch(() => {});
-        setMeta("customers", customerList).catch(() => {});
-        setMeta("company_name", cname).catch(() => {});
+        const { data } = await api.get("/inventory/products/", { params: { page_size: 500, active: 1 } });
+        const list = data.results || data;
+        if (alive) { setProducts(list); saveCatalog(list).catch(() => {}); }
       } catch {
-        // OFFLINE: no hay servidor. Carga desde la copia local guardada.
-        if (!alive) return;
-        const [cat, custs, cname] = await Promise.all([
-          getCatalog(), getMeta("customers"), getMeta("company_name"),
-        ]);
-        setProducts(cat || []);
-        setCustomers(custs || []);
-        setCompanyName(cname || "Ferretería");
+        const cat = await getCatalog().catch(() => []);
+        if (alive) setProducts(cat || []);
+      }
+      // Clientes (opcional: si no tiene permiso, se queda sin lista, no rompe).
+      try {
+        const { data } = await api.get("/customers/?active=1&page_size=300");
+        const list = data.results || data;
+        if (alive) { setCustomers(list); setMeta("customers", list).catch(() => {}); }
+      } catch {
+        const c = await getMeta("customers").catch(() => null);
+        if (alive) setCustomers(c || []);
+      }
+      // Nombre de la empresa (para el comprobante).
+      try {
+        const { data } = await api.get("/company-settings/");
+        const cname = data.commercial_name || "Ferretería";
+        if (alive) { setCompanyName(cname); setMeta("company_name", cname).catch(() => {}); }
+      } catch {
+        const cn = await getMeta("company_name").catch(() => null);
+        if (alive) setCompanyName(cn || "Ferretería");
       }
       // Estado de caja: solo para quien puede verla. Su error (403/red) NO
       // afecta la venta; el vendedor sin permiso simplemente no ve el estado.
