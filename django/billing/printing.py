@@ -26,6 +26,22 @@ def _money(value):
     return "Q" + f"{n:,.2f}"
 
 
+def _fmt_dt(value):
+    """Formatea una fecha/hora (ISO o datetime) a hora local legible
+    (dd/mm/aaaa hh:mm), sin microsegundos ni zona técnica. Para el ticket."""
+    if not value:
+        return ""
+    try:
+        from datetime import datetime
+        from django.utils import timezone
+        dt = datetime.fromisoformat(value) if isinstance(value, str) else value
+        if timezone.is_aware(dt):
+            dt = timezone.localtime(dt)
+        return dt.strftime("%d/%m/%Y %H:%M")
+    except Exception:
+        return str(value)[:16]
+
+
 class Escpos:
     """Constructor incremental de un flujo ESC/POS."""
 
@@ -110,7 +126,7 @@ def build_ticket_escpos(ticket, *, width_mm=80, auto_cut=True):
     # Datos de la venta
     e.align(0)
     e.line(f"Documento: {sale['folio']}")
-    e.line(f"Fecha: {sale['date']}")
+    e.line(f"Fecha: {_fmt_dt(sale['date'])}")
     e.line(f"Cliente: {sale['customer']}")
     e.line(f"NIT: {sale['customer_nit']}")
     e.sep()
@@ -141,7 +157,7 @@ def build_ticket_escpos(ticket, *, width_mm=80, auto_cut=True):
         if fel.get("certificador"):
             e.line(fel["certificador"])
         if fel.get("fecha_certificacion"):
-            e.line(fel["fecha_certificacion"])
+            e.line("Certificado: " + _fmt_dt(fel["fecha_certificacion"]))
         if fel.get("status") == "anulada":
             e.bold(True).line("** ANULADA **").bold(False)
 
