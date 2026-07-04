@@ -17,7 +17,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from rest_framework.test import APITestCase
 
-from core.models import Branch, BranchUser
+from core.models import Branch, BranchUser, CompanySetting
 from core.permissions import ROLE_MATRIX, sync_permissions
 from inventory.models import Product
 from partners.models import Customer
@@ -51,6 +51,12 @@ class ScenarioTests(APITestCase):
                                           tax_type="iva", base_unit_label="libra")
         Customer.objects.create(name="María Castañeda")
         Customer.objects.create(name="José Pérez")
+        # Empresa emisora con NIT válido (necesaria para emitir FEL).
+        c = CompanySetting.objects.first() or CompanySetting.objects.create()
+        c.commercial_name = "Ferretería Central"
+        c.tax_id = "46851372"
+        c.tax_regime = "GENERAL"
+        c.save()
 
     # -- helpers ------------------------------------------------------------
     def as_(self, user):
@@ -142,6 +148,28 @@ class ScenarioTests(APITestCase):
         # total refleja lo registrado
         rt = self.as_(self.alm).get("/api/supplier-bills/total/")
         self.assertEqual(Decimal(str(rt.data["total"])), Decimal("1250.50"))
+
+    # -- Escenario G: FEL diferida offline (sync + emitir) -----------------
+    def test_G_fel_diferida_offline(self):
+        """Replica lo que hace el frontend al reconectar: sincroniza la venta
+        offline y luego certifica su factura (con el certificador stub)."""
+        self._open_cash(self.admin, self.b1, "100")
+        body = {"sales": [{
+            "offline_uuid": "FEL-OFF-1", "payment_method": "efectivo", "payment_status": "pagada",
+            "paid_amount": "10", "items": [{"product_id": self.prod.id, "quantity": "2", "unit_price": "5", "units_factor": "1"}],
+        }]}
+        rs = self.as_(self.admin).post("/api/sales/sync-offline/", body, format="json", HTTP_X_BRANCH_ID=str(self.b1.id))
+        self.assertEqual(rs.status_code, 200)
+        sale_id = rs.data["results"][0]["id"]
+        # FEL diferida: certificar la venta ya sincronizada (stub)
+        rf = self.as_(self.admin).post(f"/api/sales/{sale_id}/emit-invoice/", {}, format="json",
+                                       HTTP_X_BRANCH_ID=str(self.b1.id))
+        self.assertIn(rf.status_code, (200, 201), rf.data)
+        from billing.models import ElectronicInvoice
+        inv = ElectronicInvoice.objects.filter(sale_id=sale_id).first()
+        self.assertIsNotNone(inv)
+        self.assertEqual(inv.status, "certificada")
+        self.assertTrue(inv.uuid)
 
     # -- Escenario F: cotización → venta -----------------------------------
     def test_F_cotizacion_convertir_en_venta(self):
