@@ -1,15 +1,27 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
-import { Q, KpiCard } from "./common";
+import { Q, KpiCard, ExcelButton } from "./common";
+import { exportToExcel } from "../../utils/exportExcel";
 
 export default function DailyCash() {
   const [day, setDay] = useState(new Date().toISOString().slice(0, 10));
   const [data, setData] = useState(null);
   const load = () => { api.get("/reports/daily-cash/", { params: { day } }).then((r) => setData(r.data)); };
   useEffect(load, []);
+  const exportXls = () => exportToExcel(`corte-caja-${day}`, [
+    { header: "Cajero", value: (s) => s.user },
+    { header: "Cierre", value: (s) => (s.closed_at ? new Date(s.closed_at).toLocaleString("es-GT") : "") },
+    { header: "Fondo", value: (s) => Number(s.opening_amount) },
+    { header: "Esperado", value: (s) => Number(s.expected_cash) },
+    { header: "Contado", value: (s) => Number(s.counted_cash) },
+    { header: "Diferencia", value: (s) => Number(s.difference) },
+  ], data?.sessions || []);
   return (
     <div>
-      <h1 className="text-lg font-semibold mb-4">Corte diario de caja</h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-lg font-semibold">Corte diario de caja</h1>
+        <ExcelButton onClick={exportXls} disabled={!data || !data.sessions.length} />
+      </div>
       <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white rounded-lg shadow p-4 mb-4 flex gap-2 items-end">
         <div>
           <label className="block text-xs text-slate-500 mb-1">Día</label>

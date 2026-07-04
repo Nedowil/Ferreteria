@@ -1,14 +1,27 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
-import { Q, KpiCard } from "./common";
+import { Q, KpiCard, ExcelButton } from "./common";
+import { exportToExcel } from "../../utils/exportExcel";
 
 export default function InventoryValue() {
   const [data, setData] = useState(null);
   useEffect(() => { api.get("/reports/inventory-value/").then((r) => setData(r.data)); }, []);
+  const exportXls = () => exportToExcel("valor-inventario", [
+    { header: "SKU", value: (r) => r.sku },
+    { header: "Producto", value: (r) => r.name },
+    { header: "Categoría", value: (r) => r.category || "" },
+    { header: "Stock", value: (r) => r.stock },
+    { header: "Costo", value: (r) => Number(r.purchase_price) },
+    { header: "Valor costo", value: (r) => Number(r.cost_value) },
+    { header: "Valor venta", value: (r) => Number(r.sale_value) },
+  ], data?.rows || []);
   if (!data) return <div className="text-slate-400">Cargando…</div>;
   return (
     <div>
-      <h1 className="text-lg font-semibold mb-4">Valor de inventario</h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-lg font-semibold">Valor de inventario</h1>
+        <ExcelButton onClick={exportXls} disabled={!data.rows.length} />
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
         <KpiCard label="Valor a costo" value={Q(data.total_cost_value)} />
         <KpiCard label="Valor a precio de venta" value={Q(data.total_sale_value)} />

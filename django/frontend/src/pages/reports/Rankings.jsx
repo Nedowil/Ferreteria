@@ -1,11 +1,20 @@
-import { Q, useDateReport, DateRangeBar } from "./common";
+import { Q, useDateReport, DateRangeBar, ExcelButton } from "./common";
+import { exportToExcel } from "../../utils/exportExcel";
 
 // Reportes de ranking simples (tabla con rango de fechas).
 function RankingTable({ title, path, columns }) {
   const { from, setFrom, to, setTo, data, reload } = useDateReport(path);
+  const exportXls = () => exportToExcel(
+    title.toLowerCase().replace(/\s+/g, "-"),
+    columns.map((c) => ({ header: c.label, value: (r) => r[c.key] })),
+    data?.rows || []
+  );
   return (
     <div>
-      <h1 className="text-lg font-semibold mb-4">{title}</h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-lg font-semibold">{title}</h1>
+        <ExcelButton onClick={exportXls} disabled={!data || !data.rows.length} />
+      </div>
       <DateRangeBar from={from} setFrom={setFrom} to={to} setTo={setTo} onApply={reload} />
       {data && (
         <div className="bg-white rounded-lg shadow overflow-hidden">

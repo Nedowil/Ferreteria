@@ -1,10 +1,23 @@
-import { Q, useDateReport, DateRangeBar, KpiCard } from "./common";
+import { Q, useDateReport, DateRangeBar, KpiCard, ExcelButton } from "./common";
+import { exportToExcel } from "../../utils/exportExcel";
 
 export default function ProfitReport() {
   const { from, setFrom, to, setTo, data, reload } = useDateReport("/reports/profit/");
+  const exportXls = () => exportToExcel("utilidad-bruta", [
+    { header: "SKU", value: (r) => r.product__sku },
+    { header: "Producto", value: (r) => r.product__name },
+    { header: "Cantidad", value: (r) => r.total_quantity },
+    { header: "Ingreso", value: (r) => Number(r.total_revenue) },
+    { header: "Costo", value: (r) => Number(r.total_cost) },
+    { header: "Utilidad", value: (r) => Number(r.gross_profit) },
+    { header: "Margen %", value: (r) => (r.total_revenue > 0 ? (r.gross_profit / r.total_revenue) * 100 : 0).toFixed(1) },
+  ], data?.rows || []);
   return (
     <div>
-      <h1 className="text-lg font-semibold mb-4">Utilidad bruta</h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-lg font-semibold">Utilidad bruta</h1>
+        <ExcelButton onClick={exportXls} disabled={!data || !data.rows.length} />
+      </div>
       <DateRangeBar from={from} setFrom={setFrom} to={to} setTo={setTo} onApply={reload} />
       {data && (
         <>

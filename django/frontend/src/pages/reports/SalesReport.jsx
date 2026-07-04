@@ -1,10 +1,17 @@
-import { Q, useDateReport, DateRangeBar, KpiCard } from "./common";
+import { Q, useDateReport, DateRangeBar, KpiCard, ExcelButton } from "./common";
+import { exportToExcel } from "../../utils/exportExcel";
 
 export default function SalesReport() {
   const { from, setFrom, to, setTo, data, reload } = useDateReport("/reports/sales/");
+  const exportXls = () => exportToExcel("ventas-por-periodo",
+    [{ header: "Día", value: (d) => d.day }, { header: "Ventas", value: (d) => d.count }, { header: "Total", value: (d) => Number(d.total) }],
+    (data?.by_day || []).filter((d) => d.count > 0));
   return (
     <div>
-      <h1 className="text-lg font-semibold mb-4">Ventas por periodo</h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-lg font-semibold">Ventas por periodo</h1>
+        <ExcelButton onClick={exportXls} disabled={!data} />
+      </div>
       <DateRangeBar from={from} setFrom={setFrom} to={to} setTo={setTo} onApply={reload} />
       {data && (
         <>

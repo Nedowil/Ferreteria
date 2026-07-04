@@ -1,15 +1,27 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
-import { Q } from "./common";
+import { Q, ExcelButton } from "./common";
+import { exportToExcel } from "../../utils/exportExcel";
 
 export default function DeadStock() {
   const [days, setDays] = useState(60);
   const [data, setData] = useState(null);
   const load = () => { api.get("/reports/dead-stock/", { params: { days } }).then((r) => setData(r.data)); };
   useEffect(load, []);
+  const exportXls = () => exportToExcel("stock-muerto", [
+    { header: "SKU", value: (r) => r.sku },
+    { header: "Producto", value: (r) => r.name },
+    { header: "Categoría", value: (r) => r.category || "" },
+    { header: "Marca", value: (r) => r.brand || "" },
+    { header: "Stock", value: (r) => r.stock_display },
+    { header: "Valor a costo", value: (r) => Number(r.cost_value) },
+  ], data?.rows || []);
   return (
     <div>
-      <h1 className="text-lg font-semibold mb-4">Stock muerto</h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-lg font-semibold">Stock muerto</h1>
+        <ExcelButton onClick={exportXls} disabled={!data || !data.rows.length} />
+      </div>
       <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white rounded-lg shadow p-4 mb-4 flex gap-2 items-end">
         <div>
           <label className="block text-xs text-slate-500 mb-1">Sin salidas en (días)</label>

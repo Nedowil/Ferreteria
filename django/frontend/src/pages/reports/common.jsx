@@ -38,6 +38,15 @@ export function DateRangeBar({ from, setFrom, to, setTo, onApply, children }) {
   );
 }
 
+export function ExcelButton({ onClick, disabled }) {
+  return (
+    <button onClick={onClick} disabled={disabled}
+            className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-100 transition disabled:opacity-50">
+      ⬇️ Excel
+    </button>
+  );
+}
+
 export function KpiCard({ label, value, accent = "" }) {
   return (
     <div className="bg-white rounded-lg shadow p-5">
