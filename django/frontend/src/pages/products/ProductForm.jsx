@@ -217,6 +217,7 @@ export default function ProductForm() {
   const baseUnit = form.base_unit_label || "unidad";
   const containerLabel = form.container_label;
   const hasContainer = Boolean(containerLabel && factor > 0);
+  const [minUnit, setMinUnit] = useState("base");
 
   const perBaseOf = (raw, mode) => {
     const v = parseFrac(raw);
@@ -225,6 +226,19 @@ export default function ProductForm() {
   // El precio se guarda como dinero (2 decimales); redondeamos para no enviar
   // números larguísimos (p. ej. 800/108 = 7.407407…) que el backend rechaza.
   const round2 = (n) => (Number.isFinite(n) ? Math.round(n * 100) / 100 : 0);
+
+  // "Stock mínimo": se puede escribir en unidad base o en empaque, pero se
+  // guarda siempre en unidad base (como la existencia). Definido DESPUÉS de
+  // round2 para no usarlo antes de inicializarlo.
+  const useContainerMin = minUnit === "container" && hasContainer;
+  const minShown = useContainerMin
+    ? (form.min_stock === "" || form.min_stock == null ? "" : String(round2(Number(form.min_stock) / factor)))
+    : form.min_stock;
+  const onMinChange = (v) => {
+    if (v === "") { set("min_stock", ""); return; }
+    const n = parseFrac(v);
+    set("min_stock", useContainerMin ? round2(n * factor) : n);
+  };
 
   const onPriceRaw = (field) => (raw) => {
     const mode = field === "purchase" ? purchaseMode : saleMode;
@@ -408,7 +422,29 @@ export default function ProductForm() {
           <p className="text-sm text-slate-500 mb-4">El stock se ajusta desde <b>Inventario</b> del producto.</p>
         )}
         <div className="grid grid-cols-3 gap-4">
-          <TextField label="Stock mínimo" name="min_stock" form={form} errors={errors} onChange={set} type="number" placeholder="0" />
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Stock mínimo <span className="text-slate-400 font-normal">(en {useContainerMin ? containerLabel : baseUnit})</span>
+            </label>
+            <div className="flex gap-2">
+              <input type="number" step="any" min="0" value={minShown} onChange={(e) => onMinChange(e.target.value)} placeholder="0"
+                     className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+              {hasContainer && (
+                <select value={minUnit} onChange={(e) => setMinUnit(e.target.value)}
+                        className="border border-slate-300 rounded-lg px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="base">{baseUnit}</option>
+                  <option value="container">{containerLabel}</option>
+                </select>
+              )}
+            </div>
+            {hasContainer && Number(form.min_stock) > 0 ? (
+              <p className="text-xs text-slate-500 mt-1">
+                Equivale a <b>{round2(Number(form.min_stock) / factor)}</b> {containerLabel} · <b>{form.min_stock}</b> {baseUnit}.
+              </p>
+            ) : (
+              <p className="text-xs text-slate-500 mt-1">La alerta salta cuando la existencia baja a este valor o menos.</p>
+            )}
+          </div>
         </div>
         <div className="flex gap-6 mt-4 text-sm items-end">
           <label className="flex items-center gap-2">
