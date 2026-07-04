@@ -496,6 +496,12 @@ export default function POS() {
   const onReconnect = useCallback(() => doSyncRef.current(), []);
   const serverOnline = useServerOnline({ onReconnect });
   const refreshPending = () => countPending().then(setPendingCount).catch(() => {});
+  // El aviso flotante de error se cierra solo a los 6 segundos.
+  useEffect(() => {
+    if (!error) return undefined;
+    const t = setTimeout(() => setError(""), 6000);
+    return () => clearTimeout(t);
+  }, [error]);
   const fmtDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   const todayStr = fmtDate(new Date());
   // La SAT permite emitir FEL solo hasta 5 días hacia atrás.
@@ -879,7 +885,19 @@ export default function POS() {
       )}
       {offlineNote && <div className="bg-blue-50 border border-blue-200 text-blue-800 rounded-lg px-4 py-2 text-sm mb-4">{offlineNote}</div>}
 
-      {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-2 text-sm mb-4">{error}</div>}
+      {/* Aviso flotante (toast): aparece arriba-centro y se cierra solo. */}
+      {error && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[60] w-[min(92vw,480px)] pos-toast">
+          <style>{`@keyframes posToastIn{from{opacity:0;transform:translate(-50%,-14px)}to{opacity:1;transform:translate(-50%,0)}}
+            .pos-toast{animation:posToastIn .22s ease-out}`}</style>
+          <div className="bg-white border border-red-200 border-l-4 border-l-red-500 shadow-2xl rounded-xl px-4 py-3 flex items-start gap-3">
+            <span className="text-red-500 text-lg leading-none mt-0.5">⚠️</span>
+            <div className="flex-1 text-sm text-slate-700">{error}</div>
+            <button onClick={() => setError("")} aria-label="Cerrar"
+                    className="text-slate-400 hover:text-slate-600 text-xl leading-none -mt-0.5">×</button>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Catálogo + carrito */}
