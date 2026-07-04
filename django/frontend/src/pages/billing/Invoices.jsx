@@ -127,7 +127,7 @@ export default function Invoices() {
               Infile sin credenciales{cfg.infile_missing?.length ? ` (${cfg.infile_missing.length})` : ""}
             </span>
           ) : null}
-          <button onClick={exportExcel} disabled={exporting} title="Descarga el listado con las mismas columnas del reporte de DTE de la SAT" className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-100 transition">{exporting ? "Exportando…" : "⬇️ Excel (formato SAT)"}</button>
+          <button onClick={exportExcel} disabled={exporting} title="Descarga el listado con las mismas columnas del reporte de DTE de la SAT" className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-100 transition">{exporting ? "Exportando…" : "⬇️ Excel"}</button>
         </div>
       </div>
 
