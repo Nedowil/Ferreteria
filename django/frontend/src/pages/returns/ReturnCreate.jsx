@@ -44,6 +44,20 @@ export default function ReturnCreate() {
     setQtys((prev) => { const n = { ...prev }; delete n[itemId]; return n; });
   };
 
+  // No permitir devolver más de lo comprado en la partida.
+  const setSaleQty = (it, raw) => {
+    let v = raw;
+    if (v !== "") {
+      const n = Number(v);
+      const max = Number(it.quantity);
+      if (Number.isFinite(n)) {
+        if (n < 0) v = "0";
+        else if (n > max) v = String(max);
+      }
+    }
+    setQtys((prev) => ({ ...prev, [it.id]: v }));
+  };
+
   const findByFolio = async (e) => {
     e.preventDefault(); setError(""); setSale(null);
     const { data } = await api.get("/sales/", { params: { search: folio } });
@@ -113,8 +127,9 @@ export default function ReturnCreate() {
               <td className="px-4 py-2 text-right">Q{it.unit_price}</td>
               <td className="px-4 py-2 text-right">
                 <input type="number" step="any" min="0" max={it.quantity} value={qtys[it.id] || ""}
-                       onChange={(e) => setQtys({ ...qtys, [it.id]: e.target.value })}
+                       onChange={(e) => setSaleQty(it, e.target.value)}
                        className="border border-slate-300 rounded px-2 py-1 text-sm w-24 text-right" />
+                <div className="text-[10px] text-slate-400 mt-0.5">máx {Number(it.quantity)}</div>
               </td>
               <td className="px-4 py-2 text-right">
                 <button type="button" onClick={() => removeSaleItem(it.id)} title="Quitar de la devolución"

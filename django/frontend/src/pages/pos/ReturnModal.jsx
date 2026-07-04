@@ -35,6 +35,22 @@ export default function ReturnModal({ onClose, initialFolio = "" }) {
     }
   };
 
+  // La cantidad a devolver nunca puede superar lo comprado. Se recorta al
+  // escribir para no mostrar un reembolso irreal (ej. 100 de un producto que
+  // solo se compró 2 veces). El backend valida además lo ya devuelto antes.
+  const setQty = (it, raw) => {
+    let v = raw;
+    if (v !== "") {
+      const n = Number(v);
+      const max = Number(it.quantity);
+      if (Number.isFinite(n)) {
+        if (n < 0) v = "0";
+        else if (n > max) v = String(max);
+      }
+    }
+    setQtys({ ...qtys, [it.id]: v });
+  };
+
   const refundTotal = sale
     ? sale.items.reduce((s, it) => s + Number(qtys[it.id] || 0) * Number(it.unit_price), 0)
     : 0;
@@ -106,9 +122,10 @@ export default function ReturnModal({ onClose, initialFolio = "" }) {
                           <td className="px-3 py-2 text-right">{Q(it.unit_price)}</td>
                           <td className="px-3 py-2 text-right">
                             <input type="number" step="any" min="0" max={it.quantity} value={qtys[it.id] || ""}
-                                   onChange={(e) => setQtys({ ...qtys, [it.id]: e.target.value })}
+                                   onChange={(e) => setQty(it, e.target.value)}
                                    placeholder="0"
                                    className="border border-slate-300 rounded-lg px-2 py-1 text-sm w-24 text-right outline-none focus:ring-2 focus:ring-amber-500" />
+                            <div className="text-[10px] text-slate-400 mt-0.5">máx {Number(it.quantity)}</div>
                           </td>
                         </tr>
                       ))}
