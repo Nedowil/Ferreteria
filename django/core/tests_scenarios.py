@@ -171,6 +171,23 @@ class ScenarioTests(APITestCase):
         self.assertEqual(inv.status, "certificada")
         self.assertTrue(inv.uuid)
 
+    # -- Escenario H: un vendedor ve el catálogo del POS aunque no tenga el
+    #    permiso del módulo Productos (solo 'ventas.crear'). ------------------
+    def test_H_vendedor_solo_ventas_ve_catalogo(self):
+        perms = sync_permissions()
+        g = Group.objects.create(name="solo_vende")
+        g.permissions.set([perms["ventas.crear"]])  # sin productos.ver
+        seller = User.objects.create_user(username="sv", email="sv@t.com", password="x", name="Solo Vende")
+        seller.groups.add(g)
+        BranchUser.objects.create(branch=self.b1, user=seller, is_default=True)
+        r = self.as_(seller).get("/api/inventory/products/?active=1", HTTP_X_BRANCH_ID=str(self.b1.id))
+        self.assertEqual(r.status_code, 200)
+        rows = r.data.get("results", r.data)
+        self.assertTrue(any(p["name"] == "Clavo" for p in rows), "El vendedor no ve el catálogo")
+        # Pero NO puede crear productos (eso sí requiere productos.crear).
+        rc = self.as_(seller).post("/api/inventory/products/", {"name": "X", "sale_price": "1"}, format="json")
+        self.assertEqual(rc.status_code, 403)
+
     # -- Escenario F: cotización → venta -----------------------------------
     def test_F_cotizacion_convertir_en_venta(self):
         self._open_cash(self.admin, self.b1, "100")

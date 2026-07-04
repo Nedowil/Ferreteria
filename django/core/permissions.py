@@ -146,6 +146,30 @@ class HasPermission(BasePermission):
         return self.required in user_permission_codenames(user)
 
 
+class HasAnyPermission(BasePermission):
+    """Permite si el usuario tiene AL MENOS UNO de los codenames dados.
+
+    Uso: HasAnyPermission.require_any('productos.ver', 'ventas.crear')().
+    Útil cuando una acción sirve a varios roles (p. ej. ver el catálogo del
+    POS lo puede hacer quien administra productos o quien solo vende).
+    """
+
+    required = ()
+
+    @classmethod
+    def require_any(cls, *codenames):
+        return type("HasAnyPerm", (cls,), {"required": tuple(codenames)})
+
+    def has_permission(self, request, view):
+        user = request.user
+        if not user or not user.is_authenticated:
+            return False
+        if user.is_superuser:
+            return True
+        codes = user_permission_codenames(user)
+        return any(c in codes for c in self.required)
+
+
 class PermissionByActionMixin:
     """Mixin para ViewSets: exige un permiso según la acción.
 
@@ -165,4 +189,7 @@ class PermissionByActionMixin:
             entry = entry.get(self.request.method, self.default_permission)
         if not entry:
             return [IsAuthenticated()]
+        # Una tupla/lista de codenames significa "cualquiera de estos".
+        if isinstance(entry, (tuple, list)):
+            return [HasAnyPermission.require_any(*entry)()]
         return [HasPermission.require(entry)()]

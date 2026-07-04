@@ -123,7 +123,10 @@ def _deliver_zpl(company, data, mode_override=None):
 
 class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.ModelViewSet):
     perms_map = {
-        "list": "productos.ver", "retrieve": "productos.ver",
+        # Ver el catálogo lo puede hacer quien administra productos O quien
+        # vende (el POS necesita listar productos para poder cobrar).
+        "list": ("productos.ver", "ventas.crear"),
+        "retrieve": ("productos.ver", "ventas.crear"),
         "low_stock": "productos.ver", "label": "productos.ver",
         "create": "productos.crear", "update": "productos.editar",
         "partial_update": "productos.editar", "destroy": "productos.eliminar",
