@@ -71,6 +71,35 @@ def _referencias_nota(ref) -> str:
     )
 
 
+def _complemento_cambiario(cambiaria) -> str:
+    """Complemento de abonos de la Factura Cambiaria (SAT face2).
+
+    ``cambiaria``: {"abonos": [{numero, fecha_vencimiento, monto}, ...]}.
+    Devuelve "" si no aplica (factura de contado).
+    """
+    if not cambiaria or not cambiaria.get("abonos"):
+        return ""
+    abonos = "".join(
+        "<cfc:Abono>"
+        f"<cfc:NumeroAbono>{_esc(a['numero'])}</cfc:NumeroAbono>"
+        f"<cfc:FechaVencimiento>{_esc(a['fecha_vencimiento'])}</cfc:FechaVencimiento>"
+        f"<cfc:MontoAbono>{_esc(a['monto'])}</cfc:MontoAbono>"
+        "</cfc:Abono>"
+        for a in cambiaria["abonos"]
+    )
+    return (
+        "<dte:Complementos>"
+        '<dte:Complemento IDComplemento="Cambiaria" NombreComplemento="Cambiaria" '
+        'URIComplemento="http://www.sat.gob.gt/fel/cambiaria.xsd">'
+        '<cfc:AbonosFacturaCambiaria '
+        'xmlns:cfc="http://www.sat.gob.gt/face2/ComplementoFacturaCambiaria/0.1.0" '
+        'Version="1">'
+        f"{abonos}"
+        "</cfc:AbonosFacturaCambiaria>"
+        "</dte:Complemento></dte:Complementos>"
+    )
+
+
 def build_invoice_xml(dte: dict) -> str:
     """Arma el XML SAT (GTDocumento) a partir del dict de ``build_dte``."""
     em = dte["emisor"]
@@ -160,6 +189,7 @@ def build_invoice_xml(dte: dict) -> str:
         f"<dte:GranTotal>{_esc(dte['totales']['gran_total'])}</dte:GranTotal>"
         "</dte:Totales>"
         f"{_referencias_nota(dte.get('referencia_nota'))}"
+        f"{_complemento_cambiario(dte.get('cambiaria'))}"
         "</dte:DatosEmision>"
         "</dte:DTE>"
         "</dte:SAT>"

@@ -21,6 +21,7 @@ class ElectronicInvoice(models.Model):
         ("NCRE", "Nota de crédito"),
         ("NDEB", "Nota de débito"),
         ("FPEQ", "Factura pequeño contribuyente"),
+        ("FCAP", "Factura cambiaria pequeño contribuyente"),
     ]
 
     sale = models.OneToOneField("sales.Sale", on_delete=models.CASCADE, related_name="electronic_invoice")

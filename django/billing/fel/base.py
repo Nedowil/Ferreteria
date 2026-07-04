@@ -177,8 +177,15 @@ def build_dte(sale, company):
         for it in sale.items.select_related("product")
     ]
     items, gran_total, total_iva = _items_and_totals(rows, sale.discount, company, rate, pequeno)
-    return {
-        "tipo_documento": "FPEQ" if pequeno else "FACT",
+    # Venta al crédito → Factura Cambiaria (FCAM general / FCAP pequeño), que
+    # lleva el complemento de abonos. Contado → FACT/FPEQ.
+    credit = _is_credit_sale(sale)
+    if pequeno:
+        tipo = "FCAP" if credit else "FPEQ"
+    else:
+        tipo = "FCAM" if credit else "FACT"
+    dte = {
+        "tipo_documento": tipo,
         "moneda": company.currency_code,
         "fecha_emision": _fecha_emision(sale.date),
         "emisor": _emisor(company, pequeno),
@@ -186,6 +193,28 @@ def build_dte(sale, company):
         "items": items,
         "totales": {"gran_total": str(gran_total), "total_iva": str(total_iva)},
     }
+    if credit:
+        dte["cambiaria"] = _abonos_cambiaria(sale, gran_total)
+    return dte
+
+
+def _is_credit_sale(sale):
+    """True si la venta se pagó al crédito o parcial (queda saldo financiado)."""
+    from sales.models import Sale
+    return sale.payment_status in (Sale.PAY_CREDITO, Sale.PAY_PARCIAL)
+
+
+def _abonos_cambiaria(sale, gran_total):
+    """Complemento cambiario: un abono por el total, con vencimiento de la venta
+    (o a 30 días si no se fijó)."""
+    from datetime import timedelta
+    from django.utils import timezone
+    venc = sale.due_date or (timezone.localdate() + timedelta(days=30))
+    return {"abonos": [{
+        "numero": "1",
+        "fecha_vencimiento": venc.isoformat(),
+        "monto": str(gran_total),
+    }]}
 
 
 def build_credit_note_dte(sale_return, invoice, company, *, motivo=None):

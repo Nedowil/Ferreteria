@@ -69,10 +69,11 @@ def emit_invoice(sale, *, user=None):
         invoice = ElectronicInvoice(sale=sale)
     invoice.environment = settings.FEL_ENVIRONMENT
     invoice.certificador = settings.FEL_CERTIFICADOR
-    # Pequeño contribuyente emite Factura Pequeño Contribuyente (FPEQ)
-    invoice.document_type = "FPEQ" if company.tax_regime == "PEQUENO_CONTRIBUYENTE" else "FACT"
 
+    # El DTE decide el tipo de documento: contado → FACT/FPEQ; crédito →
+    # Factura Cambiaria (FCAM general / FCAP pequeño contribuyente).
     dte = build_dte(sale, company)
+    invoice.document_type = dte["tipo_documento"]
     invoice.xml_generated = str(dte)
 
     result = get_certifier().certify(dte)

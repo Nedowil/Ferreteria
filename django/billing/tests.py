@@ -359,6 +359,56 @@ class InfileCertifierTests(TestCase):
         self.assertNotIn("<dte:Impuesto>", xml)
         self.assertIn('TipoFrase="4"', xml)
 
+    def _set_regimen_general(self):
+        from core.models import CompanySetting
+        c = CompanySetting.current()
+        c.tax_regime = "GENERAL"
+        if (c.tax_id or "").upper() in ("", "CF"):
+            c.tax_id = "12345678"
+        c.save()
+
+    def _credit_sale(self, folio):
+        from datetime import date
+        self._set_regimen_general()
+        sale = _make_sale(folio=folio)
+        sale.payment_status = Sale.PAY_CREDITO
+        sale.paid_amount = Decimal("0")
+        sale.due_date = date(2026, 8, 1)
+        sale.save()
+        return sale
+
+    def test_credito_emite_factura_cambiaria_fcam(self):
+        from core.models import CompanySetting
+        from .fel.base import build_dte
+        sale = self._credit_sale("V-FCAM-1")
+        dte = build_dte(sale, CompanySetting.current())
+        self.assertEqual(dte["tipo_documento"], "FCAM")
+        self.assertIn("cambiaria", dte)
+        # Al emitir, la factura queda como FCAM
+        inv = services.emit_invoice(sale, user=None)
+        self.assertEqual(inv.document_type, "FCAM")
+        self.assertEqual(inv.status, ElectronicInvoice.STATUS_CERTIFICADA)
+
+    def test_build_xml_fcam_incluye_abonos(self):
+        from core.models import CompanySetting
+        from .fel.base import build_dte
+        from .fel.infile import build_invoice_xml
+        sale = self._credit_sale("V-FCAM-2")
+        xml = build_invoice_xml(build_dte(sale, CompanySetting.current()))
+        self.assertIn('Tipo="FCAM"', xml)
+        self.assertIn("AbonosFacturaCambiaria", xml)
+        self.assertIn("<cfc:FechaVencimiento>2026-08-01</cfc:FechaVencimiento>", xml)
+        self.assertIn("<cfc:NumeroAbono>1</cfc:NumeroAbono>", xml)
+
+    def test_contado_sigue_siendo_fact(self):
+        from core.models import CompanySetting
+        from .fel.base import build_dte
+        self._set_regimen_general()
+        sale = _make_sale(folio="V-CONTADO-1")  # pagada
+        dte = build_dte(sale, CompanySetting.current())
+        self.assertEqual(dte["tipo_documento"], "FACT")
+        self.assertNotIn("cambiaria", dte)
+
     def test_factory_devuelve_infile(self):
         from django.test import override_settings
         from .fel import get_certifier
