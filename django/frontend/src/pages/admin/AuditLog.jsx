@@ -7,6 +7,32 @@ const EVENT_BADGE = {
   deleted: "bg-red-100 text-red-700",
 };
 
+// Nombres técnicos de los modelos → nombre en español para "Recurso".
+const RESOURCE_LABEL = {
+  "sales.Sale": "Venta",
+  "sales.SalePayment": "Abono de venta",
+  "inventory.Product": "Producto",
+  "inventory.Category": "Categoría",
+  "inventory.Brand": "Marca",
+  "inventory.Unit": "Unidad",
+  "cashbox.CashSession": "Sesión de caja",
+  "cashbox.CashMovement": "Movimiento de caja",
+  "core.Branch": "Sucursal",
+  "core.User": "Usuario",
+  "core.CompanySetting": "Configuración de empresa",
+  "partners.Customer": "Cliente",
+  "partners.Supplier": "Proveedor",
+  "purchasing.Purchase": "Compra",
+  "quotes.Quotation": "Cotización",
+  "salereturns.SaleReturn": "Devolución",
+  "billing.ElectronicInvoice": "Factura electrónica",
+  "billing.CreditNote": "Nota de crédito",
+  "supplierbills.SupplierBill": "Factura de proveedor",
+  "transfers.BranchTransfer": "Transferencia",
+  "auth.Group": "Rol",
+};
+const resourceLabel = (t) => RESOURCE_LABEL[t] || t;
+
 export default function AuditLog() {
   const [data, setData] = useState({ results: [] });
   const [summary, setSummary] = useState(null);
@@ -44,7 +70,7 @@ export default function AuditLog() {
         </select>
         <select value={filters.type} onChange={(e) => setFilters({ ...filters, type: e.target.value })} className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
           <option value="">Todos los recursos</option>
-          {summary?.types.map((t) => <option key={t} value={t}>{t}</option>)}
+          {summary?.types.map((t) => <option key={t} value={t}>{resourceLabel(t)}</option>)}
         </select>
         <input placeholder="Buscar (ID/desc)" value={filters.q} onChange={(e) => setFilters({ ...filters, q: e.target.value })} className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-40" />
         <input type="date" value={filters.from} onChange={(e) => setFilters({ ...filters, from: e.target.value })} className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
@@ -64,7 +90,7 @@ export default function AuditLog() {
                   <td className="px-4 py-2 text-xs text-slate-500">{new Date(l.created_at).toLocaleString()}</td>
                   <td className="px-4 py-2 font-medium text-slate-800">{l.user_name || "—"}</td>
                   <td className="px-4 py-2"><span className={"inline-block rounded-full px-2 py-0.5 text-xs font-medium " + EVENT_BADGE[l.event]}>{l.event_display}</span></td>
-                  <td className="px-4 py-2 font-mono text-xs">{l.auditable_type}</td>
+                  <td className="px-4 py-2 text-slate-700">{resourceLabel(l.auditable_type)}</td>
                   <td className="px-4 py-2 font-mono text-xs">{l.auditable_id}</td>
                   <td className="px-4 py-2 text-right"><button onClick={() => setExpanded(expanded === l.id ? null : l.id)} className="text-blue-600 hover:underline text-xs">{expanded === l.id ? "ocultar" : "ver cambios"}</button></td>
                 </tr>
