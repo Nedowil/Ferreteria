@@ -46,6 +46,21 @@ class PurchaseViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Mode
     search_fields = ["folio", "invoice_number", "supplier__name"]
     ordering_fields = ["date", "total", "folio"]
 
+    def get_queryset(self):
+        """Filtra por rango de fechas con ?from=&to= (aplica también a payable)."""
+        from django.utils.dateparse import parse_date
+        qs = super().get_queryset()
+        p = self.request.query_params
+        if p.get("from"):
+            d = parse_date(p["from"])
+            if d:
+                qs = qs.filter(date__gte=d)
+        if p.get("to"):
+            d = parse_date(p["to"])
+            if d:
+                qs = qs.filter(date__lte=d)
+        return qs
+
     def get_serializer_class(self):
         if self.action == "list":
             return PurchaseListSerializer

@@ -13,15 +13,23 @@ export default function PurchaseList() {
   const [data, setData] = useState({ results: [], count: 0 });
   const [status, setStatus] = useState("");
   const [search, setSearch] = useState("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
   const [exporting, setExporting] = useState(false);
+
+  const buildParams = () => {
+    const params = {};
+    if (status) params.status = status;
+    if (search) params.search = search;
+    if (from) params.from = from;
+    if (to) params.to = to;
+    return params;
+  };
 
   const exportExcel = async () => {
     setExporting(true);
     try {
-      const params = {};
-      if (status) params.status = status;
-      if (search) params.search = search;
-      const rows = await fetchAll("/purchases/", params);
+      const rows = await fetchAll("/purchases/", buildParams());
       exportToExcel("compras", [
         { header: "Folio", value: (r) => r.folio },
         { header: "Proveedor", value: (r) => r.supplier_name },
@@ -33,10 +41,7 @@ export default function PurchaseList() {
   };
 
   const load = () => {
-    const params = {};
-    if (status) params.status = status;
-    if (search) params.search = search;
-    api.get("/purchases/", { params }).then((r) => setData(r.data));
+    api.get("/purchases/", { params: buildParams() }).then((r) => setData(r.data));
   };
   useEffect(load, []);
 
@@ -58,6 +63,10 @@ export default function PurchaseList() {
           <option value="recibida">Recibida</option>
           <option value="cancelada">Cancelada</option>
         </select>
+        <div><label className="block text-[11px] text-slate-500 mb-0.5">Desde</label>
+          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" /></div>
+        <div><label className="block text-[11px] text-slate-500 mb-0.5">Hasta</label>
+          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" /></div>
         <button className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition">Filtrar</button>
       </form>
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">

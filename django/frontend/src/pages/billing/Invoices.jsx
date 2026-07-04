@@ -23,7 +23,7 @@ export default function Invoices() {
   const [cfg, setCfg] = useState(null);
   const [err, setErr] = useState("");
   const [exporting, setExporting] = useState(false);
-  const [filters, setFilters] = useState({ search: "", from: "", to: "" });
+  const [filters, setFilters] = useState({ search: "", from: "", to: "", status: "" });
 
   const invParams = () => {
     const p = {};
@@ -130,13 +130,22 @@ export default function Invoices() {
         <form onSubmit={(e) => { e.preventDefault(); loadInvoices(); }} className="bg-white rounded-xl shadow-sm border border-slate-100 p-3 mb-4 flex flex-wrap gap-2 items-end">
           <input placeholder="Folio, NIT/UUID o cliente" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })}
                  className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-56" />
+          <div><label className="block text-[11px] text-slate-500 mb-0.5">Estado</label>
+            <select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                    className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">Todos</option>
+              <option value="certificada">Certificada</option>
+              <option value="anulada">Anulada</option>
+              <option value="pendiente">Pendiente</option>
+              <option value="error">Error</option>
+            </select></div>
           <div><label className="block text-[11px] text-slate-500 mb-0.5">Desde</label>
             <input type="date" value={filters.from} onChange={(e) => setFilters({ ...filters, from: e.target.value })} className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" /></div>
           <div><label className="block text-[11px] text-slate-500 mb-0.5">Hasta</label>
             <input type="date" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" /></div>
           <button className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition">Filtrar</button>
-          {(filters.search || filters.from || filters.to) && (
-            <button type="button" onClick={() => { setFilters({ search: "", from: "", to: "" }); api.get("/invoices/").then((r) => setInvoices(r.data.results || r.data)); }}
+          {(filters.search || filters.from || filters.to || filters.status) && (
+            <button type="button" onClick={() => { setFilters({ search: "", from: "", to: "", status: "" }); api.get("/invoices/").then((r) => setInvoices(r.data.results || r.data)); }}
                     className="text-sm text-slate-500 px-2 py-2 hover:underline">Limpiar</button>
           )}
         </form>

@@ -13,24 +13,25 @@ const BADGE = {
 
 export default function QuotationList() {
   const [data, setData] = useState({ results: [] });
-  const [filters, setFilters] = useState({ search: "", status: "" });
+  const [filters, setFilters] = useState({ search: "", status: "", from: "", to: "" });
   const [exporting, setExporting] = useState(false);
 
-  const load = () => {
+  const buildParams = () => {
     const params = {};
-    if (filters.search) params.search = filters.search;
-    if (filters.status) params.status = filters.status;
-    api.get("/quotations/", { params }).then((r) => setData(r.data));
+    Object.entries(filters).forEach(([k, v]) => { if (v) params[k] = v; });
+    return params;
+  };
+
+  const load = () => {
+    api.get("/quotations/", { params: buildParams() }).then((r) => setData(r.data));
   };
   useEffect(load, []);
 
   const exportExcel = async () => {
-    const params = {};
-    if (filters.search) params.search = filters.search;
-    if (filters.status) params.status = filters.status;
+    const params = buildParams();
     setExporting(true);
     try {
-      const rows = await fetchAll("/quotations/", params);
+      const rows = await fetchAll("/quotations/", buildParams());
       exportToExcel("cotizaciones", [
         { header: "Folio", value: (q) => q.folio },
         { header: "Cliente", value: (q) => q.customer_name || "Sin cliente" },
@@ -61,6 +62,10 @@ export default function QuotationList() {
           <option value="">Todos</option>
           {Object.keys(BADGE).map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
+        <div><label className="block text-[11px] text-slate-500 mb-0.5">Desde</label>
+          <input type="date" value={filters.from} onChange={(e) => setFilters({ ...filters, from: e.target.value })} className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" /></div>
+        <div><label className="block text-[11px] text-slate-500 mb-0.5">Hasta</label>
+          <input type="date" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" /></div>
         <button className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition">Filtrar</button>
       </form>
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
