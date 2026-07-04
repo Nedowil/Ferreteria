@@ -58,6 +58,62 @@ class InvoiceViewSet(viewsets.ReadOnlyModelViewSet):
     def quota(self, request):
         return Response(services.quota_status())
 
+    @action(detail=False, methods=["get"], url_path="sat-export")
+    def sat_export(self, request):
+        """Devuelve las facturas con las mismas columnas del listado de DTE que
+        la SAT entrega al contribuyente (hoja ``InformacionDTE-FEL``). Respeta
+        los filtros activos (estado, rango de fechas, búsqueda). Solo incluye
+        DTE ya autorizados (con número de autorización)."""
+        from django.utils import timezone
+
+        company = CompanySetting.current()
+        cert_nit = getattr(settings, "FEL_CERTIFICADOR_NIT", "") or "12521337"
+        cert_name = settings.FEL_CERTIFICADOR
+        moneda = company.currency_code or "GTQ"
+        emisor_nit = company.tax_id or "CF"
+        emisor_nombre = company.legal_name or company.commercial_name
+
+        def _iso(dt):
+            if not dt:
+                return ""
+            if timezone.is_aware(dt):
+                dt = timezone.localtime(dt)
+            return dt.strftime("%Y-%m-%dT%H:%M:%S")
+
+        qs = (self.filter_queryset(self.get_queryset())
+              .exclude(uuid__isnull=True).exclude(uuid=""))
+        rows = []
+        for inv in qs:
+            sale = inv.sale
+            cust = sale.customer
+            branch = getattr(sale, "branch", None)
+            anulada = inv.status == ElectronicInvoice.STATUS_ANULADA
+            rows.append({
+                "fecha_emision": _iso(inv.fecha_certificacion or sale.date),
+                "autorizacion": inv.uuid or "",
+                "tipo_dte": inv.document_type or "",
+                "serie": inv.serie or "",
+                "numero": inv.numero or "",
+                "clasificacion_emisor": "",
+                "exportacion": "No",
+                "ubicacion_temporal": "No",
+                "nit_emisor": emisor_nit,
+                "nombre_emisor": emisor_nombre,
+                "codigo_establecimiento": (branch.code if branch and branch.code else "1"),
+                "nombre_establecimiento": company.commercial_name,
+                "id_receptor": (cust.tax_id if cust and cust.tax_id else "CF"),
+                "nombre_receptor": (cust.name if cust else "CONSUMIDOR FINAL"),
+                "nit_certificador": cert_nit,
+                "nombre_certificador": inv.certificador or cert_name,
+                "estado": "Anulado" if anulada else "Vigente",
+                "moneda": moneda,
+                "gran_total": float(sale.total or 0),
+                "iva": float(sale.tax or 0),
+                "marca_anulado": "Si" if anulada else "No",
+                "fecha_anulacion": _iso(inv.anulada_at),
+            })
+        return Response(rows)
+
     @action(detail=False, methods=["get"])
     def pending(self, request):
         """Ventas completadas sin factura electrónica certificada."""

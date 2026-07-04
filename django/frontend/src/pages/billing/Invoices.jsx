@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
-import { exportToExcel, fetchAll } from "../../utils/exportExcel";
+import { exportToExcel } from "../../utils/exportExcel";
 
 const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -40,19 +40,48 @@ export default function Invoices() {
   };
   useEffect(load, []);
 
+  // Exporta con las mismas columnas del listado de DTE que descarga el
+  // contribuyente desde el portal de la SAT (hoja "InformacionDTE-FEL"), para
+  // que el archivo sea idéntico al que ya conoce la contabilidad.
   const exportExcel = async () => {
     setExporting(true);
     try {
-      const rows = await fetchAll("/invoices/", invParams());
-      exportToExcel("facturas", [
-        { header: "Venta", value: (i) => i.sale_folio },
-        { header: "Cliente", value: (i) => i.customer_name || "Consumidor final" },
-        { header: "Tipo", value: (i) => i.document_type },
-        { header: "Serie-Número", value: (i) => (i.serie ? `${i.serie}-${i.numero}` : "") },
-        { header: "Autorización SAT", value: (i) => i.uuid || "" },
-        { header: "Total", value: (i) => Number(i.total) },
-        { header: "Estado", value: (i) => i.status_display },
-      ], rows);
+      const { data: rows } = await api.get("/invoices/sat-export/", { params: invParams() });
+      exportToExcel("InformacionDTE-FEL", [
+        { header: "Fecha de emisión", value: (r) => r.fecha_emision },
+        { header: "Número de Autorización", value: (r) => r.autorizacion },
+        { header: "Tipo de DTE (nombre)", value: (r) => r.tipo_dte },
+        { header: "Serie", value: (r) => r.serie },
+        { header: "Número del DTE", value: (r) => r.numero },
+        { header: "Clasificación emisor", value: (r) => r.clasificacion_emisor },
+        { header: "Exportación", value: (r) => r.exportacion },
+        { header: "Ubicación temporal", value: (r) => r.ubicacion_temporal },
+        { header: "NIT del emisor", value: (r) => r.nit_emisor },
+        { header: "Nombre completo del emisor", value: (r) => r.nombre_emisor },
+        { header: "Código de establecimiento", value: (r) => r.codigo_establecimiento },
+        { header: "Nombre del establecimiento", value: (r) => r.nombre_establecimiento },
+        { header: "ID del receptor", value: (r) => r.id_receptor },
+        { header: "Nombre completo del receptor", value: (r) => r.nombre_receptor },
+        { header: "NIT del Certificador", value: (r) => r.nit_certificador },
+        { header: "Nombre completo del Certificador", value: (r) => r.nombre_certificador },
+        { header: "Estado", value: (r) => r.estado },
+        { header: "Moneda", value: (r) => r.moneda },
+        { header: "Gran Total (Moneda Original)", value: (r) => r.gran_total },
+        { header: "IVA (monto de este impuesto)", value: (r) => r.iva },
+        { header: "Marca de anulado", value: (r) => r.marca_anulado },
+        { header: "Fecha de anulación", value: (r) => r.fecha_anulacion },
+        { header: "Petróleo (monto de este impuesto)", value: () => 0 },
+        { header: "Turismo Hospedaje (monto de este impuesto)", value: () => 0 },
+        { header: "Turismo Pasajes (monto de este impuesto)", value: () => 0 },
+        { header: "Timbre de Prensa (monto de este impuesto)", value: () => 0 },
+        { header: "Bomberos (monto de este impuesto)", value: () => 0 },
+        { header: "Tasa Municipal (monto de este impuesto)", value: () => 0 },
+        { header: "Bebidas alcohólicas (monto de este impuesto)", value: () => 0 },
+        { header: "Tabaco (monto de este impuesto)", value: () => 0 },
+        { header: "Cemento (monto de este impuesto)", value: () => 0 },
+        { header: "Bebidas no Alcohólicas (monto de este impuesto)", value: () => 0 },
+        { header: "Tarifa Portuaria (monto de este impuesto)", value: () => 0 },
+      ], rows, "InformacionDTE-FEL");
     } finally {
       setExporting(false);
     }
@@ -98,7 +127,7 @@ export default function Invoices() {
               Infile sin credenciales{cfg.infile_missing?.length ? ` (${cfg.infile_missing.length})` : ""}
             </span>
           ) : null}
-          <button onClick={exportExcel} disabled={exporting} className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-100 transition">{exporting ? "Exportando…" : "⬇️ Excel"}</button>
+          <button onClick={exportExcel} disabled={exporting} title="Descarga el listado con las mismas columnas del reporte de DTE de la SAT" className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-100 transition">{exporting ? "Exportando…" : "⬇️ Excel (formato SAT)"}</button>
         </div>
       </div>
 

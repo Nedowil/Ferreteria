@@ -3,7 +3,7 @@ import api from "../api/client";
 
 // Exporta filas a un archivo .xlsx.
 // columns: [{ header: "Folio", value: (row) => row.folio }]
-export function exportToExcel(filename, columns, rows) {
+export function exportToExcel(filename, columns, rows, sheetName = "Datos") {
   const header = columns.map((c) => c.header);
   const body = rows.map((r) => columns.map((c) => {
     const v = c.value(r);
@@ -16,7 +16,7 @@ export function exportToExcel(filename, columns, rows) {
     return { wch: Math.min(Math.max(max + 2, 8), 50) };
   });
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Datos");
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
   XLSX.writeFile(wb, filename.endsWith(".xlsx") ? filename : `${filename}.xlsx`);
 }
 
