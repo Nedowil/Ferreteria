@@ -131,11 +131,14 @@ def build_ticket_escpos(ticket, *, width_mm=80, auto_cut=True):
     e.line(f"NIT: {sale['customer_nit']}")
     e.sep()
 
-    # Partidas
+    # Partidas: el total de la línea es el BRUTO (cantidad x precio), para que
+    # cuadre con "cant x precio" a la vista. El descuento se muestra aparte en
+    # los totales (no restado en cada línea).
     for it in sale["items"]:
         name = it["name"] + (f" ({it['unit_label']})" if it.get("unit_label") else "")
         e.line(name)
-        e.cols(f"  {it['qty']} x {_money(it['unit_price'])}", _money(it["subtotal"]))
+        line_total = it.get("gross", it["subtotal"])
+        e.cols(f"  {it['qty']} x {_money(it['unit_price'])}", _money(line_total))
     e.sep()
 
     # Totales
