@@ -114,6 +114,7 @@ export default function CashBox() {
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-slate-500 text-left">
                 <tr><th className="px-4 py-2">Hora</th><th className="px-4 py-2">Tipo</th><th className="px-4 py-2">Método</th>
+                    <th className="px-4 py-2">Usuario</th>
                     <th className="px-4 py-2">Descripción</th><th className="px-4 py-2 text-right">Monto</th></tr>
               </thead>
               <tbody>
@@ -122,13 +123,14 @@ export default function CashBox() {
                     <td className="px-4 py-2 text-xs text-slate-500">{new Date(m.created_at).toLocaleTimeString()}</td>
                     <td className="px-4 py-2">{m.type_display}</td>
                     <td className="px-4 py-2 text-slate-500">{m.payment_method}</td>
+                    <td className="px-4 py-2 text-slate-600">{m.user_name || "—"}</td>
                     <td className="px-4 py-2 text-slate-500">{m.description || "—"}</td>
                     <td className={"px-4 py-2 text-right " + (["egreso", "devolucion"].includes(m.type) ? "text-red-600" : "text-green-700")}>
                       {["egreso", "devolucion"].includes(m.type) ? "−" : "+"}Q{m.amount}
                     </td>
                   </tr>
                 ))}
-                {session.movements.length === 0 && <tr><td colSpan="5" className="px-5 py-8 text-center text-slate-400">Sin movimientos.</td></tr>}
+                {session.movements.length === 0 && <tr><td colSpan="6" className="px-5 py-8 text-center text-slate-400">Sin movimientos.</td></tr>}
               </tbody>
             </table>
           </div>

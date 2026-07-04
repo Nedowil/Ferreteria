@@ -11,11 +11,12 @@ from .services import compute_expected, totals_by_payment_method
 
 class CashMovementSerializer(serializers.ModelSerializer):
     type_display = serializers.CharField(source="get_type_display", read_only=True)
+    user_name = serializers.CharField(source="user.name", read_only=True, default=None)
 
     class Meta:
         model = CashMovement
         fields = ["id", "type", "type_display", "payment_method", "amount",
-                  "description", "sale", "created_at"]
+                  "description", "sale", "created_at", "user_name"]
 
 
 class CashSessionListSerializer(serializers.ModelSerializer):
