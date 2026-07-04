@@ -1,4 +1,5 @@
-import { Routes, Route, Navigate, Link } from "react-router-dom";
+import { Component } from "react";
+import { Routes, Route, Navigate, Link, useLocation } from "react-router-dom";
 import { useAuth } from "./auth/AuthContext";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
@@ -69,14 +70,51 @@ function NoAccess() {
   );
 }
 
+// Red de seguridad: si una pantalla lanza un error de render, en vez de dejar
+// TODA la app en blanco (obligando a refrescar), muestra un aviso y permite
+// reintentar/seguir navegando. Se reinicia al cambiar de ruta (key=pathname).
+class ErrorBoundary extends Component {
+  state = { error: null };
+  static getDerivedStateFromError(error) { return { error }; }
+  componentDidCatch(error, info) {
+    // Queda en consola para diagnóstico (no rompe la app).
+    console.error("Error en la pantalla:", error, info);
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="max-w-md mx-auto mt-16 text-center">
+          <div className="text-5xl mb-4">⚠️</div>
+          <h1 className="text-xl font-bold text-slate-800">No se pudo mostrar esta pantalla</h1>
+          <p className="text-slate-500 mt-2">
+            Ocurrió un error al cargar este módulo. Podés reintentar o ir a otra sección.
+          </p>
+          <div className="flex gap-2 justify-center mt-5">
+            <button onClick={() => this.setState({ error: null })}
+                    className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium">Reintentar</button>
+            <button onClick={() => window.location.reload()}
+                    className="border border-slate-300 text-slate-700 rounded-lg px-4 py-2 text-sm font-medium">Recargar página</button>
+          </div>
+          <details className="mt-5 text-left text-xs text-slate-400">
+            <summary className="cursor-pointer">Detalle técnico</summary>
+            <pre className="whitespace-pre-wrap break-words mt-2 bg-slate-100 rounded p-2">{String(this.state.error?.message || this.state.error)}</pre>
+          </details>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // `perm` opcional: si el usuario no lo tiene, ve la pantalla "Sin acceso"
 // (aunque escriba la URL directo). El backend igual valida cada endpoint.
 function Protected({ children, perm }) {
   const { user, loading, can } = useAuth();
+  const location = useLocation();
   if (loading) return <div className="p-10 text-center text-slate-400">Cargando…</div>;
   if (!user) return <Navigate to="/login" replace />;
   if (perm && !can(perm)) return <Layout><NoAccess /></Layout>;
-  return <Layout>{children}</Layout>;
+  return <Layout><ErrorBoundary key={location.pathname}>{children}</ErrorBoundary></Layout>;
 }
 
 export default function App() {

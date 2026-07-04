@@ -14,7 +14,7 @@ export default function Receivable() {
     return params;
   };
   const load = () => api.get("/sales/receivable/", { params: buildParams() }).then((r) => setData(r.data));
-  useEffect(load, []);
+  useEffect(() => { load(); }, []);
   const total = Number(data.total_balance || 0);
 
   const exportExcel = async () => {

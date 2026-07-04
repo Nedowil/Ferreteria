@@ -14,7 +14,7 @@ export default function Payable() {
     return params;
   };
   const load = () => api.get("/purchases/payable/", { params: buildParams() }).then((r) => setData(r.data));
-  useEffect(load, []);
+  useEffect(() => { load(); }, []);
 
   // El total viene calculado en el backend sobre TODAS las cuentas (no solo la página)
   const totalDebt = Number(data.total_balance || 0);
