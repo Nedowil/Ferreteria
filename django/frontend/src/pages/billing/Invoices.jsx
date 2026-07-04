@@ -23,9 +23,17 @@ export default function Invoices() {
   const [cfg, setCfg] = useState(null);
   const [err, setErr] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [filters, setFilters] = useState({ search: "", from: "", to: "" });
 
+  const invParams = () => {
+    const p = {};
+    Object.entries(filters).forEach(([k, v]) => { if (v) p[k] = v; });
+    return p;
+  };
+
+  const loadInvoices = () => api.get("/invoices/", { params: invParams() }).then((r) => setInvoices(r.data.results || r.data));
   const load = () => {
-    api.get("/invoices/").then((r) => setInvoices(r.data.results || r.data));
+    loadInvoices();
     api.get("/invoices/pending/").then((r) => setPending(r.data));
     api.get("/invoices/quota/").then((r) => setQuota(r.data));
     api.get("/fel/config/").then((r) => setCfg(r.data));
@@ -35,7 +43,7 @@ export default function Invoices() {
   const exportExcel = async () => {
     setExporting(true);
     try {
-      const rows = await fetchAll("/invoices/", {});
+      const rows = await fetchAll("/invoices/", invParams());
       exportToExcel("facturas", [
         { header: "Venta", value: (i) => i.sale_folio },
         { header: "Cliente", value: (i) => i.customer_name || "Consumidor final" },
@@ -119,6 +127,22 @@ export default function Invoices() {
       </div>
 
       {tab === "emitidas" && (
+        <form onSubmit={(e) => { e.preventDefault(); loadInvoices(); }} className="bg-white rounded-xl shadow-sm border border-slate-100 p-3 mb-4 flex flex-wrap gap-2 items-end">
+          <input placeholder="Folio, NIT/UUID o cliente" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                 className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-56" />
+          <div><label className="block text-[11px] text-slate-500 mb-0.5">Desde</label>
+            <input type="date" value={filters.from} onChange={(e) => setFilters({ ...filters, from: e.target.value })} className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" /></div>
+          <div><label className="block text-[11px] text-slate-500 mb-0.5">Hasta</label>
+            <input type="date" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" /></div>
+          <button className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition">Filtrar</button>
+          {(filters.search || filters.from || filters.to) && (
+            <button type="button" onClick={() => { setFilters({ search: "", from: "", to: "" }); api.get("/invoices/").then((r) => setInvoices(r.data.results || r.data)); }}
+                    className="text-sm text-slate-500 px-2 py-2 hover:underline">Limpiar</button>
+          )}
+        </form>
+      )}
+
+      {tab === "emitidas" && (
         <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">
@@ -141,9 +165,10 @@ export default function Invoices() {
                   <td className="px-4 py-2">
                     <span className={"inline-block rounded-full px-2 py-0.5 text-xs font-medium " + (statusBadge[i.status] || "")}>{i.status_display}</span>
                   </td>
-                  <td className="px-4 py-2 text-right">
+                  <td className="px-4 py-2 text-right whitespace-nowrap">
+                    <Link to={`/ventas/${i.sale}/ticket`} className="text-xs text-blue-600 hover:underline">Ver / Imprimir</Link>
                     {i.status === "certificada" && can("facturas.anular") && (
-                      <button onClick={() => annul(i)} className="text-xs text-red-600 hover:underline">Anular</button>
+                      <button onClick={() => annul(i)} className="text-xs text-red-600 hover:underline ml-3">Anular</button>
                     )}
                   </td>
                 </tr>

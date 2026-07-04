@@ -24,8 +24,23 @@ class InvoiceViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = InvoiceSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ["status", "document_type", "sale"]
-    search_fields = ["uuid", "numero", "sale__folio"]
+    search_fields = ["uuid", "numero", "sale__folio", "sale__customer__name"]
     permission_classes = [HasPermission.require("facturas.ver")]
+
+    def get_queryset(self):
+        """Filtra por rango de fechas (de la venta) con ?from=&to=."""
+        from django.utils.dateparse import parse_date
+        qs = super().get_queryset()
+        p = self.request.query_params
+        if p.get("from"):
+            d = parse_date(p["from"])
+            if d:
+                qs = qs.filter(sale__date__date__gte=d)
+        if p.get("to"):
+            d = parse_date(p["to"])
+            if d:
+                qs = qs.filter(sale__date__date__lte=d)
+        return qs
 
     @action(detail=True, methods=["post"], permission_classes=[HasPermission.require("facturas.anular")])
     def annul(self, request, pk=None):
