@@ -63,7 +63,7 @@ function NoAccess() {
         administrador que te habilite el permiso correspondiente.
       </p>
       <Link to="/" className="inline-block mt-5 bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium">
-        Volver al tablero
+        Volver al Dashboard
       </Link>
     </div>
   );

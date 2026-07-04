@@ -525,8 +525,9 @@ export default function POS() {
     (async () => {
       try {
         // ONLINE: carga del servidor y guarda copia local para vender offline.
-        const [sess, custs, comp, prods] = await Promise.all([
-          api.get("/cashbox/cash-sessions/current/"),
+        // (La caja se consulta aparte: no debe romper el POS si el vendedor
+        // no tiene permiso de caja.)
+        const [custs, comp, prods] = await Promise.all([
           api.get("/customers/?active=1&page_size=300"),
           api.get("/company-settings/"),
           api.get("/inventory/products/", { params: { page_size: 500, active: 1 } }),
@@ -535,25 +536,34 @@ export default function POS() {
         const productList = prods.data.results || prods.data;
         const customerList = custs.data.results || custs.data;
         const cname = comp.data.commercial_name || "Ferretería";
-        setCashOpen(sess.data.session || false);
         setCustomers(customerList);
         setCompanyName(cname);
         setProducts(productList);
         saveCatalog(productList).catch(() => {});
         setMeta("customers", customerList).catch(() => {});
         setMeta("company_name", cname).catch(() => {});
-        setMeta("cash_open", !!sess.data.session).catch(() => {});
       } catch {
         // OFFLINE: no hay servidor. Carga desde la copia local guardada.
         if (!alive) return;
-        const [cat, custs, cname, casho] = await Promise.all([
-          getCatalog(), getMeta("customers"), getMeta("company_name"), getMeta("cash_open"),
+        const [cat, custs, cname] = await Promise.all([
+          getCatalog(), getMeta("customers"), getMeta("company_name"),
         ]);
         setProducts(cat || []);
         setCustomers(custs || []);
         setCompanyName(cname || "Ferretería");
-        // Si la última vez había caja abierta, permitimos vender offline.
-        setCashOpen(casho ? { offline: true } : false);
+      }
+      // Estado de caja: solo para quien puede verla. Su error (403/red) NO
+      // afecta la venta; el vendedor sin permiso simplemente no ve el estado.
+      if (alive && can("caja.ver")) {
+        try {
+          const { data } = await api.get("/cashbox/cash-sessions/current/");
+          if (alive) { setCashOpen(data.session || false); setMeta("cash_open", !!data.session).catch(() => {}); }
+        } catch {
+          const casho = await getMeta("cash_open").catch(() => null);
+          if (alive) setCashOpen(casho ? { offline: true } : false);
+        }
+      } else if (alive) {
+        setCashOpen(null); // sin permiso de caja → no se muestra estado
       }
       refreshPending();
     })();
@@ -825,12 +835,12 @@ export default function POS() {
                   className="text-sm border border-slate-300 rounded-lg px-3 py-1.5 hover:bg-slate-50 transition">
             🖥️ Pantalla cliente
           </button>
-          {cashOpen === false && (
+          {cashOpen === false && can("caja.abrir") && (
             <span className="text-sm text-amber-700 bg-amber-100 rounded-full px-3 py-1">
               ⚠️ Caja cerrada — <button onClick={() => navigate("/caja")} className="underline">ábrela</button> para registrar el efectivo
             </span>
           )}
-          {cashOpen && <span className="text-sm text-green-700 bg-green-100 rounded-full px-3 py-1 font-medium">● Caja abierta</span>}
+          {cashOpen && can("caja.ver") && <span className="text-sm text-green-700 bg-green-100 rounded-full px-3 py-1 font-medium">● Caja abierta</span>}
         </div>
       </div>
 
