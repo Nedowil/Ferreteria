@@ -155,13 +155,16 @@ def build_ticket_escpos(ticket, *, width_mm=80, auto_cut=True):
         e.line(f"Autorizacion: {fel['uuid']}")
         e.line(f"Serie: {fel['serie']}  Numero: {fel['numero']}")
         if fel.get("certificador"):
-            e.line(fel["certificador"])
+            e.line("Certificador: " + fel["certificador"])
         if fel.get("fecha_certificacion"):
             e.line("Certificado: " + _fmt_dt(fel["fecha_certificacion"]))
         if fel.get("status") == "anulada":
             e.bold(True).line("** ANULADA **").bold(False)
 
-    e.align(1).feed(1).line("Gracias por su compra!").feed(3)
+    e.align(1).feed(1).line("Gracias por su compra!")
+    e.line('"La bendición del Señor es la que enriquece."')
+    e.line("Proverbios 10:22")
+    e.feed(3)
     if auto_cut:
         e.cut()
     return e.bytes()
