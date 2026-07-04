@@ -755,6 +755,19 @@ export default function POS() {
       setError("La factura electrónica solo se puede emitir con fecha dentro de los últimos 5 días (regla de la SAT). Cambiá la fecha o usá 'Recibo'.");
       return;
     }
+    // Regla SAT: una factura a Consumidor Final (CF) no puede superar Q2,500.
+    // Arriba de eso se exige NIT o CUI (DPI) del cliente.
+    if (wantFel && total > 2500) {
+      const tid = (customer?.tax_id || "").trim().toUpperCase();
+      const tieneIdValido = tid && tid !== "CF"; // NIT o CUI
+      if (!tieneIdValido) {
+        setError(
+          "La factura supera Q2,500 y va a Consumidor Final (CF). La SAT exige el NIT o CUI (DPI) del cliente para montos mayores a Q2,500. " +
+          "Seleccioná o agregá un cliente con NIT o DPI, o usá 'Recibo' en vez de factura."
+        );
+        return;
+      }
+    }
     const payload = {
       customer_id: customerId || null,
       date: saleDate || null,
@@ -1112,6 +1125,11 @@ export default function POS() {
                   {customer && customer.tax_id
                     ? <>Se facturará a NIT <b>{customer.tax_id}</b>.</>
                     : <>Sin NIT del cliente se factura como <b>Consumidor Final (CF)</b>.</>}
+                </p>
+              )}
+              {wantFel && total > 2500 && !((customer?.tax_id || "").trim() && (customer?.tax_id || "").trim().toUpperCase() !== "CF") && (
+                <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-2 py-1.5 mt-1">
+                  ⚠️ Supera Q2,500: la SAT exige <b>NIT o CUI (DPI)</b> del cliente para facturar. Elegí un cliente con NIT/DPI o usá <b>Recibo</b>.
                 </p>
               )}
             </div>
