@@ -1,21 +1,42 @@
+import { useState } from "react";
 import { Q, useDateReport, DateRangeBar, ExcelButton } from "./common";
 import { exportToExcel } from "../../utils/exportExcel";
 
 // Reportes de ranking simples (tabla con rango de fechas).
-function RankingTable({ title, path, columns }) {
+// `filter` (opcional) = { key, label }: agrega un selector para ver una sola
+// fila (ej. un vendedor), filtrando por el valor de esa columna.
+function RankingTable({ title, path, columns, filter }) {
   const { from, setFrom, to, setTo, data, reload } = useDateReport(path);
+  const [filterVal, setFilterVal] = useState("");
+
+  const allRows = data?.rows || [];
+  const options = filter ? [...new Set(allRows.map((r) => r[filter.key]).filter(Boolean))] : [];
+  const active = filter && filterVal && options.includes(filterVal);
+  const rows = active ? allRows.filter((r) => r[filter.key] === filterVal) : allRows;
+
   const exportXls = () => exportToExcel(
     title.toLowerCase().replace(/\s+/g, "-"),
     columns.map((c) => ({ header: c.label, value: (r) => r[c.key] })),
-    data?.rows || []
+    rows
   );
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-lg font-semibold">{title}</h1>
-        <ExcelButton onClick={exportXls} disabled={!data || !data.rows.length} />
+        <ExcelButton onClick={exportXls} disabled={!rows.length} />
       </div>
-      <DateRangeBar from={from} setFrom={setFrom} to={to} setTo={setTo} onApply={reload} />
+      <DateRangeBar from={from} setFrom={setFrom} to={to} setTo={setTo} onApply={reload}>
+        {filter && data && (
+          <div>
+            <label className="block text-xs text-slate-500 mb-1">{filter.label}</label>
+            <select value={filterVal} onChange={(e) => setFilterVal(e.target.value)}
+                    className="border border-slate-300 rounded px-2 py-2 text-sm bg-white">
+              <option value="">Todos</option>
+              {options.map((o) => <option key={o} value={o}>{o}</option>)}
+            </select>
+          </div>
+        )}
+      </DateRangeBar>
       {data && (
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <table className="w-full text-sm">
@@ -23,12 +44,12 @@ function RankingTable({ title, path, columns }) {
               <tr>{columns.map((c) => <th key={c.key} className={"px-4 py-2 " + (c.right ? "text-right" : "")}>{c.label}</th>)}</tr>
             </thead>
             <tbody>
-              {data.rows.map((r, i) => (
+              {rows.map((r, i) => (
                 <tr key={i} className="border-t">
                   {columns.map((c) => <td key={c.key} className={"px-4 py-2 " + (c.right ? "text-right" : "")}>{c.render ? c.render(r) : r[c.key]}</td>)}
                 </tr>
               ))}
-              {data.rows.length === 0 && <tr><td colSpan={columns.length} className="px-5 py-8 text-center text-slate-400">Sin datos en el rango.</td></tr>}
+              {rows.length === 0 && <tr><td colSpan={columns.length} className="px-5 py-8 text-center text-slate-400">Sin datos en el rango.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -63,7 +84,7 @@ export function TopSuppliers() {
 }
 
 export function BySeller() {
-  return <RankingTable title="Ventas por vendedor" path="/reports/by-seller/" columns={[
+  return <RankingTable title="Ventas por vendedor" path="/reports/by-seller/" filter={{ key: "name", label: "Vendedor" }} columns={[
     { key: "name", label: "Vendedor" },
     { key: "sales_count", label: "Ventas", right: true },
     { key: "total_revenue", label: "Ingreso", right: true, render: (r) => Q(r.total_revenue) },
