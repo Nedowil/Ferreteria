@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../api/client";
+import logo from "../../assets/logo.jpg";
 
 const BADGE = {
   vigente: "bg-blue-100 text-blue-700", aceptada: "bg-green-100 text-green-700",
@@ -45,7 +46,8 @@ export default function QuotationDetail() {
   const printQuote = () => {
     const win = window.open("", "_blank", "width=800,height=900");
     if (!win) { alert("Permití las ventanas emergentes para imprimir."); return; }
-    win.document.write(quoteHtml(q, company));
+    const logoUrl = new URL(logo, window.location.origin).href;
+    win.document.write(quoteHtml(q, company, logoUrl));
     win.document.close();
     win.focus();
     // Espera a que cargue antes de abrir el diálogo (para "Guardar como PDF").
@@ -141,77 +143,173 @@ export default function QuotationDetail() {
 }
 
 // --- Documento imprimible (HTML) --------------------------------------------
-function quoteHtml(q, company) {
+// Réplica del formato profesional de cotización (estilo Factoa): encabezado con
+// logo, bloque Emisor/Receptor, tabla con desglose de IVA por partida y el
+// bloque "Detalle de Venta" con el total en letras.
+function quoteHtml(q, company, logoUrl) {
   const c = company || {};
-  const bizName = c.name || c.commercial_name || "Ferretería Central";
-  const rows = q.items.map((it) => `
-    <tr>
-      <td>${escapeHtml(it.product_name)}</td>
-      <td class="r">${it.quantity}</td>
-      <td class="r">${Q(it.unit_price)}</td>
-      <td class="r">${Q(it.subtotal)}</td>
-    </tr>`).join("");
+  const bizName = c.commercial_name || c.name || "Ferretería Central";
+  const iva = Number(company?.default_tax_rate || 12);
+  const factor = 1 + iva / 100;
+
+  const rows = q.items.map((it, i) => {
+    const sub = Number(it.subtotal || 0);
+    const exento = it.tax_type === "exento";
+    const lineIva = exento ? 0 : sub - sub / factor;
+    const impuesto = exento ? "IVA: 0.00" : `IVA (${iva}%): ${num(lineIva)}`;
+    return `
+      <tr>
+        <td class="c">${i + 1}</td>
+        <td class="c">${num(it.quantity)}</td>
+        <td>${escapeHtml(it.product_name)}</td>
+        <td class="c">B</td>
+        <td class="r">${num(it.unit_price)}</td>
+        <td class="r nowrap">${impuesto}</td>
+        <td class="r">${num(sub)}</td>
+      </tr>`;
+  }).join("");
+
+  const precio = Number(q.subtotal || 0);
+  const descuento = Number(q.discount || 0);
+  const total = Number(q.total || 0);
+  const montoIva = Number(q.tax || 0);
+  const gravable = total - montoIva;
+  const num8 = folioNumber(q.folio);
+
+  const emisor = `
+    <div class="party">
+      <div class="ph">Emisor</div>
+      <div><b>${escapeHtml(bizName)}</b></div>
+      ${c.legal_name ? `<div>Razón Social: ${escapeHtml(c.legal_name)}</div>` : ""}
+      <div>NIT: ${escapeHtml(c.tax_id || "CF")}</div>
+      ${c.email ? `<div>Correo Electrónico: ${escapeHtml(c.email)}</div>` : ""}
+      ${c.address ? `<div>Dirección: ${escapeHtml(c.address)}</div>` : ""}
+      <div>Código Establecimiento: ${escapeHtml(q.branch_code || "1")}</div>
+    </div>`;
+  const receptor = `
+    <div class="party">
+      <div class="ph">Receptor</div>
+      <div><b>${escapeHtml(q.customer_name || "Consumidor Final")}</b></div>
+      <div>NIT: ${escapeHtml(q.customer_tax_id || "CF")}</div>
+      ${q.customer_email ? `<div>Correo Electrónico: ${escapeHtml(q.customer_email)}</div>` : ""}
+      ${q.customer_address ? `<div>Dirección: ${escapeHtml(q.customer_address)}</div>` : ""}
+      ${q.customer_phone ? `<div>Teléfono: ${escapeHtml(q.customer_phone)}</div>` : ""}
+    </div>`;
+
   return `<!doctype html><html lang="es"><head><meta charset="utf-8">
     <title>Cotización ${escapeHtml(q.folio)}</title>
     <style>
       * { box-sizing: border-box; }
-      body { font-family: Arial, Helvetica, sans-serif; color:#1e293b; margin:0; padding:28px; font-size:13px; }
-      .head { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid #111; padding-bottom:10px; margin-bottom:14px; }
-      .biz h1 { margin:0 0 2px; font-size:18px; }
-      .biz div { font-size:12px; color:#475569; }
-      .doc { text-align:right; }
-      .doc .t { font-size:16px; font-weight:bold; }
-      .doc .badge { display:inline-block; margin-top:4px; padding:2px 8px; border:1px solid #94a3b8; border-radius:4px; font-size:11px; }
-      .info { display:flex; justify-content:space-between; gap:20px; margin-bottom:14px; font-size:12px; }
-      .info b { color:#0f172a; }
-      table { width:100%; border-collapse:collapse; margin-top:6px; }
-      th { background:#f1f5f9; text-align:left; padding:7px 8px; font-size:11px; text-transform:uppercase; letter-spacing:.03em; color:#475569; }
-      td { padding:7px 8px; border-bottom:1px solid #e2e8f0; }
-      .r { text-align:right; }
-      tfoot td { border:none; }
-      .tot { font-weight:bold; font-size:14px; }
-      .notes { margin-top:16px; font-size:12px; color:#475569; white-space:pre-wrap; }
-      .foot { margin-top:26px; text-align:center; color:#94a3b8; font-size:11px; }
-      @media print { body { padding:10px; } }
+      body { font-family: Arial, Helvetica, sans-serif; color:#1e293b; margin:0; padding:26px 30px; font-size:12px; }
+      .top { display:flex; justify-content:space-between; align-items:flex-start; gap:20px; margin-bottom:14px; }
+      .top img { max-height:60px; max-width:200px; object-fit:contain; }
+      .meta { text-align:right; font-size:12px; }
+      .meta .t { font-size:17px; font-weight:bold; color:#0f172a; margin-bottom:4px; }
+      .meta .row { display:flex; justify-content:flex-end; gap:10px; }
+      .meta .row span:first-child { color:#475569; }
+      .parties { display:flex; gap:16px; margin-bottom:14px; }
+      .party { flex:1; border:1px solid #cbd5e1; border-radius:6px; padding:8px 10px; font-size:11.5px; line-height:1.45; }
+      .party .ph { font-weight:bold; color:#fff; background:#0f766e; display:inline-block; padding:1px 10px; border-radius:4px; margin-bottom:5px; font-size:11px; }
+      table { width:100%; border-collapse:collapse; }
+      th { background:#0f766e; color:#fff; text-align:left; padding:6px 7px; font-size:10.5px; }
+      td { padding:6px 7px; border-bottom:1px solid #e2e8f0; font-size:11px; }
+      th.c, td.c { text-align:center; }
+      th.r, td.r { text-align:right; }
+      .nowrap { white-space:nowrap; }
+      .totwrap { display:flex; justify-content:flex-end; margin-top:12px; }
+      .totals { width:280px; font-size:12px; }
+      .totals .l { display:flex; justify-content:space-between; padding:3px 0; }
+      .totals .grand { font-weight:bold; font-size:14px; border-top:2px solid #0f172a; margin-top:4px; padding-top:5px; }
+      .letras { margin-top:12px; font-size:12px; }
+      .letras b { text-transform:uppercase; }
+      .notes { margin-top:10px; font-size:11.5px; color:#475569; white-space:pre-wrap; }
+      .foot { margin-top:22px; border-top:1px solid #e2e8f0; padding-top:8px; text-align:center; color:#94a3b8; font-size:10.5px; }
+      @media print { body { padding:12px; } }
     </style></head><body>
-    <div class="head">
-      <div class="biz">
-        <h1>${escapeHtml(bizName)}</h1>
-        ${c.legal_name ? `<div>${escapeHtml(c.legal_name)}</div>` : ""}
-        ${c.tax_id ? `<div>NIT: ${escapeHtml(c.tax_id)}</div>` : ""}
-        ${c.address ? `<div>${escapeHtml(c.address)}</div>` : ""}
-        ${c.phone ? `<div>Tel: ${escapeHtml(c.phone)}</div>` : ""}
-      </div>
-      <div class="doc">
-        <div class="t">COTIZACIÓN</div>
-        <div>${escapeHtml(q.folio)}</div>
-        <div class="badge">${escapeHtml(q.status_display || "")}</div>
+    <div class="top">
+      <div>${logoUrl ? `<img src="${logoUrl}" alt="">` : `<div style="font-size:18px;font-weight:bold">${escapeHtml(bizName)}</div>`}</div>
+      <div class="meta">
+        <div class="t">Cotización # ${escapeHtml(num8)}</div>
+        <div class="row"><span>Forma de Pago:</span><span>Contado</span></div>
+        <div class="row"><span>Moneda:</span><span>Quetzal</span></div>
+        <div class="row"><span>Fecha de Emisión:</span><span>${escapeHtml(fmtDate(q.date))}</span></div>
+        ${q.valid_until ? `<div class="row"><span>Válida hasta:</span><span>${escapeHtml(fmtDate(q.valid_until))}</span></div>` : ""}
       </div>
     </div>
-    <div class="info">
-      <div>
-        <div><b>Cliente:</b> ${escapeHtml(q.customer_name || "Sin cliente")}</div>
-        ${q.customer_tax_id ? `<div><b>NIT:</b> ${escapeHtml(q.customer_tax_id)}</div>` : ""}
-        ${q.customer_phone ? `<div><b>Tel:</b> ${escapeHtml(q.customer_phone)}</div>` : ""}
-      </div>
-      <div style="text-align:right">
-        <div><b>Fecha:</b> ${escapeHtml(q.date)}</div>
-        <div><b>Válida hasta:</b> ${escapeHtml(q.valid_until || "—")}</div>
-      </div>
-    </div>
+
+    <div class="parties">${emisor}${receptor}</div>
+
     <table>
-      <thead><tr><th>Producto</th><th class="r">Cant.</th><th class="r">Precio</th><th class="r">Importe</th></tr></thead>
+      <thead><tr>
+        <th class="c">#</th><th class="c">Cant</th><th>Detalle</th><th class="c">B/S</th>
+        <th class="r">P.Unit</th><th class="r">IVA / Impuestos</th><th class="r">Total</th>
+      </tr></thead>
       <tbody>${rows}</tbody>
-      <tfoot>
-        <tr><td colspan="3" class="r">Subtotal</td><td class="r">${Q(q.subtotal)}</td></tr>
-        ${Number(q.discount) ? `<tr><td colspan="3" class="r">Descuento</td><td class="r">- ${Q(q.discount)}</td></tr>` : ""}
-        <tr><td colspan="3" class="r">IVA</td><td class="r">${Q(q.tax)}</td></tr>
-        <tr class="tot"><td colspan="3" class="r">TOTAL</td><td class="r">${Q(q.total)}</td></tr>
-      </tfoot>
     </table>
-    ${q.notes ? `<div class="notes"><b>Notas:</b> ${escapeHtml(q.notes)}</div>` : ""}
-    <div class="foot">Esta cotización no es un documento tributario. Precios sujetos a cambio sin previo aviso.</div>
+
+    <div class="totwrap"><div class="totals">
+      <div class="l"><span>Precio:</span><span>${Q(precio)}</span></div>
+      <div class="l"><span>Descuento:</span><span>${Q(descuento)}</span></div>
+      <div class="l"><span>Monto Gravable:</span><span>${Q(gravable)}</span></div>
+      <div class="l"><span>Monto IVA:</span><span>${Q(montoIva)}</span></div>
+      <div class="l"><span>Total Venta:</span><span>${Q(total)}</span></div>
+      <div class="l grand"><span>Total a Pagar:</span><span>${Q(total)}</span></div>
+    </div></div>
+
+    <div class="letras">SON: <b>${escapeHtml(enLetras(total))}</b></div>
+    ${q.notes ? `<div class="notes"><b>Detalles:</b> ${escapeHtml(q.notes)}</div>` : ""}
+
+    <div class="foot">Esta cotización no es un documento tributario. Precios sujetos a cambio sin previo aviso.${q.valid_until ? ` Válida hasta ${escapeHtml(fmtDate(q.valid_until))}.` : ""}</div>
   </body></html>`;
+}
+
+// Número de cotización a 8 dígitos (extrae los dígitos del folio).
+function folioNumber(folio) {
+  const digits = String(folio || "").replace(/\D/g, "");
+  return digits ? digits.padStart(8, "0") : String(folio || "");
+}
+const fmtDate = (s) => {
+  if (!s) return "";
+  const m = String(s).slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : s;
+};
+const num = (v) => Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+// --- Número a letras (quetzales) ----
+const UNI = ["", "UNO", "DOS", "TRES", "CUATRO", "CINCO", "SEIS", "SIETE", "OCHO", "NUEVE", "DIEZ",
+  "ONCE", "DOCE", "TRECE", "CATORCE", "QUINCE", "DIECISÉIS", "DIECISIETE", "DIECIOCHO", "DIECINUEVE", "VEINTE"];
+const DEC = ["", "", "", "TREINTA", "CUARENTA", "CINCUENTA", "SESENTA", "SETENTA", "OCHENTA", "NOVENTA"];
+const CEN = ["", "CIENTO", "DOSCIENTOS", "TRESCIENTOS", "CUATROCIENTOS", "QUINIENTOS", "SEISCIENTOS", "SETECIENTOS", "OCHOCIENTOS", "NOVECIENTOS"];
+function seccion(n) {
+  if (n === 0) return "";
+  if (n === 100) return "CIEN";
+  let out = "";
+  const cc = Math.floor(n / 100), dd = n % 100;
+  if (cc) out += CEN[cc] + " ";
+  if (dd <= 20) out += UNI[dd];
+  else if (dd < 30) out += "VEINTI" + UNI[dd - 20];
+  else { const d = Math.floor(dd / 10), u = dd % 10; out += DEC[d]; if (u) out += " Y " + UNI[u]; }
+  return out.trim();
+}
+function miles(n) {
+  if (n < 1000) return seccion(n);
+  const m = Math.floor(n / 1000), r = n % 1000;
+  const pre = m === 1 ? "MIL" : seccion(m) + " MIL";
+  return (pre + (r ? " " + seccion(r) : "")).trim();
+}
+function millones(n) {
+  if (n < 1000000) return miles(n);
+  const mm = Math.floor(n / 1000000), r = n % 1000000;
+  const pre = mm === 1 ? "UN MILLÓN" : miles(mm) + " MILLONES";
+  return (pre + (r ? " " + miles(r) : "")).trim();
+}
+function enLetras(value) {
+  const numv = Number(value) || 0;
+  const ent = Math.floor(numv);
+  const cent = Math.round((numv - ent) * 100);
+  const words = ent === 0 ? "CERO" : millones(ent);
+  const tail = cent === 0 ? "EXACTOS" : `CON ${String(cent).padStart(2, "0")}/100`;
+  return `${words} QUETZALES ${tail}`.replace(/\s+/g, " ").trim();
 }
 
 // --- Mensaje de WhatsApp (texto plano) --------------------------------------

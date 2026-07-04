@@ -34,12 +34,16 @@ class QuotationDetailSerializer(QuotationListSerializer):
     customer = serializers.PrimaryKeyRelatedField(read_only=True)
     customer_tax_id = serializers.CharField(source="customer.tax_id", read_only=True, default=None)
     customer_phone = serializers.CharField(source="customer.phone", read_only=True, default=None)
+    customer_email = serializers.CharField(source="customer.email", read_only=True, default=None)
+    customer_address = serializers.CharField(source="customer.address", read_only=True, default=None)
     user_name = serializers.CharField(source="user.name", read_only=True, default=None)
     branch_name = serializers.CharField(source="branch.name", read_only=True, default=None)
+    branch_code = serializers.CharField(source="branch.code", read_only=True, default=None)
 
     class Meta(QuotationListSerializer.Meta):
         fields = QuotationListSerializer.Meta.fields + [
-            "customer", "customer_tax_id", "customer_phone", "user_name", "branch_name",
+            "customer", "customer_tax_id", "customer_phone", "customer_email",
+            "customer_address", "user_name", "branch_name", "branch_code",
             "subtotal", "discount", "tax", "notes", "items",
         ]
 
