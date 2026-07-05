@@ -334,7 +334,7 @@ export default function ProductForm() {
 
       <section className="bg-white rounded-lg shadow p-5">
         <h3 className="font-semibold mb-3">Identificación</h3>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <TextField label="SKU" name="sku" form={form} errors={errors} onChange={set} hint="Se autogenera si lo dejas vacío" />
           <TextField label="Código de barras" name="barcode" form={form} errors={errors} onChange={set} hint="EAN-13 automático si lo dejas vacío" />
         </div>
@@ -344,7 +344,7 @@ export default function ProductForm() {
           <textarea value={form.description ?? ""} onChange={(e) => set("description", e.target.value)} rows="2"
                     className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
         </div>
-        <div className="grid grid-cols-3 gap-4 mt-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
           <SelectField label="Marca" name="brand" form={form} onChange={set} options={brands} empty="— Sin marca —" />
         </div>
 
@@ -375,7 +375,7 @@ export default function ProductForm() {
       <section className="bg-sky-50 rounded-lg shadow p-5">
         <h3 className="font-semibold mb-1">Unidad y empaque</h3>
         <p className="text-xs text-slate-500 mb-3">Ej.: empaque "caja", factor 50 → 1 caja = 50 unidades base.</p>
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <TextField label="Unidad base" name="base_unit_label" form={form} errors={errors} onChange={set} placeholder="unidad" />
           <TextField label="Empaque" name="container_label" form={form} errors={errors} onChange={set} />
           <TextField label="Factor de empaque" name="container_factor" form={form} errors={errors} onChange={set} />
@@ -385,7 +385,7 @@ export default function ProductForm() {
 
       <section className="bg-white rounded-lg shadow p-5">
         <h3 className="font-semibold mb-3">Precios e impuesto</h3>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <PriceField label="Precio de compra" raw={purchaseRaw} mode={purchaseMode}
                       onRaw={onPriceRaw("purchase")} onMode={onPriceMode("purchase")} error={errors.purchase_price}
                       hasContainer={hasContainer} factor={factor} baseUnit={baseUnit} containerLabel={containerLabel} />
@@ -403,7 +403,7 @@ export default function ProductForm() {
             ))}
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-4 mt-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
           <TextField label="Precio mayorista" name="wholesale_price" form={form} errors={errors} onChange={set} type="number" placeholder="0" />
           <TextField label="Cant. mín. mayorista" name="wholesale_min_quantity" form={form} errors={errors} onChange={set} type="number" placeholder="0" />
           <TextField label="Precio empaque mayorista" name="container_wholesale_price" form={form} errors={errors} onChange={set} type="number" placeholder="0" />
@@ -413,7 +413,7 @@ export default function ProductForm() {
       <section className="bg-white rounded-lg shadow p-5">
         <h3 className="font-semibold mb-3">Inventario</h3>
         {!editing ? (
-          <div className="grid grid-cols-3 gap-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
             <TextField label="Stock inicial" name="initial_stock" form={form} errors={errors} onChange={set} type="number" placeholder="0" />
             <SelectField label="Modo" name="stock_input_mode" form={form} onChange={set}
                          options={[{ id: "base", name: "Unidad base" }, { id: "container", name: "Empaque" }]} empty="" />
@@ -421,7 +421,7 @@ export default function ProductForm() {
         ) : (
           <p className="text-sm text-slate-500 mb-4">El stock se ajusta desde <b>Inventario</b> del producto.</p>
         )}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">
               Stock mínimo <span className="text-slate-400 font-normal">(en {useContainerMin ? containerLabel : baseUnit})</span>

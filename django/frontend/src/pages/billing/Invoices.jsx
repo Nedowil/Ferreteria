@@ -111,7 +111,7 @@ export default function Invoices() {
 
   return (
     <div className="max-w-5xl">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">📑 Facturación electrónica (FEL)</h1>
         <div className="flex items-center gap-2">
           {cfg?.is_stub ? (

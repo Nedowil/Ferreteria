@@ -62,7 +62,7 @@ export default function QuotationForm() {
       <h1 className="text-lg font-semibold">Nueva cotización</h1>
       {error && <div className="bg-red-100 text-red-800 rounded px-4 py-2 text-sm">{error}</div>}
 
-      <section className="bg-white rounded-lg shadow p-5 grid grid-cols-3 gap-4">
+      <section className="bg-white rounded-lg shadow p-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Cliente</label>
           <div className="flex gap-2">

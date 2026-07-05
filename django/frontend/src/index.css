@@ -17,7 +17,9 @@ input[type="number"] {
    dentro de su tarjeta (en vez de desbordar la página). Se aplica al div que
    contiene directamente una <table> — típicamente la tarjeta del listado. */
 @media (max-width: 1023px) {
-  main div:has(> table) {
+  /* Cualquier contenedor (div, section, …) que envuelva directamente una tabla
+     permite scroll horizontal, para que la tabla no desborde la página. */
+  main :has(> table) {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
