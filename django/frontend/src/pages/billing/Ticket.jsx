@@ -143,7 +143,7 @@ function TicketPaper({ company, sale, fel, qr, phrases }) {
 
       <div className="mt-2 font-bold">{fel ? "DOCUMENTO TRIBUTARIO ELECTRÓNICO" : "COMPROBANTE DE VENTA"}</div>
       <div className="font-bold">{fel ? `Factura # ${fel.numero}` : `Recibo No. ${sale.folio}`}</div>
-      {fel?.uuid && <div className="break-all">{fel.uuid}</div>}
+      {fel?.uuid && <><div className="font-bold">Número de Autorización:</div><div className="break-all">{fel.uuid}</div></>}
       <div className="font-bold">Fecha: {new Date(sale.date).toLocaleString("es-GT")}</div>
       <div className="font-bold">Cliente: {sale.customer}</div>
       <div className="font-bold">NIT: {sale.customer_nit}</div>

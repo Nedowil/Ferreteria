@@ -175,6 +175,7 @@ def build_ticket_escpos(ticket, *, width_mm=80, auto_cut=True):
     e.line(f"Factura # {fel['numero']}" if fel else f"Recibo No. {sale['folio']}")
     e.bold(False)
     if fel and fel.get("uuid"):
+        e.line("Número de Autorización:")
         e.line(fel["uuid"])
     e.bold(True)
     e.line(f"Fecha: {_fmt_dt(sale['date'])}")
