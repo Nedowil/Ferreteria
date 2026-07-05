@@ -13,6 +13,19 @@ input[type="number"] {
   appearance: textfield;
 }
 
+/* Responsive: en pantallas chicas, las tablas anchas hacen scroll horizontal
+   dentro de su tarjeta (en vez de desbordar la página). Se aplica al div que
+   contiene directamente una <table> — típicamente la tarjeta del listado. */
+@media (max-width: 1023px) {
+  main div:has(> table) {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  main table {
+    min-width: max-content;
+  }
+}
+
 /* Al imprimir un comprobante, solo se muestra el ticket (#ticket). */
 @media print {
   body * { visibility: hidden; }

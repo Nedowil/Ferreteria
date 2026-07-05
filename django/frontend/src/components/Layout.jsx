@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import logo from "../assets/logo.svg";
@@ -22,6 +23,7 @@ const Section = ({ title }) => (
 
 export default function Layout({ children }) {
   const { user, branches, currentBranchId, setBranch, logout, can } = useAuth();
+  const [open, setOpen] = useState(false); // cajón del menú en móvil
   const showVentas = can("ventas.crear") || can("ventas.ver") || can("caja.ver")
     || can("cotizaciones.ver") || can("facturas.ver");
   const showInventario = can("productos.ver") || can("inventario.ajustar");
@@ -32,7 +34,12 @@ export default function Layout({ children }) {
 
   return (
     <div className="min-h-screen flex bg-slate-50">
-      <aside className="w-60 bg-gradient-to-b from-slate-900 to-slate-950 text-slate-200 flex flex-col fixed inset-y-0 shadow-xl">
+      {/* Fondo oscuro al abrir el menú en móvil */}
+      {open && <div onClick={() => setOpen(false)} className="fixed inset-0 bg-black/40 z-30 lg:hidden" aria-hidden="true" />}
+
+      <aside className={"w-60 bg-gradient-to-b from-slate-900 to-slate-950 text-slate-200 flex flex-col fixed inset-y-0 z-40 shadow-xl "
+        + "transform transition-transform duration-200 lg:translate-x-0 "
+        + (open ? "translate-x-0" : "-translate-x-full")}>
         <div className="px-4 py-4 border-b border-white/10">
           <div className="flex items-center gap-3">
             <div className="h-11 w-11 shrink-0 bg-white rounded-xl p-1 shadow ring-1 ring-black/5 flex items-center justify-center overflow-hidden">
@@ -45,7 +52,7 @@ export default function Layout({ children }) {
           </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto py-2">
+        <nav className="flex-1 overflow-y-auto py-2" onClick={() => setOpen(false)}>
           <NavItem to="/" end icon="📊" label="Dashboard" />
 
           {showVentas && (
@@ -119,9 +126,14 @@ export default function Layout({ children }) {
         </div>
       </aside>
 
-      <div className="flex-1 ml-60 flex flex-col min-h-screen">
-        <header className="bg-white/80 backdrop-blur border-b border-slate-200 px-6 py-3 flex items-center justify-between sticky top-0 z-10">
-          <div className="text-sm text-slate-400">Sistema de gestión</div>
+      <div className="flex-1 lg:ml-60 flex flex-col min-h-screen">
+        <header className="bg-white/80 backdrop-blur border-b border-slate-200 px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-20">
+          <div className="flex items-center gap-3 min-w-0">
+            <button onClick={() => setOpen(true)} aria-label="Abrir menú"
+                    className="lg:hidden text-slate-600 hover:text-slate-900 border border-slate-200 rounded-lg px-2.5 py-1.5 text-lg leading-none">☰</button>
+            <span className="hidden sm:inline text-sm text-slate-400">Sistema de gestión</span>
+            <span className="sm:hidden font-semibold text-slate-700 truncate">Ferretería Central</span>
+          </div>
           <div className="flex items-center gap-3">
             {branches.length > 0 && (
               <div className="flex items-center gap-1.5 text-sm">
@@ -138,7 +150,7 @@ export default function Layout({ children }) {
             </button>
           </div>
         </header>
-        <main className="p-6 flex-1">{children}</main>
+        <main className="p-4 sm:p-6 flex-1">{children}</main>
       </div>
     </div>
   );
