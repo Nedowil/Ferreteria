@@ -124,7 +124,7 @@ export default function ReturnCreate() {
             <tr key={it.id} className="border-t">
               <td className="px-4 py-2"><span className="font-mono text-xs text-slate-400">{it.product_sku}</span> {it.product_name}</td>
               <td className="px-4 py-2 text-right">{it.quantity}</td>
-              <td className="px-4 py-2 text-right">Q{it.unit_price}</td>
+              <td className="px-4 py-2 text-right">Q{Number(it.effective_unit_price ?? it.unit_price).toFixed(2)}</td>
               <td className="px-4 py-2 text-right">
                 <input type="number" step="any" min="0" max={it.quantity} value={qtys[it.id] || ""}
                        onChange={(e) => setSaleQty(it, e.target.value)}

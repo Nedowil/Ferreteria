@@ -51,8 +51,11 @@ export default function ReturnModal({ onClose, initialFolio = "" }) {
     setQtys({ ...qtys, [it.id]: v });
   };
 
+  // Precio realmente pagado por unidad (con descuento). Si el backend no lo
+  // envía (venta vieja), cae al precio de lista.
+  const netPrice = (it) => Number(it.effective_unit_price ?? it.unit_price);
   const refundTotal = sale
-    ? sale.items.reduce((s, it) => s + Number(qtys[it.id] || 0) * Number(it.unit_price), 0)
+    ? sale.items.reduce((s, it) => s + Number(qtys[it.id] || 0) * netPrice(it), 0)
     : 0;
 
   const submit = async () => {
@@ -119,7 +122,7 @@ export default function ReturnModal({ onClose, initialFolio = "" }) {
                           <td className="px-3 py-2"><div className="font-medium text-slate-800">{it.product_name}</div>
                             <div className="text-xs font-mono text-slate-400">{it.product_sku}</div></td>
                           <td className="px-3 py-2 text-right">{it.quantity}</td>
-                          <td className="px-3 py-2 text-right">{Q(it.unit_price)}</td>
+                          <td className="px-3 py-2 text-right">{Q(netPrice(it))}</td>
                           <td className="px-3 py-2 text-right">
                             <input type="number" step="any" min="0" max={it.quantity} value={qtys[it.id] || ""}
                                    onChange={(e) => setQty(it, e.target.value)}

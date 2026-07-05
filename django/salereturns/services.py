@@ -45,6 +45,17 @@ def create_return(data, items, *, user=None):
     if not sale.is_completada:
         raise ReturnError("Solo se pueden devolver ventas completadas.")
 
+    # Descuento efectivo por línea = descuento de línea + parte prorrateada del
+    # descuento global de la venta, para reembolsar lo que el cliente pagó.
+    from core.pricing import effective_line_discounts
+    all_items = list(sale.items.all())
+    eff_discs = effective_line_discounts(
+        [Decimal(i.quantity) * Decimal(i.unit_price) for i in all_items],
+        [i.discount for i in all_items],
+        sale.discount,
+    )
+    eff_by_id = {i.id: d for i, d in zip(all_items, eff_discs)}
+
     prepared, lines = [], []
     for it in items:
         sale_item = SaleItem.objects.filter(pk=it["sale_item_id"], sale=sale).first()
@@ -60,7 +71,8 @@ def create_return(data, items, *, user=None):
                 f"(disponible {available})."
             )
         orig_qty = Decimal(sale_item.quantity)
-        line_discount = (Decimal(sale_item.discount) * (qty / orig_qty)) if orig_qty else Decimal("0")
+        eff_line_disc = eff_by_id.get(sale_item.id, Decimal(sale_item.discount or 0))
+        line_discount = (eff_line_disc * (qty / orig_qty)) if orig_qty else Decimal("0")
         gross = qty * Decimal(sale_item.unit_price)
         lines.append({"gross": gross, "line_discount": line_discount, "tax_type": sale_item.tax_type})
         prepared.append({

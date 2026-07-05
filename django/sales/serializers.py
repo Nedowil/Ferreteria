@@ -19,11 +19,32 @@ def _is_admin(user):
 class SaleItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source="product.name", read_only=True)
     product_sku = serializers.CharField(source="product.sku", read_only=True)
+    # Precio neto por unidad (ya con el descuento de línea y la parte del
+    # descuento global de la venta). Es lo que el cliente pagó por unidad; se usa
+    # en devoluciones para reembolsar el monto correcto.
+    effective_unit_price = serializers.SerializerMethodField()
 
     class Meta:
         model = SaleItem
         fields = ["id", "product", "product_name", "product_sku", "quantity",
-                  "unit_price", "discount", "subtotal", "unit_label", "units_factor", "tax_type"]
+                  "unit_price", "effective_unit_price", "discount", "subtotal",
+                  "unit_label", "units_factor", "tax_type"]
+
+    def get_effective_unit_price(self, obj):
+        from decimal import Decimal
+        from core.pricing import effective_line_discounts, money
+        sale = obj.sale
+        all_items = list(sale.items.all())
+        eff = effective_line_discounts(
+            [Decimal(i.quantity) * Decimal(i.unit_price) for i in all_items],
+            [i.discount for i in all_items],
+            sale.discount,
+        )
+        eff_disc = next((d for i, d in zip(all_items, eff) if i.id == obj.id),
+                        Decimal(obj.discount or 0))
+        qty = Decimal(obj.quantity) or Decimal("1")
+        net = Decimal(obj.quantity) * Decimal(obj.unit_price) - eff_disc
+        return money(net / qty)
 
 
 class SalePaymentSerializer(serializers.ModelSerializer):
