@@ -195,8 +195,8 @@ function TicketPaper({ company, sale, fel, qr, phrases }) {
       )}
       {!fel && <div className="text-center mt-3">¡Gracias por su compra!</div>}
       <div className="text-center mt-2 text-[11px]">
-        <div className="italic">«La bendición del Señor es la que enriquece.»</div>
-        <div>Proverbios 10:22</div>
+        <div className="italic">«Pon en manos del Señor todas tus obras, y tus proyectos se cumplirán.»</div>
+        <div>Proverbios 16:3</div>
       </div>
     </div>
   );

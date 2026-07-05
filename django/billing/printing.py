@@ -230,8 +230,9 @@ def build_ticket_escpos(ticket, *, width_mm=80, auto_cut=True):
             e.align(1).line(txt)
 
     e.align(1).feed(1).line("Gracias por su compra!")
-    e.line('"La bendición del Señor es la que enriquece."')
-    e.line("Proverbios 10:22")
+    e.line("«Pon en manos del Señor todas tus obras,")
+    e.line("y tus proyectos se cumplirán.»")
+    e.line("Proverbios 16:3")
     e.feed(3)
     if auto_cut:
         e.cut()
