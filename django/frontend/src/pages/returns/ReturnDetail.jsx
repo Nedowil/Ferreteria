@@ -2,17 +2,32 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
+import logo from "../../assets/logo.jpg";
+
+const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default function ReturnDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { can } = useAuth();
   const [r, setR] = useState(null);
+  const [company, setCompany] = useState(null);
   const [error, setError] = useState("");
   const [emitting, setEmitting] = useState(false);
 
   const load = () => { api.get(`/returns/${id}/`).then((res) => setR(res.data)); };
   useEffect(load, [id]);
+  useEffect(() => { api.get("/company-settings/").then((res) => setCompany(res.data)).catch(() => {}); }, []);
+
+  // Comprobante imprimible de la devolución (con los datos de la NCRE si existe).
+  const printReturn = () => {
+    const win = window.open("", "_blank", "width=800,height=900");
+    if (!win) { alert("Permití las ventanas emergentes para imprimir."); return; }
+    win.document.write(returnHtml(r, company));
+    win.document.close();
+    win.focus();
+    win.onload = () => setTimeout(() => win.print(), 200);
+  };
 
   const cancel = async () => {
     if (!confirm("¿Cancelar esta devolución? Se re-extraerá el stock restituido.")) return;
@@ -39,7 +54,10 @@ export default function ReturnDetail() {
         <h1 className="text-lg font-semibold">Devolución {r.folio}
           <span className={"ml-3 text-xs px-2 py-0.5 rounded align-middle " + (r.status === "procesada" ? "bg-green-100 text-green-700" : "bg-slate-200 text-slate-500")}>{r.status_display}</span>
         </h1>
-        <button onClick={() => navigate("/devoluciones")} className="text-sm text-slate-500">← Volver</button>
+        <div className="flex items-center gap-3">
+          <button onClick={printReturn} className="inline-flex items-center gap-2 bg-white border border-slate-300 text-slate-700 rounded-lg px-4 py-2 text-sm font-medium hover:bg-slate-50">🖨️ Imprimir comprobante</button>
+          <button onClick={() => navigate("/devoluciones")} className="text-sm text-slate-500">← Volver</button>
+        </div>
       </div>
       {error && <div className="bg-red-100 text-red-800 rounded px-4 py-2 text-sm mb-4">{error}</div>}
 
@@ -94,4 +112,94 @@ export default function ReturnDetail() {
       )}
     </div>
   );
+}
+
+// --- Comprobante imprimible (HTML) ------------------------------------------
+function returnHtml(r, company) {
+  const c = company || {};
+  const bizName = c.commercial_name || c.name || "Ferretería Central";
+  const nc = r.credit_note && r.credit_note.status === "certificada" ? r.credit_note : null;
+  const titulo = nc ? "NOTA DE CRÉDITO ELECTRÓNICA" : "COMPROBANTE DE DEVOLUCIÓN";
+  const rows = r.items.map((it) => `
+    <tr>
+      <td>${escapeHtml(it.product_name)}</td>
+      <td class="r">${Number(it.quantity)}</td>
+      <td class="r">${Q(it.unit_price)}</td>
+      <td class="r">${Q(it.subtotal)}</td>
+    </tr>`).join("");
+  const logoUrl = new URL(logo, window.location.origin).href;
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8">
+    <title>Devolución ${escapeHtml(r.folio)}</title>
+    <style>
+      * { box-sizing: border-box; }
+      body { font-family: Arial, Helvetica, sans-serif; color:#1e293b; margin:0; padding:26px 30px; font-size:12px; }
+      .top { display:flex; justify-content:space-between; align-items:flex-start; gap:20px; margin-bottom:14px; }
+      .top img { max-height:60px; max-width:200px; object-fit:contain; }
+      .biz b { font-size:15px; }
+      .biz div { font-size:11.5px; color:#475569; }
+      .meta { text-align:right; }
+      .meta .t { font-size:16px; font-weight:bold; color:#0f172a; }
+      .info { display:flex; flex-wrap:wrap; gap:4px 24px; margin:10px 0 14px; font-size:12px; }
+      .info b { color:#0f172a; }
+      table { width:100%; border-collapse:collapse; margin-top:6px; }
+      th { background:#0f766e; color:#fff; text-align:left; padding:6px 8px; font-size:11px; }
+      td { padding:6px 8px; border-bottom:1px solid #e2e8f0; }
+      .r { text-align:right; }
+      tfoot td { border:none; }
+      .tot { font-weight:bold; font-size:14px; }
+      .nc { margin-top:14px; border:1px solid #bfdbfe; background:#eff6ff; border-radius:8px; padding:10px 12px; font-size:11.5px; }
+      .nc .h { font-weight:bold; color:#1e40af; margin-bottom:3px; }
+      .nc .uuid { font-family:monospace; word-break:break-all; color:#1d4ed8; }
+      .foot { margin-top:22px; border-top:1px solid #e2e8f0; padding-top:8px; text-align:center; color:#94a3b8; font-size:10.5px; }
+      @media print { body { padding:12px; } }
+    </style></head><body>
+    <div class="top">
+      <div class="biz">
+        <img src="${logoUrl}" alt=""><br>
+        <b>${escapeHtml(bizName)}</b>
+        ${c.legal_name ? `<div>${escapeHtml(c.legal_name)}</div>` : ""}
+        <div>NIT: ${escapeHtml(c.tax_id || "CF")}</div>
+        ${c.address ? `<div>${escapeHtml(c.address)}</div>` : ""}
+        <div>${[c.phone ? `Tel: ${c.phone}` : "", c.email || ""].filter(Boolean).join("  ")}</div>
+      </div>
+      <div class="meta">
+        <div class="t">${titulo}</div>
+        <div><b>Devolución:</b> ${escapeHtml(r.folio)}</div>
+        <div><b>Fecha:</b> ${new Date(r.date).toLocaleString("es-GT")}</div>
+      </div>
+    </div>
+    <div class="info">
+      <div><b>Venta origen:</b> ${escapeHtml(r.sale_folio || "Sin ticket")}</div>
+      <div><b>Cliente:</b> ${escapeHtml(r.customer_name || "Consumidor Final")}</div>
+      <div><b>Motivo:</b> ${escapeHtml(r.reason_display || "")}</div>
+      <div><b>Reembolso:</b> ${escapeHtml(r.refund_method || "")}</div>
+      ${r.reason ? `<div><b>Detalle:</b> ${escapeHtml(r.reason)}</div>` : ""}
+    </div>
+    <table>
+      <thead><tr><th>Producto</th><th class="r">Cant.</th><th class="r">Precio</th><th class="r">Importe</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot>
+        <tr><td colspan="3" class="r">Subtotal</td><td class="r">${Q(r.subtotal)}</td></tr>
+        <tr><td colspan="3" class="r">IVA</td><td class="r">${Q(r.tax)}</td></tr>
+        <tr class="tot"><td colspan="3" class="r">Total reembolsado</td><td class="r">${Q(r.total)}</td></tr>
+      </tfoot>
+    </table>
+    ${nc ? `
+    <div class="nc">
+      <div class="h">📄 Nota de Crédito Electrónica (FEL)</div>
+      <div>Número de Autorización:</div>
+      <div class="uuid">${escapeHtml(nc.uuid || "")}</div>
+      <div>Serie: ${escapeHtml(nc.serie || "")}  ·  No: ${escapeHtml(nc.numero || "")}</div>
+      ${r.sale_folio ? `<div>Referencia a la factura de la venta ${escapeHtml(r.sale_folio)}.</div>` : ""}
+    </div>` : ""}
+    <div class="foot">${nc
+      ? "Representación impresa de la Nota de Crédito Electrónica."
+      : "Comprobante interno de devolución. No es un documento tributario."}</div>
+  </body></html>`;
+}
+
+function escapeHtml(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (m) => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]
+  ));
 }
