@@ -198,7 +198,10 @@ COMPANY_PRICES_INCLUDE_TAX = env_bool("COMPANY_PRICES_INCLUDE_TAX", True)
 # o 'infile' (certificador real Infile/FEEL) cuando se configuren credenciales.
 FEL_DRIVER = os.getenv("FEL_DRIVER", "stub")
 FEL_ENVIRONMENT = os.getenv("FEL_ENVIRONMENT", "PRUEBAS")  # PRUEBAS|PRODUCCION
-FEL_CERTIFICADOR = os.getenv("FEL_CERTIFICADOR", "Certificador de pruebas")
+FEL_CERTIFICADOR = os.getenv("FEL_CERTIFICADOR", "INFILE, S.A.")
+# NIT del certificador (aparece en el Excel de la SAT y en la hoja completa).
+# Poné el NIT exacto de tu certificador según tu contrato FEL.
+FEL_CERTIFICADOR_NIT = os.getenv("FEL_CERTIFICADOR_NIT", "12521337")
 
 
 # ---------------------------------------------------------------------------
