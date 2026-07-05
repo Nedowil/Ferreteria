@@ -26,6 +26,34 @@ def _money(value):
     return "Q" + f"{n:,.2f}"
 
 
+def _num2(value):
+    """Número con 2 decimales, sin símbolo (columnas de partidas)."""
+    try:
+        n = Decimal(str(value))
+    except Exception:
+        n = Decimal("0")
+    return f"{n:,.2f}"
+
+
+def _qty(value):
+    """Cantidad sin decimales inútiles: 12 en vez de 12.00; 1.5 se conserva."""
+    try:
+        n = Decimal(str(value))
+    except Exception:
+        return str(value)
+    n = n.normalize()
+    s = format(n, "f")
+    return s
+
+
+def _forma_pago(payment_status):
+    return "Crédito" if "cred" in str(payment_status or "").lower() else "Contado"
+
+
+_METODO = {"efectivo": "Efectivo", "tarjeta": "Tarjeta",
+           "transferencia": "Transferencia", "credito": "Crédito"}
+
+
 def _fmt_dt(value):
     """Formatea una fecha/hora (ISO o datetime) a hora local legible
     (dd/mm/aaaa hh:mm), sin microsegundos ni zona técnica. Para el ticket."""
@@ -85,6 +113,22 @@ class Escpos:
             space = 1
         return self.line(left + " " * space + right)
 
+    def cols3(self, a, b, c):
+        """Tres columnas (como el ticket en pantalla): ``a`` a la izquierda,
+        ``b`` centrada, ``c`` a la derecha."""
+        a, b, c = str(a), str(b), str(c)
+        w = self.width
+        c1 = w // 3
+        c3 = w // 3
+        c2 = w - c1 - c3
+        s1 = a[:c1].ljust(c1)
+        bb = b[:c2]
+        pad = c2 - len(bb)
+        left = pad // 2
+        s2 = (" " * left) + bb + (" " * (pad - left))
+        s3 = c[:c3].rjust(c3)
+        return self.line(s1 + s2 + s3)
+
     def feed(self, n=1):
         self.buf += b"\n" * n
         return self
@@ -111,58 +155,79 @@ def build_ticket_escpos(ticket, *, width_mm=80, auto_cut=True):
     fel = ticket.get("fel")
     e = Escpos(_width_chars(width_mm))
 
-    # Encabezado
+    # Encabezado (mismo contenido y orden que el ticket en pantalla)
     e.align(1).bold(True).double(True).line(co["name"]).double(False)
     if co.get("legal_name"):
         e.line(co["legal_name"])
-    e.bold(False)
     e.line(f"NIT: {co.get('tax_id') or 'CF'}")
+    e.bold(False)
     if co.get("address"):
         e.line(co["address"])
-    if co.get("phone"):
-        e.line(f"Tel: {co['phone']}")
-    e.sep()
+    contacto = "  ".join(filter(None, [
+        f"Tel: {co['phone']}" if co.get("phone") else None, co.get("email")]))
+    if contacto:
+        e.line(contacto)
+    e.feed(1)
 
-    # Datos de la venta
-    e.align(0)
-    e.line(f"Documento: {sale['folio']}")
+    # Tipo de documento
+    e.align(0).bold(True)
+    e.line("DOCUMENTO TRIBUTARIO ELECTRÓNICO" if fel else "COMPROBANTE DE VENTA")
+    e.line(f"Factura # {fel['numero']}" if fel else f"Recibo No. {sale['folio']}")
+    e.bold(False)
+    if fel and fel.get("uuid"):
+        e.line(fel["uuid"])
+    e.bold(True)
     e.line(f"Fecha: {_fmt_dt(sale['date'])}")
     e.line(f"Cliente: {sale['customer']}")
     e.line(f"NIT: {sale['customer_nit']}")
+    e.line(f"Forma de Pago: {_forma_pago(sale.get('payment_status'))}")
+    e.bold(False)
+    if sale.get("customer_address"):
+        e.line(f"Dirección: {sale['customer_address']}")
+    if fel:
+        e.bold(True)
+        e.line(f"Serie: {fel.get('serie')}  No: {fel.get('numero')}")
+        if fel.get("fecha_certificacion"):
+            e.line("Certificación: " + _fmt_dt(fel["fecha_certificacion"]))
+        e.bold(False)
     e.sep()
 
-    # Partidas: el total de la línea es el BRUTO (cantidad x precio), para que
-    # cuadre con "cant x precio" a la vista. El descuento se muestra aparte en
-    # los totales (no restado en cada línea).
+    # Partidas: encabezado de 3 columnas y una fila por producto (cant/precio/
+    # subtotal), igual que la vista en pantalla. El subtotal de la línea es el
+    # BRUTO (cantidad x precio); el descuento va aparte en los totales.
+    e.bold(True).cols3("Cant.", "Precio", "Sub Total").bold(False)
     for it in sale["items"]:
         name = it["name"] + (f" ({it['unit_label']})" if it.get("unit_label") else "")
         e.line(name)
         line_total = it.get("gross", it["subtotal"])
-        e.cols(f"  {it['qty']} x {_money(it['unit_price'])}", _money(line_total))
+        e.cols3(_qty(it["qty"]), _num2(it["unit_price"]), _num2(line_total))
     e.sep()
 
     # Totales
-    e.cols("Subtotal", _money(sale["subtotal"]))
     if Decimal(str(sale.get("discount") or 0)) > 0:
-        e.cols("Descuento", "-" + _money(sale["discount"]))
-    e.cols("IVA", _money(sale["tax"]))
-    e.bold(True).double(True).cols("TOTAL", _money(sale["total"])).double(False).bold(False)
-    e.cols("Recibido", _money(sale["paid"]))
-    if Decimal(str(sale.get("change") or 0)) > 0:
-        e.cols("Vuelto", _money(sale["change"]))
+        e.cols("Subtotal:", _money(sale["subtotal"]))
+        e.cols("Descuento:", "-" + _money(sale["discount"]))
+    e.align(1).bold(True).double(True).line(f"Total Venta: {_money(sale['total'])}").double(False).bold(False)
+    e.align(0).bold(True).line("Métodos de Pago:").bold(False)
+    e.cols(f"{_METODO.get(sale.get('payment_method'), sale.get('payment_method') or 'Efectivo')}:", _money(sale["paid"]))
+    e.align(1).bold(True).line(f"Impuesto Total: {_money(sale['tax'])}").bold(False)
+    e.align(0).sep()
+    e.bold(True).cols("Entregado:", _money(sale["paid"]))
+    e.cols("Vuelto:", _money(sale.get("change") or 0)).bold(False)
 
-    # Bloque FEL
+    # Bloque FEL: certificador (y estado anulado)
     if fel:
-        e.sep()
-        e.align(1).bold(True).line("FACTURA ELECTRONICA EN LINEA (FEL)").bold(False)
-        e.line(f"Autorizacion: {fel['uuid']}")
-        e.line(f"Serie: {fel['serie']}  Numero: {fel['numero']}")
+        if fel.get("status") == "anulada":
+            e.align(1).bold(True).line("** ANULADA **").bold(False)
+        e.feed(1).align(1)
         if fel.get("certificador"):
             e.line("Certificador: " + fel["certificador"])
-        if fel.get("fecha_certificacion"):
-            e.line("Certificado: " + _fmt_dt(fel["fecha_certificacion"]))
-        if fel.get("status") == "anulada":
-            e.bold(True).line("** ANULADA **").bold(False)
+
+    # Frases SAT (si las hay)
+    for ph in (co.get("phrases") or []):
+        txt = ph if isinstance(ph, str) else " ".join(str(v) for v in ph.values())
+        if txt:
+            e.align(1).line(txt)
 
     e.align(1).feed(1).line("Gracias por su compra!")
     e.line('"La bendición del Señor es la que enriquece."')
