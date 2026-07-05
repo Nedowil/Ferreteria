@@ -210,6 +210,8 @@ def build_ticket(sale):
         },
         "sale": {
             "folio": sale.folio, "date": sale.date.isoformat(),
+            "seller": (sale.user.name if sale.user and sale.user.name else
+                       (sale.user.email if sale.user else None)),
             "customer": sale.customer.name if sale.customer else "Consumidor Final",
             "customer_nit": (sale.customer.tax_id if sale.customer and sale.customer.tax_id else "CF"),
             "customer_phone": (sale.customer.phone if sale.customer else None),

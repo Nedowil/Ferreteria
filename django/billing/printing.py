@@ -181,6 +181,8 @@ def build_ticket_escpos(ticket, *, width_mm=80, auto_cut=True):
     e.line(f"Cliente: {sale['customer']}")
     e.line(f"NIT: {sale['customer_nit']}")
     e.line(f"Forma de Pago: {_forma_pago(sale.get('payment_status'))}")
+    if sale.get("seller"):
+        e.line(f"Vendedor: {sale['seller']}")
     e.bold(False)
     if sale.get("customer_address"):
         e.line(f"Dirección: {sale['customer_address']}")

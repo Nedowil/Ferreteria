@@ -148,6 +148,7 @@ function TicketPaper({ company, sale, fel, qr, phrases }) {
       <div className="font-bold">Cliente: {sale.customer}</div>
       <div className="font-bold">NIT: {sale.customer_nit}</div>
       <div className="font-bold">Forma de Pago: {formaPago(sale.payment_status)}</div>
+      {sale.seller && <div className="font-bold">Vendedor: {sale.seller}</div>}
       {sale.customer_address && <div>Dirección: {sale.customer_address}</div>}
       {fel && <div className="font-bold">Serie: {fel.serie}  No: {fel.numero}</div>}
       {fel?.fecha_certificacion && <div className="font-bold">Certificación: {new Date(fel.fecha_certificacion).toLocaleDateString("es-GT")}</div>}
@@ -251,6 +252,7 @@ function CartaPaper({ company, sale, fel, qr, phrases, d, meses }) {
             <div className="pl-2">{metodoLabel(sale.payment_method)}: {Q(sale.paid)}</div>
             <div><b>Moneda:</b> {company.currency === "GTQ" ? "Quetzal" : company.currency}</div>
             <div><b>Fecha de Emisión:</b> {d.toLocaleDateString("es-GT")}</div>
+            {sale.seller && <div><b>Vendedor:</b> {sale.seller}</div>}
           </div>
         </div>
         <div>
