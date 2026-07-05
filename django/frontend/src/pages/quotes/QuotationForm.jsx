@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/client";
+import QuickCustomerModal from "../../components/QuickCustomerModal";
 
 export default function QuotationForm() {
   const navigate = useNavigate();
@@ -12,8 +13,16 @@ export default function QuotationForm() {
   const [results, setResults] = useState([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [addingCustomer, setAddingCustomer] = useState(false);
 
   useEffect(() => { api.get("/customers/?active=1&page_size=300").then((r) => setCustomers(r.data.results || r.data)); }, []);
+
+  // Cliente recién creado desde el modal: se agrega a la lista y queda elegido.
+  const onCustomerCreated = (c) => {
+    setCustomers((prev) => [c, ...prev.filter((x) => x.id !== c.id)]);
+    setHeader((h) => ({ ...h, customer_id: String(c.id) }));
+    setAddingCustomer(false);
+  };
 
   const doSearch = async (q) => {
     setSearch(q);
@@ -56,11 +65,15 @@ export default function QuotationForm() {
       <section className="bg-white rounded-lg shadow p-5 grid grid-cols-3 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Cliente</label>
-          <select value={header.customer_id} onChange={(e) => setHeader({ ...header, customer_id: e.target.value })}
-                  className="w-full border border-slate-300 rounded px-3 py-2 text-sm">
-            <option value="">Sin cliente</option>
-            {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+          <div className="flex gap-2">
+            <select value={header.customer_id} onChange={(e) => setHeader({ ...header, customer_id: e.target.value })}
+                    className="flex-1 border border-slate-300 rounded px-3 py-2 text-sm">
+              <option value="">Sin cliente</option>
+              {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            <button type="button" onClick={() => setAddingCustomer(true)} title="Nuevo cliente"
+                    className="shrink-0 border border-slate-300 rounded px-3 py-2 text-sm hover:bg-slate-50 transition">➕</button>
+          </div>
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Fecha</label>
@@ -113,6 +126,10 @@ export default function QuotationForm() {
         <button disabled={busy} className="bg-blue-600 text-white rounded px-6 py-2 font-medium disabled:opacity-50">{busy ? "Guardando…" : "Guardar cotización"}</button>
         <button type="button" onClick={() => navigate("/cotizaciones")} className="px-6 py-2 text-slate-500">Cancelar</button>
       </div>
+
+      {addingCustomer && (
+        <QuickCustomerModal onClose={() => setAddingCustomer(false)} onCreated={onCustomerCreated} />
+      )}
     </form>
   );
 }
