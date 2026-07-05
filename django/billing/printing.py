@@ -210,7 +210,7 @@ def build_ticket_escpos(ticket, *, width_mm=80, auto_cut=True):
     if Decimal(str(sale.get("discount") or 0)) > 0:
         e.cols("Subtotal:", _money(sale["subtotal"]))
         e.cols("Descuento:", "-" + _money(sale["discount"]))
-    e.align(1).bold(True).double(True).line(f"Total Venta: {_money(sale['total'])}").double(False).bold(False)
+    e.align(1).bold(True).line(f"Total Venta: {_money(sale['total'])}").bold(False)
     e.align(0).bold(True).line("Métodos de Pago:").bold(False)
     e.cols(f"{_METODO.get(sale.get('payment_method'), sale.get('payment_method') or 'Efectivo')}:", _money(sale["paid"]))
     e.align(1).bold(True).line(f"Impuesto Total: {_money(sale['tax'])}").bold(False)
