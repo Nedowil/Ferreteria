@@ -45,6 +45,33 @@ function enLetras(value) {
   return `${words} QUETZALES ${tail}`.replace(/\s+/g, " ").trim();
 }
 
+// Resumen del comprobante para enviar por WhatsApp (texto plano).
+function saleText(t) {
+  const { company, sale, fel } = t;
+  const bizName = company.name || company.commercial_name || "Ferretería Central";
+  const lines = [];
+  lines.push(`*${bizName}*`);
+  lines.push(fel ? `Factura Electrónica ${fel.numero || ""}`.trim() : `Comprobante de venta ${sale.folio}`);
+  lines.push(`Fecha: ${new Date(sale.date).toLocaleString("es-GT")}`);
+  if (sale.customer && sale.customer !== "Consumidor Final") lines.push(`Cliente: ${sale.customer}`);
+  lines.push("");
+  sale.items.forEach((it) => {
+    const imp = Number(it.gross ?? it.subtotal);
+    lines.push(`• ${it.name}${it.unit_label ? ` (${it.unit_label})` : ""}  x${Number(it.qty)}  =  ${Q(imp)}`);
+  });
+  lines.push("");
+  if (Number(sale.discount) > 0) lines.push(`Descuento: -${Q(sale.discount)}`);
+  lines.push(`*TOTAL: ${Q(sale.total)}*`);
+  if (fel?.uuid) {
+    lines.push("");
+    lines.push("Factura Electrónica (FEL)");
+    lines.push(`Autorización: ${fel.uuid}`);
+  }
+  lines.push("");
+  lines.push("¡Gracias por su compra!");
+  return lines.join("\n");
+}
+
 const regimeLabel = (r) => (r === "GENERAL" ? "General" : "Pequeño Contribuyente");
 const formaPago = (s) => (/cred/i.test(s || "") ? "Crédito" : "Contado");
 const metodoLabel = (m) => ({ efectivo: "Efectivo", tarjeta: "Tarjeta", transferencia: "Transferencia", credito: "Crédito" }[m] || m);
@@ -89,6 +116,16 @@ export default function Ticket() {
     }
   };
 
+  // Enviar el comprobante por WhatsApp (resumen en texto). Si el cliente tiene
+  // teléfono, abre el chat directo; si no, abre WhatsApp para elegir contacto.
+  const sendWhatsapp = () => {
+    const text = saleText(t);
+    let phone = (sale.customer_phone || "").replace(/\D/g, "");
+    if (phone && phone.length === 8) phone = "502" + phone; // Guatemala
+    const base = phone ? `https://wa.me/${phone}` : "https://wa.me/";
+    window.open(`${base}?text=${encodeURIComponent(text)}`, "_blank");
+  };
+
   return (
     <div className={mode === "carta" ? "max-w-4xl mx-auto" : "max-w-md mx-auto"}>
       <style>{`
@@ -116,6 +153,7 @@ export default function Ticket() {
           <button onClick={() => window.print()} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm shadow hover:from-blue-700 hover:to-indigo-700 transition">
             {mode === "carta" ? "Imprimir / PDF" : "Imprimir"}
           </button>
+          <button onClick={sendWhatsapp} className="inline-flex items-center gap-2 bg-green-600 text-white rounded-lg px-4 py-2 text-sm shadow hover:bg-green-700 transition">💬 WhatsApp</button>
         </div>
       </div>
 
