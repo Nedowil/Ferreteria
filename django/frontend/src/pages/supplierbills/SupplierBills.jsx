@@ -21,6 +21,7 @@ export default function SupplierBills() {
   const [editing, setEditing] = useState(null); // id en edición
   const [error, setError] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [fund, setFund] = useState(null); // fondo de proveedores abierto (o null)
 
   const params = () => {
     const p = {};
@@ -28,11 +29,37 @@ export default function SupplierBills() {
     return p;
   };
 
+  const loadFund = () => api.get("/supplier-fund/").then((r) => setFund(r.data)).catch(() => setFund(null));
   const load = () => {
     api.get("/supplier-bills/", { params: params() }).then((r) => setRows(r.data.results || r.data));
     api.get("/supplier-bills/total/", { params: params() }).then((r) => setTotals(r.data)).catch(() => {});
+    loadFund();
   };
   useEffect(load, []);
+
+  // --- Fondo de proveedores -------------------------------------------------
+  const openFund = async () => {
+    const v = prompt("¿Con cuánto abrís el fondo de proveedores? (ej. 5000)");
+    if (v === null) return;
+    const amount = Number(v);
+    if (!amount || amount <= 0) { alert("Monto inválido."); return; }
+    try { await api.post("/supplier-fund/open/", { opening_amount: amount }); loadFund(); }
+    catch (e) { alert(e.response?.data?.detail || "No se pudo abrir el fondo."); }
+  };
+  const addFund = async () => {
+    const v = prompt("¿Cuánto agregás al fondo?");
+    if (v === null) return;
+    const amount = Number(v);
+    if (!amount || amount <= 0) { alert("Monto inválido."); return; }
+    try { await api.post("/supplier-fund/add/", { amount }); loadFund(); }
+    catch (e) { alert(e.response?.data?.detail || "No se pudo agregar."); }
+  };
+  const closeFund = async () => {
+    if (!confirm("¿Cerrar el fondo de proveedores? Ya no se podrán registrar pagos en efectivo hasta abrir otro.")) return;
+    const notes = prompt("Nota de cierre (opcional):") || "";
+    try { await api.post("/supplier-fund/close/", { notes }); loadFund(); }
+    catch (e) { alert(e.response?.data?.detail || "No se pudo cerrar."); }
+  };
 
   const set = (k, v) => setForm({ ...form, [k]: v });
 
@@ -85,9 +112,37 @@ export default function SupplierBills() {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">🧾 Facturas de proveedor</h1>
-          <p className="text-sm text-slate-500">Control simple de las facturas pagadas a proveedores. No se vincula con otros módulos.</p>
+          <p className="text-sm text-slate-500">Control de facturas pagadas a proveedores. Los pagos en efectivo se descuentan del fondo.</p>
         </div>
         <button onClick={exportExcel} disabled={exporting} className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-100 transition">{exporting ? "Exportando…" : "⬇️ Excel"}</button>
+      </div>
+
+      {/* Fondo de proveedores (caja para pagos en efectivo) */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 mb-4">
+        {fund ? (
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap gap-x-8 gap-y-2">
+              <div><div className="text-[11px] uppercase tracking-wide text-slate-400">Fondo de proveedores</div><div className="font-semibold text-emerald-700">● Abierto</div></div>
+              <div><div className="text-[11px] uppercase tracking-wide text-slate-400">Inicial + aportes</div><div className="font-semibold text-slate-700">{Q(Number(fund.opening_amount) + Number(fund.added_amount))}</div></div>
+              <div><div className="text-[11px] uppercase tracking-wide text-slate-400">Pagado</div><div className="font-semibold text-red-600">−{Q(fund.spent)}</div></div>
+              <div><div className="text-[11px] uppercase tracking-wide text-slate-400">Saldo disponible</div><div className="text-2xl font-bold text-slate-800">{Q(fund.balance)}</div></div>
+            </div>
+            {canEdit && (
+              <div className="flex gap-2">
+                <button onClick={addFund} className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-3 py-2 text-sm font-medium hover:bg-emerald-100 transition">+ Agregar fondos</button>
+                <button onClick={closeFund} className="border border-slate-300 text-slate-600 rounded-lg px-3 py-2 text-sm font-medium hover:bg-slate-50 transition">Cerrar fondo</button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="font-semibold text-slate-700">💵 Fondo de proveedores</div>
+              <div className="text-sm text-slate-500">No hay un fondo abierto. El admin lo abre con el dinero que deja para pagar facturas; cada pago en <b>efectivo</b> lo descuenta.</div>
+            </div>
+            {canEdit && <button onClick={openFund} className="bg-emerald-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:bg-emerald-700 transition">Abrir fondo</button>}
+          </div>
+        )}
       </div>
 
       {/* Formulario de registro / edición */}
@@ -125,6 +180,12 @@ export default function SupplierBills() {
                       className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
                 {METHODS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
+              {form.payment_method === "efectivo" && !fund && (
+                <p className="text-[11px] text-amber-600 mt-1">Abrí el fondo para pagar en efectivo.</p>
+              )}
+              {form.payment_method === "efectivo" && fund && (
+                <p className="text-[11px] text-slate-400 mt-1">Saldo del fondo: {Q(fund.balance)}</p>
+              )}
             </div>
             <div className="md:col-span-5">
               <label className="block text-xs text-slate-500 mb-1">Nota</label>

@@ -5,7 +5,22 @@ from decimal import Decimal
 from django.utils import timezone
 from rest_framework import serializers
 
-from .models import SupplierBill
+from .models import SupplierBill, SupplierFund
+
+
+class SupplierFundSerializer(serializers.ModelSerializer):
+    spent = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True)
+    balance = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True)
+    opened_by_name = serializers.CharField(source="opened_by.name", read_only=True, default=None)
+    status_display = serializers.CharField(source="get_status_display", read_only=True)
+
+    class Meta:
+        model = SupplierFund
+        fields = [
+            "id", "opening_amount", "added_amount", "spent", "balance",
+            "status", "status_display", "opened_by_name", "opened_at",
+            "closed_at", "closing_notes",
+        ]
 
 
 class SupplierBillSerializer(serializers.ModelSerializer):
