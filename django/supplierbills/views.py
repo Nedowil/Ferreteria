@@ -147,6 +147,27 @@ def report(request):
             SupplierFund.objects.select_related("opened_by").all()[:50], many=True
         ).data,
     }
+
+    # Rango de fechas personalizado (opcional): ?from=&to=
+    from django.utils.dateparse import parse_date
+    frm = parse_date(request.query_params.get("from") or "")
+    to = parse_date(request.query_params.get("to") or "")
+    if frm or to:
+        rq = base
+        if frm:
+            rq = rq.filter(paid_on__gte=frm)
+        if to:
+            rq = rq.filter(paid_on__lte=to)
+        data["rango"] = {
+            "from": frm, "to": to,
+            "efectivo": total(rq, payment_method="efectivo"),
+            "total": total(rq),
+            "count": rq.count(),
+            "by_method": [
+                {"method": m, "method_display": label, "total": total(rq, payment_method=m)}
+                for m, label in SupplierBill.PAYMENT_CHOICES
+            ],
+        }
     return Response(data)
 
 

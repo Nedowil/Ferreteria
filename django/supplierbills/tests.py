@@ -76,3 +76,19 @@ class SupplierFundTests(TestCase):
         self.assertEqual(Decimal(r.data["efectivo"]["anio"]), Decimal("300.00"))
         self.assertEqual(Decimal(r.data["total"]["anio"]), Decimal("1000.00"))
         self.assertEqual(len(r.data["funds"]), 1)
+        self.assertNotIn("rango", r.data)  # sin from/to no hay bloque de rango
+
+    def test_reporte_rango_de_fechas(self):
+        from django.utils import timezone
+        hoy = timezone.localdate().isoformat()
+        self.c.post("/api/supplier-fund/open/", {"opening_amount": "5000"})
+        self.c.post("/api/supplier-bills/", {
+            "supplier_name": "P", "amount": "300.00", "payment_method": "efectivo", "paid_on": hoy})
+        self.c.post("/api/supplier-bills/", {
+            "supplier_name": "P", "amount": "150.00", "payment_method": "efectivo",
+            "paid_on": "2020-01-01"})  # fuera del rango
+        r = self.c.get("/api/supplier-report/", {"from": hoy, "to": hoy})
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("rango", r.data)
+        self.assertEqual(Decimal(r.data["rango"]["efectivo"]), Decimal("300.00"))
+        self.assertEqual(r.data["rango"]["count"], 1)

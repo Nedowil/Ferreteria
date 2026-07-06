@@ -1,16 +1,25 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
-import { KpiCard, ExcelButton } from "./common";
+import { KpiCard, ExcelButton, DateRangeBar } from "./common";
 import { exportToExcel } from "../../utils/exportExcel";
 
 const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const dt = (v) => (v ? new Date(v).toLocaleString("es-GT") : "—");
 
-// Reporte de pagos a proveedores: efectivo por día/mes/año, desglose por forma
-// de pago del año e historial de fondos abiertos/cerrados.
+// Reporte de pagos a proveedores: efectivo por día/mes/año, filtro por rango de
+// fechas, desglose por forma de pago e historial de fondos abiertos/cerrados.
 export default function SupplierPayments() {
   const [d, setD] = useState(null);
-  useEffect(() => { api.get("/supplier-report/").then((r) => setD(r.data)).catch(() => {}); }, []);
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+
+  const loadReport = () => {
+    const params = {};
+    if (from) params.from = from;
+    if (to) params.to = to;
+    api.get("/supplier-report/", { params }).then((r) => setD(r.data)).catch(() => {});
+  };
+  useEffect(() => { loadReport(); }, []); // eslint-disable-line
   if (!d) return <div className="text-slate-400">Cargando…</div>;
 
   const exportFunds = () => exportToExcel("fondos-proveedor", [
@@ -27,6 +36,31 @@ export default function SupplierPayments() {
   return (
     <div>
       <h1 className="text-lg font-semibold mb-4">Pagos a proveedores</h1>
+
+      {/* Filtro por rango de fechas */}
+      <DateRangeBar from={from} setFrom={setFrom} to={to} setTo={setTo} onApply={loadReport} />
+      {d.rango && (
+        <div className="bg-white rounded-lg shadow p-5 mb-6">
+          <div className="text-sm font-semibold text-slate-600 mb-3">
+            Rango seleccionado ({d.rango.count} pago{d.rango.count === 1 ? "" : "s"})
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
+            <div className="border border-slate-100 rounded-lg p-4">
+              <div className="text-sm text-slate-500">Pagado en efectivo</div>
+              <div className="text-2xl font-bold text-emerald-700">{Q(d.rango.efectivo)}</div>
+            </div>
+            <div className="border border-slate-100 rounded-lg p-4">
+              <div className="text-sm text-slate-500">Total (todas las formas)</div>
+              <div className="text-2xl font-bold text-slate-800">{Q(d.rango.total)}</div>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-600">
+            {d.rango.by_method.filter((m) => Number(m.total) > 0).map((m) => (
+              <span key={m.method}>{m.method_display}: <b>{Q(m.total)}</b></span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Pagado en EFECTIVO */}
       <div className="text-sm font-semibold text-slate-600 mb-2">Pagado en efectivo</div>
