@@ -9,6 +9,7 @@ router = DefaultRouter()
 router.register("supplier-bills", views.SupplierBillViewSet, basename="supplier-bill")
 
 urlpatterns = router.urls + [
+    path("supplier-report/", views.report, name="supplier-report"),
     path("supplier-fund/", views.fund_current, name="supplier-fund-current"),
     path("supplier-fund/open/", views.fund_open, name="supplier-fund-open"),
     path("supplier-fund/add/", views.fund_add, name="supplier-fund-add"),

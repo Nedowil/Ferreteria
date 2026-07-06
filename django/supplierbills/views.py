@@ -9,7 +9,7 @@ from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
-from core.permissions import HasPermission, PermissionByActionMixin
+from core.permissions import HasAnyPermission, HasPermission, PermissionByActionMixin
 from .models import SupplierBill, SupplierFund
 from .serializers import SupplierBillSerializer, SupplierFundSerializer
 
@@ -111,6 +111,43 @@ def fund_add(request):
     fund.added_amount = (fund.added_amount or 0) + amount
     fund.save(update_fields=["added_amount"])
     return Response(SupplierFundSerializer(fund).data)
+
+
+@api_view(["GET"])
+@permission_classes([HasAnyPermission.require_any("reportes.ver", "facturas_prov.ver")])
+def report(request):
+    """Reporte de pagos a proveedores: totales de HOY, MES y AÑO (efectivo y
+    total), desglose por forma de pago del año, e historial de fondos."""
+    today = timezone.localdate()
+    month_start = today.replace(day=1)
+    year_start = today.replace(month=1, day=1)
+    base = SupplierBill.objects.all()
+
+    def total(qs, **flt):
+        return qs.filter(**flt).aggregate(x=Sum("amount"))["x"] or Decimal("0")
+
+    efectivo = base.filter(payment_method="efectivo")
+    data = {
+        "efectivo": {
+            "hoy": total(efectivo, paid_on=today),
+            "mes": total(efectivo, paid_on__gte=month_start),
+            "anio": total(efectivo, paid_on__gte=year_start),
+        },
+        "total": {
+            "hoy": total(base, paid_on=today),
+            "mes": total(base, paid_on__gte=month_start),
+            "anio": total(base, paid_on__gte=year_start),
+        },
+        "by_method_year": [
+            {"method": m, "method_display": label,
+             "total": total(base, paid_on__gte=year_start, payment_method=m)}
+            for m, label in SupplierBill.PAYMENT_CHOICES
+        ],
+        "funds": SupplierFundSerializer(
+            SupplierFund.objects.select_related("opened_by").all()[:50], many=True
+        ).data,
+    }
+    return Response(data)
 
 
 @api_view(["POST"])

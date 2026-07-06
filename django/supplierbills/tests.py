@@ -64,3 +64,15 @@ class SupplierFundTests(TestCase):
         r = self.c.post("/api/supplier-fund/close/", {"notes": "fin de mes"})
         self.assertEqual(r.status_code, 200)
         self.assertIsNone(SupplierFund.current())
+
+    def test_reporte_totales_y_fondos(self):
+        self.c.post("/api/supplier-fund/open/", {"opening_amount": "5000"})
+        self.c.post("/api/supplier-bills/", {
+            "supplier_name": "P", "amount": "300.00", "payment_method": "efectivo"})
+        self.c.post("/api/supplier-bills/", {
+            "supplier_name": "P", "amount": "700.00", "payment_method": "transferencia"})
+        r = self.c.get("/api/supplier-report/")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(Decimal(r.data["efectivo"]["anio"]), Decimal("300.00"))
+        self.assertEqual(Decimal(r.data["total"]["anio"]), Decimal("1000.00"))
+        self.assertEqual(len(r.data["funds"]), 1)

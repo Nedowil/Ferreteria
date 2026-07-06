@@ -36,6 +36,7 @@ import InventoryValue from "./pages/reports/InventoryValue";
 import DeadStock from "./pages/reports/DeadStock";
 import DailyCash from "./pages/reports/DailyCash";
 import { TopProducts, TopCustomers, TopSuppliers, BySeller, ByCategory } from "./pages/reports/Rankings";
+import SupplierPayments from "./pages/reports/SupplierPayments";
 import Users from "./pages/admin/Users";
 import Roles from "./pages/admin/Roles";
 import Branches from "./pages/admin/Branches";
@@ -166,6 +167,7 @@ export default function App() {
       <Route path="/reportes/stock-muerto" element={<Protected perm="reportes.ver"><DeadStock /></Protected>} />
       <Route path="/reportes/corte-diario" element={<Protected perm="reportes.ver"><DailyCash /></Protected>} />
       <Route path="/reportes/valor-inventario" element={<Protected perm="reportes.ver"><InventoryValue /></Protected>} />
+      <Route path="/reportes/pagos-proveedor" element={<Protected perm="reportes.ver"><SupplierPayments /></Protected>} />
       <Route path="/admin/usuarios" element={<Protected perm="usuarios.ver"><Users /></Protected>} />
       <Route path="/admin/roles" element={<Protected perm="roles.gestionar"><Roles /></Protected>} />
       <Route path="/admin/sucursales" element={<Protected perm="sucursales.gestionar"><Branches /></Protected>} />
