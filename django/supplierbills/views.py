@@ -80,7 +80,7 @@ def fund_current(request):
 
 
 @api_view(["POST"])
-@permission_classes([HasPermission.require("facturas_prov.gestionar")])
+@permission_classes([HasPermission.require("facturas_prov.fondo")])
 def fund_open(request):
     """Abre el fondo con un monto inicial. Solo uno abierto a la vez (global)."""
     if SupplierFund.current():
@@ -96,7 +96,7 @@ def fund_open(request):
 
 
 @api_view(["POST"])
-@permission_classes([HasPermission.require("facturas_prov.gestionar")])
+@permission_classes([HasPermission.require("facturas_prov.fondo")])
 def fund_add(request):
     """Agrega más dinero al fondo abierto (aporte)."""
     fund = SupplierFund.current()
@@ -172,7 +172,7 @@ def report(request):
 
 
 @api_view(["POST"])
-@permission_classes([HasPermission.require("facturas_prov.gestionar")])
+@permission_classes([HasPermission.require("facturas_prov.fondo")])
 def fund_close(request):
     """Cierra el fondo abierto."""
     fund = SupplierFund.current()

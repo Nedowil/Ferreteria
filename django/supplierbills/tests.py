@@ -78,6 +78,22 @@ class SupplierFundTests(TestCase):
         self.assertEqual(len(r.data["funds"]), 1)
         self.assertNotIn("rango", r.data)  # sin from/to no hay bloque de rango
 
+    def test_permiso_fondo_separado_de_gestionar(self):
+        """Un usuario con 'gestionar' (registrar facturas) pero SIN 'fondo' puede
+        ver el fondo, pero no abrirlo/cerrarlo/agregar."""
+        from django.contrib.auth.models import Group
+        from core.permissions import sync_permissions
+        perms = sync_permissions()
+        juan = User.objects.create_user(
+            username="juan", email="juan@test.com", password="x", name="Juan")
+        g = Group.objects.create(name="compras")
+        g.permissions.set([perms["facturas_prov.ver"], perms["facturas_prov.gestionar"]])
+        juan.groups.add(g)
+        cj = APIClient()
+        cj.force_authenticate(juan)
+        self.assertEqual(cj.get("/api/supplier-fund/").status_code, 200)          # puede ver
+        self.assertEqual(cj.post("/api/supplier-fund/open/", {"opening_amount": "1000"}).status_code, 403)  # no puede abrir
+
     def test_reporte_rango_de_fechas(self):
         from django.utils import timezone
         hoy = timezone.localdate().isoformat()

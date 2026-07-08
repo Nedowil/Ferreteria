@@ -14,6 +14,7 @@ const BLANK = { supplier_name: "", invoice_number: "", amount: "", paid_on: toda
 export default function SupplierBills() {
   const { can } = useAuth();
   const canEdit = can("facturas_prov.gestionar");
+  const canFund = can("facturas_prov.fondo"); // abrir/cerrar/agregar al fondo
   const [rows, setRows] = useState([]);
   const [totals, setTotals] = useState({ total: 0, count: 0 });
   const [filters, setFilters] = useState({ search: "", from: "", to: "", method: "" });
@@ -127,7 +128,7 @@ export default function SupplierBills() {
               <div><div className="text-[11px] uppercase tracking-wide text-slate-400">Pagado</div><div className="font-semibold text-red-600">−{Q(fund.spent)}</div></div>
               <div><div className="text-[11px] uppercase tracking-wide text-slate-400">Saldo disponible</div><div className="text-2xl font-bold text-slate-800">{Q(fund.balance)}</div></div>
             </div>
-            {canEdit && (
+            {canFund && (
               <div className="flex gap-2">
                 <button onClick={addFund} className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-3 py-2 text-sm font-medium hover:bg-emerald-100 transition">+ Agregar fondos</button>
                 <button onClick={closeFund} className="border border-slate-300 text-slate-600 rounded-lg px-3 py-2 text-sm font-medium hover:bg-slate-50 transition">Cerrar fondo</button>
@@ -140,7 +141,7 @@ export default function SupplierBills() {
               <div className="font-semibold text-slate-700">💵 Fondo de proveedores</div>
               <div className="text-sm text-slate-500">No hay un fondo abierto. El admin lo abre con el dinero que deja para pagar facturas; cada pago en <b>efectivo</b> lo descuenta.</div>
             </div>
-            {canEdit && <button onClick={openFund} className="bg-emerald-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:bg-emerald-700 transition">Abrir fondo</button>}
+            {canFund && <button onClick={openFund} className="bg-emerald-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:bg-emerald-700 transition">Abrir fondo</button>}
           </div>
         )}
       </div>

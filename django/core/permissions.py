@@ -30,6 +30,7 @@ PERMISSIONS = [
     ("compras.cancelar", "Cancelar compras", "Compras"),
     ("facturas_prov.ver", "Ver facturas de proveedor", "Compras"),
     ("facturas_prov.gestionar", "Registrar/editar facturas de proveedor", "Compras"),
+    ("facturas_prov.fondo", "Gestionar fondo de proveedores (abrir/cerrar/agregar)", "Compras"),
     ("clientes.ver", "Ver clientes", "Ventas"),
     ("clientes.crear", "Crear clientes", "Ventas"),
     ("clientes.editar", "Editar clientes", "Ventas"),
