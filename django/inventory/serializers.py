@@ -172,10 +172,15 @@ class MovementCreateSerializer(serializers.Serializer):
 class StockCountItemSerializer(serializers.Serializer):
     product_id = serializers.IntegerField()
     new_count = RoundingDecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0"))
+    # Unidad en que se ingresó el conteo: "base" (libras) o "container" (cajas).
+    unit = serializers.ChoiceField(choices=["base", "container"], required=False, default="base")
 
 
 class StockCountSerializer(serializers.Serializer):
     """Conteo físico masivo."""
 
     reason = serializers.CharField(required=False, allow_blank=True, max_length=255)
+    # "set" = fijar la existencia al valor contado (recuento total, ajuste).
+    # "add" = sumar lo encontrado a la existencia actual (entrada).
+    mode = serializers.ChoiceField(choices=["set", "add"], required=False, default="set")
     counts = StockCountItemSerializer(many=True)

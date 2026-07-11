@@ -279,6 +279,7 @@ class StockCountView(APIView):
         ser = StockCountSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         reason = ser.validated_data.get("reason") or f"Conteo físico masivo {timezone.localdate()}"
+        mode = ser.validated_data.get("mode", "set")  # "set" = fijar, "add" = sumar
         branch = get_request_branch(request)
 
         adjusted, errors = 0, []
@@ -286,17 +287,31 @@ class StockCountView(APIView):
             product = Product.objects.filter(pk=item["product_id"]).first()
             if not product:
                 continue
-            new_count = item["new_count"]
+            # El conteo puede venir en unidad base o en empaque (cajas). Se
+            # convierte a unidad base con el factor de empaque del producto.
+            value = item["new_count"]
+            if item.get("unit") == "container" and product.container_factor:
+                value = value * Decimal(product.container_factor)
             current = product.stock_for(branch.pk if branch else None)
-            if abs(new_count - current) < Decimal("0.001"):
-                continue
             try:
-                apply_movement(
-                    product, InventoryMovement.AJUSTE, new_count,
-                    reason=f"{reason} (era {current} → quedó {new_count})",
-                    user=request.user, branch=branch,
-                )
-                adjusted += 1
+                if mode == "add":
+                    if value <= 0:
+                        continue
+                    apply_movement(
+                        product, InventoryMovement.ENTRADA, value,
+                        reason=f"{reason} (se sumaron {value}; era {current} → quedó {current + value})",
+                        user=request.user, branch=branch,
+                    )
+                    adjusted += 1
+                else:  # set / fijar
+                    if abs(value - current) < Decimal("0.001"):
+                        continue
+                    apply_movement(
+                        product, InventoryMovement.AJUSTE, value,
+                        reason=f"{reason} (era {current} → quedó {value})",
+                        user=request.user, branch=branch,
+                    )
+                    adjusted += 1
             except InventoryError as e:
                 errors.append(f"{product.sku}: {e}")
         return Response({"adjusted": adjusted, "errors": errors})

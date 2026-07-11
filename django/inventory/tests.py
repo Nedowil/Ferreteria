@@ -335,3 +335,48 @@ class ProductEditApiTests(TestCase):
         self.product.refresh_from_db()
         self.assertTrue(self.product.image)
         self.assertIn("products/", self.product.image.name)
+
+
+class StockCountEndpointTests(TestCase):
+    """Conteo físico: modos fijar/sumar y conteo en empaque (cajas)."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from rest_framework.test import APIClient
+        U = get_user_model()
+        self.admin = U.objects.create_superuser(
+            username="a", email="a@a.com", password="x", name="A")
+        self.c = APIClient()
+        self.c.force_authenticate(self.admin)
+        # Clavos: 1 caja = 50 libras; existencia 500 lb (10 cajas)
+        self.p = Product.objects.create(
+            sku="CLA", name="Clavos", stock=Decimal("500"),
+            base_unit_label="libra", container_label="caja", container_factor=Decimal("50"))
+
+    def test_sumar_en_empaque_no_borra(self):
+        # Encontró 6.5 cajas más -> 500 + 325 = 825 lb (NO reemplaza)
+        r = self.c.post("/api/inventory/stock-count/", {
+            "mode": "add",
+            "counts": [{"product_id": self.p.id, "new_count": "6.5", "unit": "container"}],
+        }, format="json")
+        self.assertEqual(r.status_code, 200)
+        self.p.refresh_from_db()
+        self.assertEqual(self.p.stock, Decimal("825"))
+
+    def test_fijar_en_empaque(self):
+        # Recuento total: 16.5 cajas -> 825 lb (fija)
+        r = self.c.post("/api/inventory/stock-count/", {
+            "mode": "set",
+            "counts": [{"product_id": self.p.id, "new_count": "16.5", "unit": "container"}],
+        }, format="json")
+        self.assertEqual(r.status_code, 200)
+        self.p.refresh_from_db()
+        self.assertEqual(self.p.stock, Decimal("825"))
+
+    def test_fijar_en_base_por_defecto(self):
+        r = self.c.post("/api/inventory/stock-count/", {
+            "counts": [{"product_id": self.p.id, "new_count": "480"}],
+        }, format="json")
+        self.assertEqual(r.status_code, 200)
+        self.p.refresh_from_db()
+        self.assertEqual(self.p.stock, Decimal("480"))
