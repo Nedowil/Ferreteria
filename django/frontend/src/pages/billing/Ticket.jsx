@@ -214,7 +214,8 @@ function TicketPaper({ company, sale, fel, qr, phrases }) {
           <div className="flex justify-between"><span>Descuento:</span><span>−{Q(sale.discount)}</span></div>
         </>
       )}
-      <div className="text-center font-bold text-[15px]">Total Venta: {Q(sale.total)}</div>
+      {/* Igual que el térmico: a la izquierda, en negrita y sin agrandar. */}
+      <div className="flex justify-between font-bold"><span>Total Venta:</span><span>{Q(sale.total)}</span></div>
       <div className="font-bold mt-1">Métodos de Pago:</div>
       <div className="flex justify-between"><span>{metodoLabel(sale.payment_method)}:</span><span>{Q(sale.paid)}</span></div>
       <div className="text-center font-bold my-1">Impuesto Total: {Q(sale.tax)}</div>
