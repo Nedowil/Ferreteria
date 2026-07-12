@@ -66,12 +66,15 @@ class SaleViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.ModelVie
         ser = SaleWriteSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         data = ser.validated_data
-        # Regla de negocio: no se registra una venta sin una caja abierta (la
-        # venta queda ligada a la caja del turno). El sync offline queda exento
-        # porque esas ventas ya ocurrieron con la caja abierta en su momento.
-        if cash.active_session(branch=self.branch, user=request.user) is None:
+        # Regla de negocio: una venta de contado necesita una caja abierta (el
+        # efectivo debe registrarse en la caja del turno). Las ventas al crédito
+        # quedan exentas porque no entra dinero al momento. El sync offline
+        # también queda exento: esas ventas ya ocurrieron con la caja abierta.
+        is_credit = (data.get("payment_status") == Sale.PAY_CREDITO
+                     or data.get("payment_method") == "credito")
+        if not is_credit and cash.active_session(branch=self.branch, user=request.user) is None:
             return Response(
-                {"detail": "No hay una caja abierta. Abrí la caja antes de registrar una venta."},
+                {"detail": "No hay una caja abierta. Abrí la caja antes de registrar una venta de contado."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         try:

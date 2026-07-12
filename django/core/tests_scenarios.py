@@ -176,13 +176,23 @@ class ScenarioTests(APITestCase):
         # El almacenista NO tiene cuentas por cobrar → 403.
         self.assertEqual(self.as_(self.alm).get("/api/sales/receivable/").status_code, 403)
 
-    # -- Escenario H: no se vende sin caja abierta -------------------------
-    def test_H_venta_requiere_caja_abierta(self):
-        # Sin caja abierta la venta se rechaza con un mensaje claro.
+    # -- Escenario H: la venta de contado exige caja; el crédito no --------
+    def test_H_venta_contado_requiere_caja_abierta(self):
+        # Sin caja abierta la venta de contado se rechaza con un mensaje claro.
         r = self._sell(self.admin, self.b1)
         self.assertEqual(r.status_code, 400, r.data)
         self.assertIn("caja", r.data["detail"].lower())
-        # Al abrir la caja, la misma venta se registra sin problema.
+
+        # Una venta AL CRÉDITO sí se puede registrar sin caja abierta.
+        from partners.models import Customer
+        cli = Customer.objects.create(name="Cliente Credito")
+        credito = {"payment_method": "credito", "payment_status": "al_credito",
+                   "paid_amount": "0", "customer_id": cli.id,
+                   "items": [{"product_id": self.prod.id, "quantity": "1", "unit_price": "5", "tax_type": "iva"}]}
+        r = self.as_(self.admin).post("/api/sales/", credito, format="json", HTTP_X_BRANCH_ID=str(self.b1.id))
+        self.assertEqual(r.status_code, 201, r.data)
+
+        # Al abrir la caja, la venta de contado se registra sin problema.
         self._open_cash(self.admin, self.b1, "100")
         r = self._sell(self.admin, self.b1)
         self.assertEqual(r.status_code, 201, r.data)

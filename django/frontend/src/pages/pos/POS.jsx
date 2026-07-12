@@ -665,10 +665,11 @@ export default function POS() {
   const checkout = async () => {
     setError("");
     if (cart.length === 0) { setError("El carrito está vacío."); return; }
-    // Sin caja abierta no se puede cobrar (la venta debe registrarse en la caja
-    // del turno). Solo se bloquea cuando sabemos con certeza que está cerrada.
-    if (cashOpen === false) {
-      setError("No hay una caja abierta. Abrí la caja antes de cobrar.");
+    // Una venta de contado necesita caja abierta (el efectivo se registra en la
+    // caja del turno). Las ventas al crédito quedan exentas. Solo se bloquea
+    // cuando sabemos con certeza que está cerrada.
+    if (!credit && cashOpen === false) {
+      setError("No hay una caja abierta. Abrí la caja antes de cobrar de contado.");
       return;
     }
     if (credit && !customerId) { setError("Una venta al crédito requiere cliente."); return; }
@@ -1128,9 +1129,9 @@ export default function POS() {
             </div>
           )}
 
-          <button disabled={busy || cart.length === 0 || felDateInvalid || cashOpen === false} onClick={checkout}
+          <button disabled={busy || cart.length === 0 || felDateInvalid || (!credit && cashOpen === false)} onClick={checkout}
                   className="w-full bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-lg py-3 font-semibold text-lg shadow-lg shadow-green-600/20 hover:from-emerald-600 hover:to-green-700 disabled:opacity-50 transition">
-            {busy ? "Procesando…" : cashOpen === false ? "Caja cerrada — abrí la caja" : "Cobrar"}
+            {busy ? "Procesando…" : (!credit && cashOpen === false) ? "Caja cerrada — abrí la caja" : "Cobrar"}
           </button>
         </div>
       </div>
