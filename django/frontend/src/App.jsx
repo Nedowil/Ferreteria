@@ -1,59 +1,68 @@
-import { Component } from "react";
+import { Component, lazy, Suspense } from "react";
 import { Routes, Route, Navigate, Link, useLocation } from "react-router-dom";
 import { useAuth } from "./auth/AuthContext";
 import Layout from "./components/Layout";
-import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import ProductList from "./pages/products/ProductList";
-import ProductForm from "./pages/products/ProductForm";
-import InventoryShow from "./pages/products/InventoryShow";
-import LowStock from "./pages/products/LowStock";
-import StockCount from "./pages/products/StockCount";
-import CatalogList from "./pages/catalogs/CatalogList";
-import SupplierList from "./pages/partners/SupplierList";
-import CustomerList from "./pages/partners/CustomerList";
-import PurchaseList from "./pages/purchases/PurchaseList";
-import PurchaseForm from "./pages/purchases/PurchaseForm";
-import PurchaseDetail from "./pages/purchases/PurchaseDetail";
-import Payable from "./pages/purchases/Payable";
-import SupplierBills from "./pages/supplierbills/SupplierBills";
-import POS from "./pages/pos/POS";
-import SalesList from "./pages/pos/SalesList";
-import SaleDetail from "./pages/pos/SaleDetail";
-import Receivable from "./pages/pos/Receivable";
-import CashBox from "./pages/cash/CashBox";
-import CashSessions from "./pages/cash/CashSessions";
-import QuotationList from "./pages/quotes/QuotationList";
-import QuotationForm from "./pages/quotes/QuotationForm";
-import QuotationDetail from "./pages/quotes/QuotationDetail";
-import ReturnsList from "./pages/returns/ReturnsList";
-import ReturnCreate from "./pages/returns/ReturnCreate";
-import ReturnDetail from "./pages/returns/ReturnDetail";
-import ReportsIndex from "./pages/reports/ReportsIndex";
-import SalesReport from "./pages/reports/SalesReport";
-import ProfitReport from "./pages/reports/ProfitReport";
-import InventoryValue from "./pages/reports/InventoryValue";
-import DeadStock from "./pages/reports/DeadStock";
-import DailyCash from "./pages/reports/DailyCash";
-import { TopProducts, TopCustomers, TopSuppliers, BySeller, ByCategory } from "./pages/reports/Rankings";
-import SupplierPayments from "./pages/reports/SupplierPayments";
-import Users from "./pages/admin/Users";
-import Roles from "./pages/admin/Roles";
-import Branches from "./pages/admin/Branches";
-import Transfers from "./pages/admin/Transfers";
-import TransferCreate from "./pages/admin/TransferCreate";
-import TransferDetail from "./pages/admin/TransferDetail";
-import AuditLog from "./pages/admin/AuditLog";
-import Invoices from "./pages/billing/Invoices";
-import Ticket from "./pages/billing/Ticket";
-import CompanySettings from "./pages/billing/CompanySettings";
-import ImportData from "./pages/admin/ImportData";
-import Backups from "./pages/admin/Backups";
-import PublicCatalog from "./pages/public/PublicCatalog";
-import CustomerDisplay from "./pages/pos/CustomerDisplay";
-import ForgotPassword from "./pages/auth/ForgotPassword";
-import ResetPassword from "./pages/auth/ResetPassword";
-import ChangePassword from "./pages/auth/ChangePassword";
+import Login from "./pages/Login"; // eager: es la puerta de entrada
+
+// Code-splitting: cada pantalla se carga en su propio "chunk" solo cuando se
+// visita, así la primera carga de la app es mucho más liviana.
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const ProductList = lazy(() => import("./pages/products/ProductList"));
+const ProductForm = lazy(() => import("./pages/products/ProductForm"));
+const InventoryShow = lazy(() => import("./pages/products/InventoryShow"));
+const LowStock = lazy(() => import("./pages/products/LowStock"));
+const StockCount = lazy(() => import("./pages/products/StockCount"));
+const CatalogList = lazy(() => import("./pages/catalogs/CatalogList"));
+const SupplierList = lazy(() => import("./pages/partners/SupplierList"));
+const CustomerList = lazy(() => import("./pages/partners/CustomerList"));
+const PurchaseList = lazy(() => import("./pages/purchases/PurchaseList"));
+const PurchaseForm = lazy(() => import("./pages/purchases/PurchaseForm"));
+const PurchaseDetail = lazy(() => import("./pages/purchases/PurchaseDetail"));
+const Payable = lazy(() => import("./pages/purchases/Payable"));
+const SupplierBills = lazy(() => import("./pages/supplierbills/SupplierBills"));
+const POS = lazy(() => import("./pages/pos/POS"));
+const SalesList = lazy(() => import("./pages/pos/SalesList"));
+const SaleDetail = lazy(() => import("./pages/pos/SaleDetail"));
+const Receivable = lazy(() => import("./pages/pos/Receivable"));
+const CashBox = lazy(() => import("./pages/cash/CashBox"));
+const CashSessions = lazy(() => import("./pages/cash/CashSessions"));
+const QuotationList = lazy(() => import("./pages/quotes/QuotationList"));
+const QuotationForm = lazy(() => import("./pages/quotes/QuotationForm"));
+const QuotationDetail = lazy(() => import("./pages/quotes/QuotationDetail"));
+const ReturnsList = lazy(() => import("./pages/returns/ReturnsList"));
+const ReturnCreate = lazy(() => import("./pages/returns/ReturnCreate"));
+const ReturnDetail = lazy(() => import("./pages/returns/ReturnDetail"));
+const ReportsIndex = lazy(() => import("./pages/reports/ReportsIndex"));
+const SalesReport = lazy(() => import("./pages/reports/SalesReport"));
+const ProfitReport = lazy(() => import("./pages/reports/ProfitReport"));
+const InventoryValue = lazy(() => import("./pages/reports/InventoryValue"));
+const DeadStock = lazy(() => import("./pages/reports/DeadStock"));
+const DailyCash = lazy(() => import("./pages/reports/DailyCash"));
+const TopProducts = lazy(() => import("./pages/reports/Rankings").then((m) => ({ default: m.TopProducts })));
+const TopCustomers = lazy(() => import("./pages/reports/Rankings").then((m) => ({ default: m.TopCustomers })));
+const TopSuppliers = lazy(() => import("./pages/reports/Rankings").then((m) => ({ default: m.TopSuppliers })));
+const BySeller = lazy(() => import("./pages/reports/Rankings").then((m) => ({ default: m.BySeller })));
+const ByCategory = lazy(() => import("./pages/reports/Rankings").then((m) => ({ default: m.ByCategory })));
+const SupplierPayments = lazy(() => import("./pages/reports/SupplierPayments"));
+const Users = lazy(() => import("./pages/admin/Users"));
+const Roles = lazy(() => import("./pages/admin/Roles"));
+const Branches = lazy(() => import("./pages/admin/Branches"));
+const Transfers = lazy(() => import("./pages/admin/Transfers"));
+const TransferCreate = lazy(() => import("./pages/admin/TransferCreate"));
+const TransferDetail = lazy(() => import("./pages/admin/TransferDetail"));
+const AuditLog = lazy(() => import("./pages/admin/AuditLog"));
+const Invoices = lazy(() => import("./pages/billing/Invoices"));
+const Ticket = lazy(() => import("./pages/billing/Ticket"));
+const CompanySettings = lazy(() => import("./pages/billing/CompanySettings"));
+const ImportData = lazy(() => import("./pages/admin/ImportData"));
+const Backups = lazy(() => import("./pages/admin/Backups"));
+const PublicCatalog = lazy(() => import("./pages/public/PublicCatalog"));
+const CustomerDisplay = lazy(() => import("./pages/pos/CustomerDisplay"));
+const ForgotPassword = lazy(() => import("./pages/auth/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/auth/ResetPassword"));
+const ChangePassword = lazy(() => import("./pages/auth/ChangePassword"));
+
+const Loading = () => <div className="p-10 text-center text-slate-400">Cargando…</div>;
 
 function NoAccess() {
   return (
@@ -115,11 +124,18 @@ function Protected({ children, perm }) {
   if (loading) return <div className="p-10 text-center text-slate-400">Cargando…</div>;
   if (!user) return <Navigate to="/login" replace />;
   if (perm && !can(perm)) return <Layout><NoAccess /></Layout>;
-  return <Layout><ErrorBoundary key={location.pathname}>{children}</ErrorBoundary></Layout>;
+  return (
+    <Layout>
+      <ErrorBoundary key={location.pathname}>
+        <Suspense fallback={<Loading />}>{children}</Suspense>
+      </ErrorBoundary>
+    </Layout>
+  );
 }
 
 export default function App() {
   return (
+    <Suspense fallback={<Loading />}>
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/recuperar-contrasena" element={<ForgotPassword />} />
@@ -182,5 +198,6 @@ export default function App() {
       <Route path="/admin/respaldos" element={<Protected perm="backup.gestionar"><Backups /></Protected>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
   );
 }
