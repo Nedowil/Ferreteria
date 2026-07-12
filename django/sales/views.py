@@ -9,6 +9,7 @@ from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from cashbox import services as cash
 from core.api_utils import BranchContextMixin
 from core.permissions import PermissionByActionMixin
 from .models import Sale
@@ -65,6 +66,14 @@ class SaleViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.ModelVie
         ser = SaleWriteSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         data = ser.validated_data
+        # Regla de negocio: no se registra una venta sin una caja abierta (la
+        # venta queda ligada a la caja del turno). El sync offline queda exento
+        # porque esas ventas ya ocurrieron con la caja abierta en su momento.
+        if cash.active_session(branch=self.branch, user=request.user) is None:
+            return Response(
+                {"detail": "No hay una caja abierta. Abrí la caja antes de registrar una venta."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         try:
             sale = services.create_sale(data, data["items"], user=request.user, branch=self.branch)
         except services.SaleError as e:

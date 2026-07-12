@@ -665,6 +665,12 @@ export default function POS() {
   const checkout = async () => {
     setError("");
     if (cart.length === 0) { setError("El carrito está vacío."); return; }
+    // Sin caja abierta no se puede cobrar (la venta debe registrarse en la caja
+    // del turno). Solo se bloquea cuando sabemos con certeza que está cerrada.
+    if (cashOpen === false) {
+      setError("No hay una caja abierta. Abrí la caja antes de cobrar.");
+      return;
+    }
     if (credit && !customerId) { setError("Una venta al crédito requiere cliente."); return; }
     if (felDateInvalid) {
       setError("La factura electrónica solo se puede emitir con fecha dentro de los últimos 5 días (regla de la SAT). Cambiá la fecha o usá 'Recibo'.");
@@ -1122,9 +1128,9 @@ export default function POS() {
             </div>
           )}
 
-          <button disabled={busy || cart.length === 0 || felDateInvalid} onClick={checkout}
+          <button disabled={busy || cart.length === 0 || felDateInvalid || cashOpen === false} onClick={checkout}
                   className="w-full bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-lg py-3 font-semibold text-lg shadow-lg shadow-green-600/20 hover:from-emerald-600 hover:to-green-700 disabled:opacity-50 transition">
-            {busy ? "Procesando…" : "Cobrar"}
+            {busy ? "Procesando…" : cashOpen === false ? "Caja cerrada — abrí la caja" : "Cobrar"}
           </button>
         </div>
       </div>

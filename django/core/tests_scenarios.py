@@ -176,6 +176,17 @@ class ScenarioTests(APITestCase):
         # El almacenista NO tiene cuentas por cobrar → 403.
         self.assertEqual(self.as_(self.alm).get("/api/sales/receivable/").status_code, 403)
 
+    # -- Escenario H: no se vende sin caja abierta -------------------------
+    def test_H_venta_requiere_caja_abierta(self):
+        # Sin caja abierta la venta se rechaza con un mensaje claro.
+        r = self._sell(self.admin, self.b1)
+        self.assertEqual(r.status_code, 400, r.data)
+        self.assertIn("caja", r.data["detail"].lower())
+        # Al abrir la caja, la misma venta se registra sin problema.
+        self._open_cash(self.admin, self.b1, "100")
+        r = self._sell(self.admin, self.b1)
+        self.assertEqual(r.status_code, 201, r.data)
+
     # -- Escenario G: FEL diferida offline (sync + emitir) -----------------
     def test_G_fel_diferida_offline(self):
         """Replica lo que hace el frontend al reconectar: sincroniza la venta
