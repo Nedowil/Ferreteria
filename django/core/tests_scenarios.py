@@ -142,12 +142,39 @@ class ScenarioTests(APITestCase):
         # almacenista sí puede ver y registrar
         r = self.as_(self.alm).get("/api/supplier-bills/")
         self.assertEqual(r.status_code, 200)
+        # Método distinto a efectivo: no depende del fondo de proveedores.
         r = self.as_(self.alm).post("/api/supplier-bills/",
-                                    {"supplier_name": "Distribuidora X", "amount": "1250.50"}, format="json")
+                                    {"supplier_name": "Distribuidora X", "amount": "1250.50",
+                                     "payment_method": "transferencia"}, format="json")
         self.assertEqual(r.status_code, 201, r.data)
         # total refleja lo registrado
         rt = self.as_(self.alm).get("/api/supplier-bills/total/")
         self.assertEqual(Decimal(str(rt.data["total"])), Decimal("1250.50"))
+
+    # -- Escenario F: permisos propios de cuentas y devoluciones -----------
+    def test_F_permisos_cuentas_y_devoluciones(self):
+        """Cuentas por pagar/cobrar y Devoluciones tienen permiso propio, así
+        el admin los asigna por rol de forma independiente."""
+        from django.contrib.auth.models import Group, Permission
+        perms = sync_permissions()
+
+        # Rol con SOLO cuentas por pagar (sin 'compras.ver').
+        g = Group.objects.create(name="solo_cxp")
+        g.permissions.set([perms["cuentas_pagar.ver"]])
+        u = User.objects.create_user(username="cxp", email="cxp@t.com", password="x")
+        u.groups.add(g)
+        BranchUser.objects.create(branch=self.b1, user=u, is_default=True)
+
+        # Puede ver cuentas por pagar aunque no tenga 'compras.ver'.
+        self.assertEqual(self.as_(u).get("/api/purchases/payable/").status_code, 200)
+        # Pero NO la lista de compras (ese sí necesita 'compras.ver').
+        self.assertEqual(self.as_(u).get("/api/purchases/").status_code, 403)
+
+        # El vendedor (rol por defecto) sí tiene cuentas por cobrar y devoluciones.
+        self.assertEqual(self.as_(self.vend).get("/api/sales/receivable/").status_code, 200)
+        self.assertEqual(self.as_(self.vend).get("/api/returns/").status_code, 200)
+        # El almacenista NO tiene cuentas por cobrar → 403.
+        self.assertEqual(self.as_(self.alm).get("/api/sales/receivable/").status_code, 403)
 
     # -- Escenario G: FEL diferida offline (sync + emitir) -----------------
     def test_G_fel_diferida_offline(self):

@@ -19,12 +19,13 @@ from . import services
 
 
 class SaleReturnViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.ModelViewSet):
-    # No hay permiso dedicado de devoluciones: se reusa el de ventas (ver/crear/cancelar).
+    # Permisos propios del módulo de devoluciones (el admin los controla por rol).
     perms_map = {
-        "list": "ventas.ver", "retrieve": "ventas.ver", "search_by_product": "ventas.ver",
-        "create": "ventas.crear", "without_sale": "ventas.crear",
-        "cancel": "ventas.cancelar", "destroy": "ventas.cancelar",
-        "update": "ventas.cancelar", "partial_update": "ventas.cancelar",
+        "list": "devoluciones.ver", "retrieve": "devoluciones.ver",
+        "search_by_product": ("devoluciones.ver", "devoluciones.crear"),
+        "create": "devoluciones.crear", "without_sale": "devoluciones.crear",
+        "cancel": "devoluciones.cancelar", "destroy": "devoluciones.cancelar",
+        "update": "devoluciones.cancelar", "partial_update": "devoluciones.cancelar",
     }
     queryset = (
         SaleReturn.objects.filter(deleted_at__isnull=True)

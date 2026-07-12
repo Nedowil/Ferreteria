@@ -24,7 +24,7 @@ from . import services
 
 class SaleViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.ModelViewSet):
     perms_map = {
-        "list": "ventas.ver", "retrieve": "ventas.ver", "receivable": "ventas.ver",
+        "list": "ventas.ver", "retrieve": "ventas.ver", "receivable": "cuentas_cobrar.ver",
         "create": "ventas.crear",
         "sync_offline": "ventas.crear",
         "cancel": "ventas.cancelar",

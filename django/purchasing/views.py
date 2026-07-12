@@ -30,7 +30,7 @@ from .services import (
 
 class PurchaseViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.ModelViewSet):
     perms_map = {
-        "list": "compras.ver", "retrieve": "compras.ver", "payable": "compras.ver",
+        "list": "compras.ver", "retrieve": "compras.ver", "payable": "cuentas_pagar.ver",
         "create": "compras.crear", "update": "compras.crear", "partial_update": "compras.crear",
         "destroy": "compras.cancelar", "cancel": "compras.cancelar",
         "receive": "compras.recibir",

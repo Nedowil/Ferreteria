@@ -617,7 +617,7 @@ class PrintingTests(TestCase):
         self.assertIsInstance(data, bytes)
         self.assertTrue(data.startswith(b"\x1b@"))      # init
         self.assertIn(b"\x1dV", data)                    # corte
-        self.assertIn(b"TOTAL", data)
+        self.assertIn(b"Total Venta", data)             # total del comprobante
 
     def test_ancho_58mm_usa_32_columnas(self):
         from .printing import Escpos, _width_chars

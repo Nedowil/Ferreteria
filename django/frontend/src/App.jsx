@@ -157,21 +157,21 @@ export default function App() {
       <Route path="/compras" element={<Protected perm="compras.ver"><PurchaseList /></Protected>} />
       <Route path="/compras/nueva" element={<Protected perm="compras.crear"><PurchaseForm /></Protected>} />
       <Route path="/compras/:id" element={<Protected perm="compras.ver"><PurchaseDetail /></Protected>} />
-      <Route path="/cuentas-por-pagar" element={<Protected perm="compras.ver"><Payable /></Protected>} />
+      <Route path="/cuentas-por-pagar" element={<Protected perm="cuentas_pagar.ver"><Payable /></Protected>} />
       <Route path="/facturas-proveedor" element={<Protected perm="facturas_prov.ver"><SupplierBills /></Protected>} />
       <Route path="/pos" element={<Protected perm="ventas.crear"><POS /></Protected>} />
       <Route path="/ventas" element={<Protected perm="ventas.ver"><SalesList /></Protected>} />
       <Route path="/ventas/:id" element={<Protected perm="ventas.ver"><SaleDetail /></Protected>} />
       <Route path="/ventas/:id/ticket" element={<Protected perm="ventas.ver"><Ticket /></Protected>} />
-      <Route path="/cuentas-por-cobrar" element={<Protected perm="ventas.ver"><Receivable /></Protected>} />
+      <Route path="/cuentas-por-cobrar" element={<Protected perm="cuentas_cobrar.ver"><Receivable /></Protected>} />
       <Route path="/caja" element={<Protected perm="caja.ver"><CashBox /></Protected>} />
       <Route path="/caja/historial" element={<Protected perm="caja.ver"><CashSessions /></Protected>} />
       <Route path="/cotizaciones" element={<Protected perm="cotizaciones.ver"><QuotationList /></Protected>} />
       <Route path="/cotizaciones/nueva" element={<Protected perm="cotizaciones.crear"><QuotationForm /></Protected>} />
       <Route path="/cotizaciones/:id" element={<Protected perm="cotizaciones.ver"><QuotationDetail /></Protected>} />
-      <Route path="/devoluciones" element={<Protected perm="ventas.ver"><ReturnsList /></Protected>} />
-      <Route path="/devoluciones/nueva" element={<Protected perm="ventas.crear"><ReturnCreate /></Protected>} />
-      <Route path="/devoluciones/:id" element={<Protected perm="ventas.ver"><ReturnDetail /></Protected>} />
+      <Route path="/devoluciones" element={<Protected perm="devoluciones.ver"><ReturnsList /></Protected>} />
+      <Route path="/devoluciones/nueva" element={<Protected perm="devoluciones.crear"><ReturnCreate /></Protected>} />
+      <Route path="/devoluciones/:id" element={<Protected perm="devoluciones.ver"><ReturnDetail /></Protected>} />
       <Route path="/reportes" element={<Protected perm="reportes.ver"><ReportsIndex /></Protected>} />
       <Route path="/reportes/ventas" element={<Protected perm="reportes.ver"><SalesReport /></Protected>} />
       <Route path="/reportes/utilidad" element={<Protected perm="reportes.ver"><ProfitReport /></Protected>} />
