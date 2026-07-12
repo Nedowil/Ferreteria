@@ -138,9 +138,9 @@ export default function Ticket() {
           @page { margin: 8mm; }
         }`}</style>
 
-      <div className="flex flex-wrap gap-2 justify-between mb-3 print:hidden">
+      <div className="flex flex-wrap gap-3 justify-between mb-3 print:hidden">
         <button onClick={() => navigate(-1)} className="text-sm text-slate-500">← Volver</button>
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-3 items-center">
           <div className="flex rounded-lg border border-slate-200 overflow-hidden text-sm">
             <button onClick={() => setMode("ticket")}
                     className={"px-3 py-1.5 " + (mode === "ticket" ? "bg-blue-600 text-white" : "bg-white text-slate-600")}>🧾 Ticket</button>
