@@ -147,12 +147,15 @@ export default function Ticket() {
             <button onClick={() => setMode("carta")}
                     className={"px-3 py-1.5 " + (mode === "carta" ? "bg-blue-600 text-white" : "bg-white text-slate-600")}>📄 Hoja completa</button>
           </div>
-          {mode === "ticket" && (
+          {/* En el ticket solo se imprime en la térmica (es la que se usa).
+              La impresión normal/PDF queda para la Hoja completa (tamaño carta). */}
+          {mode === "ticket" ? (
             <button onClick={printThermal} className="bg-emerald-600 text-white rounded-lg px-4 py-2 text-sm shadow hover:bg-emerald-700 transition">Imprimir térmica</button>
+          ) : (
+            <button onClick={() => window.print()} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm shadow hover:from-blue-700 hover:to-indigo-700 transition">
+              Imprimir / PDF
+            </button>
           )}
-          <button onClick={() => window.print()} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm shadow hover:from-blue-700 hover:to-indigo-700 transition">
-            {mode === "carta" ? "Imprimir / PDF" : "Imprimir"}
-          </button>
           <button onClick={sendWhatsapp} className="inline-flex items-center gap-2 bg-green-600 text-white rounded-lg px-4 py-2 text-sm shadow hover:bg-green-700 transition">💬 WhatsApp</button>
         </div>
       </div>
