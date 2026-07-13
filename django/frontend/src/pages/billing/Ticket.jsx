@@ -153,7 +153,7 @@ export default function Ticket() {
             <>
               <button onClick={printThermal} className="bg-emerald-600 text-white rounded-lg px-4 py-2 text-sm shadow hover:bg-emerald-700 transition">Imprimir ticket</button>
               {/* Guardar el ticket: abre el diálogo del navegador para "Guardar como PDF". */}
-              <button onClick={() => window.print()} className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm shadow hover:bg-slate-800 transition">💾 Guardar PDF</button>
+              <button onClick={() => window.print()} className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm shadow hover:bg-slate-800 transition">💾 Guardar ticket</button>
             </>
           ) : (
             <button onClick={() => window.print()} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm shadow hover:from-blue-700 hover:to-indigo-700 transition">
