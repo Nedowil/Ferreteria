@@ -87,12 +87,14 @@ def _complemento_cambiario(cambiaria) -> str:
         "</cfc:Abono>"
         for a in cambiaria["abonos"]
     )
+    # Namespace/URI correctos del complemento cambiario de la SAT (el esquema
+    # real es .../dte/fel/CompCambiaria/0.1.0, no face2/ComplementoFacturaCambiaria).
     return (
         "<dte:Complementos>"
-        '<dte:Complemento IDComplemento="Cambiaria" NombreComplemento="Cambiaria" '
-        'URIComplemento="http://www.sat.gob.gt/fel/cambiaria.xsd">'
+        '<dte:Complemento IDComplemento="1" NombreComplemento="Abono" '
+        'URIComplemento="http://www.sat.gob.gt/dte/fel/CompCambiaria/0.1.0">'
         '<cfc:AbonosFacturaCambiaria '
-        'xmlns:cfc="http://www.sat.gob.gt/face2/ComplementoFacturaCambiaria/0.1.0" '
+        'xmlns:cfc="http://www.sat.gob.gt/dte/fel/CompCambiaria/0.1.0" '
         'Version="1">'
         f"{abonos}"
         "</cfc:AbonosFacturaCambiaria>"

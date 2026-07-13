@@ -397,6 +397,11 @@ class InfileCertifierTests(TestCase):
         xml = build_invoice_xml(build_dte(sale, CompanySetting.current()))
         self.assertIn('Tipo="FCAM"', xml)
         self.assertIn("AbonosFacturaCambiaria", xml)
+        # Namespace/URI correctos del esquema SAT (evita el error "No matching
+        # global element declaration" que devolvía Infile con el namespace viejo).
+        self.assertIn('xmlns:cfc="http://www.sat.gob.gt/dte/fel/CompCambiaria/0.1.0"', xml)
+        self.assertIn('URIComplemento="http://www.sat.gob.gt/dte/fel/CompCambiaria/0.1.0"', xml)
+        self.assertNotIn("face2/ComplementoFacturaCambiaria", xml)
         self.assertIn("<cfc:FechaVencimiento>2026-08-01</cfc:FechaVencimiento>", xml)
         self.assertIn("<cfc:NumeroAbono>1</cfc:NumeroAbono>", xml)
 
