@@ -211,12 +211,27 @@ def build_ticket_escpos(ticket, *, width_mm=80, auto_cut=True):
         e.cols("Subtotal:", _money(sale["subtotal"]))
         e.cols("Descuento:", "-" + _money(sale["discount"]))
     e.align(0).bold(True).cols("Total Venta:", _money(sale["total"])).bold(False)
-    e.align(0).bold(True).line("Métodos de Pago:").bold(False)
-    e.cols(f"{_METODO.get(sale.get('payment_method'), sale.get('payment_method') or 'Efectivo')}:", _money(sale["paid"]))
-    e.align(1).bold(True).line(f"Impuesto Total: {_money(sale['tax'])}").bold(False)
-    e.align(0).sep()
-    e.bold(True).cols("Entregado:", _money(sale["paid"]))
-    e.cols("Vuelto:", _money(sale.get("change") or 0)).bold(False)
+    # En venta al crédito no entra efectivo: se muestra el saldo pendiente en vez
+    # de Métodos de Pago / Entregado / Vuelto.
+    is_credit = ("cred" in str(sale.get("payment_status") or "").lower()
+                 or sale.get("payment_method") == "credito")
+    paid = Decimal(str(sale.get("paid") or 0))
+    if is_credit:
+        pending = Decimal(str(sale.get("total") or 0)) - paid
+        if pending < 0:
+            pending = Decimal("0")
+        if paid > 0:
+            e.cols("Abonado:", _money(paid))
+        e.bold(True).cols("Saldo pendiente:", _money(pending)).bold(False)
+        e.align(1).bold(True).line(f"Impuesto Total: {_money(sale['tax'])}").bold(False)
+        e.align(0).sep()
+    else:
+        e.align(0).bold(True).line("Métodos de Pago:").bold(False)
+        e.cols(f"{_METODO.get(sale.get('payment_method'), sale.get('payment_method') or 'Efectivo')}:", _money(sale["paid"]))
+        e.align(1).bold(True).line(f"Impuesto Total: {_money(sale['tax'])}").bold(False)
+        e.align(0).sep()
+        e.bold(True).cols("Entregado:", _money(sale["paid"]))
+        e.cols("Vuelto:", _money(sale.get("change") or 0)).bold(False)
 
     # Bloque FEL: certificador (y estado anulado)
     if fel:

@@ -220,12 +220,23 @@ function TicketPaper({ company, sale, fel, qr, phrases }) {
       )}
       {/* Igual que el térmico: a la izquierda, en negrita y sin agrandar. */}
       <div className="flex justify-between font-bold"><span>Total Venta:</span><span>{Q(sale.total)}</span></div>
-      <div className="font-bold mt-1">Métodos de Pago:</div>
-      <div className="flex justify-between"><span>{metodoLabel(sale.payment_method)}:</span><span>{Q(sale.paid)}</span></div>
-      <div className="text-center font-bold my-1">Impuesto Total: {Q(sale.tax)}</div>
-      <div className="border-t border-dashed border-slate-400 my-2" />
-      <div className="flex justify-between font-bold"><span>Entregado:</span><span>{Q(sale.paid)}</span></div>
-      <div className="flex justify-between font-bold text-[15px]"><span>Vuelto:</span><span>{Q(sale.change)}</span></div>
+      {(/cred/i.test(sale.payment_status || "") || sale.payment_method === "credito") ? (
+        <>
+          {/* Venta al crédito: no entra efectivo; se muestra el saldo pendiente. */}
+          {Number(sale.paid) > 0 && <div className="flex justify-between"><span>Abonado:</span><span>{Q(sale.paid)}</span></div>}
+          <div className="flex justify-between font-bold"><span>Saldo pendiente:</span><span>{Q(Math.max(0, Number(sale.total) - Number(sale.paid)))}</span></div>
+          <div className="text-center font-bold my-1">Impuesto Total: {Q(sale.tax)}</div>
+        </>
+      ) : (
+        <>
+          <div className="font-bold mt-1">Métodos de Pago:</div>
+          <div className="flex justify-between"><span>{metodoLabel(sale.payment_method)}:</span><span>{Q(sale.paid)}</span></div>
+          <div className="text-center font-bold my-1">Impuesto Total: {Q(sale.tax)}</div>
+          <div className="border-t border-dashed border-slate-400 my-2" />
+          <div className="flex justify-between font-bold"><span>Entregado:</span><span>{Q(sale.paid)}</span></div>
+          <div className="flex justify-between font-bold text-[15px]"><span>Vuelto:</span><span>{Q(sale.change)}</span></div>
+        </>
+      )}
 
       {fel?.status === "anulada" && <div className="text-center text-red-600 font-bold mt-2">** ANULADA **</div>}
 

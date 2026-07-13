@@ -615,6 +615,17 @@ class PrintingTests(TestCase):
         c.credentials(HTTP_AUTHORIZATION=f"Bearer {r.json()['access']}", HTTP_X_BRANCH_ID=str(self.branch.id))
         return c
 
+    def test_ticket_credito_muestra_saldo_pendiente(self):
+        from .printing import build_ticket_escpos
+        sale = _make_sale(folio="V-CRED-TICKET")
+        sale.payment_status = Sale.PAY_CREDITO
+        sale.paid_amount = Decimal("0")
+        sale.change_amount = Decimal("0")
+        sale.save()
+        data = build_ticket_escpos(services.build_ticket(sale), width_mm=80, auto_cut=True)
+        self.assertIn("Saldo pendiente".encode("cp850"), data)
+        self.assertNotIn(b"Vuelto", data)  # en credito no hay vuelto
+
     def test_build_ticket_escpos_genera_bytes(self):
         from .printing import build_ticket_escpos
         sale = _make_sale()
