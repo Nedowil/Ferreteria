@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/client";
 import QuickCustomerModal from "../../components/QuickCustomerModal";
+import QuickProductModal from "../../components/QuickProductModal";
 
 export default function QuotationForm() {
   const navigate = useNavigate();
@@ -14,6 +15,13 @@ export default function QuotationForm() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [addingCustomer, setAddingCustomer] = useState(false);
+  const [addingProduct, setAddingProduct] = useState(false);
+
+  // Producto recién creado desde el modal: se agrega como partida (medida base).
+  const onProductCreated = (p) => {
+    addItem(p, { label: p.base_unit_label || "unidad", price: Number(p.sale_price) });
+    setAddingProduct(false);
+  };
 
   useEffect(() => { api.get("/customers/?active=1&page_size=300").then((r) => setCustomers(r.data.results || r.data)); }, []);
 
@@ -101,9 +109,10 @@ export default function QuotationForm() {
 
       <section className="bg-white rounded-lg shadow p-5">
         <h3 className="font-semibold mb-3">Productos</h3>
-        <div className="relative mb-3">
+        <div className="flex gap-2 mb-3">
+          <div className="relative flex-1">
           <input placeholder="Buscar producto…" value={search} onChange={(e) => doSearch(e.target.value)}
-                 className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
+                 className="w-full border border-slate-300 rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
           {results.length > 0 && (
             <div className="absolute z-10 bg-white border rounded shadow w-full mt-1 max-h-60 overflow-auto">
               {results.map((p) => measuresFor(p).map((m) => (
@@ -113,6 +122,9 @@ export default function QuotationForm() {
               )))}
             </div>
           )}
+          </div>
+          <button type="button" onClick={() => setAddingProduct(true)} title="Crear un producto nuevo"
+                  className="shrink-0 inline-flex items-center gap-1 bg-blue-600 text-white rounded px-3 py-2 text-sm font-medium hover:bg-blue-700 transition whitespace-nowrap">➕ Producto</button>
         </div>
         <table className="w-full text-sm">
           <thead className="text-slate-500 text-left">
@@ -143,6 +155,9 @@ export default function QuotationForm() {
 
       {addingCustomer && (
         <QuickCustomerModal onClose={() => setAddingCustomer(false)} onCreated={onCustomerCreated} />
+      )}
+      {addingProduct && (
+        <QuickProductModal submitLabel="Guardar y agregar" onClose={() => setAddingProduct(false)} onCreated={onProductCreated} />
       )}
     </form>
   );
