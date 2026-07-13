@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../api/client";
 
@@ -217,7 +217,13 @@ export default function ProductForm() {
   const baseUnit = form.base_unit_label || "unidad";
   const containerLabel = form.container_label;
   const hasContainer = Boolean(containerLabel && factor > 0);
-  const [minUnit, setMinUnit] = useState("base");
+  // El stock mínimo se muestra primero en el EMPAQUE (caja, rollo…) cuando el
+  // producto lo tiene; el usuario puede cambiar a la unidad base si quiere.
+  const [minUnit, setMinUnit] = useState("container");
+  const minUnitTouched = useRef(false);   // true cuando el usuario elige a mano
+  useEffect(() => {
+    if (!minUnitTouched.current) setMinUnit(hasContainer ? "container" : "base");
+  }, [hasContainer]);
 
   const perBaseOf = (raw, mode) => {
     const v = parseFrac(raw);
@@ -430,10 +436,10 @@ export default function ProductForm() {
               <input type="number" step="any" min="0" value={minShown} onChange={(e) => onMinChange(e.target.value)} placeholder="0"
                      className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
               {hasContainer && (
-                <select value={minUnit} onChange={(e) => setMinUnit(e.target.value)}
+                <select value={minUnit} onChange={(e) => { minUnitTouched.current = true; setMinUnit(e.target.value); }}
                         className="border border-slate-300 rounded-lg px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="base">{baseUnit}</option>
                   <option value="container">{containerLabel}</option>
+                  <option value="base">{baseUnit}</option>
                 </select>
               )}
             </div>
