@@ -806,11 +806,11 @@ export default function POS() {
         <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[60] w-[min(92vw,480px)] pos-toast">
           <style>{`@keyframes posToastIn{from{opacity:0;transform:translate(-50%,-14px)}to{opacity:1;transform:translate(-50%,0)}}
             .pos-toast{animation:posToastIn .22s ease-out}`}</style>
-          <div className="bg-white border border-red-200 border-l-4 border-l-red-500 shadow-2xl rounded-xl px-4 py-3 flex items-start gap-3">
-            <span className="text-red-500 text-lg leading-none mt-0.5">⚠️</span>
-            <div className="flex-1 text-sm text-slate-700">{error}</div>
+          <div className="bg-red-600 text-white ring-2 ring-red-700 shadow-2xl shadow-red-600/40 rounded-xl px-4 py-3.5 flex items-start gap-3">
+            <span className="text-2xl leading-none mt-0.5">⚠️</span>
+            <div className="flex-1 text-sm font-semibold leading-snug">{error}</div>
             <button onClick={() => setError("")} aria-label="Cerrar"
-                    className="text-slate-400 hover:text-slate-600 text-xl leading-none -mt-0.5">×</button>
+                    className="text-white/80 hover:text-white text-xl leading-none -mt-0.5">×</button>
           </div>
         </div>
       )}
