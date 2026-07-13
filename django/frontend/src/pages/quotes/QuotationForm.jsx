@@ -67,12 +67,12 @@ export default function QuotationForm() {
           <label className="block text-sm font-medium mb-1">Cliente</label>
           <div className="flex gap-2">
             <select value={header.customer_id} onChange={(e) => setHeader({ ...header, customer_id: e.target.value })}
-                    className="flex-1 border border-slate-300 rounded px-3 py-2 text-sm">
+                    className="flex-1 border border-slate-300 rounded px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500">
               <option value="">Sin cliente</option>
               {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
-            <button type="button" onClick={() => setAddingCustomer(true)} title="Nuevo cliente"
-                    className="shrink-0 border border-slate-300 rounded px-3 py-2 text-sm hover:bg-slate-50 transition">➕</button>
+            <button type="button" onClick={() => setAddingCustomer(true)} title="Agregar nuevo cliente"
+                    className="shrink-0 inline-flex items-center gap-1 bg-blue-600 text-white rounded px-3 py-2 text-sm font-medium hover:bg-blue-700 transition whitespace-nowrap">➕ Cliente</button>
           </div>
         </div>
         <div>
