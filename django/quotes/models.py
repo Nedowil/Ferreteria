@@ -62,6 +62,8 @@ class Quotation(models.Model):
 class QuotationItem(models.Model):
     quotation = models.ForeignKey(Quotation, on_delete=models.CASCADE, related_name="items")
     product = models.ForeignKey("inventory.Product", on_delete=models.PROTECT, related_name="quotation_items")
+    # Medida en que se cotiza (unidad base, empaque o presentación: "media libra", "caja"…).
+    unit_label = models.CharField("medida", max_length=40, blank=True, default="")
     quantity = models.DecimalField(max_digits=12, decimal_places=2)
     unit_price = models.DecimalField("precio unitario", max_digits=12, decimal_places=2)
     discount = models.DecimalField("descuento", max_digits=12, decimal_places=2, default=0)

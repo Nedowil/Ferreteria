@@ -52,6 +52,7 @@ def _sync_items(quotation, items, global_discount):
         lines.append({"gross": gross, "line_discount": line_discount, "tax_type": tax_type})
         quotation.items.create(
             product_id=it["product_id"], quantity=qty, unit_price=price,
+            unit_label=(it.get("unit_label") or ""),
             discount=line_discount, subtotal=money(gross - line_discount), tax_type=tax_type,
         )
     subtotal, total_discount, tax, total = compute_totals(lines, global_discount)
@@ -72,7 +73,7 @@ def convert_to_sale(quotation, *, payment_method="efectivo", paid_amount=None,
 
     items = [
         {"product_id": it.product_id, "quantity": it.quantity, "unit_price": it.unit_price,
-         "discount": it.discount, "tax_type": it.tax_type}
+         "discount": it.discount, "tax_type": it.tax_type, "unit_label": it.unit_label}
         for it in quotation.items.all()
     ]
     sale_data = {

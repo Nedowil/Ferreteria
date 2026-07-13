@@ -103,7 +103,7 @@ export default function QuotationDetail() {
               <thead className="bg-slate-50 text-slate-500 text-left"><tr><th className="px-4 py-2">Producto</th><th className="px-4 py-2 text-right">Cant.</th><th className="px-4 py-2 text-right">Precio</th><th className="px-4 py-2 text-right">Importe</th></tr></thead>
               <tbody>
                 {q.items.map((it) => (
-                  <tr key={it.id} className="border-t"><td className="px-4 py-2"><span className="font-mono text-xs text-slate-400">{it.product_sku}</span> {it.product_name}</td>
+                  <tr key={it.id} className="border-t"><td className="px-4 py-2"><span className="font-mono text-xs text-slate-400">{it.product_sku}</span> {it.product_name}{it.unit_label ? ` (${it.unit_label})` : ""}</td>
                     <td className="px-4 py-2 text-right">{it.quantity}</td><td className="px-4 py-2 text-right">Q{it.unit_price}</td><td className="px-4 py-2 text-right">Q{it.subtotal}</td></tr>
                 ))}
               </tbody>
@@ -161,7 +161,7 @@ function quoteHtml(q, company, logoUrl) {
       <tr>
         <td class="c">${i + 1}</td>
         <td class="c">${num(it.quantity)}</td>
-        <td>${escapeHtml(it.product_name)}</td>
+        <td>${escapeHtml(it.product_name + (it.unit_label ? ` (${it.unit_label})` : ""))}</td>
         <td class="c">B</td>
         <td class="r">${num(it.unit_price)}</td>
         <td class="r nowrap">${impuesto}</td>
@@ -322,7 +322,7 @@ function quoteText(q, company) {
   if (q.customer_name) lines.push(`Cliente: ${q.customer_name}`);
   lines.push("");
   q.items.forEach((it) => {
-    lines.push(`• ${it.product_name}  x${it.quantity}  =  ${Q(it.subtotal)}`);
+    lines.push(`• ${it.product_name}${it.unit_label ? ` (${it.unit_label})` : ""}  x${it.quantity}  =  ${Q(it.subtotal)}`);
   });
   lines.push("");
   lines.push(`Subtotal: ${Q(q.subtotal)}`);

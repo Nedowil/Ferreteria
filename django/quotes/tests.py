@@ -31,6 +31,12 @@ class QuotationServiceTests(TestCase):
         self.assertEqual(q.valid_until, date(2026, 7, 14))  # +15 días
         self.assertEqual(q.status, Quotation.STATUS_VIGENTE)
 
+    def test_medida_se_guarda_en_la_partida(self):
+        items = [{"product_id": self.prod.id, "quantity": "2", "unit_price": "10",
+                  "unit_label": "Media libra", "tax_type": "iva"}]
+        q = create_quotation({"date": date(2026, 6, 29)}, items, user=self.user, branch=self.branch)
+        self.assertEqual(q.items.first().unit_label, "Media libra")
+
     def test_convertir_a_venta_descuenta_stock_y_marca(self):
         q = create_quotation({"date": date(2026, 6, 29)}, self._items(), user=self.user, branch=self.branch)
         sale = convert_to_sale(q, payment_method="efectivo", paid_amount=Decimal("600"),

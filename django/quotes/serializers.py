@@ -15,7 +15,7 @@ class QuotationItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = QuotationItem
-        fields = ["id", "product", "product_name", "product_sku", "quantity",
+        fields = ["id", "product", "product_name", "product_sku", "unit_label", "quantity",
                   "unit_price", "discount", "subtotal", "tax_type"]
 
 
@@ -50,6 +50,7 @@ class QuotationDetailSerializer(QuotationListSerializer):
 
 class QuotationItemWriteSerializer(serializers.Serializer):
     product_id = serializers.IntegerField()
+    unit_label = serializers.CharField(required=False, allow_blank=True, max_length=40)
     quantity = RoundingDecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0.01"))
     unit_price = RoundingDecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0"))
     discount = RoundingDecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0"), required=False, default=0)
