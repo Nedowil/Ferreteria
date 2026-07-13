@@ -53,7 +53,7 @@ export default function Backups() {
         Programa <code className="bg-slate-100 px-1 rounded">manage.py backup_run</code> con cron para respaldos automáticos.
       </p>
       {msg && <div className="bg-green-100 text-green-800 rounded px-4 py-2 text-sm mb-4">{msg}</div>}
-      {error && <div className="bg-red-100 text-red-800 rounded px-4 py-2 text-sm mb-4">{error}</div>}
+      {error && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm mb-4">{error}</div>}
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <table className="w-full text-sm">

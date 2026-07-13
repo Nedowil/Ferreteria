@@ -45,7 +45,7 @@ export default function QuickCustomerModal({ onClose, onCreated }) {
           <div className="text-lg font-bold">Nuevo cliente</div>
         </div>
         <div className="p-5 space-y-3">
-          {err && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2">{err}</div>}
+          {err && <div className="bg-red-600 border border-red-700 text-white font-semibold text-sm rounded-lg px-3 py-2">{err}</div>}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">NIT (opcional)</label>
             <div className="flex gap-2">

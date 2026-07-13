@@ -43,7 +43,7 @@ export default function ResetPassword() {
           <div className="text-sm text-red-700">Enlace inválido o incompleto.</div>
         ) : (
           <form onSubmit={submit}>
-            {error && <div className="mb-4 bg-red-100 text-red-800 text-sm rounded px-3 py-2">{error}</div>}
+            {error && <div className="mb-4 bg-red-600 text-white font-semibold text-sm rounded px-3 py-2">{error}</div>}
             <label className="block text-sm font-medium mb-1">Nueva contraseña</label>
             <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} required
                    className="w-full border border-slate-300 rounded px-3 py-2 mb-4" />

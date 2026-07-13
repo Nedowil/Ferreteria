@@ -109,7 +109,7 @@ function LabelPrintModal({ product, companyName, onClose }) {
           <div className="text-xs text-blue-100 truncate">{product.name} · {product.sku}</div>
         </div>
         <div className="p-5 space-y-4">
-          {err && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2">{err}</div>}
+          {err && <div className="bg-red-600 border border-red-700 text-white font-semibold text-sm rounded-lg px-3 py-2">{err}</div>}
 
           {step === "qty" ? (
             <>

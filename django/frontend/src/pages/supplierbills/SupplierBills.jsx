@@ -153,7 +153,7 @@ export default function SupplierBills() {
             <h2 className="font-semibold text-slate-700">{editing ? "Editar factura" : "Registrar factura pagada"}</h2>
             {editing && <button type="button" onClick={cancelEdit} className="text-sm text-slate-500">Cancelar edición</button>}
           </div>
-          {error && <div className="bg-red-100 text-red-800 rounded px-4 py-2 text-sm mb-3">{error}</div>}
+          {error && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm mb-3">{error}</div>}
           <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
             <div className="md:col-span-2">
               <label className="block text-xs text-slate-500 mb-1">Proveedor *</label>

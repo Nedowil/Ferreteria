@@ -74,7 +74,7 @@ export default function QuotationDetail() {
         </h1>
         <button onClick={() => navigate("/cotizaciones")} className="text-sm text-slate-500">← Volver</button>
       </div>
-      {error && <div className="bg-red-100 text-red-800 rounded px-4 py-2 text-sm mb-4">{error}</div>}
+      {error && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm mb-4">{error}</div>}
 
       {/* Acciones: imprimir / PDF / WhatsApp */}
       <div className="flex flex-wrap gap-2 mb-4">

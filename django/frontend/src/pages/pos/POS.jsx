@@ -269,7 +269,7 @@ function QuickProductModal({ onClose, onCreated }) {
           <div className="text-xs text-blue-100">El SKU y el código de barras se generan solos.</div>
         </div>
         <div className="p-5 space-y-3">
-          {err && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2">{err}</div>}
+          {err && <div className="bg-red-600 border border-red-700 text-white font-semibold text-sm rounded-lg px-3 py-2">{err}</div>}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Nombre *</label>
             <input autoFocus value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}

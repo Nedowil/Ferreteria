@@ -124,7 +124,7 @@ export default function Users() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4" onClick={() => setEditing(null)}>
           <form onClick={(e) => e.stopPropagation()} onSubmit={save} className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 w-full max-w-lg max-h-[90vh] overflow-auto">
             <h3 className="font-semibold mb-4">{editing.id ? "Editar" : "Nuevo"} usuario</h3>
-            {error && <div className="bg-red-100 text-red-800 rounded px-3 py-2 text-xs mb-3">{error}</div>}
+            {error && <div className="bg-red-600 text-white font-semibold rounded px-3 py-2 text-xs mb-3">{error}</div>}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="col-span-2">
                 <label className="block text-sm font-medium mb-1">Nombre</label>

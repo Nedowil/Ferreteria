@@ -144,7 +144,7 @@ export default function Invoices() {
         </div>
       )}
 
-      {err && <div className="bg-red-100 text-red-800 rounded px-4 py-2 text-sm mb-4">{err}</div>}
+      {err && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm mb-4">{err}</div>}
 
       <div className="flex gap-2 mb-4 text-sm">
         <button onClick={() => setTab("emitidas")} className={"px-4 py-2 rounded " + (tab === "emitidas" ? "bg-slate-700 text-white" : "bg-white border")}>

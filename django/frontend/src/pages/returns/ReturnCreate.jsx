@@ -148,7 +148,7 @@ export default function ReturnCreate() {
   return (
     <div className="max-w-4xl">
       <h1 className="text-lg font-semibold mb-4">Nueva devolución</h1>
-      {error && <div className="bg-red-100 text-red-800 rounded px-4 py-2 text-sm mb-4">{error}</div>}
+      {error && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm mb-4">{error}</div>}
 
       <div className="flex gap-2 mb-4">
         {MODES.map(([v, l]) => (

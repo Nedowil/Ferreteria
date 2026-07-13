@@ -53,7 +53,7 @@ export default function PurchaseDetail() {
         </h1>
         <button onClick={() => navigate("/compras")} className="text-sm text-slate-500">← Volver</button>
       </div>
-      {error && <div className="bg-red-100 text-red-800 rounded px-4 py-2 text-sm mb-4">{error}</div>}
+      {error && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm mb-4">{error}</div>}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2 space-y-5">

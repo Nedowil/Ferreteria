@@ -48,7 +48,7 @@ export default function CashBox() {
         <h1 className="text-lg font-semibold">Caja</h1>
         <Link to="/caja/historial" className="text-sm text-blue-600 hover:underline">Ver historial</Link>
       </div>
-      {error && <div className="bg-red-100 text-red-800 rounded px-4 py-2 text-sm mb-4">{error}</div>}
+      {error && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm mb-4">{error}</div>}
 
       {!session ? (
         <form onSubmit={openCash} className="max-w-md bg-white rounded-lg shadow p-6">

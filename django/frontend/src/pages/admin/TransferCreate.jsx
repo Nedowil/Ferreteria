@@ -48,7 +48,7 @@ export default function TransferCreate() {
   return (
     <form onSubmit={submit} className="max-w-3xl space-y-5">
       <h1 className="text-lg font-semibold">Nueva transferencia</h1>
-      {error && <div className="bg-red-100 text-red-800 rounded px-4 py-2 text-sm">{error}</div>}
+      {error && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm">{error}</div>}
       <section className="bg-white rounded-lg shadow p-5 grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Sucursal origen</label>

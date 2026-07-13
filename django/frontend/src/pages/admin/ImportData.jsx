@@ -67,7 +67,7 @@ function ImportCard({ type }) {
           {busy ? "Importando…" : "Importar"}
         </button>
       </form>
-      {error && <div className="bg-red-100 text-red-800 rounded px-3 py-2 text-sm mt-3">{error}</div>}
+      {error && <div className="bg-red-600 text-white font-semibold rounded px-3 py-2 text-sm mt-3">{error}</div>}
       {result && (
         <div className="bg-green-50 border border-green-200 rounded px-3 py-2 text-sm mt-3">
           {"imported" in result

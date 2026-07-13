@@ -70,7 +70,7 @@ export default function Roles() {
             {/* Encabezado fijo */}
             <div className="px-6 pt-5 pb-4 border-b shrink-0">
               <h3 className="font-semibold mb-3">{editing.id ? "Editar" : "Nuevo"} rol</h3>
-              {error && <div className="bg-red-100 text-red-800 rounded px-3 py-2 text-xs mb-3">{error}</div>}
+              {error && <div className="bg-red-600 text-white font-semibold rounded px-3 py-2 text-xs mb-3">{error}</div>}
               <label className="block text-sm font-medium mb-1">Nombre</label>
               <input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} required disabled={SYSTEM.includes(editing.name)}
                      className="w-full border border-slate-300 rounded px-3 py-2 text-sm disabled:bg-slate-100" />

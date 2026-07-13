@@ -337,9 +337,9 @@ export default function ProductForm() {
   return (
     <form onSubmit={submit} className="max-w-4xl space-y-5">
       <h1 className="text-lg font-semibold">{editing ? "Editar producto" : "Nuevo producto"}</h1>
-      {errors.detail && <div className="bg-red-100 text-red-800 rounded px-4 py-2 text-sm">{errors.detail}</div>}
+      {errors.detail && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm">{errors.detail}</div>}
       {!errors.detail && Object.keys(errors).length > 0 && (
-        <div className="bg-red-100 text-red-800 rounded px-4 py-2 text-sm">
+        <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm">
           No se pudo guardar. Revisá los campos marcados:
           <ul className="list-disc ml-5 mt-1">
             {Object.entries(errors).map(([field, msg]) => (
