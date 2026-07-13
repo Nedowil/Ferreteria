@@ -145,7 +145,7 @@ export default function Ticket() {
             <button onClick={() => setMode("ticket")}
                     className={"px-3 py-1.5 " + (mode === "ticket" ? "bg-blue-600 text-white" : "bg-white text-slate-600")}>🧾 Ticket</button>
             <button onClick={() => setMode("carta")}
-                    className={"px-3 py-1.5 " + (mode === "carta" ? "bg-blue-600 text-white" : "bg-white text-slate-600")}>📄 Hoja completa</button>
+                    className={"px-3 py-1.5 " + (mode === "carta" ? "bg-blue-600 text-white" : "bg-white text-slate-600")}>📄 Formato carta</button>
           </div>
           {/* En el ticket solo se imprime en la térmica (es la que se usa).
               La impresión normal/PDF queda para la Hoja completa (tamaño carta). */}
