@@ -41,7 +41,9 @@ def template(request, kind):
     if kind not in services.TEMPLATES:
         return Response({"detail": "Tipo de plantilla desconocido."}, status=status.HTTP_404_NOT_FOUND)
     content = services.template_csv(kind)
-    resp = HttpResponse(content, content_type="text/csv; charset=utf-8")
+    # BOM UTF-8: hace que Excel en Windows abra el CSV como UTF-8 y muestre bien
+    # los acentos (sin él, Excel lo lee como Windows-1252 y sale "uÃ±a").
+    resp = HttpResponse("\ufeff" + content, content_type="text/csv; charset=utf-8")
     resp["Content-Disposition"] = f'attachment; filename="plantilla-{kind}.csv"'
     return resp
 

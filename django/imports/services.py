@@ -50,8 +50,16 @@ def template_csv(kind: str) -> str:
 
 
 def parse_csv(file_bytes: bytes) -> list[dict]:
-    """Lee un CSV (encabezados en la primera fila) → lista de dicts."""
-    text = file_bytes.decode("utf-8-sig", errors="replace")
+    """Lee un CSV (encabezados en la primera fila) → lista de dicts.
+
+    Acepta UTF-8 (con o sin BOM) y, si el archivo no es UTF-8 válido (típico
+    cuando Excel en Windows guarda como "CSV" normal en vez de "CSV UTF-8"),
+    cae a Windows-1252 para no perder los acentos.
+    """
+    try:
+        text = file_bytes.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        text = file_bytes.decode("cp1252", errors="replace")
     reader = csv.DictReader(io.StringIO(text))
     rows = []
     for raw in reader:

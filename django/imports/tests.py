@@ -121,7 +121,9 @@ class ImportApiTests(TestCase):
         r = self._client("a@test.com").get("/api/imports/template/productos/")
         self.assertEqual(r.status_code, 200)
         self.assertIn("text/csv", r["Content-Type"])
-        self.assertIn("sale_price", r.content.decode())
+        # Debe iniciar con BOM UTF-8 para que Excel muestre bien los acentos.
+        self.assertTrue(r.content.startswith(b"\xef\xbb\xbf"))
+        self.assertIn("sale_price", r.content.decode("utf-8-sig"))
 
     def test_import_productos_via_api(self):
         r = self._client("a@test.com").post(
