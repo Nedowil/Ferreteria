@@ -239,6 +239,44 @@ export default function ProductList() {
       </form>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+        {/* Móvil: tarjetas (la tabla no cabe en pantallas angostas) */}
+        <div className="md:hidden divide-y divide-slate-100">
+          {data.results.map((p) => (
+            <div key={p.id} className="p-4 flex gap-3">
+              <div className="h-12 w-12 shrink-0 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden">
+                {p.image
+                  ? <img src={p.image} alt={p.name} className="h-full w-full object-contain" loading="lazy" />
+                  : <span className="text-lg text-slate-300">📦</span>}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="font-medium text-slate-800 break-words">{p.name}</div>
+                    <div className="text-xs text-slate-400 font-mono">{p.sku}{p.brand_name ? ` · ${p.brand_name}` : ""}</div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="font-semibold text-slate-700">Q{p.sale_price}</div>
+                    {p.is_low_stock
+                      ? <span className="inline-block bg-red-100 text-red-700 rounded-full px-2 py-0.5 text-xs font-medium">{p.stock_display}</span>
+                      : <span className="text-xs text-slate-500">{p.stock_display}</span>}
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm">
+                  <button onClick={() => setLabeling(p)} className="text-slate-600 hover:underline">Etiqueta</button>
+                  <Link to={`/productos/${p.id}/inventario`} className="text-slate-600 hover:underline">Inventario</Link>
+                  <Link to={`/productos/${p.id}/editar`} className="text-blue-600 hover:underline">Editar</Link>
+                  <button onClick={() => remove(p.id)} className="text-red-600 hover:underline">Eliminar</button>
+                </div>
+              </div>
+            </div>
+          ))}
+          {!loading && data.results.length === 0 && (
+            <div className="px-5 py-10 text-center text-slate-400">No hay productos.</div>
+          )}
+        </div>
+
+        {/* Escritorio: tabla con scroll propio si hiciera falta */}
+        <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">
             <tr><th className="px-4 py-2.5 w-14"></th><th className="px-4 py-2.5">SKU</th><th className="px-4 py-2.5">Producto</th>
@@ -281,6 +319,7 @@ export default function ProductList() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {totalPages > 1 && (
