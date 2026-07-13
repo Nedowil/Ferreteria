@@ -264,6 +264,17 @@ export default function ProductForm() {
 
   const submit = async (e) => {
     e.preventDefault();
+    // Recordatorio (solo al crear): es común olvidar el stock inicial y el
+    // mínimo. Si alguno quedó vacío se avisa y se pide confirmar; si de verdad
+    // va en 0, el usuario puede continuar.
+    if (!editing) {
+      const faltantes = [];
+      if (form.initial_stock === "" || form.initial_stock == null) faltantes.push("el stock inicial");
+      if (form.min_stock === "" || form.min_stock == null) faltantes.push("el stock mínimo");
+      if (faltantes.length && !window.confirm(
+        `No ingresaste ${faltantes.join(" ni ")}. Se guardará en 0.\n\n¿Guardar el producto de todos modos?`
+      )) return;
+    }
     setBusy(true); setErrors({});
     const payload = { ...form };
     // La imagen no se edita en este formulario (envío JSON, no multipart). Al
