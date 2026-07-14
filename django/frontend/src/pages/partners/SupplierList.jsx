@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
@@ -37,6 +37,12 @@ export default function SupplierList() {
     api.get("/suppliers/", { params }).then((r) => setItems(r.data.results || r.data));
   };
   useEffect(load, []);
+  // Al vaciar la búsqueda, se recargan todos los registros automáticamente.
+  const _firstLoad = useRef(true);
+  useEffect(() => {
+    if (_firstLoad.current) { _firstLoad.current = false; return; }
+    if (search === "") load();
+  }, [search]);
 
   const lookupSat = async () => {
     const nit = (editing.tax_id || "").trim();

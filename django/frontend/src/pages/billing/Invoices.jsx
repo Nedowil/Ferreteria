@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
@@ -39,6 +39,12 @@ export default function Invoices() {
     api.get("/fel/config/").then((r) => setCfg(r.data));
   };
   useEffect(load, []);
+  // Al vaciar la búsqueda, se recargan todas las facturas automáticamente.
+  const _firstLoad = useRef(true);
+  useEffect(() => {
+    if (_firstLoad.current) { _firstLoad.current = false; return; }
+    if (filters.search === "") loadInvoices();
+  }, [filters.search]);
 
   // Exporta con las mismas columnas del listado de DTE que descarga el
   // contribuyente desde el portal de la SAT (hoja "InformacionDTE-FEL"), para

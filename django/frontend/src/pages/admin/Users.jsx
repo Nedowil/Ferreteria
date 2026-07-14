@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 
@@ -21,6 +21,12 @@ export default function Users() {
     api.get("/roles/").then((r) => setRoles(r.data.results || r.data));
     api.get("/branches/").then((r) => setBranches(r.data.results || r.data));
   }, []);
+  // Al vaciar la búsqueda, se recargan todos los usuarios automáticamente.
+  const _firstLoad = useRef(true);
+  useEffect(() => {
+    if (_firstLoad.current) { _firstLoad.current = false; return; }
+    if (search === "") load();
+  }, [search]);
 
   const blank = { name: "", email: "", password: "", role: "vendedor", is_active: true, branch_ids: [], default_branch: null };
 

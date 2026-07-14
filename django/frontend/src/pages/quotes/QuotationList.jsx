@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
@@ -28,6 +28,12 @@ export default function QuotationList() {
     api.get("/quotations/", { params: buildParams() }).then((r) => setData(r.data));
   };
   useEffect(load, []);
+  // Al vaciar la búsqueda, se recargan todos los registros automáticamente.
+  const _firstLoad = useRef(true);
+  useEffect(() => {
+    if (_firstLoad.current) { _firstLoad.current = false; return; }
+    if (filters.search === "") load();
+  }, [filters.search]);
 
   const exportExcel = async () => {
     const params = buildParams();
