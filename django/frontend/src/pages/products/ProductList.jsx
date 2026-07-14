@@ -175,17 +175,28 @@ export default function ProductList() {
     api.get("/company-settings/").then((r) => setCompanyName(r.data.commercial_name || "Ferretería Central")).catch(() => {});
   }, []);
 
-  const load = () => {
+  const load = (f = filters, pg = page) => {
     setLoading(true);
-    const params = { page };
-    if (filters.search) params.search = filters.search;
-    if (filters.brand) params.brand = filters.brand;
-    if (filters.low_stock) params.low_stock = 1;
+    const params = { page: pg };
+    if (f.search) params.search = f.search;
+    if (f.brand) params.brand = f.brand;
+    if (f.low_stock) params.low_stock = 1;
     api.get("/inventory/products/", { params }).then((r) => setData(r.data)).finally(() => setLoading(false));
   };
-  useEffect(load, [page]);
+  useEffect(() => { load(); }, [page]);
 
-  const applyFilters = (e) => { e.preventDefault(); setPage(1); load(); };
+  const applyFilters = (e) => { e.preventDefault(); setPage(1); load(filters, 1); };
+
+  // Al escribir en la búsqueda: si se borra todo el texto, se recargan todos
+  // los productos automáticamente (sin tener que presionar "Filtrar").
+  const onSearchChange = (v) => {
+    const next = { ...filters, search: v };
+    setFilters(next);
+    if (v === "") {
+      if (page !== 1) setPage(1);   // el efecto de [page] recarga con la búsqueda vacía
+      else load(next, 1);
+    }
+  };
 
   const remove = async (id) => {
     if (!confirm("¿Eliminar este producto?")) return;
@@ -229,7 +240,7 @@ export default function ProductList() {
 
       <form onSubmit={applyFilters} className="bg-white rounded-lg shadow p-4 mb-4 flex flex-wrap gap-2 items-end">
         <input placeholder="Nombre, SKU o código" value={filters.search}
-               onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+               onChange={(e) => onSearchChange(e.target.value)}
                className="border border-slate-300 rounded px-3 py-2 text-sm w-64" />
         <select value={filters.brand} onChange={(e) => setFilters({ ...filters, brand: e.target.value })}
                 className="border border-slate-300 rounded px-2 py-2 text-sm">
