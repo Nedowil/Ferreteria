@@ -223,7 +223,7 @@ export default function ProductList() {
         <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">📦 Productos</h1>
         <div className="flex gap-2">
           <button onClick={exportExcel} disabled={exporting} className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-100 transition">{exporting ? "Exportando…" : "⬇️ Excel"}</button>
-          <Link to="/productos/nuevo" className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nuevo producto</Link>
+          {can("productos.crear") && <Link to="/productos/nuevo" className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nuevo producto</Link>}
         </div>
       </div>
 
@@ -270,8 +270,8 @@ export default function ProductList() {
                   <button onClick={() => setLabeling(p)} className="text-slate-600 hover:underline">Etiqueta</button>
                   <Link to={`/productos/${p.id}/inventario`} className="text-slate-600 hover:underline">Inventario</Link>
                   {can("auditoria.ver") && <Link to={historyLink(p.id)} className="text-slate-600 hover:underline">Historial</Link>}
-                  <Link to={`/productos/${p.id}/editar`} className="text-blue-600 hover:underline">Editar</Link>
-                  <button onClick={() => remove(p.id)} className="text-red-600 hover:underline">Eliminar</button>
+                  {can("productos.editar") && <Link to={`/productos/${p.id}/editar`} className="text-blue-600 hover:underline">Editar</Link>}
+                  {can("productos.eliminar") && <button onClick={() => remove(p.id)} className="text-red-600 hover:underline">Eliminar</button>}
                 </div>
               </div>
             </div>
@@ -316,8 +316,8 @@ export default function ProductList() {
                   <button onClick={() => setLabeling(p)} className="text-slate-600 hover:underline" title="Imprimir etiqueta Zebra">Etiqueta</button>
                   <Link to={`/productos/${p.id}/inventario`} className="text-slate-600 hover:underline ml-2">Inventario</Link>
                   {can("auditoria.ver") && <Link to={historyLink(p.id)} className="text-slate-600 hover:underline ml-2" title="Quién creó, editó o eliminó este producto">Historial</Link>}
-                  <Link to={`/productos/${p.id}/editar`} className="text-blue-600 hover:underline ml-2">Editar</Link>
-                  <button onClick={() => remove(p.id)} className="text-red-600 hover:underline ml-2">Eliminar</button>
+                  {can("productos.editar") && <Link to={`/productos/${p.id}/editar`} className="text-blue-600 hover:underline ml-2">Editar</Link>}
+                  {can("productos.eliminar") && <button onClick={() => remove(p.id)} className="text-red-600 hover:underline ml-2">Eliminar</button>}
                 </td>
               </tr>
             ))}
