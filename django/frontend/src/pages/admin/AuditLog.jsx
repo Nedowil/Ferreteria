@@ -88,7 +88,7 @@ export default function AuditLog() {
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">
             <tr><th className="px-4 py-2.5">Fecha</th><th className="px-4 py-2.5">Usuario</th><th className="px-4 py-2.5">Evento</th>
-                <th className="px-4 py-2.5">Recurso</th><th className="px-4 py-2.5">ID</th><th className="px-4 py-2.5"></th></tr>
+                <th className="px-4 py-2.5">Recurso</th><th className="px-4 py-2.5">Detalle</th><th className="px-4 py-2.5"></th></tr>
           </thead>
           <tbody>
             {data.results.map((l) => (
@@ -98,7 +98,7 @@ export default function AuditLog() {
                   <td className="px-4 py-2 font-medium text-slate-800">{l.user_name || "—"}</td>
                   <td className="px-4 py-2"><span className={"inline-block rounded-full px-2 py-0.5 text-xs font-medium " + EVENT_BADGE[l.event]}>{l.event_display}</span></td>
                   <td className="px-4 py-2 text-slate-700">{resourceLabel(l.auditable_type)}</td>
-                  <td className="px-4 py-2 font-mono text-xs">{l.auditable_id}</td>
+                  <td className="px-4 py-2 text-slate-800">{l.description || <span className="font-mono text-xs text-slate-400">#{l.auditable_id}</span>}</td>
                   <td className="px-4 py-2 text-right"><button onClick={() => setExpanded(expanded === l.id ? null : l.id)} className="text-blue-600 hover:underline text-xs">{expanded === l.id ? "ocultar" : "ver cambios"}</button></td>
                 </tr>
                 {expanded === l.id && (

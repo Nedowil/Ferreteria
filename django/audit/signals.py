@@ -48,6 +48,15 @@ def _field_values(instance):
     return out
 
 
+def _describe(instance):
+    """Etiqueta legible del objeto (p. ej. 'CLA-0001 — Clavos') para que en la
+    auditoría se vea CUÁL producto/venta/etc. se creó, editó o eliminó."""
+    try:
+        return str(instance)[:255]
+    except Exception:
+        return None
+
+
 def _actor():
     """Devuelve (user, branch) de la petición actual, si los hay."""
     request = get_request()
@@ -99,6 +108,7 @@ def _on_save(sender, instance, created, **kwargs):
             user=user, branch=branch, event=AuditLog.CREATED,
             auditable_type=label, auditable_id=str(instance.pk),
             old_values=None, new_values=new, ip=ip, user_agent=ua,
+            description=_describe(instance),
         )
         return
 
@@ -125,6 +135,7 @@ def _on_save(sender, instance, created, **kwargs):
         event=AuditLog.DELETED if soft_deleted else AuditLog.UPDATED,
         auditable_type=label, auditable_id=str(instance.pk),
         old_values=changed_old, new_values=changed_new, ip=ip, user_agent=ua,
+        description=_describe(instance),
     )
 
 
@@ -140,4 +151,5 @@ def _on_delete(sender, instance, **kwargs):
         user=user, branch=branch, event=AuditLog.DELETED,
         auditable_type=label, auditable_id=str(instance.pk),
         old_values=_field_values(instance), new_values=None, ip=ip, user_agent=ua,
+        description=_describe(instance),
     )

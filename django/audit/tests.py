@@ -17,6 +17,13 @@ class AuditSignalTests(TestCase):
         self.assertIsNone(log.old_values)
         self.assertEqual(log.new_values["name"], "X")
 
+    def test_descripcion_legible_del_objeto(self):
+        p = Product.objects.create(sku="DESC-1", name="Martillo", stock=Decimal("1"))
+        log = AuditLog.objects.filter(auditable_type="inventory.Product", auditable_id=str(p.pk),
+                                      event=AuditLog.CREATED).first()
+        self.assertIn("DESC-1", log.description)   # muestra CUÁL producto (sku + nombre)
+        self.assertIn("Martillo", log.description)
+
     def test_updated_registra_diff(self):
         p = Product.objects.create(sku="A-2", name="Viejo", stock=Decimal("1"))
         p.name = "Nuevo"
