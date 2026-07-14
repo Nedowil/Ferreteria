@@ -2,7 +2,11 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import JsBarcode from "jsbarcode";
 import api from "../../api/client";
+import { useAuth } from "../../auth/AuthContext";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
+
+// Enlace a la auditoría del producto (quién lo creó, editó o eliminó).
+const historyLink = (id) => `/admin/auditoria?type=inventory.Product&q=${id}`;
 
 // Genera un <svg> de código de barras (EAN-13 si son 13 dígitos, si no Code128)
 // y devuelve su HTML. Igual criterio que la etiqueta Zebra del backend.
@@ -164,6 +168,7 @@ export default function ProductList() {
   const [exporting, setExporting] = useState(false);
   const [labeling, setLabeling] = useState(null); // producto a etiquetar (modal)
   const [companyName, setCompanyName] = useState("Ferretería Central");
+  const { can } = useAuth();
 
   useEffect(() => {
     api.get("/inventory/brands/?page_size=200").then((r) => setBrands(r.data.results || r.data));
@@ -264,6 +269,7 @@ export default function ProductList() {
                 <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm">
                   <button onClick={() => setLabeling(p)} className="text-slate-600 hover:underline">Etiqueta</button>
                   <Link to={`/productos/${p.id}/inventario`} className="text-slate-600 hover:underline">Inventario</Link>
+                  {can("auditoria.ver") && <Link to={historyLink(p.id)} className="text-slate-600 hover:underline">Historial</Link>}
                   <Link to={`/productos/${p.id}/editar`} className="text-blue-600 hover:underline">Editar</Link>
                   <button onClick={() => remove(p.id)} className="text-red-600 hover:underline">Eliminar</button>
                 </div>
@@ -309,6 +315,7 @@ export default function ProductList() {
                 <td className="px-4 py-2 text-right whitespace-nowrap">
                   <button onClick={() => setLabeling(p)} className="text-slate-600 hover:underline" title="Imprimir etiqueta Zebra">Etiqueta</button>
                   <Link to={`/productos/${p.id}/inventario`} className="text-slate-600 hover:underline ml-2">Inventario</Link>
+                  {can("auditoria.ver") && <Link to={historyLink(p.id)} className="text-slate-600 hover:underline ml-2" title="Quién creó, editó o eliminó este producto">Historial</Link>}
                   <Link to={`/productos/${p.id}/editar`} className="text-blue-600 hover:underline ml-2">Editar</Link>
                   <button onClick={() => remove(p.id)} className="text-red-600 hover:underline ml-2">Eliminar</button>
                 </td>

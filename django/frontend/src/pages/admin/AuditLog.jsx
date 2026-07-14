@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import api from "../../api/client";
 
 const EVENT_BADGE = {
@@ -34,9 +35,15 @@ const RESOURCE_LABEL = {
 const resourceLabel = (t) => RESOURCE_LABEL[t] || t;
 
 export default function AuditLog() {
+  const [searchParams] = useSearchParams();
   const [data, setData] = useState({ results: [] });
   const [summary, setSummary] = useState(null);
-  const [filters, setFilters] = useState({ event: "", type: "", q: "", from: "", to: "" });
+  // Filtros iniciales tomados de la URL (permite abrir la auditoría ya filtrada
+  // a un recurso, p. ej. un producto: ?type=inventory.Product&q=<id>).
+  const [filters, setFilters] = useState({
+    event: searchParams.get("event") || "", type: searchParams.get("type") || "",
+    q: searchParams.get("q") || "", from: searchParams.get("from") || "", to: searchParams.get("to") || "",
+  });
   const [expanded, setExpanded] = useState(null);
 
   const load = () => {

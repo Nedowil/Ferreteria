@@ -42,3 +42,13 @@ class AuditSignalTests(TestCase):
                                       event=AuditLog.DELETED).first()
         self.assertIsNotNone(log)
         self.assertEqual(log.old_values["name"], "Borrar")
+
+    def test_soft_delete_se_registra_como_eliminado(self):
+        from django.utils import timezone
+        p = Product.objects.create(sku="A-5", name="SoftDel", stock=Decimal("1"))
+        p.deleted_at = timezone.now()  # borrado lógico (como hace la API)
+        p.active = False
+        p.save()
+        log = AuditLog.objects.filter(auditable_type="inventory.Product", auditable_id=str(p.pk),
+                                      event=AuditLog.DELETED).order_by("-id").first()
+        self.assertIsNotNone(log)  # aunque sea un UPDATE de deleted_at, se marca como Eliminado

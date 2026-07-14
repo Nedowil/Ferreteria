@@ -116,8 +116,13 @@ def _on_save(sender, instance, created, **kwargs):
             changed_new[k] = v
     if not changed_new:
         return
+    # Soft-delete: si el cambio marca deleted_at (de vacío a con valor), se
+    # registra como "Eliminado" para que en la auditoría se vea claro quién lo
+    # borró (aunque técnicamente sea un UPDATE del deleted_at).
+    soft_deleted = bool(changed_new.get("deleted_at")) and not changed_old.get("deleted_at")
     AuditLog.objects.create(
-        user=user, branch=branch, event=AuditLog.UPDATED,
+        user=user, branch=branch,
+        event=AuditLog.DELETED if soft_deleted else AuditLog.UPDATED,
         auditable_type=label, auditable_id=str(instance.pk),
         old_values=changed_old, new_values=changed_new, ip=ip, user_agent=ua,
     )
