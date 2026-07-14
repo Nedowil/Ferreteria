@@ -46,7 +46,7 @@ export default function CashBox() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-lg font-semibold">Caja</h1>
-        <Link to="/caja/historial" className="text-sm text-blue-600 hover:underline">Ver historial</Link>
+        <Link to="/caja/historial" className="inline-flex items-center gap-1 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 hover:bg-blue-100 hover:border-blue-300 transition">🕘 Ver historial</Link>
       </div>
       {error && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm mb-4">{error}</div>}
 
