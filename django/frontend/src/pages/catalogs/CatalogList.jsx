@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
+import { useAuth } from "../../auth/AuthContext";
 
 const CONFIG = {
   categories: { title: "Categorías", endpoint: "/inventory/categories/", hasDescription: true },
@@ -8,6 +9,7 @@ const CONFIG = {
 };
 
 export default function CatalogList({ kind }) {
+  const { can } = useAuth();
   const cfg = CONFIG[kind];
   const [items, setItems] = useState([]);
   const [editing, setEditing] = useState(null); // objeto o {} para nuevo
@@ -44,7 +46,7 @@ export default function CatalogList({ kind }) {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">🗂️ {cfg.title}</h1>
-        <button onClick={() => setEditing(blank)} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nuevo</button>
+        {can("catalogos.gestionar") && <button onClick={() => setEditing(blank)} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nuevo</button>}
       </div>
 
       {!cfg.isUnit && (
@@ -74,8 +76,8 @@ export default function CatalogList({ kind }) {
                 {cfg.hasDescription && <td className="px-5 py-2 text-slate-500">{o.description || "—"}</td>}
                 {cfg.hasDescription && <td className="px-5 py-2">{o.active ? <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700">Sí</span> : <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-slate-100 text-slate-600">No</span>}</td>}
                 <td className="px-5 py-2 text-right">
-                  <button onClick={() => setEditing(o)} className="text-blue-600 hover:underline">Editar</button>
-                  <button onClick={() => remove(o.id)} className="text-red-600 hover:underline ml-3">Eliminar</button>
+                  {can("catalogos.gestionar") && <button onClick={() => setEditing(o)} className="text-blue-600 hover:underline">Editar</button>}
+                  {can("catalogos.gestionar") && <button onClick={() => remove(o.id)} className="text-red-600 hover:underline ml-3">Eliminar</button>}
                 </td>
               </tr>
             ))}

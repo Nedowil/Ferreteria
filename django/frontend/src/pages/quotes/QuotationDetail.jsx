@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../api/client";
+import { useAuth } from "../../auth/AuthContext";
 import logo from "../../assets/logo.jpg";
 
 const BADGE = {
@@ -12,6 +13,7 @@ const BADGE = {
 const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default function QuotationDetail() {
+  const { can } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
   const [q, setQ] = useState(null);
@@ -117,7 +119,7 @@ export default function QuotationDetail() {
         </div>
 
         <div className="space-y-5">
-          {canConvert && (
+          {canConvert && can("cotizaciones.convertir") && (
             <form onSubmit={convert} className="bg-white rounded-lg shadow p-5 space-y-3">
               <h3 className="font-semibold">Convertir en venta</h3>
               <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={pay.credit} onChange={(e) => setPay({ ...pay, credit: e.target.checked })} /> Al crédito</label>
@@ -131,7 +133,7 @@ export default function QuotationDetail() {
               <button className="w-full bg-green-600 text-white rounded px-4 py-2 text-sm font-medium">Convertir</button>
             </form>
           )}
-          {q.status === "vigente" && (
+          {q.status === "vigente" && can("cotizaciones.cancelar") && (
             <section className="bg-white rounded-lg shadow p-5">
               <button onClick={cancel} className="w-full bg-white border border-red-300 text-red-600 rounded px-4 py-2 text-sm font-medium">Cancelar cotización</button>
             </section>

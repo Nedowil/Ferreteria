@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
+import { useAuth } from "../../auth/AuthContext";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 
 const BLANK = { name: "", tax_id: "", contact_name: "", email: "", phone: "", address: "", notes: "", active: true };
 
 export default function SupplierList() {
+  const { can } = useAuth();
   const [items, setItems] = useState([]);
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState(null);
@@ -66,7 +68,7 @@ export default function SupplierList() {
         <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">🚚 Proveedores</h1>
         <div className="flex gap-2">
           <button onClick={exportExcel} disabled={exporting} className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-100 transition">{exporting ? "Exportando…" : "⬇️ Excel"}</button>
-          <button onClick={() => { setSatMsg(""); setEditing(BLANK); }} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nuevo proveedor</button>
+          {can("proveedores.crear") && <button onClick={() => { setSatMsg(""); setEditing(BLANK); }} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nuevo proveedor</button>}
         </div>
       </div>
       <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 mb-4 flex gap-2">
@@ -89,8 +91,8 @@ export default function SupplierList() {
                 <td className="px-4 py-2 text-slate-500">{s.phone || "—"}</td>
                 <td className="px-4 py-2 text-right">{s.purchase_count}</td>
                 <td className="px-4 py-2 text-right">
-                  <button onClick={() => { setSatMsg(""); setEditing(s); }} className="text-blue-600 hover:underline">Editar</button>
-                  <button onClick={() => remove(s.id)} className="text-red-600 hover:underline ml-3">Eliminar</button>
+                  {can("proveedores.editar") && <button onClick={() => { setSatMsg(""); setEditing(s); }} className="text-blue-600 hover:underline">Editar</button>}
+                  {can("proveedores.eliminar") && <button onClick={() => remove(s.id)} className="text-red-600 hover:underline ml-3">Eliminar</button>}
                 </td>
               </tr>
             ))}

@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
+import { useAuth } from "../../auth/AuthContext";
 
 export default function Users() {
+  const { can } = useAuth();
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
   const [branches, setBranches] = useState([]);
@@ -59,7 +61,7 @@ export default function Users() {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">👤 Usuarios</h1>
-        <button onClick={() => setEditing(blank)} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nuevo usuario</button>
+        {can("usuarios.crear") && <button onClick={() => setEditing(blank)} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nuevo usuario</button>}
       </div>
       <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 mb-4 flex gap-2">
         <input placeholder="Buscar por nombre o correo" value={search} onChange={(e) => setSearch(e.target.value)}
@@ -85,8 +87,8 @@ export default function Users() {
                 <span>· {u.branches.map((b) => b.name).join(", ") || "sin sucursal"}</span>
               </div>
               <div className="flex gap-4 mt-2 text-sm">
-                <button onClick={() => openEdit(u)} className="text-blue-600 hover:underline">Editar</button>
-                <button onClick={() => remove(u.id)} className="text-red-600 hover:underline">Eliminar</button>
+                {can("usuarios.editar") && <button onClick={() => openEdit(u)} className="text-blue-600 hover:underline">Editar</button>}
+                {can("usuarios.eliminar") && <button onClick={() => remove(u.id)} className="text-red-600 hover:underline">Eliminar</button>}
               </div>
             </div>
           ))}
@@ -109,8 +111,8 @@ export default function Users() {
                 <td className="px-4 py-2 text-slate-500">{u.branches.map((b) => b.name).join(", ") || "—"}</td>
                 <td className="px-4 py-2">{u.is_active ? <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700">Sí</span> : <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-red-100 text-red-700">No</span>}</td>
                 <td className="px-4 py-2 text-right">
-                  <button onClick={() => openEdit(u)} className="text-blue-600 hover:underline">Editar</button>
-                  <button onClick={() => remove(u.id)} className="text-red-600 hover:underline ml-3">Eliminar</button>
+                  {can("usuarios.editar") && <button onClick={() => openEdit(u)} className="text-blue-600 hover:underline">Editar</button>}
+                  {can("usuarios.eliminar") && <button onClick={() => remove(u.id)} className="text-red-600 hover:underline ml-3">Eliminar</button>}
                 </td>
               </tr>
             ))}

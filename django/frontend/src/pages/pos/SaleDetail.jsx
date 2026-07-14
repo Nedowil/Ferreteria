@@ -155,7 +155,7 @@ export default function SaleDetail() {
             <Link to={`/ventas/${id}/ticket`} className="block text-center w-full border border-slate-300 text-slate-700 rounded px-4 py-2 text-sm">Ver / imprimir comprobante</Link>
           </section>
 
-          {s.status === "completada" && (
+          {s.status === "completada" && can("ventas.cancelar") && (
             <section className="bg-white rounded-lg shadow p-5">
               <button onClick={cancel} className="w-full bg-white border border-red-300 text-red-600 rounded px-4 py-2 text-sm font-medium">Cancelar venta</button>
             </section>

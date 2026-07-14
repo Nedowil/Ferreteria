@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
+import { useAuth } from "../../auth/AuthContext";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 
 const BLANK = { name: "", tax_id: "", email: "", phone: "", address: "", notes: "",
@@ -10,6 +11,7 @@ const BLANK = { name: "", tax_id: "", email: "", phone: "", address: "", notes: 
 const TYPES = [["retail", "Público"], ["wholesale", "Mayorista"]];
 
 export default function CustomerList() {
+  const { can } = useAuth();
   const [items, setItems] = useState([]);
   const [search, setSearch] = useState("");
   const [type, setType] = useState("");
@@ -77,7 +79,7 @@ export default function CustomerList() {
         <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">👥 Clientes</h1>
         <div className="flex gap-2">
           <button onClick={exportExcel} disabled={exporting} className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-100 transition">{exporting ? "Exportando…" : "⬇️ Excel"}</button>
-          <button onClick={() => { setSatMsg(""); setEditing(BLANK); }} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nuevo cliente</button>
+          {can("clientes.crear") && <button onClick={() => { setSatMsg(""); setEditing(BLANK); }} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nuevo cliente</button>}
         </div>
       </div>
       <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 mb-4 flex gap-2 items-end">
@@ -104,8 +106,8 @@ export default function CustomerList() {
                 <td className="px-4 py-2 text-slate-500">{c.phone || "—"}</td>
                 <td className="px-4 py-2 text-right font-semibold text-slate-700">Q{c.credit_balance}</td>
                 <td className="px-4 py-2 text-right">
-                  <button onClick={() => { setSatMsg(""); setEditing(c); }} className="text-blue-600 hover:underline">Editar</button>
-                  <button onClick={() => remove(c.id)} className="text-red-600 hover:underline ml-3">Eliminar</button>
+                  {can("clientes.editar") && <button onClick={() => { setSatMsg(""); setEditing(c); }} className="text-blue-600 hover:underline">Editar</button>}
+                  {can("clientes.eliminar") && <button onClick={() => remove(c.id)} className="text-red-600 hover:underline ml-3">Eliminar</button>}
                 </td>
               </tr>
             ))}

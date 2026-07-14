@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../api/client";
+import { useAuth } from "../../auth/AuthContext";
 
 const STATUS_BADGE = {
   pendiente: "bg-amber-100 text-amber-700",
@@ -9,6 +10,7 @@ const STATUS_BADGE = {
 };
 
 export default function PurchaseDetail() {
+  const { can } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
   const [p, setP] = useState(null);
@@ -111,9 +113,10 @@ export default function PurchaseDetail() {
             <h3 className="font-semibold mb-3">Acciones</h3>
             {p.status === "pendiente" && (
               <div className="space-y-2">
-                <button onClick={() => act("receive")} className="w-full bg-green-600 text-white rounded px-4 py-2 text-sm font-medium">Recibir compra</button>
-                <button onClick={() => act("cancel")} className="w-full bg-white border border-slate-300 rounded px-4 py-2 text-sm">Cancelar compra</button>
-                <button onClick={del} className="w-full text-red-600 text-sm py-1">Eliminar</button>
+                {can("compras.recibir") && <button onClick={() => act("receive")} className="w-full bg-green-600 text-white rounded px-4 py-2 text-sm font-medium">Recibir compra</button>}
+                {can("compras.cancelar") && <button onClick={() => act("cancel")} className="w-full bg-white border border-slate-300 rounded px-4 py-2 text-sm">Cancelar compra</button>}
+                {can("compras.cancelar") && <button onClick={del} className="w-full text-red-600 text-sm py-1">Eliminar</button>}
+                {!can("compras.recibir") && !can("compras.cancelar") && <p className="text-sm text-slate-500">Sin acciones disponibles.</p>}
               </div>
             )}
             {p.status !== "pendiente" && <p className="text-sm text-slate-500">Sin acciones disponibles.</p>}
