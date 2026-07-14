@@ -251,7 +251,7 @@ export default function ProductList() {
           <input type="checkbox" checked={filters.low_stock}
                  onChange={(e) => setFilters({ ...filters, low_stock: e.target.checked })} /> Stock bajo
         </label>
-        <button className="bg-slate-700 text-white rounded px-4 py-2 text-sm">Filtrar</button>
+        <button className="bg-slate-700 text-white rounded px-4 py-2 text-sm">Buscar</button>
       </form>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">

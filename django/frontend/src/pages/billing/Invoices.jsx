@@ -178,7 +178,7 @@ export default function Invoices() {
             <input type="date" value={filters.from} onChange={(e) => setFilters({ ...filters, from: e.target.value })} className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" /></div>
           <div><label className="block text-[11px] text-slate-500 mb-0.5">Hasta</label>
             <input type="date" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" /></div>
-          <button className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition">Filtrar</button>
+          <button className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition">Buscar</button>
           {(filters.search || filters.from || filters.to || filters.status) && (
             <button type="button" onClick={() => { setFilters({ search: "", from: "", to: "", status: "" }); api.get("/invoices/").then((r) => setInvoices(r.data.results || r.data)); }}
                     className="text-sm text-slate-500 px-2 py-2 hover:underline">Limpiar</button>

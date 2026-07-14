@@ -31,7 +31,7 @@ export default function Transfers() {
           <option value="">Todos los estados</option>
           {Object.keys(BADGE).map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
-        <button className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition">Filtrar</button>
+        <button className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition">Buscar</button>
       </form>
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
         <table className="w-full text-sm">

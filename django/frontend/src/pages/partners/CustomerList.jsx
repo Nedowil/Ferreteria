@@ -95,7 +95,7 @@ export default function CustomerList() {
           <option value="">Todos los tipos</option>
           {TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </select>
-        <button className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition">Filtrar</button>
+        <button className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition">Buscar</button>
       </form>
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
         <table className="w-full text-sm">
