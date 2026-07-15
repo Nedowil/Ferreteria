@@ -188,7 +188,35 @@ export default function Invoices() {
 
       {tab === "emitidas" && (
         <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-          <div className="overflow-x-auto">
+          {/* Móvil: tarjetas */}
+          <div className="md:hidden divide-y divide-slate-100">
+            {invoices.map((i) => (
+              <div key={i.id} className="p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="font-medium text-slate-800 break-words">{i.customer_name || "Consumidor final"}</div>
+                    <div className="text-xs text-slate-400 font-mono">{i.document_type} · {i.serie ? `${i.serie}-${i.numero}` : "—"}</div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="font-semibold text-slate-700">{Q(i.total)}</div>
+                    <span className={"inline-block mt-0.5 rounded-full px-2 py-0.5 text-xs font-medium " + (statusBadge[i.status] || "")}>{i.status_display}</span>
+                  </div>
+                </div>
+                <div className="text-[11px] text-slate-400 font-mono break-all mt-1">{i.uuid || ""}</div>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm">
+                  <Link to={`/ventas/${i.sale}`} className="text-slate-600 hover:underline">Venta {i.sale_folio}</Link>
+                  <Link to={`/ventas/${i.sale}/ticket`} className="text-blue-600 hover:underline">Ver / Imprimir</Link>
+                  {i.status === "certificada" && can("facturas.anular") && (
+                    <button onClick={() => annul(i)} className="text-red-600 hover:underline">Anular</button>
+                  )}
+                </div>
+              </div>
+            ))}
+            {invoices.length === 0 && <div className="px-5 py-8 text-center text-slate-400">Sin facturas emitidas.</div>}
+          </div>
+
+          {/* Escritorio: tabla */}
+          <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">
               <tr>
@@ -227,7 +255,29 @@ export default function Invoices() {
 
       {tab === "pendientes" && (
         <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-          <div className="overflow-x-auto">
+          {/* Móvil: tarjetas */}
+          <div className="md:hidden divide-y divide-slate-100">
+            {pending.map((s) => (
+              <div key={s.id} className="p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="font-medium text-slate-800 break-words">{s.customer}</div>
+                    <div className="text-xs text-slate-400 font-mono">{s.folio} · {new Date(s.date).toLocaleDateString()}</div>
+                  </div>
+                  <div className="font-semibold text-slate-700 shrink-0">{Q(s.total)}</div>
+                </div>
+                {can("facturas.emitir") && (
+                  <div className="mt-2">
+                    <button onClick={() => emit(s.id)} className="text-xs bg-blue-600 text-white rounded px-3 py-1.5">Facturar</button>
+                  </div>
+                )}
+              </div>
+            ))}
+            {pending.length === 0 && <div className="px-5 py-8 text-center text-slate-400">No hay ventas pendientes de facturar.</div>}
+          </div>
+
+          {/* Escritorio: tabla */}
+          <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">
               <tr>

@@ -71,7 +71,32 @@ export default function SalesList() {
         <button className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition">Buscar</button>
       </form>
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Móvil: tarjetas (la tabla no cabe en pantallas angostas) */}
+        <div className="md:hidden divide-y divide-slate-100">
+          {data.results.map((s) => (
+            <Link key={s.id} to={`/ventas/${s.id}`} className="block p-4 active:bg-slate-50">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-medium text-slate-800 break-words">{s.customer_name || "Consumidor final"}</div>
+                  <div className="text-xs text-slate-400 font-mono">{s.folio}</div>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="font-semibold text-slate-700">Q{s.total}</div>
+                  <span className={"inline-block mt-0.5 rounded-full px-2 py-0.5 text-xs font-medium " + STATUS_BADGE[s.status]}>{s.status_display}</span>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-slate-500">
+                <span>{new Date(s.date).toLocaleString()}</span>
+                <span>· {s.payment_status_display}{Number(s.balance) > 0 ? ` · saldo Q${s.balance}` : ""}</span>
+                {isAdmin && s.user_name && <span>· {s.user_name}</span>}
+              </div>
+            </Link>
+          ))}
+          {data.results.length === 0 && <div className="px-5 py-10 text-center text-slate-400">No hay ventas.</div>}
+        </div>
+
+        {/* Escritorio: tabla */}
+        <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">
             <tr><th className="px-4 py-2.5">Folio</th><th className="px-4 py-2.5">Cliente</th><th className="px-4 py-2.5">Fecha</th>
