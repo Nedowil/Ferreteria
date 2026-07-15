@@ -170,8 +170,11 @@ export default function Ticket() {
           body * { visibility: hidden !important; }
           #printable, #printable * { visibility: visible !important; }
           #printable { position: absolute; left: 0; top: 0; width: 100%; }
-          .ticket-paper { width: 80mm !important; box-shadow: none !important; }
-          @page { margin: 8mm; }
+          .ticket-paper { width: 80mm !important; box-shadow: none !important; padding: 3mm !important; }
+          /* Ticket térmico: la hoja mide SOLO lo que ocupa el contenido (altura
+             automática), así la impresora corta justo al final y no desperdicia
+             papel. En formato carta se usa una hoja tamaño carta normal. */
+          @page { ${mode === "carta" ? "size: letter; margin: 12mm;" : "size: 80mm auto; margin: 0;"} }
         }`}</style>
 
       <div className="flex flex-wrap gap-3 justify-between mb-3 print:hidden">
