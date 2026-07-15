@@ -103,6 +103,15 @@ export default function Ticket() {
   const phrases = Array.isArray(company.phrases) ? company.phrases : [];
 
   const printThermal = async () => {
+    // Modo "Sistema" (lo normal): la impresora térmica está instalada en la
+    // computadora (por USB). Usamos la impresión del navegador, que abre el
+    // cuadro de impresión y manda el ticket a la impresora seleccionada.
+    if ((company.printer_mode || "system") !== "network") {
+      window.print();
+      return;
+    }
+    // Modo "Red (IP)": el servidor envía el ticket directo a la impresora por su
+    // IP. Solo funciona si el servidor puede alcanzar la impresora en la red.
     try {
       const { data } = await api.post(`/sales/${id}/print/`);
       if (data.status === "sent") { alert("Ticket enviado a la impresora de red."); return; }
