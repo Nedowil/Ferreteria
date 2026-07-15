@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import QRCode from "qrcode";
 import api from "../../api/client";
@@ -83,6 +83,7 @@ export default function Ticket() {
   const [err, setErr] = useState("");
   const [mode, setMode] = useState("ticket"); // ticket | carta
   const [qr, setQr] = useState("");
+  const printRef = useRef(null);   // contenedor del ticket (para capturarlo como imagen)
 
   useEffect(() => {
     api.get(`/sales/${id}/ticket/`).then((r) => setT(r.data)).catch(() => setErr("No se pudo cargar el comprobante."));
@@ -118,12 +119,38 @@ export default function Ticket() {
 
   // Enviar el comprobante por WhatsApp (resumen en texto). Si el cliente tiene
   // teléfono, abre el chat directo; si no, abre WhatsApp para elegir contacto.
+  // WhatsApp por enlace (wa.me) SOLO admite texto, no adjunta archivos.
   const sendWhatsapp = () => {
     const text = saleText(t);
     let phone = (sale.customer_phone || "").replace(/\D/g, "");
     if (phone && phone.length === 8) phone = "502" + phone; // Guatemala
     const base = phone ? `https://wa.me/${phone}` : "https://wa.me/";
     window.open(`${base}?text=${encodeURIComponent(text)}`, "_blank");
+  };
+
+  // Compartir el ticket CON el comprobante adjunto (imagen). En el celular usa
+  // el menú nativo de compartir (Web Share API) para mandar la imagen del ticket
+  // por WhatsApp; si el navegador no lo soporta, cae al enlace de texto.
+  const shareTicket = async () => {
+    const text = saleText(t);
+    try {
+      if (printRef.current && typeof navigator !== "undefined" && navigator.canShare) {
+        const html2canvas = (await import("html2canvas")).default;
+        const canvas = await html2canvas(printRef.current, { scale: 2, backgroundColor: "#ffffff", useCORS: true });
+        const blob = await new Promise((res) => canvas.toBlob(res, "image/png"));
+        if (blob) {
+          const file = new File([blob], `ticket-${sale.folio}.png`, { type: "image/png" });
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file], text });
+            return;   // se compartió con la imagen adjunta
+          }
+        }
+      }
+    } catch (e) {
+      if (e && e.name === "AbortError") return;   // el usuario canceló el menú
+      // cualquier otro error: caemos al enlace de texto de abajo
+    }
+    sendWhatsapp();
   };
 
   return (
@@ -160,11 +187,11 @@ export default function Ticket() {
               Imprimir / PDF
             </button>
           )}
-          <button onClick={sendWhatsapp} className="inline-flex items-center gap-2 bg-green-600 text-white rounded-lg px-4 py-2 text-sm shadow hover:bg-green-700 transition">💬 WhatsApp</button>
+          <button onClick={shareTicket} className="inline-flex items-center gap-2 bg-green-600 text-white rounded-lg px-4 py-2 text-sm shadow hover:bg-green-700 transition">💬 WhatsApp</button>
         </div>
       </div>
 
-      <div id="printable">
+      <div id="printable" ref={printRef}>
         {mode === "ticket"
           ? <TicketPaper {...{ company, sale, fel, qr, phrases }} />
           : <CartaPaper {...{ company, sale, fel, qr, phrases, d, meses }} />}
