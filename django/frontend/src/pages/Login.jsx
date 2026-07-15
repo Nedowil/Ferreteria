@@ -8,6 +8,7 @@ export default function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -93,9 +94,15 @@ export default function Login() {
           <label className="block text-sm font-medium text-slate-700 mb-1">Contraseña</label>
           <div className="relative mb-6">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔒</span>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
+            <input type={showPass ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required
                    placeholder="••••••••"
-                   className="w-full border border-slate-300 rounded-lg pl-10 pr-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" />
+                   className="w-full border border-slate-300 rounded-lg pl-10 pr-11 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" />
+            <button type="button" onClick={() => setShowPass((v) => !v)}
+                    title={showPass ? "Ocultar contraseña" : "Ver contraseña"}
+                    aria-label={showPass ? "Ocultar contraseña" : "Ver contraseña"}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 px-1.5 py-1 rounded transition">
+              {showPass ? "🙈" : "👁️"}
+            </button>
           </div>
 
           <button disabled={busy}
