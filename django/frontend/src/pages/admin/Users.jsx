@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
+import PasswordInput from "../../components/PasswordInput";
 
 export default function Users() {
   const { can } = useAuth();
@@ -144,7 +145,7 @@ export default function Users() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Contraseña {editing.id && <span className="text-xs text-slate-400">(dejar vacío para no cambiar)</span>}</label>
-                <input type="password" value={editing.password} onChange={(e) => setEditing({ ...editing, password: e.target.value })} className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
+                <PasswordInput value={editing.password} onChange={(e) => setEditing({ ...editing, password: e.target.value })} className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Rol</label>

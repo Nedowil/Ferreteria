@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import api from "../../api/client";
+import PasswordInput from "../../components/PasswordInput";
 
 export default function ResetPassword() {
   const [params] = useSearchParams();
@@ -45,11 +46,11 @@ export default function ResetPassword() {
           <form onSubmit={submit}>
             {error && <div className="mb-4 bg-red-600 text-white font-semibold text-sm rounded px-3 py-2">{error}</div>}
             <label className="block text-sm font-medium mb-1">Nueva contraseña</label>
-            <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} required
-                   className="w-full border border-slate-300 rounded px-3 py-2 mb-4" />
+            <div className="mb-4"><PasswordInput value={pw} onChange={(e) => setPw(e.target.value)} required
+                   className="w-full border border-slate-300 rounded px-3 py-2" /></div>
             <label className="block text-sm font-medium mb-1">Repetir contraseña</label>
-            <input type="password" value={pw2} onChange={(e) => setPw2(e.target.value)} required
-                   className="w-full border border-slate-300 rounded px-3 py-2 mb-5" />
+            <div className="mb-5"><PasswordInput value={pw2} onChange={(e) => setPw2(e.target.value)} required
+                   className="w-full border border-slate-300 rounded px-3 py-2" /></div>
             <button disabled={busy}
                     className="w-full bg-slate-900 text-white rounded py-2 font-medium hover:bg-slate-800 disabled:opacity-50">
               {busy ? "Guardando…" : "Restablecer"}

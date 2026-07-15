@@ -1,5 +1,6 @@
 import { useState } from "react";
 import api from "../../api/client";
+import PasswordInput from "../../components/PasswordInput";
 
 export default function ChangePassword() {
   const [current, setCurrent] = useState("");
@@ -33,17 +34,17 @@ export default function ChangePassword() {
         {error && <div className="bg-red-600 text-white font-semibold text-sm rounded px-3 py-2">{error}</div>}
         <div>
           <label className="block text-sm font-medium mb-1">Contraseña actual</label>
-          <input type="password" value={current} onChange={(e) => setCurrent(e.target.value)} required
+          <PasswordInput value={current} onChange={(e) => setCurrent(e.target.value)} required
                  className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Nueva contraseña</label>
-          <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} required
+          <PasswordInput value={pw} onChange={(e) => setPw(e.target.value)} required
                  className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Repetir nueva contraseña</label>
-          <input type="password" value={pw2} onChange={(e) => setPw2(e.target.value)} required
+          <PasswordInput value={pw2} onChange={(e) => setPw2(e.target.value)} required
                  className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
         </div>
         <button disabled={busy}
