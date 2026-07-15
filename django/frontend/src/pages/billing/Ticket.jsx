@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import QRCode from "qrcode";
 import api from "../../api/client";
-import logo from "../../assets/logo.svg";
+import logo from "../../assets/logo.jpg";
 
 const GREEN = "#159f73";
 const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
