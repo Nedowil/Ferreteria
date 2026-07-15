@@ -28,6 +28,7 @@ export default function InventoryValue() {
         <KpiCard label="Utilidad potencial" value={Q(data.potential_profit)} accent="text-green-600" />
       </div>
       <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-500 text-left">
             <tr><th className="px-4 py-2">SKU</th><th className="px-4 py-2">Producto</th><th className="px-4 py-2">Categoría</th>
@@ -48,6 +49,7 @@ export default function InventoryValue() {
             {data.rows.length === 0 && <tr><td colSpan="7" className="px-5 py-8 text-center text-slate-400">Sin productos con stock.</td></tr>}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

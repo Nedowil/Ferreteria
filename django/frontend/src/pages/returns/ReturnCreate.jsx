@@ -115,6 +115,7 @@ export default function ReturnCreate() {
   const renderSaleItemsTable = () => (
     <div className="bg-white rounded-lg shadow overflow-hidden mt-4">
       <div className="px-5 py-3 border-b font-semibold text-sm">Venta {sale.folio} — {sale.customer_name || "Consumidor final"}</div>
+      <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead className="bg-slate-50 text-slate-500 text-left">
           <tr><th className="px-4 py-2">Producto</th><th className="px-4 py-2 text-right">Comprado</th><th className="px-4 py-2 text-right">Precio</th><th className="px-4 py-2 text-right w-32">A devolver</th><th className="px-4 py-2 w-10"></th></tr>
@@ -142,6 +143,7 @@ export default function ReturnCreate() {
           )}
         </tbody>
       </table>
+      </div>
     </div>
   );
 
@@ -197,6 +199,7 @@ export default function ReturnCreate() {
               </div>
             )}
           </div>
+          <div className="overflow-x-auto">
           <table className="w-full text-sm mt-3">
             <thead className="text-slate-500 text-left"><tr><th className="py-1">Producto</th><th className="py-1 w-24 text-right">Cant.</th><th className="py-1 w-28 text-right">Precio</th><th className="py-1 w-10"></th></tr></thead>
             <tbody>
@@ -214,6 +217,7 @@ export default function ReturnCreate() {
               {items.length === 0 && <tr><td colSpan="4" className="py-4 text-center text-slate-400">Agrega productos a reintegrar.</td></tr>}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 

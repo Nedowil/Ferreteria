@@ -23,6 +23,7 @@ export default function SalesReport() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             <div className="bg-white rounded-lg shadow overflow-hidden">
               <div className="px-5 py-3 border-b font-semibold">Por día</div>
+              <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 text-slate-500 text-left"><tr><th className="px-4 py-2">Día</th><th className="px-4 py-2 text-right">Ventas</th><th className="px-4 py-2 text-right">Total</th></tr></thead>
                 <tbody>
@@ -32,9 +33,11 @@ export default function SalesReport() {
                   {data.by_day.every((d) => d.count === 0) && <tr><td colSpan="3" className="px-5 py-8 text-center text-slate-400">Sin ventas en el rango.</td></tr>}
                 </tbody>
               </table>
+              </div>
             </div>
             <div className="bg-white rounded-lg shadow overflow-hidden h-fit">
               <div className="px-5 py-3 border-b font-semibold">Por método de pago</div>
+              <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 text-slate-500 text-left"><tr><th className="px-4 py-2">Método</th><th className="px-4 py-2 text-right">Ventas</th><th className="px-4 py-2 text-right">Total</th></tr></thead>
                 <tbody>
@@ -43,6 +46,7 @@ export default function SalesReport() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           </div>
         </>

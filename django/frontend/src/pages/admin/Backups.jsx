@@ -56,6 +56,7 @@ export default function Backups() {
       {error && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm mb-4">{error}</div>}
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-500 text-left">
             <tr><th className="px-4 py-2">Archivo</th><th className="px-4 py-2 text-right">Tamaño</th>
@@ -76,6 +77,7 @@ export default function Backups() {
             {items.length === 0 && <tr><td colSpan="4" className="px-4 py-6 text-center text-slate-400">No hay respaldos aún.</td></tr>}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

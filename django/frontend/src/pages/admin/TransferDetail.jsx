@@ -52,6 +52,7 @@ export default function TransferDetail() {
 
       <section className="bg-white rounded-lg shadow overflow-hidden mb-4">
         <div className="px-5 py-3 border-b font-semibold">Productos</div>
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-500 text-left"><tr><th className="px-4 py-2">Producto</th><th className="px-4 py-2 text-right">Cantidad</th><th className="px-4 py-2 text-right">Base</th></tr></thead>
           <tbody>
@@ -64,6 +65,7 @@ export default function TransferDetail() {
             ))}
           </tbody>
         </table>
+        </div>
       </section>
 
       <div className="flex gap-2">

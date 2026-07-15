@@ -31,6 +31,7 @@ export default function DeadStock() {
       </form>
       {data && (
         <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-slate-500 text-left">
               <tr><th className="px-4 py-2">SKU</th><th className="px-4 py-2">Producto</th><th className="px-4 py-2">Categoría</th>
@@ -50,6 +51,7 @@ export default function DeadStock() {
               {data.rows.length === 0 && <tr><td colSpan="6" className="px-5 py-10 text-center text-slate-400">Ningún producto sin movimiento en {data.days} días 🎉</td></tr>}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

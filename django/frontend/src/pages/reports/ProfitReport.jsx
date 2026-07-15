@@ -29,6 +29,7 @@ export default function ProfitReport() {
           </div>
           <div className="bg-white rounded-lg shadow overflow-hidden">
             <div className="px-5 py-3 border-b font-semibold">Por producto</div>
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-slate-500 text-left">
                 <tr><th className="px-4 py-2">SKU</th><th className="px-4 py-2">Producto</th><th className="px-4 py-2 text-right">Cant.</th>
@@ -52,6 +53,7 @@ export default function ProfitReport() {
                 {data.rows.length === 0 && <tr><td colSpan="7" className="px-5 py-8 text-center text-slate-400">Sin ventas en el rango.</td></tr>}
               </tbody>
             </table>
+            </div>
           </div>
         </>
       )}

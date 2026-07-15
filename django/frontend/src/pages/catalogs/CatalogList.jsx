@@ -58,6 +58,7 @@ export default function CatalogList({ kind }) {
       )}
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">
             <tr>
@@ -84,6 +85,7 @@ export default function CatalogList({ kind }) {
             {items.length === 0 && <tr><td colSpan="5" className="px-5 py-8 text-center text-slate-400">Sin registros.</td></tr>}
           </tbody>
         </table>
+        </div>
       </div>
 
       {editing && (

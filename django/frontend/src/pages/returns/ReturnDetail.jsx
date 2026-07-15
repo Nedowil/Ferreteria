@@ -72,6 +72,7 @@ export default function ReturnDetail() {
 
       <section className="bg-white rounded-lg shadow overflow-hidden">
         <div className="px-5 py-3 border-b font-semibold">Productos devueltos</div>
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-500 text-left"><tr><th className="px-4 py-2">Producto</th><th className="px-4 py-2 text-right">Cant.</th><th className="px-4 py-2 text-right">Precio</th><th className="px-4 py-2 text-right">Importe</th></tr></thead>
           <tbody>
@@ -86,6 +87,7 @@ export default function ReturnDetail() {
             <tr className="font-semibold"><td colSpan="3" className="px-4 py-1 text-right">Total reembolsado</td><td className="px-4 py-1 text-right">Q{r.total}</td></tr>
           </tfoot>
         </table>
+        </div>
       </section>
 
       {/* Nota de Crédito electrónica (FEL) */}

@@ -38,6 +38,7 @@ export default function DailyCash() {
             <KpiCard label="Diferencia" value={Q(data.totals.difference)} accent={Number(data.totals.difference) < 0 ? "text-red-600" : "text-green-600"} />
           </div>
           <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-slate-500 text-left">
                 <tr><th className="px-4 py-2">Cajero</th><th className="px-4 py-2">Cierre</th><th className="px-4 py-2 text-right">Fondo</th>
@@ -57,6 +58,7 @@ export default function DailyCash() {
                 {data.sessions.length === 0 && <tr><td colSpan="6" className="px-5 py-8 text-center text-slate-400">No hay cajas cerradas ese día.</td></tr>}
               </tbody>
             </table>
+            </div>
           </div>
         </>
       )}

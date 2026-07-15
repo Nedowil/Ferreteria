@@ -83,6 +83,7 @@ export default function SupplierList() {
         <button className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition">Buscar</button>
       </form>
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">
             <tr><th className="px-4 py-2.5">Nombre</th><th className="px-4 py-2.5">NIT</th><th className="px-4 py-2.5">Contacto</th>
@@ -105,6 +106,7 @@ export default function SupplierList() {
             {items.length === 0 && <tr><td colSpan="6" className="px-5 py-8 text-center text-slate-400">Sin proveedores.</td></tr>}
           </tbody>
         </table>
+        </div>
       </div>
 
       {editing && (

@@ -37,6 +37,7 @@ export default function CashSessions() {
         </div>
       </div>
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">
             <tr><th className="px-4 py-2.5">#</th><th className="px-4 py-2.5">Cajero</th><th className="px-4 py-2.5">Apertura</th><th className="px-4 py-2.5">Cierre</th>
@@ -62,6 +63,7 @@ export default function CashSessions() {
             {data.results.length === 0 && <tr><td colSpan="9" className="px-5 py-10 text-center text-slate-400">Sin sesiones de caja.</td></tr>}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

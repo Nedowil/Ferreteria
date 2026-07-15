@@ -79,6 +79,7 @@ export default function TransferCreate() {
             </div>
           )}
         </div>
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="text-slate-500 text-left"><tr><th className="py-1">Producto</th><th className="py-1 w-28 text-right">Cantidad</th><th className="py-1 w-24 text-right">Factor</th><th className="py-1 w-28">Unidad</th><th></th></tr></thead>
           <tbody>
@@ -94,6 +95,7 @@ export default function TransferCreate() {
             {items.length === 0 && <tr><td colSpan="5" className="py-6 text-center text-slate-400">Busca productos para agregarlos.</td></tr>}
           </tbody>
         </table>
+        </div>
       </section>
       <div className="flex gap-2">
         <button disabled={busy} className="bg-blue-600 text-white rounded px-6 py-2 font-medium disabled:opacity-50">{busy ? "Creando…" : "Crear transferencia"}</button>

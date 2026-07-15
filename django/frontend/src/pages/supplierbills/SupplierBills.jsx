@@ -228,6 +228,7 @@ export default function SupplierBills() {
 
       {/* Tabla */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">
             <tr>
@@ -257,6 +258,7 @@ export default function SupplierBills() {
             {rows.length === 0 && <tr><td colSpan={canEdit ? 7 : 6} className="px-5 py-10 text-center text-slate-400">Sin facturas registradas.</td></tr>}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

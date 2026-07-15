@@ -71,6 +71,7 @@ export default function SaleDetail() {
 
           <section className="bg-white rounded-lg shadow overflow-hidden">
             <div className="px-5 py-3 border-b font-semibold">Partidas</div>
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-slate-500 text-left">
                 <tr><th className="px-4 py-2">Producto</th><th className="px-4 py-2 text-right">Cant.</th>
@@ -94,15 +95,18 @@ export default function SaleDetail() {
                 <tr className="font-semibold"><td colSpan="3" className="px-4 py-1 text-right">Total</td><td className="px-4 py-1 text-right">Q{s.total}</td></tr>
               </tfoot>
             </table>
+            </div>
           </section>
 
           {s.payments.length > 0 && (
             <section className="bg-white rounded-lg shadow overflow-hidden">
               <div className="px-5 py-3 border-b font-semibold">Abonos</div>
+              <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 text-slate-500 text-left"><tr><th className="px-4 py-2">Fecha</th><th className="px-4 py-2">Método</th><th className="px-4 py-2 text-right">Monto</th></tr></thead>
                 <tbody>{s.payments.map((p) => <tr key={p.id} className="border-t"><td className="px-4 py-2">{p.date}</td><td className="px-4 py-2">{p.payment_method}</td><td className="px-4 py-2 text-right">Q{p.amount}</td></tr>)}</tbody>
               </table>
+              </div>
             </section>
           )}
         </div>

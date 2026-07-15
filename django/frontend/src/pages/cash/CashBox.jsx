@@ -111,6 +111,7 @@ export default function CashBox() {
 
           <div className="lg:col-span-2 bg-white rounded-lg shadow overflow-hidden">
             <div className="px-5 py-3 border-b font-semibold">Movimientos</div>
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-slate-500 text-left">
                 <tr><th className="px-4 py-2">Hora</th><th className="px-4 py-2">Tipo</th><th className="px-4 py-2">Método</th>
@@ -133,6 +134,7 @@ export default function CashBox() {
                 {session.movements.length === 0 && <tr><td colSpan="6" className="px-5 py-8 text-center text-slate-400">Sin movimientos.</td></tr>}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       )}

@@ -81,6 +81,7 @@ export default function SupplierPayments() {
       {/* Desglose por forma de pago (este año) */}
       <div className="bg-white rounded-lg shadow overflow-hidden mb-6">
         <div className="px-5 py-3 border-b font-semibold text-sm">Por forma de pago (este año)</div>
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-500 text-left"><tr><th className="px-4 py-2">Forma de pago</th><th className="px-4 py-2 text-right">Total</th></tr></thead>
           <tbody>
@@ -92,6 +93,7 @@ export default function SupplierPayments() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Historial de fondos */}
@@ -100,6 +102,7 @@ export default function SupplierPayments() {
           <span>Historial de fondos (abiertos / cerrados)</span>
           <ExcelButton onClick={exportFunds} disabled={!d.funds || !d.funds.length} />
         </div>
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-500 text-left">
             <tr>
@@ -126,6 +129,7 @@ export default function SupplierPayments() {
             {(!d.funds || d.funds.length === 0) && <tr><td colSpan="8" className="px-5 py-6 text-center text-slate-400">Sin fondos registrados.</td></tr>}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

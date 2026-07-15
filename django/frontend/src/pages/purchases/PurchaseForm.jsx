@@ -116,6 +116,7 @@ export default function PurchaseForm() {
             </div>
           )}
         </div>
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="text-slate-500 text-left">
             <tr><th className="py-1">Producto</th><th className="py-1 w-24 text-right">Cantidad</th>
@@ -140,6 +141,7 @@ export default function PurchaseForm() {
             {items.length === 0 && <tr><td colSpan="6" className="py-6 text-center text-slate-400">Busca productos para agregarlos.</td></tr>}
           </tbody>
         </table>
+        </div>
         <div className="flex justify-end mt-4">
           <div className="w-64 text-sm space-y-1">
             <div className="flex justify-between"><span className="text-slate-500">Subtotal</span><span>Q{subtotal.toFixed(2)}</span></div>

@@ -126,6 +126,7 @@ export default function QuotationForm() {
           <button type="button" onClick={() => setAddingProduct(true)} title="Crear un producto nuevo"
                   className="shrink-0 inline-flex items-center gap-1 bg-blue-600 text-white rounded px-3 py-2 text-sm font-medium hover:bg-blue-700 transition whitespace-nowrap">➕ Producto</button>
         </div>
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="text-slate-500 text-left">
             <tr><th className="py-1">Producto</th><th className="py-1 w-24 text-right">Cant.</th><th className="py-1 w-28 text-right">Precio</th>
@@ -145,6 +146,7 @@ export default function QuotationForm() {
             {items.length === 0 && <tr><td colSpan="6" className="py-6 text-center text-slate-400">Busca productos para agregarlos.</td></tr>}
           </tbody>
         </table>
+        </div>
         <div className="flex justify-end mt-4 text-base font-semibold">Total: Q{total.toFixed(2)}</div>
       </section>
 

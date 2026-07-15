@@ -188,6 +188,7 @@ export default function Invoices() {
 
       {tab === "emitidas" && (
         <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">
               <tr>
@@ -220,11 +221,13 @@ export default function Invoices() {
               {invoices.length === 0 && <tr><td colSpan="8" className="px-4 py-6 text-center text-slate-400">Sin facturas emitidas.</td></tr>}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
       {tab === "pendientes" && (
         <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">
               <tr>
@@ -250,6 +253,7 @@ export default function Invoices() {
               {pending.length === 0 && <tr><td colSpan="5" className="px-4 py-6 text-center text-slate-400">No hay ventas pendientes de facturar.</td></tr>}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

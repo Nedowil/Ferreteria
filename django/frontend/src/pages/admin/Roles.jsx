@@ -43,6 +43,7 @@ export default function Roles() {
         <button onClick={() => setEditing({ name: "", permissions: [] })} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nuevo rol</button>
       </div>
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">
             <tr><th className="px-4 py-2.5">Rol</th><th className="px-4 py-2.5 text-right">Permisos</th><th className="px-4 py-2.5 text-right">Usuarios</th><th className="px-4 py-2.5 text-right">Acciones</th></tr>
@@ -61,6 +62,7 @@ export default function Roles() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {editing && (

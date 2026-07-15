@@ -39,6 +39,7 @@ function RankingTable({ title, path, columns, filter }) {
       </DateRangeBar>
       {data && (
         <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-slate-500 text-left">
               <tr>{columns.map((c) => <th key={c.key} className={"px-4 py-2 " + (c.right ? "text-right" : "")}>{c.label}</th>)}</tr>
@@ -52,6 +53,7 @@ function RankingTable({ title, path, columns, filter }) {
               {rows.length === 0 && <tr><td colSpan={columns.length} className="px-5 py-8 text-center text-slate-400">Sin datos en el rango.</td></tr>}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

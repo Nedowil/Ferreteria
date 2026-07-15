@@ -87,6 +87,7 @@ export default function InventoryShow() {
 
         <div className="lg:col-span-2 bg-white rounded-lg shadow overflow-hidden">
           <div className="px-5 py-3 border-b font-semibold">Historial de movimientos</div>
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-slate-500 text-left">
               <tr><th className="px-4 py-2">Fecha</th><th className="px-4 py-2">Tipo</th>
@@ -107,6 +108,7 @@ export default function InventoryShow() {
               {movements.length === 0 && <tr><td colSpan="6" className="px-5 py-8 text-center text-slate-400">Sin movimientos.</td></tr>}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
     </div>
