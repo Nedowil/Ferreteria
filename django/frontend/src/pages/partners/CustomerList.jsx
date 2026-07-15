@@ -98,7 +98,31 @@ export default function CustomerList() {
         <button className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition">Buscar</button>
       </form>
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Móvil: tarjetas */}
+        <div className="md:hidden divide-y divide-slate-100">
+          {items.map((c) => (
+            <div key={c.id} className="p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-medium text-slate-800 break-words">{c.name}</div>
+                  <div className="text-xs text-slate-400">{c.tax_id ? `NIT ${c.tax_id}` : "Sin NIT"}{c.phone ? ` · ${c.phone}` : ""}</div>
+                </div>
+                <span className="inline-block shrink-0 rounded-full px-2 py-0.5 text-xs font-medium bg-slate-100 text-slate-600">{c.type_label}</span>
+              </div>
+              <div className="flex items-center justify-between gap-2 mt-2">
+                <span className="text-sm text-slate-500">Saldo: <b className="text-slate-700">Q{c.credit_balance}</b></span>
+                <div className="flex gap-4 text-sm">
+                  {can("clientes.editar") && <button onClick={() => { setSatMsg(""); setEditing(c); }} className="text-blue-600 hover:underline">Editar</button>}
+                  {can("clientes.eliminar") && <button onClick={() => remove(c.id)} className="text-red-600 hover:underline">Eliminar</button>}
+                </div>
+              </div>
+            </div>
+          ))}
+          {items.length === 0 && <div className="px-5 py-8 text-center text-slate-400">Sin clientes.</div>}
+        </div>
+
+        {/* Escritorio: tabla */}
+        <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">
             <tr><th className="px-4 py-2.5">Nombre</th><th className="px-4 py-2.5">NIT</th><th className="px-4 py-2.5">Tipo</th>

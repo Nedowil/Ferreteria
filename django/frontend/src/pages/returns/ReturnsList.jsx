@@ -65,7 +65,32 @@ export default function ReturnsList() {
         <button className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition">Buscar</button>
       </form>
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Móvil: tarjetas */}
+        <div className="md:hidden divide-y divide-slate-100">
+          {data.results.map((r) => (
+            <Link key={r.id} to={`/devoluciones/${r.id}`} className="block p-4 active:bg-slate-50">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-medium text-slate-800 font-mono text-sm">{r.folio}</div>
+                  <div className="text-xs text-slate-400">Venta: {r.sale_folio || "Sin ticket"}</div>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="font-semibold text-slate-700">Q{r.total}</div>
+                  <span className={"inline-block mt-0.5 rounded-full px-2 py-0.5 text-xs font-medium " + (r.status === "procesada" ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-600")}>{r.status_display}</span>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-slate-500">
+                <span>{new Date(r.date).toLocaleDateString()}</span>
+                <span>· {r.reason_display}</span>
+                <span>· {r.refund_method}</span>
+              </div>
+            </Link>
+          ))}
+          {data.results.length === 0 && <div className="px-5 py-10 text-center text-slate-400">No hay devoluciones.</div>}
+        </div>
+
+        {/* Escritorio: tabla */}
+        <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">
             <tr><th className="px-4 py-2.5">Folio</th><th className="px-4 py-2.5">Venta</th><th className="px-4 py-2.5">Fecha</th>
