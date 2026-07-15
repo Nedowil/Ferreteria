@@ -140,7 +140,7 @@ export default function Ticket() {
 
       <div className="flex flex-wrap gap-3 justify-between mb-3 print:hidden">
         <button onClick={() => navigate(-1)} className="inline-flex items-center gap-1 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg px-4 py-2 shadow-sm hover:bg-slate-50 hover:border-slate-400 transition">← Volver</button>
-        <div className="flex gap-3 items-center">
+        <div className="flex flex-wrap gap-2 items-center">
           <div className="flex rounded-lg border border-slate-200 overflow-hidden text-sm">
             <button onClick={() => setMode("ticket")}
                     className={"px-3 py-1.5 " + (mode === "ticket" ? "bg-blue-600 text-white" : "bg-white text-slate-600")}>🧾 Ticket</button>
