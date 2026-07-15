@@ -18,9 +18,21 @@ if [ "${SEED_DEMO:-false}" = "true" ]; then
 fi
 
 echo "==> Iniciando gunicorn…"
+# Optimizado para planes con poca RAM (p. ej. Render Starter, 512 MB):
+#  - Menos procesos (workers) + hilos (threads) para atender varias peticiones
+#    a la vez sin multiplicar el uso de memoria.
+#  - --preload carga la app una sola vez y la comparte entre workers (mucho
+#    menos consumo de RAM que cargarla en cada proceso).
+#  - --max-requests recicla los workers cada tantas peticiones para evitar que
+#    la memoria crezca con el tiempo (fugas).
 exec gunicorn config.wsgi:application \
   --bind "0.0.0.0:${PORT:-8000}" \
-  --workers "${WEB_CONCURRENCY:-3}" \
+  --workers "${WEB_CONCURRENCY:-2}" \
+  --threads "${GUNICORN_THREADS:-4}" \
+  --worker-class gthread \
+  --preload \
   --timeout "${GUNICORN_TIMEOUT:-120}" \
+  --max-requests "${GUNICORN_MAX_REQUESTS:-500}" \
+  --max-requests-jitter 50 \
   --access-logfile - \
   --error-logfile -
