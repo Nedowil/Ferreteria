@@ -68,9 +68,11 @@ export default function Backups() {
                 <td className="px-4 py-2 font-mono text-xs">{b.filename}</td>
                 <td className="px-4 py-2 text-right">{b.size_mb} MB</td>
                 <td className="px-4 py-2">{fmtDate(b.created_at)}</td>
-                <td className="px-4 py-2 text-right space-x-3">
-                  <button onClick={() => download(b.filename)} className="text-blue-600 hover:underline">Descargar</button>
-                  <button onClick={() => remove(b.filename)} className="text-red-600 hover:underline">Eliminar</button>
+                <td className="px-4 py-2 text-right">
+                  <div className="inline-flex flex-wrap gap-1.5 justify-end">
+                    <button onClick={() => download(b.filename)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white border border-slate-300 text-slate-700 hover:bg-slate-50">Descargar</button>
+                    <button onClick={() => remove(b.filename)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-red-600 hover:bg-red-700 text-white">Eliminar</button>
+                  </div>
                 </td>
               </tr>
             ))}

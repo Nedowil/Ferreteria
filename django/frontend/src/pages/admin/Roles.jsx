@@ -55,8 +55,10 @@ export default function Roles() {
                 <td className="px-4 py-2 text-right">{r.permissions.length}</td>
                 <td className="px-4 py-2 text-right">{r.user_count}</td>
                 <td className="px-4 py-2 text-right">
-                  <button onClick={() => setEditing({ id: r.id, name: r.name, permissions: [...r.permissions] })} className="text-blue-600 hover:underline">Editar</button>
-                  {!SYSTEM.includes(r.name) && <button onClick={() => remove(r.id)} className="text-red-600 hover:underline ml-3">Eliminar</button>}
+                  <div className="inline-flex flex-wrap gap-1.5 justify-end">
+                    <button onClick={() => setEditing({ id: r.id, name: r.name, permissions: [...r.permissions] })} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-blue-600 hover:bg-blue-700 text-white">Editar</button>
+                    {!SYSTEM.includes(r.name) && <button onClick={() => remove(r.id)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-red-600 hover:bg-red-700 text-white">Eliminar</button>}
+                  </div>
                 </td>
               </tr>
             ))}

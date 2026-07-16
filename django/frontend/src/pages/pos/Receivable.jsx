@@ -66,7 +66,7 @@ export default function Receivable() {
                 <td className="px-4 py-2 text-right font-semibold text-slate-700">Q{s.total}</td>
                 <td className="px-4 py-2 text-right font-semibold text-slate-700">Q{s.paid_amount}</td>
                 <td className="px-4 py-2 text-right text-red-600 font-semibold">Q{s.balance}</td>
-                <td className="px-4 py-2 text-right"><Link to={`/ventas/${s.id}`} className="text-blue-600 hover:underline">Abonar</Link></td>
+                <td className="px-4 py-2 text-right"><Link to={`/ventas/${s.id}`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-blue-600 hover:bg-blue-700 text-white">Abonar</Link></td>
               </tr>
             ))}
             {data.results.length === 0 && <tr><td colSpan="6" className="px-5 py-10 text-center text-slate-400">Sin cuentas por cobrar 🎉</td></tr>}

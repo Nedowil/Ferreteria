@@ -149,19 +149,19 @@ export default function SaleDetail() {
             ) : invoice && invoice.status === "anulada" ? (
               <div className="text-sm text-red-600 font-medium">Factura anulada</div>
             ) : (
-              <>
-                <p className="text-sm text-slate-500">Esta venta aún no tiene factura electrónica.</p>
-                {s.status === "completada" && can("facturas.emitir") && (
-                  <button onClick={emitInvoice} className="w-full bg-blue-600 text-white rounded px-4 py-2 text-sm font-medium">Emitir factura (FEL)</button>
-                )}
-              </>
+              <p className="text-sm text-slate-500">Esta venta aún no tiene factura electrónica.</p>
             )}
-            <Link to={`/ventas/${id}/ticket`} className="block text-center w-full border border-slate-300 text-slate-700 rounded px-4 py-2 text-sm">Ver / imprimir comprobante</Link>
+            <div className="flex flex-wrap gap-2 mt-3">
+              {s.status === "completada" && can("facturas.emitir") && (!invoice || (invoice.status !== "certificada" && invoice.status !== "anulada")) && (
+                <button onClick={emitInvoice} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-blue-600 hover:bg-blue-700 text-white">Emitir factura (FEL)</button>
+              )}
+              <Link to={`/ventas/${id}/ticket`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-slate-700 hover:bg-slate-800 text-white">Ver / imprimir comprobante</Link>
+            </div>
           </section>
 
           {s.status === "completada" && can("ventas.cancelar") && (
             <section className="bg-white rounded-lg shadow p-5">
-              <button onClick={cancel} className="w-full bg-white border border-red-300 text-red-600 rounded px-4 py-2 text-sm font-medium">Cancelar venta</button>
+              <button onClick={cancel} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-red-600 hover:bg-red-700 text-white">Cancelar venta</button>
             </section>
           )}
         </div>

@@ -80,13 +80,13 @@ export default function QuotationDetail() {
 
       {/* Acciones: imprimir / PDF / WhatsApp */}
       <div className="flex flex-wrap gap-2 mb-4">
-        <button onClick={printQuote} className="inline-flex items-center gap-2 bg-white border border-slate-300 text-slate-700 rounded-lg px-4 py-2 text-sm font-medium hover:bg-slate-50">
+        <button onClick={printQuote} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-slate-700 hover:bg-slate-800 text-white">
           🖨️ Imprimir
         </button>
-        <button onClick={printQuote} className="inline-flex items-center gap-2 bg-white border border-slate-300 text-slate-700 rounded-lg px-4 py-2 text-sm font-medium hover:bg-slate-50">
+        <button onClick={printQuote} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-red-600 hover:bg-red-700 text-white">
           📄 Guardar PDF
         </button>
-        <button onClick={sendWhatsapp} className="inline-flex items-center gap-2 bg-green-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-green-700">
+        <button onClick={sendWhatsapp} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-green-600 hover:bg-green-700 text-white">
           💬 Enviar por WhatsApp
         </button>
       </div>
@@ -97,7 +97,7 @@ export default function QuotationDetail() {
             <div><span className="text-slate-500">Cliente:</span> <b>{q.customer_name || "Sin cliente"}</b></div>
             <div><span className="text-slate-500">Fecha:</span> {q.date}</div>
             <div><span className="text-slate-500">Vence:</span> {q.valid_until || "—"}</div>
-            {q.converted_sale && <div><span className="text-slate-500">Venta:</span> <button onClick={() => navigate(`/ventas/${q.converted_sale}`)} className="text-blue-600 hover:underline">ver venta</button></div>}
+            {q.converted_sale && <div><span className="text-slate-500">Venta:</span> <button onClick={() => navigate(`/ventas/${q.converted_sale}`)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white border border-slate-300 text-slate-700 hover:bg-slate-50">ver venta</button></div>}
           </section>
           <section className="bg-white rounded-lg shadow overflow-hidden">
             <div className="px-5 py-3 border-b font-semibold">Partidas</div>
@@ -137,7 +137,7 @@ export default function QuotationDetail() {
           )}
           {q.status === "vigente" && can("cotizaciones.cancelar") && (
             <section className="bg-white rounded-lg shadow p-5">
-              <button onClick={cancel} className="w-full bg-white border border-red-300 text-red-600 rounded px-4 py-2 text-sm font-medium">Cancelar cotización</button>
+              <button onClick={cancel} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-red-600 hover:bg-red-700 text-white">Cancelar cotización</button>
             </section>
           )}
         </div>

@@ -106,7 +106,7 @@ export default function ReturnsList() {
                 <td className="px-4 py-2 text-slate-500">{r.refund_method}</td>
                 <td className="px-4 py-2 text-right font-semibold text-slate-700">Q{r.total}</td>
                 <td className="px-4 py-2"><span className={"inline-block rounded-full px-2 py-0.5 text-xs font-medium " + (r.status === "procesada" ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-600")}>{r.status_display}</span></td>
-                <td className="px-4 py-2 text-right"><Link to={`/devoluciones/${r.id}`} className="text-blue-600 hover:underline">Ver</Link></td>
+                <td className="px-4 py-2 text-right"><Link to={`/devoluciones/${r.id}`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-slate-700 hover:bg-slate-800 text-white">Ver</Link></td>
               </tr>
             ))}
             {data.results.length === 0 && <tr><td colSpan="8" className="px-5 py-10 text-center text-slate-400">No hay devoluciones.</td></tr>}

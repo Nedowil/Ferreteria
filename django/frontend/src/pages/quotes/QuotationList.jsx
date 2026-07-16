@@ -116,7 +116,7 @@ export default function QuotationList() {
                 <td className="px-4 py-2 text-slate-500">{q.valid_until || "—"}</td>
                 <td className="px-4 py-2 text-right font-semibold text-slate-700">Q{q.total}</td>
                 <td className="px-4 py-2"><span className={"inline-block rounded-full px-2 py-0.5 text-xs font-medium " + BADGE[q.status]}>{q.status_display}</span></td>
-                <td className="px-4 py-2 text-right"><Link to={`/cotizaciones/${q.id}`} className="text-blue-600 hover:underline">Ver</Link></td>
+                <td className="px-4 py-2 text-right"><Link to={`/cotizaciones/${q.id}`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-slate-700 hover:bg-slate-800 text-white">Ver</Link></td>
               </tr>
             ))}
             {data.results.length === 0 && <tr><td colSpan="7" className="px-5 py-10 text-center text-slate-400">No hay cotizaciones.</td></tr>}

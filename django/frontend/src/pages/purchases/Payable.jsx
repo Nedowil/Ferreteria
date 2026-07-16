@@ -72,7 +72,7 @@ export default function Payable() {
                 <td className="px-4 py-2 text-right font-semibold text-slate-700">Q{p.total}</td>
                 <td className="px-4 py-2 text-right font-semibold text-slate-700">Q{p.amount_paid}</td>
                 <td className="px-4 py-2 text-right text-red-600 font-medium">Q{p.balance}</td>
-                <td className="px-4 py-2 text-right"><Link to={`/compras/${p.id}`} className="text-blue-600 hover:underline">Abonar</Link></td>
+                <td className="px-4 py-2 text-right"><Link to={`/compras/${p.id}`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-blue-600 hover:bg-blue-700 text-white">Abonar</Link></td>
               </tr>
             ))}
             {data.results.length === 0 && <tr><td colSpan="7" className="px-5 py-10 text-center text-slate-400">Sin cuentas por pagar 🎉</td></tr>}

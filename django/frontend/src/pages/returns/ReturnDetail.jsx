@@ -55,7 +55,7 @@ export default function ReturnDetail() {
           <span className={"ml-3 text-xs px-2 py-0.5 rounded align-middle " + (r.status === "procesada" ? "bg-green-100 text-green-700" : "bg-slate-200 text-slate-500")}>{r.status_display}</span>
         </h1>
         <div className="flex items-center gap-3">
-          <button onClick={printReturn} className="inline-flex items-center gap-2 bg-white border border-slate-300 text-slate-700 rounded-lg px-4 py-2 text-sm font-medium hover:bg-slate-50">🖨️ Imprimir comprobante</button>
+          <button onClick={printReturn} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-slate-700 hover:bg-slate-800 text-white">🖨️ Imprimir comprobante</button>
           <button onClick={() => navigate("/devoluciones")} className="text-sm text-slate-500">← Volver</button>
         </div>
       </div>
@@ -100,7 +100,7 @@ export default function ReturnDetail() {
       ) : r.status === "procesada" && r.sale_invoice_certified && can("facturas.emitir") ? (
         <div className="mt-4">
           <button onClick={emitCreditNote} disabled={emitting}
-                  className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-5 py-2.5 text-sm font-semibold shadow hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 transition">
+                  className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-blue-600 hover:bg-blue-700 text-white">
             {emitting ? "Emitiendo…" : "📄 Emitir nota de crédito (FEL)"}
           </button>
           <p className="text-xs text-slate-400 mt-1">La venta de origen tiene factura electrónica; se emitirá una nota de crédito que la referencia.</p>
@@ -109,7 +109,7 @@ export default function ReturnDetail() {
 
       {r.status === "procesada" && (
         <div className="mt-4">
-          <button onClick={cancel} className="bg-white border border-red-300 text-red-600 rounded px-5 py-2 text-sm font-medium">Cancelar devolución</button>
+          <button onClick={cancel} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-red-600 hover:bg-red-700 text-white">Cancelar devolución</button>
         </div>
       )}
     </div>

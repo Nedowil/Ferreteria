@@ -49,7 +49,7 @@ export default function LowStock() {
                 <td className="px-4 py-2 text-right"><span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-red-100 text-red-700">{r.stock}</span></td>
                 <td className="px-4 py-2 text-right">{r.min_stock}</td>
                 <td className="px-4 py-2 text-right font-semibold text-blue-700">{r.suggested}</td>
-                <td className="px-4 py-2 text-right"><Link to={`/productos/${r.id}/inventario`} className="text-blue-600 hover:underline">Inventario</Link></td>
+                <td className="px-4 py-2 text-right"><div className="inline-flex flex-wrap gap-1.5 justify-end"><Link to={`/productos/${r.id}/inventario`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white border border-slate-300 text-slate-700 hover:bg-slate-50">Inventario</Link></div></td>
               </tr>
             ))}
             {rows.length === 0 && <tr><td colSpan="6" className="px-5 py-10 text-center text-slate-400">Ningún producto con stock bajo 🎉</td></tr>}

@@ -284,12 +284,12 @@ export default function ProductList() {
                       : <span className="text-xs text-slate-500">{p.stock_display}</span>}
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm">
-                  <button onClick={() => setLabeling(p)} className="text-slate-600 hover:underline">Etiqueta</button>
-                  <Link to={`/productos/${p.id}/inventario`} className="text-slate-600 hover:underline">Inventario</Link>
-                  {can("auditoria.ver") && <Link to={historyLink(p.id)} className="text-slate-600 hover:underline">Historial</Link>}
-                  {can("productos.editar") && <Link to={`/productos/${p.id}/editar`} className="text-blue-600 hover:underline">Editar</Link>}
-                  {can("productos.eliminar") && <button onClick={() => remove(p.id)} className="text-red-600 hover:underline">Eliminar</button>}
+                <div className="flex flex-wrap gap-2 mt-2">
+                  <button onClick={() => setLabeling(p)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white border border-slate-300 text-slate-700 hover:bg-slate-50">Etiqueta</button>
+                  <Link to={`/productos/${p.id}/inventario`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white border border-slate-300 text-slate-700 hover:bg-slate-50">Inventario</Link>
+                  {can("auditoria.ver") && <Link to={historyLink(p.id)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white border border-slate-300 text-slate-700 hover:bg-slate-50">Historial</Link>}
+                  {can("productos.editar") && <Link to={`/productos/${p.id}/editar`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-blue-600 hover:bg-blue-700 text-white">Editar</Link>}
+                  {can("productos.eliminar") && <button onClick={() => remove(p.id)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-red-600 hover:bg-red-700 text-white">Eliminar</button>}
                 </div>
               </div>
             </div>
@@ -331,11 +331,13 @@ export default function ProductList() {
                     : <span className="font-medium text-slate-700">{p.stock_display}</span>}
                 </td>
                 <td className="px-4 py-2 text-right whitespace-nowrap">
-                  <button onClick={() => setLabeling(p)} className="text-slate-600 hover:underline" title="Imprimir etiqueta Zebra">Etiqueta</button>
-                  <Link to={`/productos/${p.id}/inventario`} className="text-slate-600 hover:underline ml-2">Inventario</Link>
-                  {can("auditoria.ver") && <Link to={historyLink(p.id)} className="text-slate-600 hover:underline ml-2" title="Quién creó, editó o eliminó este producto">Historial</Link>}
-                  {can("productos.editar") && <Link to={`/productos/${p.id}/editar`} className="text-blue-600 hover:underline ml-2">Editar</Link>}
-                  {can("productos.eliminar") && <button onClick={() => remove(p.id)} className="text-red-600 hover:underline ml-2">Eliminar</button>}
+                  <div className="inline-flex flex-wrap gap-1.5 justify-end">
+                  <button onClick={() => setLabeling(p)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white border border-slate-300 text-slate-700 hover:bg-slate-50" title="Imprimir etiqueta Zebra">Etiqueta</button>
+                  <Link to={`/productos/${p.id}/inventario`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white border border-slate-300 text-slate-700 hover:bg-slate-50">Inventario</Link>
+                  {can("auditoria.ver") && <Link to={historyLink(p.id)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white border border-slate-300 text-slate-700 hover:bg-slate-50" title="Quién creó, editó o eliminó este producto">Historial</Link>}
+                  {can("productos.editar") && <Link to={`/productos/${p.id}/editar`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-blue-600 hover:bg-blue-700 text-white">Editar</Link>}
+                  {can("productos.eliminar") && <button onClick={() => remove(p.id)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-red-600 hover:bg-red-700 text-white">Eliminar</button>}
+                  </div>
                 </td>
               </tr>
             ))}

@@ -111,9 +111,9 @@ export default function CustomerList() {
               </div>
               <div className="flex items-center justify-between gap-2 mt-2">
                 <span className="text-sm text-slate-500">Saldo: <b className="text-slate-700">Q{c.credit_balance}</b></span>
-                <div className="flex gap-4 text-sm">
-                  {can("clientes.editar") && <button onClick={() => { setSatMsg(""); setEditing(c); }} className="text-blue-600 hover:underline">Editar</button>}
-                  {can("clientes.eliminar") && <button onClick={() => remove(c.id)} className="text-red-600 hover:underline">Eliminar</button>}
+                <div className="flex flex-wrap gap-2">
+                  {can("clientes.editar") && <button onClick={() => { setSatMsg(""); setEditing(c); }} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-blue-600 hover:bg-blue-700 text-white">Editar</button>}
+                  {can("clientes.eliminar") && <button onClick={() => remove(c.id)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-red-600 hover:bg-red-700 text-white">Eliminar</button>}
                 </div>
               </div>
             </div>
@@ -137,8 +137,10 @@ export default function CustomerList() {
                 <td className="px-4 py-2 text-slate-500">{c.phone || "—"}</td>
                 <td className="px-4 py-2 text-right font-semibold text-slate-700">Q{c.credit_balance}</td>
                 <td className="px-4 py-2 text-right">
-                  {can("clientes.editar") && <button onClick={() => { setSatMsg(""); setEditing(c); }} className="text-blue-600 hover:underline">Editar</button>}
-                  {can("clientes.eliminar") && <button onClick={() => remove(c.id)} className="text-red-600 hover:underline ml-3">Eliminar</button>}
+                  <div className="inline-flex flex-wrap gap-1.5 justify-end">
+                    {can("clientes.editar") && <button onClick={() => { setSatMsg(""); setEditing(c); }} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-blue-600 hover:bg-blue-700 text-white">Editar</button>}
+                    {can("clientes.eliminar") && <button onClick={() => remove(c.id)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-red-600 hover:bg-red-700 text-white">Eliminar</button>}
+                  </div>
                 </td>
               </tr>
             ))}

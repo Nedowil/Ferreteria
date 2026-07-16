@@ -48,7 +48,7 @@ export default function Transfers() {
                 <td className="px-4 py-2">{t.to_branch_name}</td>
                 <td className="px-4 py-2 text-slate-500">{new Date(t.date).toLocaleDateString()}</td>
                 <td className="px-4 py-2"><span className={"inline-block rounded-full px-2 py-0.5 text-xs font-medium " + BADGE[t.status]}>{t.status_display}</span></td>
-                <td className="px-4 py-2 text-right"><Link to={`/transferencias/${t.id}`} className="text-blue-600 hover:underline">Ver</Link></td>
+                <td className="px-4 py-2 text-right"><Link to={`/transferencias/${t.id}`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-slate-700 hover:bg-slate-800 text-white">Ver</Link></td>
               </tr>
             ))}
             {data.results.length === 0 && <tr><td colSpan="6" className="px-5 py-10 text-center text-slate-400">No hay transferencias.</td></tr>}
