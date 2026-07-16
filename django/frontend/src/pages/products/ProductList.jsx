@@ -40,7 +40,11 @@ function labelPrice(product) {
 }
 
 // Abre una ventana imprimible con las etiquetas (para "Guardar como PDF").
-function printLabelsPdf(product, copies, companyName) {
+// Imprime las etiquetas mediante el navegador. Cada etiqueta ocupa UNA página
+// del tamaño físico exacto de la etiqueta (por defecto 2"x1" = 51x25 mm), así
+// se alinea con el rollo de la Zebra y funciona desde la nube (imprime desde la
+// computadora, no desde el servidor). labelW/labelH en mm.
+function printLabelsPdf(product, copies, companyName, labelW = 51, labelH = 25) {
   const esc = (s) => (s || "").replace(/</g, "&lt;");
   const price = labelPrice(product);
   const one = `
@@ -48,29 +52,31 @@ function printLabelsPdf(product, copies, companyName) {
       ${companyName ? `<div class="biz">${esc(companyName)}</div>` : ""}
       <div class="name">${esc(product.name).toUpperCase()}</div>
       ${price ? `<div class="price">${price}</div>` : ""}
-      <div class="sku">${esc(product.sku)}</div>
       <div class="bc">${barcodeSvg(product.barcode || product.sku)}</div>
     </div>`;
   const labels = Array.from({ length: Math.max(1, Number(copies) || 1) }, () => one).join("");
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>Etiquetas ${product.sku}</title>
     <style>
-      @page { margin: 6mm; }
-      body { font-family: Arial, sans-serif; margin: 0; }
-      .sheet { display: flex; flex-wrap: wrap; gap: 6mm; }
-      .label { width: 50mm; border: 1px dashed #bbb; border-radius: 4px; padding: 4px 6px;
-               text-align: center; page-break-inside: avoid; }
-      .biz { font-size: 11px; font-weight: 700; color: #222; }
-      .name { font-size: 13px; font-weight: 800; line-height: 1.1; margin: 1px 0;
-              max-height: 2.4em; overflow: hidden; }
-      .price { font-size: 16px; font-weight: 800; }
-      .sku { font-family: monospace; font-size: 11px; color: #444; }
+      @page { size: ${labelW}mm ${labelH}mm; margin: 0; }
+      html, body { margin: 0; padding: 0; }
+      body { font-family: Arial, sans-serif; }
+      .label { width: ${labelW}mm; height: ${labelH}mm; box-sizing: border-box;
+               padding: 1mm 1.5mm; text-align: center; overflow: hidden;
+               display: flex; flex-direction: column; justify-content: center;
+               align-items: center; page-break-after: always; }
+      .label:last-child { page-break-after: auto; }
+      .biz { font-size: 7pt; font-weight: 700; color: #000; line-height: 1; }
+      .name { font-size: 8pt; font-weight: 800; line-height: 1.05; margin: 0.3mm 0;
+              max-height: 2.2em; overflow: hidden; }
+      .price { font-size: 11pt; font-weight: 800; }
+      .bc { width: 100%; line-height: 0; }
       .bc svg { max-width: 100%; height: auto; }
     </style></head>
-    <body><div class="sheet">${labels}</div>
-    <script>window.onload = function(){ setTimeout(function(){ window.print(); }, 200); };<\/script>
+    <body>${labels}
+    <script>window.onload = function(){ setTimeout(function(){ window.print(); }, 250); };<\/script>
     </body></html>`;
   const w = window.open("", "_blank");
-  if (!w) { alert("Permití las ventanas emergentes para generar el PDF."); return; }
+  if (!w) { alert("Permití las ventanas emergentes para imprimir la etiqueta."); return; }
   w.document.write(html);
   w.document.close();
 }
@@ -131,21 +137,21 @@ function LabelPrintModal({ product, companyName, onClose }) {
             </>
           ) : (
             <>
-              <div className="text-sm text-slate-600">Elegí la impresora para <b>{copies}</b> etiqueta(s):</div>
-              <button onClick={() => send("network")} disabled={busy}
-                      className="w-full text-left rounded-xl border border-slate-200 hover:border-blue-400 hover:shadow-md p-3 transition disabled:opacity-50">
-                <div className="font-semibold text-slate-800">🖨️ Zebra ZD421T (red)</div>
-                <div className="text-xs text-slate-500">Envía directo a la impresora de etiquetas por su IP configurada.</div>
+              <div className="text-sm text-slate-600">Elegí cómo imprimir <b>{copies}</b> etiqueta(s):</div>
+              <button onClick={() => { printLabelsPdf(product, copies, companyName); onClose(); }} disabled={busy}
+                      className="w-full text-left rounded-xl border-2 border-blue-400 bg-blue-50/50 hover:shadow-md p-3 transition disabled:opacity-50">
+                <div className="font-semibold text-slate-800">🖨️ Imprimir en la Zebra (USB) <span className="text-[10px] bg-blue-600 text-white rounded px-1.5 py-0.5 align-middle">Recomendado</span></div>
+                <div className="text-xs text-slate-500">Abre el cuadro de impresión → elegí tu <b>Zebra ZD421T</b>. Funciona con el sistema en la nube.</div>
               </button>
               <button onClick={() => send("system")} disabled={busy}
                       className="w-full text-left rounded-xl border border-slate-200 hover:border-blue-400 hover:shadow-md p-3 transition disabled:opacity-50">
                 <div className="font-semibold text-slate-800">⬇️ Descargar archivo ZPL</div>
-                <div className="text-xs text-slate-500">Para enviarlo a la Zebra por USB (utilidad de Zebra) o guardarlo.</div>
+                <div className="text-xs text-slate-500">Para enviarlo a la Zebra con la utilidad de Zebra (código de barras nativo).</div>
               </button>
-              <button onClick={() => { printLabelsPdf(product, copies, companyName); onClose(); }} disabled={busy}
+              <button onClick={() => send("network")} disabled={busy}
                       className="w-full text-left rounded-xl border border-slate-200 hover:border-blue-400 hover:shadow-md p-3 transition disabled:opacity-50">
-                <div className="font-semibold text-slate-800">🧾 Descargar PDF / Imprimir</div>
-                <div className="text-xs text-slate-500">Genera las etiquetas con código de barras y elegí "Guardar como PDF" o cualquier impresora.</div>
+                <div className="font-semibold text-slate-800">🌐 Zebra por red (IP)</div>
+                <div className="text-xs text-slate-500">Solo si el servidor está en la misma red que la impresora (no aplica en la nube).</div>
               </button>
               <div className="flex justify-between items-center pt-1">
                 <button onClick={() => setStep("qty")} className="text-sm text-slate-500 hover:text-slate-700">← Atrás</button>
