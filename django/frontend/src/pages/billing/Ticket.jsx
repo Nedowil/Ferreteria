@@ -170,6 +170,7 @@ export default function Ticket() {
           body * { visibility: hidden !important; }
           #printable, #printable * { visibility: visible !important; }
           #printable { position: absolute; left: 0; top: 0; width: 100%; }
+          #printable * { box-shadow: none !important; }
           /* La Epson de 80mm solo imprime ~72mm; centramos el ticket en ese
              ancho para que no se corten los bordes izquierdo/derecho. */
           .ticket-paper { width: 72mm !important; box-shadow: none !important; padding: 1.5mm 2mm !important; margin: 0 auto !important; }
@@ -305,11 +306,11 @@ function TicketPaper({ company, sale, fel, qr, phrases }) {
 function CartaPaper({ company, sale, fel, qr, phrases, d, meses }) {
   const cell = "border border-slate-300 px-2 py-1";
   return (
-    <div className="bg-white shadow rounded-lg p-8 text-[12px] text-slate-900">
+    <div className="bg-white shadow rounded-lg p-6 text-[10.5px] leading-snug text-slate-900 max-w-[190mm] mx-auto">
       {/* Encabezado */}
       <div className="grid grid-cols-2 gap-4 items-start">
         <div className="text-center">
-          <img src={logo} alt="" className="mx-auto mb-2 w-32 h-auto object-contain rounded" />
+          <img src={logo} alt="" className="mx-auto mb-1.5 w-24 h-auto object-contain rounded" />
           <div className="font-bold text-[15px]">{company.name}</div>
           {company.legal_name && <div>{company.legal_name}</div>}
           <div>{company.address}</div>
@@ -442,7 +443,7 @@ function CartaPaper({ company, sale, fel, qr, phrases, d, meses }) {
         <div className="text-right">
           {fel && qr && (
             <>
-              <img src={qr} alt="QR" className="inline-block" style={{ width: 130, height: 130 }} />
+              <img src={qr} alt="QR" className="inline-block" style={{ width: 92, height: 92 }} />
               <div className="text-[10px] text-slate-500">Escanea el código QR</div>
               <div className="font-bold tracking-wide" style={{ color: GREEN }}>FEL · Factura Electrónica</div>
             </>
