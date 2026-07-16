@@ -203,11 +203,11 @@ export default function Invoices() {
                   </div>
                 </div>
                 <div className="text-[11px] text-slate-400 font-mono break-all mt-1">{i.uuid || ""}</div>
-                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm">
-                  <Link to={`/ventas/${i.sale}`} className="text-slate-600 hover:underline">Venta {i.sale_folio}</Link>
-                  <Link to={`/ventas/${i.sale}/ticket`} className="text-blue-600 hover:underline">Ver / Imprimir</Link>
+                <div className="flex flex-wrap gap-2 mt-3">
+                  <Link to={`/ventas/${i.sale}/ticket`} className="inline-flex items-center gap-1 bg-slate-700 hover:bg-slate-800 text-white rounded-md px-3 py-1.5 text-xs font-medium shadow-sm transition">🖨️ Ver / Imprimir</Link>
+                  <Link to={`/ventas/${i.sale}`} className="inline-flex items-center gap-1 bg-white border border-slate-300 text-slate-700 rounded-md px-3 py-1.5 text-xs font-medium shadow-sm transition">Ver venta</Link>
                   {i.status === "certificada" && can("facturas.anular") && (
-                    <button onClick={() => annul(i)} className="text-red-600 hover:underline">Anular</button>
+                    <button onClick={() => annul(i)} className="inline-flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white rounded-md px-3 py-1.5 text-xs font-medium shadow-sm transition">Anular</button>
                   )}
                 </div>
               </div>
@@ -239,10 +239,12 @@ export default function Invoices() {
                     <span className={"inline-block rounded-full px-2 py-0.5 text-xs font-medium " + (statusBadge[i.status] || "")}>{i.status_display}</span>
                   </td>
                   <td className="px-4 py-2 text-right whitespace-nowrap">
-                    <Link to={`/ventas/${i.sale}/ticket`} className="text-xs text-blue-600 hover:underline">Ver / Imprimir</Link>
-                    {i.status === "certificada" && can("facturas.anular") && (
-                      <button onClick={() => annul(i)} className="text-xs text-red-600 hover:underline ml-3">Anular</button>
-                    )}
+                    <div className="inline-flex gap-1.5">
+                      <Link to={`/ventas/${i.sale}/ticket`} className="inline-flex items-center gap-1 bg-slate-700 hover:bg-slate-800 text-white rounded-md px-3 py-1.5 text-xs font-medium shadow-sm transition">🖨️ Ver / Imprimir</Link>
+                      {i.status === "certificada" && can("facturas.anular") && (
+                        <button onClick={() => annul(i)} className="inline-flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white rounded-md px-3 py-1.5 text-xs font-medium shadow-sm transition">Anular</button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
