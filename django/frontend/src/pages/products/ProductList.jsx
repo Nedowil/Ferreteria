@@ -10,7 +10,7 @@ const historyLink = (id) => `/admin/auditoria?type=inventory.Product&q=${id}`;
 
 // Genera un <svg> de código de barras (EAN-13 si son 13 dígitos, si no Code128)
 // y devuelve su HTML. Igual criterio que la etiqueta Zebra del backend.
-function barcodeSvg(code) {
+function barcodeSvg(code, height = 45) {
   const value = String(code || "").trim();
   if (!value) return "";
   const isEan13 = /^\d{13}$/.test(value);
@@ -18,7 +18,7 @@ function barcodeSvg(code) {
   try {
     JsBarcode(svg, value, {
       format: isEan13 ? "EAN13" : "CODE128",
-      width: 2, height: 45, fontSize: 14, margin: 4, displayValue: true,
+      width: 2, height, fontSize: 14, margin: 4, displayValue: true,
     });
   } catch {
     return `<div style="font-family:monospace;font-size:12px">${value}</div>`;
@@ -47,12 +47,13 @@ function labelPrice(product) {
 function printLabelsPdf(product, copies, companyName, labelW = 51, labelH = 25) {
   const esc = (s) => (s || "").replace(/</g, "&lt;");
   const price = labelPrice(product);
+  const name = esc(product.name || "").toUpperCase();
   const one = `
     <div class="label">
       ${companyName ? `<div class="biz">${esc(companyName)}</div>` : ""}
-      <div class="name">${esc(product.name).toUpperCase()}</div>
+      ${name ? `<div class="name">${name}</div>` : ""}
       ${price ? `<div class="price">${price}</div>` : ""}
-      <div class="bc">${barcodeSvg(product.barcode || product.sku)}</div>
+      <div class="bc">${barcodeSvg(product.barcode || product.sku, 34)}</div>
     </div>`;
   const labels = Array.from({ length: Math.max(1, Number(copies) || 1) }, () => one).join("");
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>Etiquetas ${product.sku}</title>
@@ -61,15 +62,15 @@ function printLabelsPdf(product, copies, companyName, labelW = 51, labelH = 25) 
       html, body { margin: 0; padding: 0; }
       body { font-family: Arial, sans-serif; }
       .label { width: ${labelW}mm; height: ${labelH}mm; box-sizing: border-box;
-               padding: 1mm 1.5mm; text-align: center; overflow: hidden;
+               padding: 0.8mm 1.5mm; text-align: center; overflow: hidden;
                display: flex; flex-direction: column; justify-content: center;
                align-items: center; page-break-after: always; }
       .label:last-child { page-break-after: auto; }
-      .biz { font-size: 7pt; font-weight: 700; color: #000; line-height: 1; }
-      .name { font-size: 8pt; font-weight: 800; line-height: 1.05; margin: 0.3mm 0;
-              max-height: 2.2em; overflow: hidden; }
-      .price { font-size: 11pt; font-weight: 800; }
-      .bc { width: 100%; line-height: 0; }
+      .biz { font-size: 6.5pt; font-weight: 600; color: #000; line-height: 1; }
+      .name { font-size: 8.5pt; font-weight: 800; line-height: 1.02; margin: 0.2mm 0;
+              max-height: 2.1em; overflow: hidden; word-break: break-word; }
+      .price { font-size: 10pt; font-weight: 800; line-height: 1; }
+      .bc { width: 100%; line-height: 0; margin-top: 0.2mm; }
       .bc svg { max-width: 100%; height: auto; }
     </style></head>
     <body>${labels}
