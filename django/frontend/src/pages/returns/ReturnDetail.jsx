@@ -56,7 +56,7 @@ export default function ReturnDetail() {
         </h1>
         <div className="flex items-center gap-3">
           <button onClick={printReturn} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-slate-700 hover:bg-slate-800 text-white">🖨️ Imprimir comprobante</button>
-          <button onClick={() => navigate("/devoluciones")} className="text-sm text-slate-500">← Volver</button>
+          <button onClick={() => navigate("/devoluciones")} className="inline-flex items-center gap-1 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg px-4 py-2 shadow-sm hover:bg-slate-50 hover:border-slate-400 transition">← Volver</button>
         </div>
       </div>
       {error && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm mb-4">{error}</div>}

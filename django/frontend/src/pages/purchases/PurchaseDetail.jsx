@@ -53,7 +53,7 @@ export default function PurchaseDetail() {
         <h1 className="text-lg font-semibold">Compra {p.folio}
           <span className={"ml-3 text-xs px-2 py-0.5 rounded align-middle " + STATUS_BADGE[p.status]}>{p.status_display}</span>
         </h1>
-        <button onClick={() => navigate("/compras")} className="text-sm text-slate-500">← Volver</button>
+        <button onClick={() => navigate("/compras")} className="inline-flex items-center gap-1 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg px-4 py-2 shadow-sm hover:bg-slate-50 hover:border-slate-400 transition">← Volver</button>
       </div>
       {error && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm mb-4">{error}</div>}
 
