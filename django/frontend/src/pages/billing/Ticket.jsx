@@ -170,7 +170,9 @@ export default function Ticket() {
           body * { visibility: hidden !important; }
           #printable, #printable * { visibility: visible !important; }
           #printable { position: absolute; left: 0; top: 0; width: 100%; }
-          .ticket-paper { width: 80mm !important; box-shadow: none !important; padding: 3mm !important; }
+          /* La Epson de 80mm solo imprime ~72mm; centramos el ticket en ese
+             ancho para que no se corten los bordes izquierdo/derecho. */
+          .ticket-paper { width: 72mm !important; box-shadow: none !important; padding: 1.5mm 2mm !important; margin: 0 auto !important; }
           /* Ticket térmico: la hoja mide SOLO lo que ocupa el contenido (altura
              automática), así la impresora corta justo al final y no desperdicia
              papel. En formato carta se usa una hoja tamaño carta normal. */
