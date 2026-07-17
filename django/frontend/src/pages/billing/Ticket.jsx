@@ -304,58 +304,44 @@ function TicketPaper({ company, sale, fel, qr, phrases }) {
 
 // ---------- HOJA COMPLETA (carta) ----------
 function CartaPaper({ company, sale, fel, qr, phrases, d, meses }) {
-  const cell = "border border-slate-300 px-2 py-1";
+  const cell = "border border-slate-300 px-1.5 py-0.5";
+  const rate = Number(company.tax_rate || 12);
   return (
-    <div className="bg-white shadow rounded-lg p-6 text-[10.5px] leading-snug text-slate-900 max-w-[190mm] mx-auto">
-      {/* Encabezado */}
-      <div className="grid grid-cols-2 gap-4 items-start">
-        <div className="text-center">
-          <img src={logo} alt="" className="mx-auto mb-1.5 w-24 h-auto object-contain rounded" />
-          <div className="font-bold text-[15px]">{company.name}</div>
-          {company.legal_name && <div>{company.legal_name}</div>}
-          <div>{company.address}</div>
-          <div>NIT: {company.tax_id}</div>
-          {company.phone && <div>Tel: {company.phone}</div>}
-          {company.email && <div className="text-blue-600">{company.email}</div>}
+    <div className="bg-white shadow rounded-lg p-6 text-[10px] leading-snug text-slate-900 max-w-[190mm] mx-auto">
+      {/* Encabezado: empresa (izq) · documento (der) */}
+      <div className="grid grid-cols-2 gap-6 items-start">
+        <div className="flex items-start gap-3">
+          <img src={logo} alt="" className="w-20 h-auto object-contain rounded shrink-0" />
+          <div className="leading-tight">
+            <div className="font-bold text-[12px]">{company.name}</div>
+            {company.legal_name && <div>{company.legal_name}</div>}
+            <div>{company.address}</div>
+            <div>NIT: {company.tax_id}</div>
+            {company.phone && <div>Tel: {company.phone}</div>}
+            {company.email && <div>{company.email}</div>}
+          </div>
         </div>
         <div>
-          <div className="text-right text-[13px] text-slate-600 mb-1">
+          <div className="text-right font-bold text-[11px] mb-1">
             {fel ? "DOCUMENTO TRIBUTARIO ELECTRÓNICO" : "COMPROBANTE DE VENTA"}
           </div>
           <div className="border border-slate-300">
-            <div className="text-white text-center font-bold py-1" style={{ background: GREEN }}>
+            <div className="text-white text-center font-bold py-0.5" style={{ background: GREEN }}>
               {fel ? `Factura Electrónica # ${fel.numero || "—"}` : `Recibo No. ${sale.folio}`}
             </div>
             {fel && (
               <>
-                <div className="text-white text-center text-[11px] py-0.5" style={{ background: GREEN }}>
+                <div className="text-white text-center text-[9px] py-0.5" style={{ background: GREEN }}>
                   {regimeLabel(company.regime)}
                 </div>
-                <div className="text-center text-[11px] py-1 font-semibold">
+                <div className="text-center text-[10px] py-1 font-semibold">
                   <div>Serie: {fel.serie || "—"}</div>
                   <div>No: {fel.numero || "—"}</div>
                 </div>
               </>
             )}
           </div>
-        </div>
-      </div>
-
-      {/* Detalle del documento + fecha */}
-      <div className="grid grid-cols-2 gap-4 mt-4 items-start">
-        <div className="border border-slate-300">
-          <div className="text-white text-center font-bold py-1" style={{ background: GREEN }}>Detalle del Documento</div>
-          <div className="p-2 space-y-0.5">
-            <div><b>Forma de Pago:</b> {formaPago(sale.payment_status)}</div>
-            <div><b>Métodos de Pago:</b></div>
-            <div className="pl-2">{metodoLabel(sale.payment_method)}: {Q(sale.paid)}</div>
-            <div><b>Moneda:</b> {company.currency === "GTQ" ? "Quetzal" : company.currency}</div>
-            <div><b>Fecha de Emisión:</b> {d.toLocaleDateString("es-GT")}</div>
-            {sale.seller && <div><b>Vendedor:</b> {sale.seller}</div>}
-          </div>
-        </div>
-        <div>
-          <table className="w-full text-center border-collapse">
+          <table className="w-full text-center border-collapse mt-2">
             <thead><tr className="text-white font-bold" style={{ background: GREEN }}>
               <th className={cell}>DÍA</th><th className={cell}>MES</th><th className={cell}>AÑO</th>
             </tr></thead>
@@ -366,71 +352,89 @@ function CartaPaper({ company, sale, fel, qr, phrases, d, meses }) {
         </div>
       </div>
 
-      {/* Receptor */}
-      <div className="border border-slate-300 mt-4">
-        <div className="px-2 py-1 border-b border-slate-300"><b>Nombre Receptor:</b> {sale.customer}</div>
-        <div className="grid grid-cols-2 border-b border-slate-300">
-          <div className="px-2 py-1"><b>NIT:</b> {sale.customer_nit}</div>
-          <div className="px-2 py-1"><b>Teléfono:</b> {sale.customer_phone || "N/A"}</div>
+      {/* Detalle del documento (izq) · NIT/Email receptor (der) */}
+      <div className="grid grid-cols-2 gap-6 mt-3 items-start">
+        <div>
+          <div className="text-white font-bold px-2 py-0.5" style={{ background: GREEN }}>Detalle del Documento</div>
+          <div className="border border-slate-300 border-t-0 p-2 space-y-0.5">
+            <div><b>Forma de Pago:</b> {formaPago(sale.payment_status)}</div>
+            <div><b>Métodos de Pago:</b></div>
+            <div className="pl-2">{metodoLabel(sale.payment_method)}: {Q(sale.paid)}</div>
+            <div><b>Moneda:</b> {company.currency === "GTQ" ? "Quetzal" : company.currency}</div>
+            <div><b>Fecha de Emisión:</b> {d.toLocaleString("es-GT")}</div>
+            {sale.seller && <div><b>Vendedor:</b> {sale.seller}</div>}
+          </div>
         </div>
-        <div className="grid grid-cols-2">
-          <div className="px-2 py-1"><b>Email:</b> {sale.customer_email || "N/A"}</div>
-          <div className="px-2 py-1"><b>Dirección:</b> {sale.customer_address || "N/A"}</div>
+        <div className="pt-6 space-y-0.5">
+          <div><b>NIT:</b> {sale.customer_nit}</div>
+          <div><b>Email:</b> {sale.customer_email || "N/A"}</div>
         </div>
       </div>
 
+      {/* Receptor */}
+      <div className="mt-2 space-y-0.5">
+        <div><b>Nombre Receptor:</b> {sale.customer}</div>
+        <div><b>Teléfono:</b> {sale.customer_phone || "N/A"}</div>
+        <div><b>Dirección:</b> {sale.customer_address || "N/A"}</div>
+      </div>
+
       {/* Partidas */}
-      <table className="w-full border-collapse mt-4">
-        <thead><tr className="text-white font-bold text-[11px]" style={{ background: GREEN }}>
+      <table className="w-full border-collapse mt-3 text-[9.5px]">
+        <thead><tr className="text-white font-bold" style={{ background: GREEN }}>
           <th className={cell}>CANTIDAD</th><th className={cell}>UNIDAD</th>
           <th className={cell}>DESCRIPCIÓN</th><th className={cell}>P. UNIT</th><th className={cell}>DESC</th>
           <th className={cell}>IMPUESTOS</th><th className={cell}>TOTAL</th>
         </tr></thead>
         <tbody>
-          {sale.items.map((it, i) => (
-            <tr key={i}>
-              <td className={cell + " text-center"}>{Number(it.qty)}</td>
-              <td className={cell + " text-center"}>{it.unit_label || "Unidad"}</td>
-              <td className={cell}>{it.name}</td>
-              <td className={cell + " text-right"}>{Number(it.unit_price).toFixed(2)}</td>
-              <td className={cell + " text-right"}>{Number(it.discount || 0).toFixed(2)}</td>
-              <td className={cell + " text-right"}>IVA {Number(company.tax_rate || 12)}%</td>
-              <td className={cell + " text-right"}>{Number(it.subtotal).toFixed(2)}</td>
-            </tr>
-          ))}
+          {sale.items.map((it, i) => {
+            const sub = Number(it.subtotal);
+            const iva = sub * rate / (100 + rate);
+            return (
+              <tr key={i}>
+                <td className={cell + " text-center"}>{Number(it.qty)}</td>
+                <td className={cell + " text-center"}>{it.unit_label || "Unidad"}</td>
+                <td className={cell}>{it.name}</td>
+                <td className={cell + " text-right"}>{Number(it.unit_price).toFixed(2)}</td>
+                <td className={cell + " text-right"}>{Number(it.discount || 0).toFixed(2)}</td>
+                <td className={cell + " text-right"}>IVA ({rate}%): {iva.toFixed(2)}</td>
+                <td className={cell + " text-right"}>{sub.toFixed(2)}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
 
       {/* Total en letras + total */}
-      <div className="grid grid-cols-3 gap-0 mt-4 items-stretch">
-        <div className="col-span-2 border border-slate-300 px-2 py-2">
-          <div className="text-[11px] text-slate-500">TOTAL EN LETRAS:</div>
+      <div className="grid grid-cols-3 gap-0 mt-3 items-stretch">
+        <div className="col-span-2 border border-slate-300 px-2 py-1.5">
+          <div className="text-[9px] text-slate-500">TOTAL EN LETRAS:</div>
           <div className="font-semibold uppercase">{enLetras(sale.total)}</div>
         </div>
         <div className="flex">
           <div className="text-white font-bold flex items-center justify-center px-3" style={{ background: GREEN }}>TOTAL:</div>
-          <div className="flex-1 border border-slate-300 flex items-center justify-end px-3 font-bold text-[15px]">{Q(sale.total)}</div>
+          <div className="flex-1 border border-slate-300 flex items-center justify-end px-3 font-bold text-[13px]">{Q(sale.total)}</div>
         </div>
       </div>
 
       {/* Autorización / certificación (solo FEL) */}
       {fel && (
-        <div className="border border-slate-300 mt-4 text-[11px]">
-          <div className="grid grid-cols-[200px_1fr] border-b border-slate-300">
-            <div className="px-2 py-1 border-r border-slate-300">NÚMERO DE AUTORIZACIÓN:</div>
+        <div className="border border-slate-300 mt-3 text-[10px]">
+          <div className="grid grid-cols-[190px_1fr] border-b border-slate-300">
+            <div className="px-2 py-1 border-r border-slate-300 font-semibold">NÚMERO DE AUTORIZACIÓN:</div>
             <div className="px-2 py-1 break-all">{fel.uuid || "—"}</div>
           </div>
-          <div className="grid grid-cols-[200px_1fr]">
-            <div className="px-2 py-1 border-r border-slate-300">FECHA DE CERTIFICACIÓN:</div>
+          <div className="grid grid-cols-[190px_1fr]">
+            <div className="px-2 py-1 border-r border-slate-300 font-semibold">FECHA DE CERTIFICACIÓN:</div>
             <div className="px-2 py-1">{fel.fecha_certificacion ? new Date(fel.fecha_certificacion).toLocaleString("es-GT") : "—"}</div>
           </div>
         </div>
       )}
 
-      {/* Pie: frases + QR */}
-      <div className="grid grid-cols-2 gap-4 mt-4 items-end">
-        <div className="text-[11px] text-slate-600 space-y-1">
-          {fel && phrases.map((p, i) => <div key={i}>{typeof p === "string" ? p : Object.values(p).join(" ")}</div>)}
+      {/* Frases SAT + QR + certificador */}
+      <div className="grid grid-cols-[1fr_auto] gap-4 mt-3 items-start">
+        <div className="text-[9.5px] text-slate-600 space-y-0.5">
+          {fel && phrases.length > 0 && <div className="font-semibold">Frases SAT:</div>}
+          {fel && phrases.map((p, i) => <div key={i} className="pl-1">{typeof p === "string" ? p : Object.values(p).join(" ")}</div>)}
           {fel ? (
             <>
               <div className="mt-2"><b>Certificador:</b> {fel.certificador || "INFILE, S.A."} · <b>NIT:</b> {fel.certificador_nit || "12521337"}</div>
@@ -440,18 +444,16 @@ function CartaPaper({ company, sale, fel, qr, phrases, d, meses }) {
             <div className="text-slate-400">Comprobante de venta — no es una factura electrónica.</div>
           )}
         </div>
-        <div className="text-right">
-          {fel && qr && (
-            <>
-              <img src={qr} alt="QR" className="inline-block" style={{ width: 92, height: 92 }} />
-              <div className="text-[10px] text-slate-500">Escanea el código QR</div>
-              <div className="font-bold tracking-wide" style={{ color: GREEN }}>FEL · Factura Electrónica</div>
-            </>
-          )}
-        </div>
+        {fel && qr && (
+          <div className="text-center shrink-0">
+            <img src={qr} alt="QR" className="inline-block" style={{ width: 82, height: 82 }} />
+            <div className="text-[8px] text-slate-500">Escanea el código QR</div>
+          </div>
+        )}
       </div>
 
       {fel?.status === "anulada" && <div className="text-center text-red-600 font-bold text-lg mt-3">** DOCUMENTO ANULADO **</div>}
+      <div className="text-center text-[8px] text-slate-400 mt-3">Página 1 de 1</div>
     </div>
   );
 }
