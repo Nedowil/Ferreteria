@@ -170,7 +170,7 @@ export default function Ticket() {
           body * { visibility: hidden !important; }
           #printable, #printable * { visibility: visible !important; }
           #printable { position: absolute; left: 0; top: 0; width: 100%; }
-          #printable * { box-shadow: none !important; }
+          #printable * { box-shadow: none !important; border-radius: 0 !important; }
           /* La Epson de 80mm solo imprime ~72mm; centramos el ticket en ese
              ancho para que no se corten los bordes izquierdo/derecho. */
           .ticket-paper { width: 72mm !important; box-shadow: none !important; padding: 1.5mm 2mm !important; margin: 0 auto !important; }
@@ -307,7 +307,7 @@ function CartaPaper({ company, sale, fel, qr, phrases, d, meses }) {
   const cell = "border border-slate-300 px-1.5 py-0.5";
   const rate = Number(company.tax_rate || 12);
   return (
-    <div className="bg-white shadow rounded-lg p-6 text-[10px] leading-snug text-slate-900 max-w-[190mm] mx-auto">
+    <div className="bg-white p-6 text-[10px] leading-snug text-slate-900 max-w-[190mm] mx-auto">
       {/* Encabezado: empresa (izq) · documento (der) */}
       <div className="grid grid-cols-2 gap-6 items-start">
         <div className="flex items-start gap-3">
