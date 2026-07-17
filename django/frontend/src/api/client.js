@@ -4,6 +4,10 @@ import axios from "axios";
 const ACCESS = "fz_access";
 const REFRESH = "fz_refresh";
 const BRANCH = "fz_branch";
+const EXPIRES = "fz_expires";
+
+// La sesión se cierra sola 12 horas después de iniciarla (auto-logout).
+export const SESSION_MAX_MS = 12 * 60 * 60 * 1000;
 
 export const tokenStore = {
   get access() { return localStorage.getItem(ACCESS); },
@@ -17,10 +21,15 @@ export const tokenStore = {
     if (id) localStorage.setItem(BRANCH, id);
     else localStorage.removeItem(BRANCH);
   },
+  // Marca el momento del login; la sesión vence a las 12 h de ese instante.
+  startSession() { localStorage.setItem(EXPIRES, String(Date.now() + SESSION_MAX_MS)); },
+  get expiresAt() { const v = localStorage.getItem(EXPIRES); return v ? Number(v) : null; },
+  isExpired() { const e = this.expiresAt; return e != null && Date.now() >= e; },
   clear() {
     localStorage.removeItem(ACCESS);
     localStorage.removeItem(REFRESH);
     localStorage.removeItem(BRANCH);
+    localStorage.removeItem(EXPIRES);
   },
 };
 
@@ -41,6 +50,12 @@ api.interceptors.response.use(
   (res) => res,
   async (error) => {
     const original = error.config;
+    // Si ya pasaron las 12 h desde el login, no renovamos: cerramos sesión.
+    if (error.response?.status === 401 && tokenStore.isExpired()) {
+      tokenStore.clear();
+      window.location.href = "/login";
+      return Promise.reject(error);
+    }
     if (error.response?.status === 401 && !original._retry && tokenStore.refresh) {
       original._retry = true;
       try {

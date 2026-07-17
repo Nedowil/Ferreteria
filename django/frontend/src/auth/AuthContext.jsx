@@ -10,6 +10,8 @@ export function AuthProvider({ children }) {
 
   const loadProfile = useCallback(async () => {
     if (!tokenStore.access) { setLoading(false); return; }
+    // Si ya pasaron las 12 h desde el login, la sesión venció.
+    if (tokenStore.isExpired()) { tokenStore.clear(); setLoading(false); return; }
     try {
       const { data } = await api.get("/auth/me/");
       setUser(data);
@@ -27,9 +29,23 @@ export function AuthProvider({ children }) {
 
   useEffect(() => { loadProfile(); }, [loadProfile]);
 
+  // Auto-logout a las 12 h del login: revisa cada minuto y saca al usuario.
+  useEffect(() => {
+    const check = () => {
+      if (tokenStore.access && tokenStore.isExpired()) {
+        tokenStore.clear();
+        setUser(null);
+        window.location.href = "/login";
+      }
+    };
+    const id = setInterval(check, 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
+
   const login = async (email, password) => {
     const { data } = await api.post("/auth/token/", { email, password });
     tokenStore.set({ access: data.access, refresh: data.refresh });
+    tokenStore.startSession();   // arranca el reloj de 12 h
     await loadProfile();
   };
 
