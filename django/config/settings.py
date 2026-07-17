@@ -298,8 +298,8 @@ from datetime import timedelta  # noqa: E402
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
-    # La sesión se cierra sola a las 12 horas de iniciada (auto-logout).
-    "REFRESH_TOKEN_LIFETIME": timedelta(hours=12),
+    # La sesión se cierra sola a las 11 horas de iniciada (auto-logout).
+    "REFRESH_TOKEN_LIFETIME": timedelta(hours=11),
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": False,
     "USER_ID_FIELD": "id",
