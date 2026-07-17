@@ -293,7 +293,7 @@ function TicketPaper({ company, sale, fel, qr, phrases }) {
           {qr && <img src={qr} alt="QR" className="mx-auto mt-2" style={{ width: 120, height: 120 }} />}
         </div>
       )}
-      {!fel && <div className="text-center mt-3">¡Gracias por su compra!</div>}
+      <div className="text-center mt-3 font-bold">¡Gracias por su compra!</div>
       <div className="text-center mt-2 text-[11px]">
         <div className="italic">«Pon en manos del Señor todas tus obras, y tus proyectos se cumplirán.»</div>
         <div>Proverbios 16:3</div>
