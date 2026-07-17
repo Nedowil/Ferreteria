@@ -218,7 +218,7 @@ export default function Invoices() {
           {/* Escritorio: tabla */}
           <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">
+            <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
               <tr>
                 <th className="px-4 py-2.5">Venta</th><th className="px-4 py-2.5">Cliente</th>
                 <th className="px-4 py-2.5">Tipo</th><th className="px-4 py-2.5">Serie-Número</th>
@@ -281,7 +281,7 @@ export default function Invoices() {
           {/* Escritorio: tabla */}
           <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">
+            <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
               <tr>
                 <th className="px-4 py-2.5">Folio</th><th className="px-4 py-2.5">Fecha</th>
                 <th className="px-4 py-2.5">Cliente</th><th className="px-4 py-2.5 text-right">Total</th>

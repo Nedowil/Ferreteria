@@ -124,7 +124,7 @@ export default function CustomerList() {
         {/* Escritorio: tabla */}
         <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">
+          <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
             <tr><th className="px-4 py-2.5">Nombre</th><th className="px-4 py-2.5">NIT</th><th className="px-4 py-2.5">Tipo</th>
                 <th className="px-4 py-2.5">Teléfono</th><th className="px-4 py-2.5 text-right">Saldo crédito</th><th className="px-4 py-2.5 text-right">Acciones</th></tr>
           </thead>

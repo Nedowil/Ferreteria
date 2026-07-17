@@ -845,7 +845,7 @@ export default function POS() {
               )}
             </div>
             <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">
+              <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
                 <tr><th className="px-3 py-2.5">Producto</th><th className="px-3 py-2.5 w-24 text-right">Cant.</th>
                     <th className="px-3 py-2.5 w-28 text-right">Precio</th><th className="px-3 py-2.5 w-28 text-right">Importe</th><th></th></tr>
               </thead>

@@ -91,7 +91,7 @@ export default function StockCount() {
         <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">
+            <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
               <tr><th className="px-4 py-2.5">SKU</th><th className="px-4 py-2.5">Producto</th>
                   <th className="px-4 py-2.5 text-right">Sistema</th>
                   <th className="px-4 py-2.5 text-right">{mode === "add" ? "Encontrado" : "Conteo físico"}</th>

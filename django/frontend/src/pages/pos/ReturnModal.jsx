@@ -112,7 +112,7 @@ export default function ReturnModal({ onClose, initialFolio = "" }) {
                     {sale.folio} — {sale.customer_name || "Consumidor final"}
                   </div>
                   <table className="w-full text-sm">
-                    <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">
+                    <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
                       <tr><th className="px-3 py-2">Producto</th><th className="px-3 py-2 text-right">Comprado</th>
                           <th className="px-3 py-2 text-right">Precio</th><th className="px-3 py-2 text-right w-28">A devolver</th></tr>
                     </thead>

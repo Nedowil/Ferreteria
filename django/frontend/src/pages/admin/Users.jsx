@@ -105,7 +105,7 @@ export default function Users() {
         {/* Escritorio: tabla */}
         <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase tracking-wide">
+          <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
             <tr><th className="px-4 py-2.5">Nombre</th><th className="px-4 py-2.5">Correo</th><th className="px-4 py-2.5">Rol</th>
                 <th className="px-4 py-2.5">Sucursales</th><th className="px-4 py-2.5">Activo</th><th className="px-4 py-2.5 text-right">Acciones</th></tr>
           </thead>
