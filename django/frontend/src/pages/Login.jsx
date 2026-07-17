@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { EyeIcon, EyeOffIcon } from "../components/PasswordInput";
 import logo from "../assets/logo.jpg";
 
 export default function Login() {
@@ -100,8 +101,8 @@ export default function Login() {
             <button type="button" onClick={() => setShowPass((v) => !v)}
                     title={showPass ? "Ocultar contraseña" : "Ver contraseña"}
                     aria-label={showPass ? "Ocultar contraseña" : "Ver contraseña"}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 px-1.5 py-1 rounded transition">
-              {showPass ? "🙈" : "👁️"}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 rounded transition">
+              {showPass ? <EyeOffIcon /> : <EyeIcon />}
             </button>
           </div>
 
