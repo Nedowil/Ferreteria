@@ -118,7 +118,7 @@ export default function ReturnCreate() {
       <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-left">
-          <tr><th className="px-4 py-2">Producto</th><th className="px-4 py-2 text-right">Comprado</th><th className="px-4 py-2 text-right">Precio</th><th className="px-4 py-2 text-right w-32">A devolver</th><th className="px-4 py-2 w-10"></th></tr>
+          <tr><th className="px-4 py-2">Producto</th><th className="px-4 py-2 text-right">Comprado</th><th className="px-4 py-2 text-right">Precio</th><th className="px-4 py-2 text-right w-32">Cantidad</th><th className="px-4 py-2 w-10"></th></tr>
         </thead>
         <tbody>
           {sale.items.filter((it) => !removed.includes(it.id)).map((it) => (
