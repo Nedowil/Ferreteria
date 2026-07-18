@@ -30,6 +30,16 @@ export default function ReturnDetail() {
     win.onload = () => setTimeout(() => win.print(), 200);
   };
 
+  // Ticket térmico (80mm) para la impresora Epson, igual que en ventas.
+  const printReturnTicket = async () => {
+    const win = window.open("", "_blank", "width=380,height=760");
+    if (!win) { await dialog.alert("Permití las ventanas emergentes para imprimir."); return; }
+    win.document.write(returnTicketHtml(r, company));
+    win.document.close();
+    win.focus();
+    win.onload = () => setTimeout(() => win.print(), 200);
+  };
+
   const cancel = async () => {
     if (!(await dialog.confirm("¿Estás seguro de que deseas cancelar esta devolución? Se re-extraerá el stock restituido.", { danger: true, okText: "Sí, cancelar" }))) return;
     setError("");
@@ -56,7 +66,8 @@ export default function ReturnDetail() {
           <span className={"ml-3 text-xs px-2 py-0.5 rounded align-middle " + (r.status === "procesada" ? "bg-green-100 text-green-700" : "bg-slate-200 text-slate-500 dark:text-slate-400")}>{r.status_display}</span>
         </h1>
         <div className="flex items-center gap-3">
-          <button onClick={printReturn} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-slate-700 hover:bg-slate-800 text-white">🖨️ Imprimir comprobante</button>
+          <button onClick={printReturnTicket} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-emerald-600 hover:bg-emerald-700 text-white">🎟️ Ticket</button>
+          <button onClick={printReturn} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-slate-700 hover:bg-slate-800 text-white">🖨️ Comprobante (PDF)</button>
           <button onClick={() => navigate("/devoluciones")} className="inline-flex items-center gap-1 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2 shadow-sm hover:bg-slate-50 hover:border-slate-400 transition">← Volver</button>
         </div>
       </div>
@@ -198,6 +209,70 @@ function returnHtml(r, company) {
     <div class="foot">${nc
       ? "Representación impresa de la Nota de Crédito Electrónica."
       : "Comprobante interno de devolución. No es un documento tributario."}</div>
+  </body></html>`;
+}
+
+// --- Ticket térmico 80mm (impresora Epson) ----------------------------------
+function returnTicketHtml(r, company) {
+  const c = company || {};
+  const bizName = c.commercial_name || c.name || "Ferretería Central";
+  const nc = r.credit_note && r.credit_note.status === "certificada" ? r.credit_note : null;
+  const titulo = nc ? "NOTA DE CRÉDITO ELECTRÓNICA" : "COMPROBANTE DE DEVOLUCIÓN";
+  const logoUrl = new URL(logo, window.location.origin).href;
+  const rows = r.items.map((it) => `
+    <div class="it">
+      <div>${escapeHtml(it.product_name)}</div>
+      <div class="g3"><span>${Number(it.quantity)}</span><span class="c">${Number(it.unit_price).toFixed(2)}</span><span class="r">${Number(it.subtotal).toFixed(2)}</span></div>
+    </div>`).join("");
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8">
+    <title>Devolución ${escapeHtml(r.folio)}</title>
+    <style>
+      * { box-sizing: border-box; }
+      html, body { margin:0; padding:0; }
+      body { font-family: "Courier New", monospace; color:#000; width:72mm; margin:0 auto; padding:2mm; font-size:12px; line-height:1.25; }
+      .ctr { text-align:center; }
+      .b { font-weight:bold; }
+      img.logo { max-width:60mm; max-height:22mm; object-fit:contain; display:block; margin:0 auto 4px; }
+      .sep { border-top:1px dashed #000; margin:6px 0; }
+      .g3 { display:grid; grid-template-columns:1fr 1fr 1fr; }
+      .g3 .c { text-align:center; } .g3 .r { text-align:right; }
+      .row { display:flex; justify-content:space-between; }
+      .it { margin-top:3px; }
+      .brk { word-break:break-all; }
+      @page { size: 80mm auto; margin: 0; }
+      @media print { body { width:72mm; } }
+    </style></head><body>
+    <div class="ctr">
+      <img class="logo" src="${logoUrl}" alt="">
+      <div class="b" style="font-size:14px">${escapeHtml(bizName)}</div>
+      ${c.legal_name ? `<div>${escapeHtml(c.legal_name)}</div>` : ""}
+      <div class="b">NIT: ${escapeHtml(c.tax_id || "CF")}</div>
+      ${c.address ? `<div>${escapeHtml(c.address)}</div>` : ""}
+      <div>${[c.phone ? `Tel: ${c.phone}` : "", c.email || ""].filter(Boolean).join("  ")}</div>
+    </div>
+    <div class="sep"></div>
+    <div class="b">${titulo}</div>
+    <div class="b">Devolución: ${escapeHtml(r.folio)}</div>
+    ${nc ? `<div class="b">Nota de crédito No: ${escapeHtml(nc.numero || "")}</div>
+      ${nc.uuid ? `<div class="b">Autorización:</div><div class="brk">${escapeHtml(nc.uuid)}</div>` : ""}
+      ${nc.serie ? `<div class="b">Serie: ${escapeHtml(nc.serie)}</div>` : ""}` : ""}
+    <div class="b">Fecha: ${new Date(r.date).toLocaleString("es-GT")}</div>
+    <div>Venta origen: ${escapeHtml(r.sale_folio || "Sin ticket")}</div>
+    <div>Cliente: ${escapeHtml(r.customer_name || "Consumidor Final")}</div>
+    <div>Motivo: ${escapeHtml(r.reason_display || "")}</div>
+    <div>Reembolso: ${escapeHtml(r.refund_method || "")}</div>
+    ${r.reason ? `<div>Detalle: ${escapeHtml(r.reason)}</div>` : ""}
+    <div class="sep"></div>
+    <div class="g3 b"><span>Cant.</span><span class="c">Precio</span><span class="r">Sub Total</span></div>
+    ${rows}
+    <div class="sep"></div>
+    <div class="row"><span>Subtotal:</span><span>${Q(r.subtotal)}</span></div>
+    <div class="row"><span>IVA:</span><span>${Q(r.tax)}</span></div>
+    <div class="row b" style="font-size:14px"><span>Total reembolsado:</span><span>${Q(r.total)}</span></div>
+    <div class="sep"></div>
+    <div class="ctr">${nc
+      ? "Representación impresa de la Nota de Crédito Electrónica."
+      : "Comprobante interno de devolución.<br>No es un documento tributario."}</div>
   </body></html>`;
 }
 
