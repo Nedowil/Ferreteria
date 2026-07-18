@@ -36,7 +36,7 @@ export default function Backups() {
   };
 
   const remove = async (filename) => {
-    if (!(await dialog.confirm(`¿Eliminar el respaldo ${filename}?`, { danger: true }))) return;
+    if (!(await dialog.confirm(`¿Estás seguro de que deseas eliminar el respaldo ${filename}?`, { danger: true, okText: "Eliminar" }))) return;
     await api.delete(`/backups/${filename}/`);
     load();
   };

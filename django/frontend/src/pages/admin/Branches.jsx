@@ -21,7 +21,7 @@ export default function Branches() {
     } catch (err) { setError(JSON.stringify(err.response?.data) || "Error"); }
   };
   const remove = async (id) => {
-    if (!(await dialog.confirm("¿Eliminar sucursal?", { danger: true }))) return;
+    if (!(await dialog.confirm("¿Estás seguro de que deseas eliminar esta sucursal?", { danger: true, okText: "Eliminar" }))) return;
     try { await api.delete(`/branches/${id}/`); load(); }
     catch (err) { await dialog.alert(err.response?.data?.detail || "No se pudo eliminar."); }
   };

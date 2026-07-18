@@ -32,7 +32,7 @@ export default function SaleDetail() {
   };
 
   const cancel = async () => {
-    if (!(await dialog.confirm("¿Cancelar esta venta? Se devolverá el stock.", { danger: true }))) return;
+    if (!(await dialog.confirm("¿Estás seguro de que deseas cancelar esta venta? Se devolverá el stock.", { danger: true, okText: "Sí, cancelar" }))) return;
     setError("");
     try { await api.post(`/sales/${id}/cancel/`, {}); load(); }
     catch (err) { setError(err.response?.data?.detail || "Error"); }

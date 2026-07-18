@@ -207,7 +207,7 @@ export default function ProductList() {
   };
 
   const remove = async (id) => {
-    if (!(await dialog.confirm("¿Eliminar este producto?", { danger: true }))) return;
+    if (!(await dialog.confirm("¿Estás seguro de que deseas eliminar este producto?", { danger: true, okText: "Eliminar" }))) return;
     await api.delete(`/inventory/products/${id}/`);
     load();
   };

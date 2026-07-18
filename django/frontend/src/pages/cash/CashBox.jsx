@@ -36,7 +36,7 @@ export default function CashBox() {
 
   const closeCash = async (e) => {
     e.preventDefault(); setError("");
-    if (!(await dialog.confirm("¿Cerrar la caja? Esta acción no se puede deshacer.", { danger: true }))) return;
+    if (!(await dialog.confirm("¿Estás seguro de que deseas cerrar la caja? Esta acción no se puede deshacer.", { danger: true, okText: "Cerrar caja" }))) return;
     try { await api.post(`/cashbox/cash-sessions/${session.id}/close/`, { counted_cash: counted }); load(); }
     catch (err) { setError(err.response?.data?.detail || "Error al cerrar"); }
   };

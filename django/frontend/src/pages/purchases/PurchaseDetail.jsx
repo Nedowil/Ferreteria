@@ -40,7 +40,7 @@ export default function PurchaseDetail() {
   };
 
   const del = async () => {
-    if (!(await dialog.confirm("¿Eliminar esta compra pendiente?", { danger: true }))) return;
+    if (!(await dialog.confirm("¿Estás seguro de que deseas eliminar esta compra pendiente?", { danger: true, okText: "Eliminar" }))) return;
     try { await api.delete(`/purchases/${id}/`); navigate("/compras"); }
     catch (err) { setError(err.response?.data?.detail || "Error"); }
   };

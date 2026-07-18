@@ -31,7 +31,7 @@ export default function ReturnDetail() {
   };
 
   const cancel = async () => {
-    if (!(await dialog.confirm("¿Cancelar esta devolución? Se re-extraerá el stock restituido.", { danger: true }))) return;
+    if (!(await dialog.confirm("¿Estás seguro de que deseas cancelar esta devolución? Se re-extraerá el stock restituido.", { danger: true, okText: "Sí, cancelar" }))) return;
     setError("");
     try { await api.post(`/returns/${id}/cancel/`, {}); load(); }
     catch (err) { setError(err.response?.data?.detail || "Error"); }

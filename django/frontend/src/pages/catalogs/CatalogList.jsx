@@ -32,7 +32,7 @@ export default function CatalogList({ kind }) {
   };
 
   const remove = async (id) => {
-    if (!(await dialog.confirm("¿Eliminar este registro?", { danger: true }))) return;
+    if (!(await dialog.confirm("¿Estás seguro de que deseas eliminar este registro?", { danger: true, okText: "Eliminar" }))) return;
     try {
       await api.delete(`${cfg.endpoint}${id}/`);
       load();

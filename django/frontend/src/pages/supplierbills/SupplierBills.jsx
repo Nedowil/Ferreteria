@@ -94,7 +94,7 @@ export default function SupplierBills() {
   };
 
   const remove = async (b) => {
-    if (!(await dialog.confirm(`¿Eliminar el registro de "${b.supplier_name}" por ${Q(b.amount)}?`, { danger: true }))) return;
+    if (!(await dialog.confirm(`¿Estás seguro de que deseas eliminar el registro de "${b.supplier_name}" por ${Q(b.amount)}?`, { danger: true, okText: "Eliminar" }))) return;
     await api.delete(`/supplier-bills/${b.id}/`); load();
   };
 

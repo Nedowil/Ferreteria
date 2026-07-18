@@ -56,7 +56,7 @@ export default function Users() {
   };
 
   const remove = async (id) => {
-    if (!(await dialog.confirm("¿Eliminar usuario?", { danger: true }))) return;
+    if (!(await dialog.confirm("¿Estás seguro de que deseas eliminar este usuario?", { danger: true, okText: "Eliminar" }))) return;
     try { await api.delete(`/users/${id}/`); load(); }
     catch (err) { await dialog.alert(err.response?.data?.detail || "No se pudo eliminar."); }
   };

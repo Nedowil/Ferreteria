@@ -26,7 +26,7 @@ export default function Roles() {
   };
 
   const remove = async (id) => {
-    if (!(await dialog.confirm("¿Eliminar rol?", { danger: true }))) return;
+    if (!(await dialog.confirm("¿Estás seguro de que deseas eliminar este rol?", { danger: true, okText: "Eliminar" }))) return;
     try { await api.delete(`/roles/${id}/`); load(); }
     catch (err) { await dialog.alert(err.response?.data?.detail || "No se pudo eliminar."); }
   };

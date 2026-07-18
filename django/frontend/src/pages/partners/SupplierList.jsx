@@ -65,7 +65,7 @@ export default function SupplierList() {
     setEditing(null); load();
   };
   const remove = async (id) => {
-    if (!(await dialog.confirm("¿Eliminar proveedor?", { danger: true }))) return;
+    if (!(await dialog.confirm("¿Estás seguro de que deseas eliminar este proveedor?", { danger: true, okText: "Eliminar" }))) return;
     await api.delete(`/suppliers/${id}/`); load();
   };
 
