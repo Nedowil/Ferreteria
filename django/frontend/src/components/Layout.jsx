@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import ScannerRedirect from "./ScannerRedirect";
 import logo from "../assets/logo.svg";
 
 function NavItem({ to, icon, label, end }) {
@@ -43,6 +44,7 @@ export default function Layout({ children }) {
 
   return (
     <div className="min-h-screen flex bg-slate-50 dark:bg-slate-900">
+      <ScannerRedirect />
       {/* Fondo oscuro al abrir el menú en móvil */}
       {open && <div onClick={() => setOpen(false)} className="fixed inset-0 bg-black/40 z-30 lg:hidden" aria-hidden="true" />}
 

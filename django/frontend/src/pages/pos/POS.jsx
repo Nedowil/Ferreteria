@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import api from "../../api/client";
 import { publishDisplay, openCustomerDisplay } from "../../pos/customerDisplay";
 import { useAuth } from "../../auth/AuthContext";
@@ -290,6 +290,7 @@ function SaleDoneModal({ sale, onPrint, onView, onNew }) {
 export default function POS() {
   const navigate = useNavigate();
   const { can } = useAuth();
+  const [scanParams, setScanParams] = useSearchParams();
   const [cashOpen, setCashOpen] = useState(null); // null=cargando, false=cerrada, obj=abierta
   const [search, setSearch] = useState("");
   const [products, setProducts] = useState([]);
@@ -317,6 +318,26 @@ export default function POS() {
   const onReconnect = useCallback(() => doSyncRef.current(), []);
   const serverOnline = useServerOnline({ onReconnect });
   const refreshPending = () => countPending().then(setPendingCount).catch(() => {});
+
+  // Escaneo ENTRANTE: si llegamos al POS con ?scan=CODE (desde el escáner global
+  // de otro módulo), buscamos el producto y abrimos la ventana de medida.
+  useEffect(() => {
+    const code = scanParams.get("scan");
+    if (!code) return;
+    setScanParams({}, { replace: true });
+    api.get("/inventory/products/", { params: { search: code, active: 1, page_size: 10 } })
+      .then((r) => {
+        const list = r.data.results || r.data;
+        const q = code.toLowerCase();
+        const exact = list.find((p) =>
+          (p.barcode || "").toLowerCase() === q || (p.sku || "").toLowerCase() === q)
+          || (list.length === 1 ? list[0] : null);
+        if (exact) setPicking(exact);
+        else setSearch(code);   // sin coincidencia exacta: deja el código en la barra
+      })
+      .catch(() => setSearch(code));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // El aviso flotante de error se cierra solo a los 6 segundos.
   useEffect(() => {
     if (!error) return undefined;
