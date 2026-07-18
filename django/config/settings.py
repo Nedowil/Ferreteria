@@ -32,6 +32,12 @@ SECRET_KEY = os.getenv(
 DEBUG = env_bool("DEBUG", True)
 
 ALLOWED_HOSTS = [h.strip() for h in os.getenv("ALLOWED_HOSTS", "*").split(",") if h.strip()]
+# Dominios de producción siempre permitidos (aunque se restrinja ALLOWED_HOSTS
+# por variable de entorno), para no bloquear el dominio ni el health check.
+if "*" not in ALLOWED_HOSTS:
+    for _h in ("ferreteriacentral.net", "www.ferreteriacentral.net", "ferreteria-g7zl.onrender.com"):
+        if _h not in ALLOWED_HOSTS:
+            ALLOWED_HOSTS.append(_h)
 
 
 # Application definition
@@ -206,9 +212,17 @@ FEL_CERTIFICADOR = os.getenv("FEL_CERTIFICADOR", "Certificador de pruebas")
 # ---------------------------------------------------------------------------
 # Orígenes confiables para CSRF (el dominio público), p. ej.
 # CSRF_TRUSTED_ORIGINS=https://ferreteria.example.com
-CSRF_TRUSTED_ORIGINS = [
-    o.strip() for o in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()
+# Dominios de producción conocidos: se incluyen siempre para que el login del
+# panel de Django y los formularios funcionen aunque falte la variable de entorno.
+_DEFAULT_TRUSTED_ORIGINS = [
+    "https://ferreteriacentral.net",
+    "https://www.ferreteriacentral.net",
+    "https://ferreteria-g7zl.onrender.com",
 ]
+CSRF_TRUSTED_ORIGINS = sorted(set(
+    _DEFAULT_TRUSTED_ORIGINS
+    + [o.strip() for o in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()]
+))
 
 if not DEBUG:
     # Detrás de un proxy/balanceador que termina TLS.
