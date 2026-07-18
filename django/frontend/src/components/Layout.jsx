@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import ScannerRedirect from "./ScannerRedirect";
-import logo from "../assets/logo.svg";
+import logo from "../assets/mascota.png";
 
 function NavItem({ to, icon, label, end }) {
   return (
@@ -72,8 +72,8 @@ export default function Layout({ children }) {
         + (open ? "translate-x-0" : "-translate-x-full")}>
         <div className="px-4 py-4 border-b border-white/10">
           <div className="flex items-center gap-3">
-            <div className="h-11 w-11 shrink-0 bg-white rounded-xl p-1 shadow ring-1 ring-black/5 flex items-center justify-center overflow-hidden">
-              <img src={logo} alt="Ferretería Central" className="max-h-full max-w-full object-contain rounded-md" />
+            <div className="h-11 w-11 shrink-0 rounded-xl shadow ring-1 ring-white/10 overflow-hidden">
+              <img src={logo} alt="Ferretería Central" className="h-full w-full object-cover" />
             </div>
             <div className="min-w-0">
               <div className="font-bold text-white leading-tight truncate">Ferretería Central</div>
