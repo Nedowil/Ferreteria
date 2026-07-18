@@ -6,6 +6,7 @@ import { useAuth } from "../../auth/AuthContext";
 import ReturnModal from "./ReturnModal";
 import QuickCustomerModal from "../../components/QuickCustomerModal";
 import QuickProductModal from "../../components/QuickProductModal";
+import CustomerPicker from "../../components/CustomerPicker";
 import { useServerOnline } from "../../offline/net";
 import { saveCatalog, getCatalog, setMeta, getMeta, addPending, countPending } from "../../offline/db";
 import { syncPending } from "../../offline/sync";
@@ -139,93 +140,6 @@ function MeasureModal({ product, customer, available, onAdd, onClose }) {
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-// Selector de cliente con búsqueda en el servidor (nombre/NIT/teléfono),
-// sin importar tildes — escala a miles de clientes.
-function CustomerPicker({ customers, value, onChange, onAddNew }) {
-  const [open, setOpen] = useState(false);
-  const [q, setQ] = useState("");
-  const [results, setResults] = useState(null); // null = mostrar lista inicial
-  const [loading, setLoading] = useState(false);
-  const ref = useRef(null);
-  const selected = customers.find((c) => String(c.id) === String(value));
-
-  useEffect(() => {
-    const onDoc = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, []);
-
-  // Búsqueda en el servidor con retardo (debounce) para no saturar la API.
-  useEffect(() => {
-    const ql = q.trim();
-    if (!ql) { setResults(null); setLoading(false); return; }
-    setLoading(true);
-    const t = setTimeout(async () => {
-      try {
-        const { data } = await api.get("/customers/", {
-          params: { active: 1, search: ql, page_size: 40 },
-        });
-        setResults(data.results || data);
-      } catch {
-        setResults([]);
-      } finally {
-        setLoading(false);
-      }
-    }, 250);
-    return () => clearTimeout(t);
-  }, [q]);
-
-  // Sin texto: lista inicial precargada. Con texto: resultados del servidor.
-  const filtered = (results !== null ? results : customers).slice(0, 60);
-
-  const pick = (id, obj) => { onChange(id, obj); setOpen(false); setQ(""); setResults(null); };
-
-  return (
-    <div className="relative" ref={ref}>
-      <div className="flex gap-2">
-        <button type="button" onClick={() => setOpen((o) => !o)}
-                className="flex-1 min-w-0 text-left border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-800 flex items-center justify-between gap-2 outline-none focus:ring-2 focus:ring-blue-500">
-          <span className="truncate">{selected ? `${selected.name}${selected.customer_type === "wholesale" ? " (mayorista)" : ""}` : "Consumidor final"}</span>
-          <span className="text-slate-400 shrink-0">▾</span>
-        </button>
-        <button type="button" onClick={onAddNew} title="Nuevo cliente"
-                className="shrink-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-3 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">
-          + Nuevo
-        </button>
-      </div>
-      {open && (
-        <div className="absolute z-30 mt-1 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg overflow-hidden">
-          <div className="p-2 border-b border-slate-100 dark:border-slate-700">
-            <input autoFocus value={q} onChange={(e) => setQ(e.target.value)}
-                   placeholder="Buscar por nombre, NIT o teléfono…"
-                   className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <div className="max-h-64 overflow-auto text-sm">
-            <button type="button" onClick={() => pick("", null)}
-                    className="block w-full text-left px-3 py-2 hover:bg-blue-50 transition">Consumidor final</button>
-            {filtered.map((c) => (
-              <button key={c.id} type="button" onClick={() => pick(c.id, c)}
-                      className="block w-full text-left px-3 py-2 hover:bg-blue-50 border-t border-slate-50 transition">
-                <div className="font-medium text-slate-800 dark:text-slate-100">{c.name}
-                  {c.customer_type === "wholesale" && <span className="text-xs text-blue-600"> (mayorista)</span>}</div>
-                {(c.tax_id || c.phone) && (
-                  <div className="text-xs text-slate-400">
-                    {c.tax_id || ""}{c.tax_id && c.phone ? " · " : ""}{c.phone || ""}
-                  </div>
-                )}
-              </button>
-            ))}
-            {loading && <div className="px-3 py-4 text-center text-slate-400">Buscando…</div>}
-            {!loading && filtered.length === 0 && (
-              <div className="px-3 py-4 text-center text-slate-400">Sin coincidencias.</div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

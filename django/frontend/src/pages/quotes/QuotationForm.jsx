@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../../api/client";
 import QuickCustomerModal from "../../components/QuickCustomerModal";
 import QuickProductModal from "../../components/QuickProductModal";
+import CustomerPicker from "../../components/CustomerPicker";
 
 export default function QuotationForm() {
   const navigate = useNavigate();
@@ -87,15 +88,9 @@ export default function QuotationForm() {
       <section className="bg-white dark:bg-slate-800 rounded-lg shadow p-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Cliente</label>
-          <div className="flex gap-2">
-            <select value={header.customer_id} onChange={(e) => setHeader({ ...header, customer_id: e.target.value })}
-                    className="flex-1 border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="">Sin cliente</option>
-              {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-            <button type="button" onClick={() => setAddingCustomer(true)} title="Agregar nuevo cliente"
-                    className="shrink-0 inline-flex items-center gap-1 bg-blue-600 text-white rounded px-3 py-2 text-sm font-medium hover:bg-blue-700 transition whitespace-nowrap">➕ Cliente</button>
-          </div>
+          <CustomerPicker value={header.customer_id} customers={customers} emptyLabel="Sin cliente"
+                          onChange={(id) => setHeader({ ...header, customer_id: id })}
+                          onAddNew={() => setAddingCustomer(true)} />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Fecha</label>
