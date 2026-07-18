@@ -34,7 +34,10 @@ class SaleViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.ModelVie
     queryset = (
         Sale.objects.select_related("customer", "branch", "user")
         .prefetch_related("items", "payments")
-        .order_by("-date", "-id")
+        # Orden por momento de REGISTRO (no por la fecha del documento): así una
+        # venta creada hoy con fecha anterior o adelantada aparece igual arriba,
+        # en el orden en que realmente se hizo.
+        .order_by("-created_at", "-id")
     )
     http_method_names = ["get", "post", "head", "options"]  # sin PUT/DELETE: las ventas no se editan
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
