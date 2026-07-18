@@ -138,27 +138,65 @@ export default function Ticket() {
     window.open(`${base}?text=${encodeURIComponent(text)}`, "_blank");
   };
 
-  // Compartir el ticket CON el comprobante adjunto (imagen). En el celular usa
-  // el menú nativo de compartir (Web Share API) para mandar la imagen del ticket
-  // por WhatsApp; si el navegador no lo soporta, cae al enlace de texto.
+  // Genera el PDF del comprobante EN EL FORMATO ELEGIDO (ticket 80mm o carta).
+  const buildPdfBlob = async () => {
+    const html2canvas = (await import("html2canvas")).default;
+    const { jsPDF } = await import("jspdf");
+    const canvas = await html2canvas(printRef.current, { scale: 2, backgroundColor: "#ffffff", useCORS: true });
+    const img = canvas.toDataURL("image/png");
+    let pdf;
+    if (mode === "carta") {
+      pdf = new jsPDF({ unit: "mm", format: "letter", orientation: "portrait" });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const margin = 10;
+      let w = pageW - margin * 2;
+      let h = (w * canvas.height) / canvas.width;
+      const maxH = pageH - margin * 2;
+      if (h > maxH) { h = maxH; w = (h * canvas.width) / canvas.height; }
+      pdf.addImage(img, "PNG", (pageW - w) / 2, margin, w, h);
+    } else {
+      // Ticket térmico: hoja angosta de 80mm de ancho y alto según el contenido.
+      const w = 80;
+      const h = (w * canvas.height) / canvas.width;
+      pdf = new jsPDF({ unit: "mm", format: [w, h], orientation: "portrait" });
+      pdf.addImage(img, "PNG", 0, 0, w, h);
+    }
+    return pdf.output("blob");
+  };
+
+  // Compartir el comprobante como PDF ADJUNTO (ticket o carta, según lo elegido).
+  // En el celular usa el menú nativo (Web Share API) para mandarlo por WhatsApp;
+  // en computadora descarga el PDF para adjuntarlo y abre WhatsApp con el resumen.
   const shareTicket = async () => {
     const text = saleText(t);
+    let pdfBlob = null;
     try {
-      if (printRef.current && typeof navigator !== "undefined" && navigator.canShare) {
-        const html2canvas = (await import("html2canvas")).default;
-        const canvas = await html2canvas(printRef.current, { scale: 2, backgroundColor: "#ffffff", useCORS: true });
-        const blob = await new Promise((res) => canvas.toBlob(res, "image/png"));
-        if (blob) {
-          const file = new File([blob], `ticket-${sale.folio}.png`, { type: "image/png" });
-          if (navigator.canShare({ files: [file] })) {
-            await navigator.share({ files: [file], text });
-            return;   // se compartió con la imagen adjunta
-          }
+      if (printRef.current) pdfBlob = await buildPdfBlob();
+    } catch { pdfBlob = null; }
+
+    const fname = `comprobante-${sale.folio}.pdf`;
+    // 1) Compartir el PDF por el menú nativo (WhatsApp, correo, Drive, etc.).
+    if (pdfBlob && typeof navigator !== "undefined" && navigator.canShare) {
+      try {
+        const file = new File([pdfBlob], fname, { type: "application/pdf" });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], text, title: `Comprobante ${sale.folio}` });
+          return;   // se compartió con el PDF adjunto
         }
+      } catch (e) {
+        if (e && e.name === "AbortError") return;   // el usuario canceló el menú
+        // otro error: seguimos al respaldo de abajo
       }
-    } catch (e) {
-      if (e && e.name === "AbortError") return;   // el usuario canceló el menú
-      // cualquier otro error: caemos al enlace de texto de abajo
+    }
+    // 2) Sin soporte para compartir archivos (p. ej. computadora): descarga el
+    //    PDF para adjuntarlo a mano y abre WhatsApp con el resumen en texto.
+    if (pdfBlob) {
+      const url = URL.createObjectURL(pdfBlob);
+      const a = document.createElement("a");
+      a.href = url; a.download = fname;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
     }
     sendWhatsapp();
   };
