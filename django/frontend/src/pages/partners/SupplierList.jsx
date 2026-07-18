@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
+import { dialog } from "../../components/Dialog";
 
 const BLANK = { name: "", tax_id: "", contact_name: "", email: "", phone: "", address: "", notes: "", active: true };
 
@@ -64,7 +65,7 @@ export default function SupplierList() {
     setEditing(null); load();
   };
   const remove = async (id) => {
-    if (!confirm("¿Eliminar proveedor?")) return;
+    if (!(await dialog.confirm("¿Eliminar proveedor?", { danger: true }))) return;
     await api.delete(`/suppliers/${id}/`); load();
   };
 

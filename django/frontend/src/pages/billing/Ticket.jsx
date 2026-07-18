@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import QRCode from "qrcode";
 import api from "../../api/client";
+import { dialog } from "../../components/Dialog";
 import logo from "../../assets/logo.jpg";
 
 const GREEN = "#159f73";
@@ -114,7 +115,7 @@ export default function Ticket() {
     // IP. Solo funciona si el servidor puede alcanzar la impresora en la red.
     try {
       const { data } = await api.post(`/sales/${id}/print/`);
-      if (data.status === "sent") { alert("Ticket enviado a la impresora de red."); return; }
+      if (data.status === "sent") { await dialog.alert("Ticket enviado a la impresora de red."); return; }
       const bytes = Uint8Array.from(atob(data.escpos_base64), (c) => c.charCodeAt(0));
       const url = URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" }));
       const a = document.createElement("a");
@@ -122,7 +123,7 @@ export default function Ticket() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
-      alert(e.response?.data?.detail || "No se pudo imprimir en la térmica.");
+      await dialog.alert(e.response?.data?.detail || "No se pudo imprimir en la térmica.");
     }
   };
 

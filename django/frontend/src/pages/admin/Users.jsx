@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import PasswordInput from "../../components/PasswordInput";
+import { dialog } from "../../components/Dialog";
 
 export default function Users() {
   const { can } = useAuth();
@@ -55,9 +56,9 @@ export default function Users() {
   };
 
   const remove = async (id) => {
-    if (!confirm("¿Eliminar usuario?")) return;
+    if (!(await dialog.confirm("¿Eliminar usuario?", { danger: true }))) return;
     try { await api.delete(`/users/${id}/`); load(); }
-    catch (err) { alert(err.response?.data?.detail || "No se pudo eliminar."); }
+    catch (err) { await dialog.alert(err.response?.data?.detail || "No se pudo eliminar."); }
   };
 
   const toggleBranch = (id) => setEditing((e) => ({

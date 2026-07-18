@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../../api/client";
+import { dialog } from "../../components/Dialog";
 
 export default function CashBox() {
   const [session, setSession] = useState(null);
@@ -35,7 +36,7 @@ export default function CashBox() {
 
   const closeCash = async (e) => {
     e.preventDefault(); setError("");
-    if (!confirm("¿Cerrar la caja? Esta acción no se puede deshacer.")) return;
+    if (!(await dialog.confirm("¿Cerrar la caja? Esta acción no se puede deshacer.", { danger: true }))) return;
     try { await api.post(`/cashbox/cash-sessions/${session.id}/close/`, { counted_cash: counted }); load(); }
     catch (err) { setError(err.response?.data?.detail || "Error al cerrar"); }
   };

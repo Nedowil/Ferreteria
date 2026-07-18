@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
+import { dialog } from "../../components/Dialog";
 
 const BLANK = { name: "", tax_id: "", email: "", phone: "", address: "", notes: "",
   active: true, customer_type: "retail", wholesale_discount_percent: "", credit_limit: "", credit_enabled: false };
@@ -75,7 +76,7 @@ export default function CustomerList() {
     setEditing(null); load();
   };
   const remove = async (id) => {
-    if (!confirm("¿Eliminar cliente?")) return;
+    if (!(await dialog.confirm("¿Eliminar cliente?", { danger: true }))) return;
     await api.delete(`/customers/${id}/`); load();
   };
 

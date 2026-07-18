@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../api/client";
+import { dialog } from "../../components/Dialog";
 
 const BADGE = {
   pendiente: "bg-amber-100 text-amber-700", en_transito: "bg-blue-100 text-blue-700",
@@ -20,10 +21,10 @@ export default function TransferDetail() {
     setError("");
     let body = {};
     if (action === "cancel") {
-      const reason = prompt("Motivo de la cancelación:");
+      const reason = await dialog.prompt("Motivo de la cancelación:");
       if (reason === null) return;
       body = { reason };
-    } else if (!confirm(`¿Confirmás ${action === "send" ? "enviar (descuenta stock de origen)" : "recibir (suma stock a destino)"}?`)) return;
+    } else if (!(await dialog.confirm(`¿Confirmás ${action === "send" ? "enviar (descuenta stock de origen)" : "recibir (suma stock a destino)"}?`))) return;
     try { await api.post(`/transfers/${id}/${action}/`, body); load(); }
     catch (err) { setError(err.response?.data?.detail || "Error"); }
   };

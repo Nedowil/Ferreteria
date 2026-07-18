@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
+import { dialog } from "../../components/Dialog";
 
 const CONFIG = {
   categories: { title: "Categorías", endpoint: "/inventory/categories/", hasDescription: true },
@@ -31,12 +32,12 @@ export default function CatalogList({ kind }) {
   };
 
   const remove = async (id) => {
-    if (!confirm("¿Eliminar este registro?")) return;
+    if (!(await dialog.confirm("¿Eliminar este registro?", { danger: true }))) return;
     try {
       await api.delete(`${cfg.endpoint}${id}/`);
       load();
     } catch (err) {
-      alert(err.response?.data?.detail || "No se pudo eliminar.");
+      await dialog.alert(err.response?.data?.detail || "No se pudo eliminar.");
     }
   };
 

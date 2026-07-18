@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
+import { dialog } from "../../components/Dialog";
 
 export default function SaleDetail() {
   const { id } = useParams();
@@ -31,7 +32,7 @@ export default function SaleDetail() {
   };
 
   const cancel = async () => {
-    if (!confirm("¿Cancelar esta venta? Se devolverá el stock.")) return;
+    if (!(await dialog.confirm("¿Cancelar esta venta? Se devolverá el stock.", { danger: true }))) return;
     setError("");
     try { await api.post(`/sales/${id}/cancel/`, {}); load(); }
     catch (err) { setError(err.response?.data?.detail || "Error"); }

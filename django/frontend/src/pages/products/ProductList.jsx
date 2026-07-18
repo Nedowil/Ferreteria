@@ -4,6 +4,7 @@ import JsBarcode from "jsbarcode";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
+import { dialog } from "../../components/Dialog";
 
 // Enlace a la auditoría del producto (quién lo creó, editó o eliminó).
 const historyLink = (id) => `/admin/auditoria?type=inventory.Product&q=${id}`;
@@ -44,7 +45,7 @@ function labelPrice(product) {
 // del tamaño físico exacto de la etiqueta (por defecto 2"x1" = 51x25 mm), así
 // se alinea con el rollo de la Zebra y funciona desde la nube (imprime desde la
 // computadora, no desde el servidor). labelW/labelH en mm.
-function printLabelsPdf(product, copies, companyName, labelW = 51, labelH = 25) {
+async function printLabelsPdf(product, copies, companyName, labelW = 51, labelH = 25) {
   const esc = (s) => (s || "").replace(/</g, "&lt;");
   const price = labelPrice(product);
   const name = esc(product.name || "").toUpperCase();
@@ -77,7 +78,7 @@ function printLabelsPdf(product, copies, companyName, labelW = 51, labelH = 25) 
     <script>window.onload = function(){ setTimeout(function(){ window.print(); }, 250); };<\/script>
     </body></html>`;
   const w = window.open("", "_blank");
-  if (!w) { alert("Permití las ventanas emergentes para imprimir la etiqueta."); return; }
+  if (!w) { await dialog.alert("Permití las ventanas emergentes para imprimir la etiqueta."); return; }
   w.document.write(html);
   w.document.close();
 }
@@ -99,7 +100,7 @@ function LabelPrintModal({ product, companyName, onClose }) {
     try {
       const { data } = await api.post(`/inventory/products/${product.id}/label/`,
                                       { copies: Number(copies), mode });
-      if (data.status === "sent") { alert("Etiqueta(s) enviada(s) a la Zebra ZD421T."); onClose(); return; }
+      if (data.status === "sent") { await dialog.alert("Etiqueta(s) enviada(s) a la Zebra ZD421T."); onClose(); return; }
       const bytes = Uint8Array.from(atob(data.zpl_base64), (c) => c.charCodeAt(0));
       const url = URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" }));
       const a = document.createElement("a");
@@ -206,7 +207,7 @@ export default function ProductList() {
   };
 
   const remove = async (id) => {
-    if (!confirm("¿Eliminar este producto?")) return;
+    if (!(await dialog.confirm("¿Eliminar este producto?", { danger: true }))) return;
     await api.delete(`/inventory/products/${id}/`);
     load();
   };

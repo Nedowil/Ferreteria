@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import logo from "../../assets/logo.jpg";
+import { dialog } from "../../components/Dialog";
 
 const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -20,9 +21,9 @@ export default function ReturnDetail() {
   useEffect(() => { api.get("/company-settings/").then((res) => setCompany(res.data)).catch(() => {}); }, []);
 
   // Comprobante imprimible de la devolución (con los datos de la NCRE si existe).
-  const printReturn = () => {
+  const printReturn = async () => {
     const win = window.open("", "_blank", "width=800,height=900");
-    if (!win) { alert("Permití las ventanas emergentes para imprimir."); return; }
+    if (!win) { await dialog.alert("Permití las ventanas emergentes para imprimir."); return; }
     win.document.write(returnHtml(r, company));
     win.document.close();
     win.focus();
@@ -30,7 +31,7 @@ export default function ReturnDetail() {
   };
 
   const cancel = async () => {
-    if (!confirm("¿Cancelar esta devolución? Se re-extraerá el stock restituido.")) return;
+    if (!(await dialog.confirm("¿Cancelar esta devolución? Se re-extraerá el stock restituido.", { danger: true }))) return;
     setError("");
     try { await api.post(`/returns/${id}/cancel/`, {}); load(); }
     catch (err) { setError(err.response?.data?.detail || "Error"); }

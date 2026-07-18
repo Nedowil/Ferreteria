@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
+import { dialog } from "../../components/Dialog";
 
 const BLANK = { name: "", code: "", address: "", phone: "", email: "", is_main: false, active: true };
 
@@ -20,9 +21,9 @@ export default function Branches() {
     } catch (err) { setError(JSON.stringify(err.response?.data) || "Error"); }
   };
   const remove = async (id) => {
-    if (!confirm("¿Eliminar sucursal?")) return;
+    if (!(await dialog.confirm("¿Eliminar sucursal?", { danger: true }))) return;
     try { await api.delete(`/branches/${id}/`); load(); }
-    catch (err) { alert(err.response?.data?.detail || "No se pudo eliminar."); }
+    catch (err) { await dialog.alert(err.response?.data?.detail || "No se pudo eliminar."); }
   };
 
   return (

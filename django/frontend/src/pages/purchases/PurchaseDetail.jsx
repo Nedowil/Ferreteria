@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
+import { dialog } from "../../components/Dialog";
 
 const STATUS_BADGE = {
   pendiente: "bg-amber-100 text-amber-700",
@@ -22,7 +23,7 @@ export default function PurchaseDetail() {
 
   const act = async (action) => {
     const labels = { receive: "recibir esta compra (generará entradas de inventario)", cancel: "cancelar esta compra" };
-    if (!confirm(`¿Confirmás ${labels[action]}?`)) return;
+    if (!(await dialog.confirm(`¿Confirmás ${labels[action]}?`))) return;
     setError("");
     try { await api.post(`/purchases/${id}/${action}/`, {}); load(); }
     catch (err) { setError(err.response?.data?.detail || "Error"); }
@@ -39,7 +40,7 @@ export default function PurchaseDetail() {
   };
 
   const del = async () => {
-    if (!confirm("¿Eliminar esta compra pendiente?")) return;
+    if (!(await dialog.confirm("¿Eliminar esta compra pendiente?", { danger: true }))) return;
     try { await api.delete(`/purchases/${id}/`); navigate("/compras"); }
     catch (err) { setError(err.response?.data?.detail || "Error"); }
   };

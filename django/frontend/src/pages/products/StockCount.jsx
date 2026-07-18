@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
+import { dialog } from "../../components/Dialog";
 
 const round2 = (n) => (Number.isFinite(n) ? Math.round(n * 100) / 100 : 0);
 
@@ -32,7 +33,7 @@ export default function StockCount() {
     e.preventDefault();
     if (!changed.length) return;
     const verbo = mode === "add" ? "sumar lo encontrado" : "fijar la existencia";
-    if (!confirm(`Vas a ${verbo} en ${changed.length} producto(s). ¿Confirmás?`)) return;
+    if (!(await dialog.confirm(`Vas a ${verbo} en ${changed.length} producto(s). ¿Confirmás?`))) return;
     setBusy(true);
     try {
       const payload = {
@@ -44,7 +45,7 @@ export default function StockCount() {
         })),
       };
       const { data } = await api.post("/inventory/stock-count/", payload);
-      alert(`Se aplicaron ${data.adjusted} ajustes.` + (data.errors.length ? `\nErrores: ${data.errors.join(", ")}` : ""));
+      await dialog.alert(`Se aplicaron ${data.adjusted} ajustes.` + (data.errors.length ? `\nErrores: ${data.errors.join(", ")}` : ""));
       setCounts({}); setUnits({});
       load();
     } finally {

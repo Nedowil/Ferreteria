@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../api/client";
+import { dialog } from "../../components/Dialog";
 
 const EMPTY = {
   sku: "", barcode: "", name: "", description: "",
@@ -271,9 +272,9 @@ export default function ProductForm() {
       const faltantes = [];
       if (form.initial_stock === "" || form.initial_stock == null) faltantes.push("el stock inicial");
       if (form.min_stock === "" || form.min_stock == null) faltantes.push("el stock mínimo");
-      if (faltantes.length && !window.confirm(
+      if (faltantes.length && !(await dialog.confirm(
         `No ingresaste ${faltantes.join(" ni ")}. Se guardará en 0.\n\n¿Guardar el producto de todos modos?`
-      )) return;
+      ))) return;
     }
     setBusy(true); setErrors({});
     const payload = { ...form };

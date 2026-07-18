@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
+import { dialog } from "../../components/Dialog";
 
 const SYSTEM = ["admin", "vendedor", "almacenista"];
 
@@ -25,9 +26,9 @@ export default function Roles() {
   };
 
   const remove = async (id) => {
-    if (!confirm("¿Eliminar rol?")) return;
+    if (!(await dialog.confirm("¿Eliminar rol?", { danger: true }))) return;
     try { await api.delete(`/roles/${id}/`); load(); }
-    catch (err) { alert(err.response?.data?.detail || "No se pudo eliminar."); }
+    catch (err) { await dialog.alert(err.response?.data?.detail || "No se pudo eliminar."); }
   };
 
   const toggle = (code) => setEditing((e) => ({

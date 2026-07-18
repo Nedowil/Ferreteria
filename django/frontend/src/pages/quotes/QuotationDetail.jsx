@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import logo from "../../assets/logo.jpg";
+import { dialog } from "../../components/Dialog";
 
 const BADGE = {
   vigente: "bg-blue-100 text-blue-700", aceptada: "bg-green-100 text-green-700",
@@ -26,7 +27,7 @@ export default function QuotationDetail() {
   useEffect(() => { api.get("/company-settings/").then((r) => setCompany(r.data)).catch(() => {}); }, []);
 
   const cancel = async () => {
-    if (!confirm("¿Cancelar esta cotización?")) return;
+    if (!(await dialog.confirm("¿Cancelar esta cotización?", { danger: true }))) return;
     setError("");
     try { await api.post(`/quotations/${id}/cancel/`, {}); load(); }
     catch (err) { setError(err.response?.data?.detail || "Error"); }
@@ -34,7 +35,7 @@ export default function QuotationDetail() {
 
   const convert = async (e) => {
     e.preventDefault(); setError("");
-    if (!confirm("¿Convertir en venta? Se descontará stock y se registrará en caja.")) return;
+    if (!(await dialog.confirm("¿Convertir en venta? Se descontará stock y se registrará en caja."))) return;
     try {
       const payload = pay.credit
         ? { payment_method: "credito", payment_status: "al_credito", paid_amount: pay.paid_amount || 0 }
@@ -45,9 +46,9 @@ export default function QuotationDetail() {
   };
 
   // --- Impresión / PDF -------------------------------------------------------
-  const printQuote = () => {
+  const printQuote = async () => {
     const win = window.open("", "_blank", "width=800,height=900");
-    if (!win) { alert("Permití las ventanas emergentes para imprimir."); return; }
+    if (!win) { await dialog.alert("Permití las ventanas emergentes para imprimir."); return; }
     const logoUrl = new URL(logo, window.location.origin).href;
     win.document.write(quoteHtml(q, company, logoUrl));
     win.document.close();

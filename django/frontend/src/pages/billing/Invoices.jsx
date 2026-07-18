@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { exportToExcel } from "../../utils/exportExcel";
+import { dialog } from "../../components/Dialog";
 
 const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -104,7 +105,7 @@ export default function Invoices() {
   };
 
   const annul = async (inv) => {
-    const reason = prompt("Motivo de anulación:");
+    const reason = await dialog.prompt("Motivo de anulación:");
     if (!reason) return;
     setErr("");
     try {

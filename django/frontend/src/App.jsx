@@ -2,6 +2,7 @@ import { Component, lazy, Suspense } from "react";
 import { Routes, Route, Navigate, Link, useLocation } from "react-router-dom";
 import { useAuth } from "./auth/AuthContext";
 import Layout from "./components/Layout";
+import { DialogHost } from "./components/Dialog";
 import Login from "./pages/Login"; // eager: es la puerta de entrada
 
 // Code-splitting: cada pantalla se carga en su propio "chunk" solo cuando se
@@ -136,6 +137,7 @@ function Protected({ children, perm }) {
 export default function App() {
   return (
     <Suspense fallback={<Loading />}>
+    <DialogHost />
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/recuperar-contrasena" element={<ForgotPassword />} />

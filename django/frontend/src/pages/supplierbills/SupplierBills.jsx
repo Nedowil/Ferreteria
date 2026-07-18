@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
+import { dialog } from "../../components/Dialog";
 
 const METHODS = [
   ["efectivo", "Efectivo"], ["cheque", "Cheque"], ["transferencia", "Transferencia"],
@@ -46,26 +47,26 @@ export default function SupplierBills() {
 
   // --- Fondo de proveedores -------------------------------------------------
   const openFund = async () => {
-    const v = prompt("¿Con cuánto abrís el fondo de proveedores? (ej. 5000)");
+    const v = await dialog.prompt("¿Con cuánto abrís el fondo de proveedores? (ej. 5000)");
     if (v === null) return;
     const amount = Number(v);
-    if (!amount || amount <= 0) { alert("Monto inválido."); return; }
+    if (!amount || amount <= 0) { await dialog.alert("Monto inválido."); return; }
     try { await api.post("/supplier-fund/open/", { opening_amount: amount }); loadFund(); }
-    catch (e) { alert(e.response?.data?.detail || "No se pudo abrir el fondo."); }
+    catch (e) { await dialog.alert(e.response?.data?.detail || "No se pudo abrir el fondo."); }
   };
   const addFund = async () => {
-    const v = prompt("¿Cuánto agregás al fondo?");
+    const v = await dialog.prompt("¿Cuánto agregás al fondo?");
     if (v === null) return;
     const amount = Number(v);
-    if (!amount || amount <= 0) { alert("Monto inválido."); return; }
+    if (!amount || amount <= 0) { await dialog.alert("Monto inválido."); return; }
     try { await api.post("/supplier-fund/add/", { amount }); loadFund(); }
-    catch (e) { alert(e.response?.data?.detail || "No se pudo agregar."); }
+    catch (e) { await dialog.alert(e.response?.data?.detail || "No se pudo agregar."); }
   };
   const closeFund = async () => {
-    if (!confirm("¿Cerrar el fondo de proveedores? Ya no se podrán registrar pagos en efectivo hasta abrir otro.")) return;
-    const notes = prompt("Nota de cierre (opcional):") || "";
+    if (!(await dialog.confirm("¿Cerrar el fondo de proveedores? Ya no se podrán registrar pagos en efectivo hasta abrir otro."))) return;
+    const notes = await dialog.prompt("Nota de cierre (opcional):") || "";
     try { await api.post("/supplier-fund/close/", { notes }); loadFund(); }
-    catch (e) { alert(e.response?.data?.detail || "No se pudo cerrar."); }
+    catch (e) { await dialog.alert(e.response?.data?.detail || "No se pudo cerrar."); }
   };
 
   const set = (k, v) => setForm({ ...form, [k]: v });
@@ -93,7 +94,7 @@ export default function SupplierBills() {
   };
 
   const remove = async (b) => {
-    if (!confirm(`¿Eliminar el registro de "${b.supplier_name}" por ${Q(b.amount)}?`)) return;
+    if (!(await dialog.confirm(`¿Eliminar el registro de "${b.supplier_name}" por ${Q(b.amount)}?`, { danger: true }))) return;
     await api.delete(`/supplier-bills/${b.id}/`); load();
   };
 

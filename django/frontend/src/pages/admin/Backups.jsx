@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
+import { dialog } from "../../components/Dialog";
 
 const fmtDate = (epoch) => new Date(epoch * 1000).toLocaleString();
 
@@ -35,7 +36,7 @@ export default function Backups() {
   };
 
   const remove = async (filename) => {
-    if (!confirm(`¿Eliminar el respaldo ${filename}?`)) return;
+    if (!(await dialog.confirm(`¿Eliminar el respaldo ${filename}?`, { danger: true }))) return;
     await api.delete(`/backups/${filename}/`);
     load();
   };
