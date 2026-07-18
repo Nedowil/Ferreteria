@@ -272,10 +272,10 @@ export default function POS() {
     return out;
   })();
   const [saleDate, setSaleDate] = useState(todayStr);
+  // Solo la factura electrónica (FEL) obliga a que la fecha esté dentro de los
+  // últimos 5 días (regla de la SAT). Un recibo sin FEL admite cualquier fecha,
+  // pasada o futura (el negocio a veces factura con fecha anterior o adelantada).
   const felDateInvalid = wantFel && (saleDate < minFelDate || saleDate > todayStr);
-  // Cualquier venta (con o sin FEL): la fecha no puede ser futura ni de más de
-  // 5 días atrás, para no "esconder" ventas con fechas viejas por error.
-  const saleDateInvalid = !!saleDate && (saleDate < minFelDate || saleDate > todayStr);
   // Vista del catálogo: "list" (por defecto) o "grid" (con imágenes). Se recuerda.
   const [catalogView, setCatalogView] = useState(() => localStorage.getItem("pos_catalog_view") || "list");
   const setView = (v) => { setCatalogView(v); localStorage.setItem("pos_catalog_view", v); };
@@ -523,10 +523,6 @@ export default function POS() {
       return;
     }
     if (credit && !customerId) { setError("Una venta al crédito requiere cliente."); return; }
-    if (saleDateInvalid) {
-      setError("La fecha de la venta debe ser hoy o de los últimos 5 días. Corregí la fecha (botón 'usar hoy').");
-      return;
-    }
     if (felDateInvalid) {
       setError("La factura electrónica solo se puede emitir con fecha dentro de los últimos 5 días (regla de la SAT). Cambiá la fecha o usá 'Recibo'.");
       return;
@@ -836,16 +832,11 @@ export default function POS() {
           <div>
             <label className="block text-sm font-medium mb-1">Fecha de la venta</label>
             <input type="date" value={saleDate} onChange={(e) => setSaleDate(e.target.value)}
-                   max={todayStr} min={minFelDate}
+                   max={wantFel ? todayStr : undefined} min={wantFel ? minFelDate : undefined}
                    className={"w-full border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 " +
-                     (felDateInvalid || saleDateInvalid ? "border-red-400 bg-red-50 text-red-700"
+                     (felDateInvalid ? "border-red-400 bg-red-50 text-red-700"
                         : saleDate !== todayStr ? "border-amber-400 bg-amber-50 text-amber-800" : "border-slate-300 dark:border-slate-600")} />
-            {saleDateInvalid ? (
-              <div className="text-xs text-red-600 mt-1 flex items-center justify-between">
-                <span>⚠️ La fecha debe ser hoy o de los últimos 5 días.</span>
-                <button type="button" onClick={() => setSaleDate(todayStr)} className="underline">usar hoy</button>
-              </div>
-            ) : felDateInvalid ? (
+            {felDateInvalid ? (
               <div className="text-xs text-red-600 mt-1 flex items-center justify-between">
                 <span>⚠️ La factura electrónica solo admite los últimos 5 días.</span>
                 <button type="button" onClick={() => setSaleDate(todayStr)} className="underline">usar hoy</button>
@@ -988,7 +979,7 @@ export default function POS() {
             </div>
           )}
 
-          <button disabled={busy || cart.length === 0 || felDateInvalid || saleDateInvalid || (!credit && cashOpen === false)} onClick={checkout}
+          <button disabled={busy || cart.length === 0 || felDateInvalid || (!credit && cashOpen === false)} onClick={checkout}
                   className="w-full bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-lg py-3 font-semibold text-lg shadow-lg shadow-green-600/20 hover:from-emerald-600 hover:to-green-700 disabled:opacity-50 transition">
             {busy ? "Procesando…" : (!credit && cashOpen === false) ? "Caja cerrada — abrí la caja" : "Cobrar"}
           </button>
