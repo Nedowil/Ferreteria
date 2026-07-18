@@ -53,6 +53,41 @@ export default function StockCount() {
     }
   };
 
+  // Valores derivados de un producto, compartidos por la tabla (escritorio) y las tarjetas (móvil).
+  const derive = (p) => {
+    const base = p.base_unit_label || "unidad";
+    const factor = Number(p.container_factor) || 0;
+    const hasContainer = Boolean(p.container_label && factor > 0);
+    const sys = Number(p.branch_stock ?? p.stock);
+    const val = counts[p.id];
+    const has = val !== "" && val !== undefined;
+    const addedBase = has ? round2(toBase(p, val)) : null;
+    const result = addedBase === null ? null : (mode === "add" ? round2(sys + addedBase) : addedBase);
+    return { base, factor, hasContainer, sys, val, has, addedBase, result };
+  };
+  const countInput = (p, d) => (
+    <input type="number" step="any" min="0" value={d.val ?? ""} placeholder="0"
+           onChange={(e) => setCounts({ ...counts, [p.id]: e.target.value })}
+           className="border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-24 text-right" />
+  );
+  const unitControl = (p, d) => (d.hasContainer ? (
+    <select value={units[p.id] || "base"} onChange={(e) => setUnits({ ...units, [p.id]: e.target.value })}
+            className="border border-slate-300 dark:border-slate-600 rounded-lg px-1 py-1 text-xs outline-none focus:ring-2 focus:ring-blue-500">
+      <option value="base">{d.base}</option>
+      <option value="container">{p.container_label}</option>
+    </select>
+  ) : (
+    <span className="text-xs text-slate-400 w-12 text-left">{d.base}</span>
+  ));
+  const resultBlock = (d) => (d.result === null ? <span className="text-slate-300">—</span> : (
+    <div className="text-right">
+      <div className="font-semibold text-slate-800 dark:text-slate-100">{d.result} {d.base}</div>
+      <div className={"text-[11px] " + (d.result - d.sys > 0 ? "text-green-600" : d.result - d.sys < 0 ? "text-red-600" : "text-slate-400")}>
+        {d.result - d.sys > 0 ? "+" : ""}{round2(d.result - d.sys)} vs sistema
+      </div>
+    </div>
+  ));
+
   return (
     <div>
       <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 mb-1">🔢 Conteo físico</h1>
@@ -75,21 +110,24 @@ export default function StockCount() {
         </label>
       </div>
 
-      <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex gap-2 items-end">
+      <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex flex-col sm:flex-row gap-2 sm:items-end">
         <input placeholder="Nombre, SKU o código" value={search} onChange={(e) => setSearch(e.target.value)}
-               className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-64" />
-        <button className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition">Buscar</button>
+               className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64" />
+        <button className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition w-full sm:w-auto">Buscar</button>
       </form>
 
       <form onSubmit={submit}>
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex items-center gap-4">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
           <input placeholder="Motivo (opcional)" value={reason} onChange={(e) => setReason(e.target.value)}
-                 className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 flex-1" />
-          <span className="text-sm text-slate-500 dark:text-slate-400">Con cambios: <b>{changed.length}</b></span>
-          <button disabled={busy || !changed.length} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-5 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition disabled:opacity-50">Aplicar conteo</button>
+                 className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-full sm:flex-1" />
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">Con cambios: <b>{changed.length}</b></span>
+            <button disabled={busy || !changed.length} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-5 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition disabled:opacity-50 whitespace-nowrap">Aplicar conteo</button>
+          </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+        {/* Escritorio: tabla. Móvil: tarjetas (más abajo). */}
+        <div className="hidden md:block bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
           <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
@@ -100,54 +138,28 @@ export default function StockCount() {
             </thead>
             <tbody>
               {products.map((p) => {
-                const base = p.base_unit_label || "unidad";
-                const factor = Number(p.container_factor) || 0;
-                const hasContainer = Boolean(p.container_label && factor > 0);
-                const sys = Number(p.branch_stock ?? p.stock);
-                const val = counts[p.id];
-                const has = val !== "" && val !== undefined;
-                const addedBase = has ? round2(toBase(p, val)) : null;
-                const result = addedBase === null ? null : (mode === "add" ? round2(sys + addedBase) : addedBase);
+                const d = derive(p);
                 return (
                   <tr key={p.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 transition">
                     <td className="px-4 py-2 font-mono text-xs text-slate-500 dark:text-slate-400">{p.sku}</td>
                     <td className="px-4 py-2">
                       <div className="font-medium text-slate-800 dark:text-slate-100">{p.name}</div>
-                      <div className="text-xs text-slate-400">base: {base}{hasContainer ? ` · 1 ${p.container_label} = ${factor} ${base}` : ""}</div>
+                      <div className="text-xs text-slate-400">base: {d.base}{d.hasContainer ? ` · 1 ${p.container_label} = ${d.factor} ${d.base}` : ""}</div>
                     </td>
                     <td className="px-4 py-2 text-right text-slate-500 dark:text-slate-400">
-                      <div>{p.branch_stock ?? p.stock} {base}</div>
+                      <div>{p.branch_stock ?? p.stock} {d.base}</div>
                       {p.stock_display && <div className="text-xs text-slate-400">{p.stock_display}</div>}
                     </td>
                     <td className="px-4 py-2 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <input type="number" step="any" min="0" value={val ?? ""} placeholder="0"
-                               onChange={(e) => setCounts({ ...counts, [p.id]: e.target.value })}
-                               className="border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-24 text-right" />
-                        {hasContainer ? (
-                          <select value={units[p.id] || "base"} onChange={(e) => setUnits({ ...units, [p.id]: e.target.value })}
-                                  className="border border-slate-300 dark:border-slate-600 rounded-lg px-1 py-1 text-xs outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="base">{base}</option>
-                            <option value="container">{p.container_label}</option>
-                          </select>
-                        ) : (
-                          <span className="text-xs text-slate-400 w-12 text-left">{base}</span>
-                        )}
+                        {countInput(p, d)}
+                        {unitControl(p, d)}
                       </div>
-                      {has && units[p.id] === "container" && (
-                        <div className="text-[11px] text-slate-400 mt-0.5">= {addedBase} {base}</div>
+                      {d.has && units[p.id] === "container" && (
+                        <div className="text-[11px] text-slate-400 mt-0.5">= {d.addedBase} {d.base}</div>
                       )}
                     </td>
-                    <td className="px-4 py-2 text-right">
-                      {result === null ? <span className="text-slate-300">—</span> : (
-                        <div>
-                          <div className="font-semibold text-slate-800 dark:text-slate-100">{result} {base}</div>
-                          <div className={"text-[11px] " + (result - sys > 0 ? "text-green-600" : result - sys < 0 ? "text-red-600" : "text-slate-400")}>
-                            {result - sys > 0 ? "+" : ""}{round2(result - sys)} vs sistema
-                          </div>
-                        </div>
-                      )}
-                    </td>
+                    <td className="px-4 py-2 text-right">{resultBlock(d)}</td>
                   </tr>
                 );
               })}
@@ -155,6 +167,44 @@ export default function StockCount() {
             </tbody>
           </table>
           </div>
+        </div>
+
+        {/* Móvil: tarjetas */}
+        <div className="md:hidden space-y-3">
+          {products.map((p) => {
+            const d = derive(p);
+            return (
+              <div key={p.id} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="font-medium text-slate-800 dark:text-slate-100 break-words">{p.name}</div>
+                    <div className="font-mono text-xs text-slate-400">{p.sku}</div>
+                    <div className="text-xs text-slate-400 mt-0.5">base: {d.base}{d.hasContainer ? ` · 1 ${p.container_label} = ${d.factor} ${d.base}` : ""}</div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="text-[11px] text-slate-400 uppercase">Sistema</div>
+                    <div className="text-sm text-slate-600 dark:text-slate-300">{p.branch_stock ?? p.stock} {d.base}</div>
+                    {p.stock_display && <div className="text-[11px] text-slate-400">{p.stock_display}</div>}
+                  </div>
+                </div>
+                <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
+                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">{mode === "add" ? "Encontrado" : "Conteo físico"}</label>
+                  <div className="flex items-center gap-2">
+                    {countInput(p, d)}
+                    {unitControl(p, d)}
+                  </div>
+                  {d.has && units[p.id] === "container" && (
+                    <div className="text-[11px] text-slate-400 mt-1">= {d.addedBase} {d.base}</div>
+                  )}
+                </div>
+                <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Resultado</span>
+                  {resultBlock(d)}
+                </div>
+              </div>
+            );
+          })}
+          {products.length === 0 && <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 px-5 py-10 text-center text-slate-400">Sin productos.</div>}
         </div>
       </form>
     </div>
