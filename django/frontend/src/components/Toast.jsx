@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-// Avisos "toast": mensajes que aparecen abajo a la derecha y se van solos.
+// Avisos "toast": mensajes que aparecen arriba al centro y se van solos.
 //   toast.success("Guardado");  toast.error("No se pudo…");  toast.info("…")
 let addFn = null;
 let counter = 0;
@@ -28,10 +28,10 @@ export function ToastHost() {
   }, []);
 
   return (
-    <div className="fixed z-[110] bottom-4 right-4 left-4 sm:left-auto flex flex-col gap-2 items-end pointer-events-none">
+    <div className="fixed z-[110] top-4 left-1/2 -translate-x-1/2 flex flex-col gap-2 items-center pointer-events-none w-full max-w-sm px-4 sm:px-0">
       {items.map((t) => (
         <div key={t.id}
-             className={"pointer-events-auto max-w-sm w-full sm:w-auto text-white rounded-xl shadow-lg px-4 py-3 text-sm font-medium flex items-center gap-2 " + (STYLE[t.type] || STYLE.info)}>
+             className={"pointer-events-auto max-w-sm w-full text-white rounded-xl shadow-lg px-4 py-3 text-sm font-medium flex items-center gap-2 animate-[toastIn_0.2s_ease-out] " + (STYLE[t.type] || STYLE.info)}>
           <span className="text-base leading-none">{ICON[t.type] || ICON.info}</span>
           <span className="flex-1">{t.message}</span>
         </div>
