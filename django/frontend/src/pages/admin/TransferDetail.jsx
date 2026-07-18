@@ -21,10 +21,10 @@ export default function TransferDetail() {
     setError("");
     let body = {};
     if (action === "cancel") {
-      const reason = await dialog.prompt("Motivo de la cancelación:");
+      const reason = await dialog.prompt("Escribí el motivo de la cancelación:", "", { title: "Cancelar transferencia", okText: "Cancelar transferencia" });
       if (reason === null) return;
       body = { reason };
-    } else if (!(await dialog.confirm(`¿Confirmás ${action === "send" ? "enviar (descuenta stock de origen)" : "recibir (suma stock a destino)"}?`))) return;
+    } else if (!(await dialog.confirm(`¿Estás seguro de que deseas ${action === "send" ? "enviar esta transferencia (descuenta stock de origen)" : "recibir esta transferencia (suma stock a destino)"}?`, { okText: action === "send" ? "Enviar" : "Recibir" }))) return;
     try { await api.post(`/transfers/${id}/${action}/`, body); load(); }
     catch (err) { setError(err.response?.data?.detail || "Error"); }
   };

@@ -47,7 +47,7 @@ export default function SupplierBills() {
 
   // --- Fondo de proveedores -------------------------------------------------
   const openFund = async () => {
-    const v = await dialog.prompt("¿Con cuánto abrís el fondo de proveedores? (ej. 5000)");
+    const v = await dialog.prompt("¿Con cuánto abrís el fondo de proveedores? (ej. 5000)", "", { title: "Abrir fondo de proveedores", okText: "Abrir" });
     if (v === null) return;
     const amount = Number(v);
     if (!amount || amount <= 0) { await dialog.alert("Monto inválido."); return; }
@@ -55,7 +55,7 @@ export default function SupplierBills() {
     catch (e) { await dialog.alert(e.response?.data?.detail || "No se pudo abrir el fondo."); }
   };
   const addFund = async () => {
-    const v = await dialog.prompt("¿Cuánto agregás al fondo?");
+    const v = await dialog.prompt("¿Cuánto agregás al fondo?", "", { title: "Agregar fondos", okText: "Agregar" });
     if (v === null) return;
     const amount = Number(v);
     if (!amount || amount <= 0) { await dialog.alert("Monto inválido."); return; }
@@ -63,8 +63,8 @@ export default function SupplierBills() {
     catch (e) { await dialog.alert(e.response?.data?.detail || "No se pudo agregar."); }
   };
   const closeFund = async () => {
-    if (!(await dialog.confirm("¿Cerrar el fondo de proveedores? Ya no se podrán registrar pagos en efectivo hasta abrir otro."))) return;
-    const notes = await dialog.prompt("Nota de cierre (opcional):") || "";
+    if (!(await dialog.confirm("¿Estás seguro de que deseas cerrar el fondo de proveedores? Ya no se podrán registrar pagos en efectivo hasta abrir otro.", { danger: true, okText: "Cerrar fondo" }))) return;
+    const notes = await dialog.prompt("Nota de cierre (opcional):", "", { title: "Cerrar fondo" }) || "";
     try { await api.post("/supplier-fund/close/", { notes }); loadFund(); }
     catch (e) { await dialog.alert(e.response?.data?.detail || "No se pudo cerrar."); }
   };

@@ -33,7 +33,7 @@ export default function StockCount() {
     e.preventDefault();
     if (!changed.length) return;
     const verbo = mode === "add" ? "sumar lo encontrado" : "fijar la existencia";
-    if (!(await dialog.confirm(`Vas a ${verbo} en ${changed.length} producto(s). ¿Confirmás?`))) return;
+    if (!(await dialog.confirm(`¿Estás seguro de que deseas ${verbo} en ${changed.length} producto(s)?`, { okText: "Aplicar" }))) return;
     setBusy(true);
     try {
       const payload = {

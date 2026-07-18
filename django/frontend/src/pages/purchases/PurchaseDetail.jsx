@@ -23,7 +23,7 @@ export default function PurchaseDetail() {
 
   const act = async (action) => {
     const labels = { receive: "recibir esta compra (generará entradas de inventario)", cancel: "cancelar esta compra" };
-    if (!(await dialog.confirm(`¿Confirmás ${labels[action]}?`))) return;
+    if (!(await dialog.confirm(`¿Estás seguro de que deseas ${labels[action]}?`, { danger: action === "cancel", okText: action === "receive" ? "Recibir compra" : "Sí, cancelar" }))) return;
     setError("");
     try { await api.post(`/purchases/${id}/${action}/`, {}); load(); }
     catch (err) { setError(err.response?.data?.detail || "Error"); }

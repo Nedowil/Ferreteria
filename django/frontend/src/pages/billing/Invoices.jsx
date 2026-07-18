@@ -105,7 +105,7 @@ export default function Invoices() {
   };
 
   const annul = async (inv) => {
-    const reason = await dialog.prompt("Motivo de anulación:");
+    const reason = await dialog.prompt("Escribí el motivo de la anulación:", "", { title: "Anular factura", okText: "Anular" });
     if (!reason) return;
     setErr("");
     try {

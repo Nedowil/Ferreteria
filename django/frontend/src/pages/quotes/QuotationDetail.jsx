@@ -35,7 +35,7 @@ export default function QuotationDetail() {
 
   const convert = async (e) => {
     e.preventDefault(); setError("");
-    if (!(await dialog.confirm("¿Convertir en venta? Se descontará stock y se registrará en caja."))) return;
+    if (!(await dialog.confirm("¿Estás seguro de que deseas convertir esta cotización en venta? Se descontará stock y se registrará en caja.", { okText: "Convertir" }))) return;
     try {
       const payload = pay.credit
         ? { payment_method: "credito", payment_status: "al_credito", paid_amount: pay.paid_amount || 0 }

@@ -273,7 +273,8 @@ export default function ProductForm() {
       if (form.initial_stock === "" || form.initial_stock == null) faltantes.push("el stock inicial");
       if (form.min_stock === "" || form.min_stock == null) faltantes.push("el stock mínimo");
       if (faltantes.length && !(await dialog.confirm(
-        `No ingresaste ${faltantes.join(" ni ")}. Se guardará en 0.\n\n¿Guardar el producto de todos modos?`
+        `No ingresaste ${faltantes.join(" ni ")}. Se guardará en 0.\n\n¿Guardar el producto de todos modos?`,
+        { okText: "Guardar" }
       ))) return;
     }
     setBusy(true); setErrors({});
