@@ -40,21 +40,21 @@ export default function SupplierPayments() {
       {/* Filtro por rango de fechas */}
       <DateRangeBar from={from} setFrom={setFrom} to={to} setTo={setTo} onApply={loadReport} />
       {d.rango && (
-        <div className="bg-white rounded-lg shadow p-5 mb-6">
-          <div className="text-sm font-semibold text-slate-600 mb-3">
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-5 mb-6">
+          <div className="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-3">
             Rango seleccionado ({d.rango.count} pago{d.rango.count === 1 ? "" : "s"})
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
-            <div className="border border-slate-100 rounded-lg p-4">
-              <div className="text-sm text-slate-500">Pagado en efectivo</div>
+            <div className="border border-slate-100 dark:border-slate-700 rounded-lg p-4">
+              <div className="text-sm text-slate-500 dark:text-slate-400">Pagado en efectivo</div>
               <div className="text-2xl font-bold text-emerald-700">{Q(d.rango.efectivo)}</div>
             </div>
-            <div className="border border-slate-100 rounded-lg p-4">
-              <div className="text-sm text-slate-500">Total (todas las formas)</div>
-              <div className="text-2xl font-bold text-slate-800">{Q(d.rango.total)}</div>
+            <div className="border border-slate-100 dark:border-slate-700 rounded-lg p-4">
+              <div className="text-sm text-slate-500 dark:text-slate-400">Total (todas las formas)</div>
+              <div className="text-2xl font-bold text-slate-800 dark:text-slate-100">{Q(d.rango.total)}</div>
             </div>
           </div>
-          <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-600">
+          <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-600 dark:text-slate-300">
             {d.rango.by_method.filter((m) => Number(m.total) > 0).map((m) => (
               <span key={m.method}>{m.method_display}: <b>{Q(m.total)}</b></span>
             ))}
@@ -63,7 +63,7 @@ export default function SupplierPayments() {
       )}
 
       {/* Pagado en EFECTIVO */}
-      <div className="text-sm font-semibold text-slate-600 mb-2">Pagado en efectivo</div>
+      <div className="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-2">Pagado en efectivo</div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
         <KpiCard label="Hoy" value={Q(d.efectivo.hoy)} accent="text-emerald-700" />
         <KpiCard label="Este mes" value={Q(d.efectivo.mes)} accent="text-emerald-700" />
@@ -71,7 +71,7 @@ export default function SupplierPayments() {
       </div>
 
       {/* Total (todas las formas de pago) */}
-      <div className="text-sm font-semibold text-slate-600 mb-2">Total pagado (todas las formas)</div>
+      <div className="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-2">Total pagado (todas las formas)</div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <KpiCard label="Hoy" value={Q(d.total.hoy)} />
         <KpiCard label="Este mes" value={Q(d.total.mes)} />
@@ -79,11 +79,11 @@ export default function SupplierPayments() {
       </div>
 
       {/* Desglose por forma de pago (este año) */}
-      <div className="bg-white rounded-lg shadow overflow-hidden mb-6">
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden mb-6">
         <div className="px-5 py-3 border-b font-semibold text-sm">Por forma de pago (este año)</div>
         <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-slate-500 text-left"><tr><th className="px-4 py-2">Forma de pago</th><th className="px-4 py-2 text-right">Total</th></tr></thead>
+          <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-left"><tr><th className="px-4 py-2">Forma de pago</th><th className="px-4 py-2 text-right">Total</th></tr></thead>
           <tbody>
             {d.by_method_year.filter((m) => Number(m.total) > 0).map((m) => (
               <tr key={m.method} className="border-t"><td className="px-4 py-2">{m.method_display}</td><td className="px-4 py-2 text-right font-semibold">{Q(m.total)}</td></tr>
@@ -97,14 +97,14 @@ export default function SupplierPayments() {
       </div>
 
       {/* Historial de fondos */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
         <div className="px-5 py-3 border-b font-semibold text-sm flex items-center justify-between">
           <span>Historial de fondos (abiertos / cerrados)</span>
           <ExcelButton onClick={exportFunds} disabled={!d.funds || !d.funds.length} />
         </div>
         <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-slate-500 text-left">
+          <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-left">
             <tr>
               <th className="px-4 py-2">Abierto</th><th className="px-4 py-2">Cerrado</th><th className="px-4 py-2">Estado</th>
               <th className="px-4 py-2 text-right">Inicial</th><th className="px-4 py-2 text-right">Aportes</th>
@@ -114,16 +114,16 @@ export default function SupplierPayments() {
           <tbody>
             {(d.funds || []).map((f) => (
               <tr key={f.id} className="border-t">
-                <td className="px-4 py-2 text-slate-500">{dt(f.opened_at)}</td>
-                <td className="px-4 py-2 text-slate-500">{f.closed_at ? dt(f.closed_at) : "—"}</td>
+                <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{dt(f.opened_at)}</td>
+                <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{f.closed_at ? dt(f.closed_at) : "—"}</td>
                 <td className="px-4 py-2">
-                  <span className={"text-xs px-2 py-0.5 rounded " + (f.status === "abierto" ? "bg-green-100 text-green-700" : "bg-slate-200 text-slate-500")}>{f.status_display}</span>
+                  <span className={"text-xs px-2 py-0.5 rounded " + (f.status === "abierto" ? "bg-green-100 text-green-700" : "bg-slate-200 text-slate-500 dark:text-slate-400")}>{f.status_display}</span>
                 </td>
                 <td className="px-4 py-2 text-right">{Q(f.opening_amount)}</td>
                 <td className="px-4 py-2 text-right">{Q(f.added_amount)}</td>
                 <td className="px-4 py-2 text-right text-red-600">{Q(f.spent)}</td>
                 <td className="px-4 py-2 text-right font-semibold">{Q(f.balance)}</td>
-                <td className="px-4 py-2 text-slate-500">{f.opened_by_name || "—"}</td>
+                <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{f.opened_by_name || "—"}</td>
               </tr>
             ))}
             {(!d.funds || d.funds.length === 0) && <tr><td colSpan="8" className="px-5 py-6 text-center text-slate-400">Sin fondos registrados.</td></tr>}

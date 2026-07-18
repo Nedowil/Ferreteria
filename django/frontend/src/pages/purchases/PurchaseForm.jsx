@@ -65,11 +65,11 @@ export default function PurchaseForm() {
       <h1 className="text-lg font-semibold">Nueva compra</h1>
       {error && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm">{error}</div>}
 
-      <section className="bg-white rounded-lg shadow p-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <section className="bg-white dark:bg-slate-800 rounded-lg shadow p-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Proveedor</label>
           <select value={header.supplier_id} onChange={(e) => setHeader({ ...header, supplier_id: e.target.value })}
-                  className="w-full border border-slate-300 rounded px-3 py-2 text-sm">
+                  className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm">
             <option value="">— Selecciona —</option>
             {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
@@ -77,17 +77,17 @@ export default function PurchaseForm() {
         <div>
           <label className="block text-sm font-medium mb-1">Fecha</label>
           <input type="date" value={header.date} onChange={(e) => setHeader({ ...header, date: e.target.value })}
-                 className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
+                 className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Nº factura</label>
           <input value={header.invoice_number} onChange={(e) => setHeader({ ...header, invoice_number: e.target.value })}
-                 className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
+                 className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Forma de pago</label>
           <select value={header.payment_status} onChange={(e) => setHeader({ ...header, payment_status: e.target.value })}
-                  className="w-full border border-slate-300 rounded px-3 py-2 text-sm">
+                  className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm">
             <option value="pagada">Pagada</option>
             <option value="al_credito">Al crédito</option>
           </select>
@@ -96,18 +96,18 @@ export default function PurchaseForm() {
           <div>
             <label className="block text-sm font-medium mb-1">Vence</label>
             <input type="date" value={header.due_date} onChange={(e) => setHeader({ ...header, due_date: e.target.value })}
-                   className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
+                   className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
           </div>
         )}
       </section>
 
-      <section className="bg-white rounded-lg shadow p-5">
+      <section className="bg-white dark:bg-slate-800 rounded-lg shadow p-5">
         <h3 className="font-semibold mb-3">Partidas</h3>
         <div className="relative mb-3">
           <input placeholder="Buscar producto por nombre, SKU o código…" value={search} onChange={(e) => doSearch(e.target.value)}
-                 className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
+                 className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
           {results.length > 0 && (
-            <div className="absolute z-10 bg-white border rounded shadow w-full mt-1 max-h-60 overflow-auto">
+            <div className="absolute z-10 bg-white dark:bg-slate-800 border rounded shadow w-full mt-1 max-h-60 overflow-auto">
               {results.map((p) => (
                 <button type="button" key={p.id} onClick={() => addItem(p)} className="block w-full text-left px-3 py-2 hover:bg-slate-100 text-sm">
                   <span className="font-mono text-xs text-slate-400">{p.sku}</span> {p.name} — Q{p.purchase_price ?? p.sale_price}
@@ -118,7 +118,7 @@ export default function PurchaseForm() {
         </div>
         <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="text-slate-500 text-left">
+          <thead className="text-slate-500 dark:text-slate-400 text-left">
             <tr><th className="py-1">Producto</th><th className="py-1 w-24 text-right">Cantidad</th>
                 <th className="py-1 w-28 text-right">Costo unit.</th><th className="py-1 w-24">IVA</th>
                 <th className="py-1 w-28 text-right">Subtotal</th><th></th></tr>
@@ -127,10 +127,10 @@ export default function PurchaseForm() {
             {items.map((it, idx) => (
               <tr key={idx} className="border-t">
                 <td className="py-2"><div className="font-medium">{it.name}</div><div className="text-xs font-mono text-slate-400">{it.sku}</div></td>
-                <td className="py-2"><input type="number" step="any" value={it.quantity} onChange={(e) => updateItem(idx, "quantity", e.target.value)} className="border border-slate-300 rounded px-2 py-1 text-sm w-24 text-right" /></td>
-                <td className="py-2"><input type="number" step="any" value={it.unit_cost} onChange={(e) => updateItem(idx, "unit_cost", e.target.value)} className="border border-slate-300 rounded px-2 py-1 text-sm w-28 text-right" /></td>
+                <td className="py-2"><input type="number" step="any" value={it.quantity} onChange={(e) => updateItem(idx, "quantity", e.target.value)} className="border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm w-24 text-right" /></td>
+                <td className="py-2"><input type="number" step="any" value={it.unit_cost} onChange={(e) => updateItem(idx, "unit_cost", e.target.value)} className="border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm w-28 text-right" /></td>
                 <td className="py-2">
-                  <select value={it.tax_type} onChange={(e) => updateItem(idx, "tax_type", e.target.value)} className="border border-slate-300 rounded px-1 py-1 text-sm">
+                  <select value={it.tax_type} onChange={(e) => updateItem(idx, "tax_type", e.target.value)} className="border border-slate-300 dark:border-slate-600 rounded px-1 py-1 text-sm">
                     <option value="iva">IVA</option><option value="exento">Exento</option>
                   </select>
                 </td>
@@ -144,8 +144,8 @@ export default function PurchaseForm() {
         </div>
         <div className="flex justify-end mt-4">
           <div className="w-64 text-sm space-y-1">
-            <div className="flex justify-between"><span className="text-slate-500">Subtotal</span><span>Q{subtotal.toFixed(2)}</span></div>
-            <div className="flex justify-between"><span className="text-slate-500">IVA (12%)</span><span>Q{tax.toFixed(2)}</span></div>
+            <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">Subtotal</span><span>Q{subtotal.toFixed(2)}</span></div>
+            <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">IVA (12%)</span><span>Q{tax.toFixed(2)}</span></div>
             <div className="flex justify-between font-semibold text-base border-t pt-1"><span>Total</span><span>Q{total.toFixed(2)}</span></div>
           </div>
         </div>
@@ -153,7 +153,7 @@ export default function PurchaseForm() {
 
       <div className="flex gap-2">
         <button disabled={busy} className="bg-blue-600 text-white rounded px-6 py-2 font-medium disabled:opacity-50">{busy ? "Guardando…" : "Guardar compra"}</button>
-        <button type="button" onClick={() => navigate("/compras")} className="px-6 py-2 text-slate-500">Cancelar</button>
+        <button type="button" onClick={() => navigate("/compras")} className="px-6 py-2 text-slate-500 dark:text-slate-400">Cancelar</button>
       </div>
     </form>
   );

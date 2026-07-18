@@ -20,10 +20,10 @@ export default function ReportsIndex() {
       <h1 className="text-lg font-semibold mb-4">Reportes</h1>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {REPORTS.map(([slug, title, desc, icon]) => (
-          <Link key={slug} to={`/reportes/${slug}`} className="bg-white rounded-lg shadow p-5 hover:shadow-md transition">
+          <Link key={slug} to={`/reportes/${slug}`} className="bg-white dark:bg-slate-800 rounded-lg shadow p-5 hover:shadow-md transition">
             <div className="text-2xl">{icon}</div>
             <div className="font-semibold mt-2">{title}</div>
-            <div className="text-sm text-slate-500 mt-1">{desc}</div>
+            <div className="text-sm text-slate-500 dark:text-slate-400 mt-1">{desc}</div>
           </Link>
         ))}
       </div>

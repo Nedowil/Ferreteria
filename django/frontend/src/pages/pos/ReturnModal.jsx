@@ -75,7 +75,7 @@ export default function ReturnModal({ onClose, initialFolio = "" }) {
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-5 py-4 flex items-center justify-between">
           <div className="text-lg font-bold">↩️ Devolución</div>
           <button onClick={onClose} className="text-white/80 hover:text-white text-xl leading-none">×</button>
@@ -84,13 +84,13 @@ export default function ReturnModal({ onClose, initialFolio = "" }) {
         {done ? (
           <div className="p-6 text-center space-y-4">
             <div className="text-5xl">✓</div>
-            <div className="text-lg font-bold text-slate-800">Devolución procesada</div>
+            <div className="text-lg font-bold text-slate-800 dark:text-slate-100">Devolución procesada</div>
             <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
               <div className="text-xs text-amber-700 uppercase tracking-wide">Reembolso</div>
               <div className="text-3xl font-extrabold text-amber-700">{Q(done.total ?? done.refund_total ?? refundTotal)}</div>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => navigate(`/devoluciones/${done.id}`)} className="flex-1 border border-slate-300 text-slate-700 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 transition">Ver devolución</button>
+              <button onClick={() => navigate(`/devoluciones/${done.id}`)} className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 transition">Ver devolución</button>
               <button onClick={onClose} className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg py-2.5 text-sm font-semibold shadow hover:from-blue-700 hover:to-indigo-700 transition">Cerrar</button>
             </div>
           </div>
@@ -101,14 +101,14 @@ export default function ReturnModal({ onClose, initialFolio = "" }) {
             <form onSubmit={find} className="flex gap-2">
               <input ref={folioRef} value={folio} onChange={(e) => setFolio(e.target.value)}
                      placeholder="Folio de la venta (ej. V-000001)"
-                     className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-amber-500" />
+                     className="flex-1 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-amber-500" />
               <button type="submit" className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition">Buscar</button>
             </form>
 
             {sale && (
               <>
-                <div className="border border-slate-200 rounded-xl overflow-hidden">
-                  <div className="px-4 py-2 bg-slate-50 border-b border-slate-100 text-sm font-semibold text-slate-700">
+                <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+                  <div className="px-4 py-2 bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-700 text-sm font-semibold text-slate-700 dark:text-slate-200">
                     {sale.folio} — {sale.customer_name || "Consumidor final"}
                   </div>
                   <table className="w-full text-sm">
@@ -118,8 +118,8 @@ export default function ReturnModal({ onClose, initialFolio = "" }) {
                     </thead>
                     <tbody>
                       {sale.items.map((it) => (
-                        <tr key={it.id} className="border-t border-slate-100">
-                          <td className="px-3 py-2"><div className="font-medium text-slate-800">{it.product_name}</div>
+                        <tr key={it.id} className="border-t border-slate-100 dark:border-slate-700">
+                          <td className="px-3 py-2"><div className="font-medium text-slate-800 dark:text-slate-100">{it.product_name}</div>
                             <div className="text-xs font-mono text-slate-400">{it.product_sku}</div></td>
                           <td className="px-3 py-2 text-right">{it.quantity}</td>
                           <td className="px-3 py-2 text-right">{Q(netPrice(it))}</td>
@@ -127,7 +127,7 @@ export default function ReturnModal({ onClose, initialFolio = "" }) {
                             <input type="number" step="any" min="0" max={it.quantity} value={qtys[it.id] || ""}
                                    onChange={(e) => setQty(it, e.target.value)}
                                    placeholder="0"
-                                   className="border border-slate-300 rounded-lg px-2 py-1 text-sm w-24 text-right outline-none focus:ring-2 focus:ring-amber-500" />
+                                   className="border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1 text-sm w-24 text-right outline-none focus:ring-2 focus:ring-amber-500" />
                             <div className="text-[10px] text-slate-400 mt-0.5">máx {Number(it.quantity)}</div>
                           </td>
                         </tr>
@@ -140,7 +140,7 @@ export default function ReturnModal({ onClose, initialFolio = "" }) {
                   <div>
                     <label className="block text-sm font-medium mb-1">Motivo</label>
                     <select value={reasonType} onChange={(e) => setReasonType(e.target.value)}
-                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-amber-500">
+                            className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-amber-500">
                       <option value="equivocacion">Equivocación</option><option value="defectuoso">Defectuoso</option>
                       <option value="no_satisfecho">No satisfecho</option><option value="otro">Otro</option>
                     </select>
@@ -148,7 +148,7 @@ export default function ReturnModal({ onClose, initialFolio = "" }) {
                   <div>
                     <label className="block text-sm font-medium mb-1">Reembolso</label>
                     <select value={refund} onChange={(e) => setRefund(e.target.value)}
-                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-amber-500">
+                            className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-amber-500">
                       <option value="efectivo">Efectivo</option><option value="tarjeta">Tarjeta</option>
                       <option value="transferencia">Transferencia</option><option value="credito_nota">Nota de crédito</option>
                     </select>
@@ -156,12 +156,12 @@ export default function ReturnModal({ onClose, initialFolio = "" }) {
                   <div className="col-span-2">
                     <label className="block text-sm font-medium mb-1">Detalle (opcional)</label>
                     <input value={reason} onChange={(e) => setReason(e.target.value)}
-                           className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-amber-500" />
+                           className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-amber-500" />
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <div className="text-sm text-slate-500">Reembolso: <span className="font-bold text-slate-800">{Q(refundTotal)}</span></div>
+                  <div className="text-sm text-slate-500 dark:text-slate-400">Reembolso: <span className="font-bold text-slate-800 dark:text-slate-100">{Q(refundTotal)}</span></div>
                   <button disabled={busy || refundTotal <= 0} onClick={submit}
                           className="bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg px-6 py-2.5 text-sm font-semibold shadow hover:from-amber-600 hover:to-orange-600 disabled:opacity-50 transition">
                     {busy ? "Procesando…" : "Procesar devolución"}
@@ -171,7 +171,7 @@ export default function ReturnModal({ onClose, initialFolio = "" }) {
             )}
 
             <div className="text-center pt-1">
-              <button onClick={() => navigate("/devoluciones/nueva")} className="text-xs text-slate-500 hover:text-amber-600">
+              <button onClick={() => navigate("/devoluciones/nueva")} className="text-xs text-slate-500 dark:text-slate-400 hover:text-amber-600">
                 Más opciones (por producto / sin ticket) →
               </button>
             </div>

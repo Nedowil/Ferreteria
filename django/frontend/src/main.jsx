@@ -5,6 +5,12 @@ import { AuthProvider } from "./auth/AuthContext";
 import App from "./App";
 import "./index.css";
 
+// Aplica el tema (claro/oscuro) guardado antes de renderizar, para evitar
+// el parpadeo al cargar.
+if (localStorage.getItem("fz_theme") === "dark") {
+  document.documentElement.classList.add("dark");
+}
+
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>

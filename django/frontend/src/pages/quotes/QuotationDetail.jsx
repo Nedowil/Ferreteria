@@ -7,8 +7,8 @@ import { dialog } from "../../components/Dialog";
 
 const BADGE = {
   vigente: "bg-blue-100 text-blue-700", aceptada: "bg-green-100 text-green-700",
-  expirada: "bg-amber-100 text-amber-700", convertida: "bg-slate-200 text-slate-600",
-  cancelada: "bg-slate-200 text-slate-500",
+  expirada: "bg-amber-100 text-amber-700", convertida: "bg-slate-200 text-slate-600 dark:text-slate-300",
+  cancelada: "bg-slate-200 text-slate-500 dark:text-slate-400",
 };
 
 const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -75,7 +75,7 @@ export default function QuotationDetail() {
         <h1 className="text-lg font-semibold">Cotización {q.folio}
           <span className={"ml-3 text-xs px-2 py-0.5 rounded align-middle " + BADGE[q.status]}>{q.status_display}</span>
         </h1>
-        <button onClick={() => navigate("/cotizaciones")} className="inline-flex items-center gap-1 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg px-4 py-2 shadow-sm hover:bg-slate-50 hover:border-slate-400 transition">← Volver</button>
+        <button onClick={() => navigate("/cotizaciones")} className="inline-flex items-center gap-1 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2 shadow-sm hover:bg-slate-50 hover:border-slate-400 transition">← Volver</button>
       </div>
       {error && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm mb-4">{error}</div>}
 
@@ -94,17 +94,17 @@ export default function QuotationDetail() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2 space-y-5">
-          <section className="bg-white rounded-lg shadow p-5 text-sm grid grid-cols-2 gap-2">
-            <div><span className="text-slate-500">Cliente:</span> <b>{q.customer_name || "Sin cliente"}</b></div>
-            <div><span className="text-slate-500">Fecha:</span> {q.date}</div>
-            <div><span className="text-slate-500">Vence:</span> {q.valid_until || "—"}</div>
-            {q.converted_sale && <div><span className="text-slate-500">Venta:</span> <button onClick={() => navigate(`/ventas/${q.converted_sale}`)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white border border-slate-300 text-slate-700 hover:bg-slate-50">ver venta</button></div>}
+          <section className="bg-white dark:bg-slate-800 rounded-lg shadow p-5 text-sm grid grid-cols-2 gap-2">
+            <div><span className="text-slate-500 dark:text-slate-400">Cliente:</span> <b>{q.customer_name || "Sin cliente"}</b></div>
+            <div><span className="text-slate-500 dark:text-slate-400">Fecha:</span> {q.date}</div>
+            <div><span className="text-slate-500 dark:text-slate-400">Vence:</span> {q.valid_until || "—"}</div>
+            {q.converted_sale && <div><span className="text-slate-500 dark:text-slate-400">Venta:</span> <button onClick={() => navigate(`/ventas/${q.converted_sale}`)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50">ver venta</button></div>}
           </section>
-          <section className="bg-white rounded-lg shadow overflow-hidden">
+          <section className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
             <div className="px-5 py-3 border-b font-semibold">Partidas</div>
             <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-slate-500 text-left"><tr><th className="px-4 py-2">Producto</th><th className="px-4 py-2 text-right">Cant.</th><th className="px-4 py-2 text-right">Precio</th><th className="px-4 py-2 text-right">Importe</th></tr></thead>
+              <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-left"><tr><th className="px-4 py-2">Producto</th><th className="px-4 py-2 text-right">Cant.</th><th className="px-4 py-2 text-right">Precio</th><th className="px-4 py-2 text-right">Importe</th></tr></thead>
               <tbody>
                 {q.items.map((it) => (
                   <tr key={it.id} className="border-t"><td className="px-4 py-2"><span className="font-mono text-xs text-slate-400">{it.product_sku}</span> {it.product_name}{it.unit_label ? ` (${it.unit_label})` : ""}</td>
@@ -112,8 +112,8 @@ export default function QuotationDetail() {
                 ))}
               </tbody>
               <tfoot className="text-sm">
-                <tr className="border-t"><td colSpan="3" className="px-4 py-1 text-right text-slate-500">Subtotal</td><td className="px-4 py-1 text-right">Q{q.subtotal}</td></tr>
-                <tr><td colSpan="3" className="px-4 py-1 text-right text-slate-500">IVA</td><td className="px-4 py-1 text-right">Q{q.tax}</td></tr>
+                <tr className="border-t"><td colSpan="3" className="px-4 py-1 text-right text-slate-500 dark:text-slate-400">Subtotal</td><td className="px-4 py-1 text-right">Q{q.subtotal}</td></tr>
+                <tr><td colSpan="3" className="px-4 py-1 text-right text-slate-500 dark:text-slate-400">IVA</td><td className="px-4 py-1 text-right">Q{q.tax}</td></tr>
                 <tr className="font-semibold"><td colSpan="3" className="px-4 py-1 text-right">Total</td><td className="px-4 py-1 text-right">Q{q.total}</td></tr>
               </tfoot>
             </table>
@@ -123,21 +123,21 @@ export default function QuotationDetail() {
 
         <div className="space-y-5">
           {canConvert && can("cotizaciones.convertir") && (
-            <form onSubmit={convert} className="bg-white rounded-lg shadow p-5 space-y-3">
+            <form onSubmit={convert} className="bg-white dark:bg-slate-800 rounded-lg shadow p-5 space-y-3">
               <h3 className="font-semibold">Convertir en venta</h3>
               <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={pay.credit} onChange={(e) => setPay({ ...pay, credit: e.target.checked })} /> Al crédito</label>
               {!pay.credit && (
-                <select value={pay.payment_method} onChange={(e) => setPay({ ...pay, payment_method: e.target.value })} className="w-full border border-slate-300 rounded px-3 py-2 text-sm">
+                <select value={pay.payment_method} onChange={(e) => setPay({ ...pay, payment_method: e.target.value })} className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm">
                   <option value="efectivo">Efectivo</option><option value="tarjeta">Tarjeta</option><option value="transferencia">Transferencia</option>
                 </select>
               )}
               <input type="number" step="any" placeholder={pay.credit ? "Abono inicial (opcional)" : `Recibido (${q.total})`} value={pay.paid_amount}
-                     onChange={(e) => setPay({ ...pay, paid_amount: e.target.value })} className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
+                     onChange={(e) => setPay({ ...pay, paid_amount: e.target.value })} className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
               <button className="w-full bg-green-600 text-white rounded px-4 py-2 text-sm font-medium">Convertir</button>
             </form>
           )}
           {q.status === "vigente" && can("cotizaciones.cancelar") && (
-            <section className="bg-white rounded-lg shadow p-5">
+            <section className="bg-white dark:bg-slate-800 rounded-lg shadow p-5">
               <button onClick={cancel} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-red-600 hover:bg-red-700 text-white">Cancelar cotización</button>
             </section>
           )}

@@ -24,6 +24,13 @@ const Section = ({ title }) => (
 export default function Layout({ children }) {
   const { user, branches, currentBranchId, setBranch, logout, can } = useAuth();
   const [open, setOpen] = useState(false); // cajón del menú en móvil
+  const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
+  const toggleTheme = () => {
+    const next = !dark;
+    setDark(next);
+    document.documentElement.classList.toggle("dark", next);
+    localStorage.setItem("fz_theme", next ? "dark" : "light");
+  };
   const showVentas = can("ventas.crear") || can("ventas.ver") || can("caja.ver")
     || can("cotizaciones.ver") || can("facturas.ver") || can("devoluciones.ver")
     || can("cuentas_cobrar.ver");
@@ -35,7 +42,7 @@ export default function Layout({ children }) {
   const initial = (user?.name || user?.email || "U").charAt(0).toUpperCase();
 
   return (
-    <div className="min-h-screen flex bg-slate-50">
+    <div className="min-h-screen flex bg-slate-50 dark:bg-slate-900">
       {/* Fondo oscuro al abrir el menú en móvil */}
       {open && <div onClick={() => setOpen(false)} className="fixed inset-0 bg-black/40 z-30 lg:hidden" aria-hidden="true" />}
 
@@ -129,25 +136,29 @@ export default function Layout({ children }) {
       </aside>
 
       <div className="flex-1 lg:ml-60 flex flex-col min-h-screen min-w-0">
-        <header className="bg-white/80 backdrop-blur border-b border-slate-200 px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-20">
+        <header className="bg-white/80 dark:bg-slate-800/80 backdrop-blur border-b border-slate-200 dark:border-slate-700 px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-20">
           <div className="flex items-center gap-3 min-w-0">
             <button onClick={() => setOpen(true)} aria-label="Abrir menú"
-                    className="lg:hidden text-slate-600 hover:text-slate-900 border border-slate-200 rounded-lg px-2.5 py-1.5 text-lg leading-none">☰</button>
+                    className="lg:hidden text-slate-600 dark:text-slate-300 hover:text-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg px-2.5 py-1.5 text-lg leading-none">☰</button>
             <span className="hidden sm:inline text-sm text-slate-400">Sistema de gestión</span>
-            <span className="sm:hidden font-semibold text-slate-700 truncate">Ferretería Central</span>
+            <span className="sm:hidden font-semibold text-slate-700 dark:text-slate-200 truncate">Ferretería Central</span>
           </div>
           <div className="flex items-center gap-3">
             {branches.length > 0 && (
               <div className="flex items-center gap-1.5 text-sm">
                 <span className="text-slate-400">🏢</span>
                 <select value={currentBranchId || ""} onChange={(e) => setBranch(e.target.value)}
-                        className="text-sm border border-slate-300 rounded-lg px-2 py-1.5 bg-white outline-none focus:ring-2 focus:ring-blue-500">
+                        className="text-sm border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1.5 bg-white dark:bg-slate-700 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500">
                   {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
                 </select>
               </div>
             )}
+            <button onClick={toggleTheme} title={dark ? "Modo claro" : "Modo oscuro"} aria-label="Cambiar tema"
+                    className="text-lg leading-none border border-slate-200 dark:border-slate-600 rounded-lg px-2.5 py-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+              {dark ? "☀️" : "🌙"}
+            </button>
             <button onClick={logout}
-                    className="text-sm text-slate-600 hover:text-white hover:bg-red-500 border border-slate-200 hover:border-red-500 rounded-lg px-3 py-1.5 transition">
+                    className="text-sm text-slate-600 dark:text-slate-300 hover:text-white hover:bg-red-500 border border-slate-200 dark:border-slate-600 hover:border-red-500 rounded-lg px-3 py-1.5 transition">
               Salir
             </button>
           </div>

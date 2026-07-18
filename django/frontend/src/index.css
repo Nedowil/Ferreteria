@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Modo oscuro: color base del fondo y del texto. */
+html.dark body { background-color: #0f172a; color: #e2e8f0; }
+
 /* Ocultar las flechitas (spinners) de los campos numéricos en toda la app. */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {

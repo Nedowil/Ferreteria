@@ -21,11 +21,11 @@ export default function SalesReport() {
             <KpiCard label="Ticket promedio" value={Q(data.avg_ticket)} />
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
               <div className="px-5 py-3 border-b font-semibold">Por día</div>
               <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-slate-50 text-slate-500 text-left"><tr><th className="px-4 py-2">Día</th><th className="px-4 py-2 text-right">Ventas</th><th className="px-4 py-2 text-right">Total</th></tr></thead>
+                <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-left"><tr><th className="px-4 py-2">Día</th><th className="px-4 py-2 text-right">Ventas</th><th className="px-4 py-2 text-right">Total</th></tr></thead>
                 <tbody>
                   {data.by_day.filter((d) => d.count > 0).map((d) => (
                     <tr key={d.day} className="border-t"><td className="px-4 py-2">{d.day}</td><td className="px-4 py-2 text-right">{d.count}</td><td className="px-4 py-2 text-right">{Q(d.total)}</td></tr>
@@ -35,11 +35,11 @@ export default function SalesReport() {
               </table>
               </div>
             </div>
-            <div className="bg-white rounded-lg shadow overflow-hidden h-fit">
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden h-fit">
               <div className="px-5 py-3 border-b font-semibold">Por método de pago</div>
               <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-slate-50 text-slate-500 text-left"><tr><th className="px-4 py-2">Método</th><th className="px-4 py-2 text-right">Ventas</th><th className="px-4 py-2 text-right">Total</th></tr></thead>
+                <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-left"><tr><th className="px-4 py-2">Método</th><th className="px-4 py-2 text-right">Ventas</th><th className="px-4 py-2 text-right">Total</th></tr></thead>
                 <tbody>
                   {data.by_payment_method.map((m) => (
                     <tr key={m.payment_method} className="border-t"><td className="px-4 py-2 capitalize">{m.payment_method}</td><td className="px-4 py-2 text-right">{m.count}</td><td className="px-4 py-2 text-right">{Q(m.total)}</td></tr>

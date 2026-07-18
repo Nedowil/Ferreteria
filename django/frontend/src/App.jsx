@@ -16,6 +16,7 @@ const StockCount = lazy(() => import("./pages/products/StockCount"));
 const CatalogList = lazy(() => import("./pages/catalogs/CatalogList"));
 const SupplierList = lazy(() => import("./pages/partners/SupplierList"));
 const CustomerList = lazy(() => import("./pages/partners/CustomerList"));
+const CustomerHistory = lazy(() => import("./pages/partners/CustomerHistory"));
 const PurchaseList = lazy(() => import("./pages/purchases/PurchaseList"));
 const PurchaseForm = lazy(() => import("./pages/purchases/PurchaseForm"));
 const PurchaseDetail = lazy(() => import("./pages/purchases/PurchaseDetail"));
@@ -156,6 +157,7 @@ export default function App() {
       <Route path="/unidades" element={<Protected perm="productos.ver"><CatalogList kind="units" /></Protected>} />
       <Route path="/proveedores" element={<Protected perm="proveedores.ver"><SupplierList /></Protected>} />
       <Route path="/clientes" element={<Protected perm="clientes.ver"><CustomerList /></Protected>} />
+      <Route path="/clientes/:id/historial" element={<Protected perm="clientes.ver"><CustomerHistory /></Protected>} />
       <Route path="/compras" element={<Protected perm="compras.ver"><PurchaseList /></Protected>} />
       <Route path="/compras/nueva" element={<Protected perm="compras.crear"><PurchaseForm /></Protected>} />
       <Route path="/compras/:id" element={<Protected perm="compras.ver"><PurchaseDetail /></Protected>} />

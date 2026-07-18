@@ -56,28 +56,28 @@ export default function PurchaseList() {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-        <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">📥 Compras</h1>
+        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">📥 Compras</h1>
         <div className="flex gap-2">
           <button onClick={exportExcel} disabled={exporting} className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-100 transition">{exporting ? "Exportando…" : "⬇️ Excel"}</button>
           {can("compras.crear") && <Link to="/compras/nueva" className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nueva compra</Link>}
         </div>
       </div>
-      <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 mb-4 flex flex-wrap gap-2 items-end">
+      <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex flex-wrap gap-2 items-end">
         <input placeholder="Folio, factura, proveedor…" value={search} onChange={(e) => setSearch(e.target.value)}
-               className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-64" />
-        <select value={status} onChange={(e) => setStatus(e.target.value)} className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+               className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-64" />
+        <select value={status} onChange={(e) => setStatus(e.target.value)} className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
           <option value="">Todos los estados</option>
           <option value="pendiente">Pendiente</option>
           <option value="recibida">Recibida</option>
           <option value="cancelada">Cancelada</option>
         </select>
-        <div><label className="block text-[11px] text-slate-500 mb-0.5">Desde</label>
-          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" /></div>
-        <div><label className="block text-[11px] text-slate-500 mb-0.5">Hasta</label>
-          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" /></div>
+        <div><label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">Desde</label>
+          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" /></div>
+        <div><label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">Hasta</label>
+          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" /></div>
         <button className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition">Buscar</button>
       </form>
-      <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
         <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
@@ -86,13 +86,13 @@ export default function PurchaseList() {
           </thead>
           <tbody>
             {data.results.map((p) => (
-              <tr key={p.id} className="border-t border-slate-100 hover:bg-slate-50/70 transition">
+              <tr key={p.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 transition">
                 <td className="px-4 py-2 font-mono text-xs">{p.folio}</td>
-                <td className="px-4 py-2 font-medium text-slate-800">{p.supplier_name}</td>
-                <td className="px-4 py-2 text-slate-500">{p.date}</td>
-                <td className="px-4 py-2 text-right font-semibold text-slate-700">Q{p.total}</td>
+                <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">{p.supplier_name}</td>
+                <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{p.date}</td>
+                <td className="px-4 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">Q{p.total}</td>
                 <td className="px-4 py-2"><span className={"inline-block rounded-full px-2 py-0.5 text-xs font-medium " + STATUS_BADGE[p.status]}>{p.status_display}</span></td>
-                <td className="px-4 py-2 text-xs text-slate-500">{p.payment_status_display}{Number(p.balance) > 0 && p.status === "recibida" ? ` · saldo Q${p.balance}` : ""}</td>
+                <td className="px-4 py-2 text-xs text-slate-500 dark:text-slate-400">{p.payment_status_display}{Number(p.balance) > 0 && p.status === "recibida" ? ` · saldo Q${p.balance}` : ""}</td>
                 <td className="px-4 py-2 text-right"><Link to={`/compras/${p.id}`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-slate-700 hover:bg-slate-800 text-white">Ver</Link></td>
               </tr>
             ))}

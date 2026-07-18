@@ -53,29 +53,29 @@ export default function ReturnDetail() {
     <div className="max-w-3xl">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-lg font-semibold">Devolución {r.folio}
-          <span className={"ml-3 text-xs px-2 py-0.5 rounded align-middle " + (r.status === "procesada" ? "bg-green-100 text-green-700" : "bg-slate-200 text-slate-500")}>{r.status_display}</span>
+          <span className={"ml-3 text-xs px-2 py-0.5 rounded align-middle " + (r.status === "procesada" ? "bg-green-100 text-green-700" : "bg-slate-200 text-slate-500 dark:text-slate-400")}>{r.status_display}</span>
         </h1>
         <div className="flex items-center gap-3">
           <button onClick={printReturn} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-slate-700 hover:bg-slate-800 text-white">🖨️ Imprimir comprobante</button>
-          <button onClick={() => navigate("/devoluciones")} className="inline-flex items-center gap-1 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg px-4 py-2 shadow-sm hover:bg-slate-50 hover:border-slate-400 transition">← Volver</button>
+          <button onClick={() => navigate("/devoluciones")} className="inline-flex items-center gap-1 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2 shadow-sm hover:bg-slate-50 hover:border-slate-400 transition">← Volver</button>
         </div>
       </div>
       {error && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm mb-4">{error}</div>}
 
-      <section className="bg-white rounded-lg shadow p-5 text-sm grid grid-cols-2 gap-2 mb-5">
-        <div><span className="text-slate-500">Venta origen:</span> {r.sale_folio || "Sin ticket"}</div>
-        <div><span className="text-slate-500">Cliente:</span> {r.customer_name || "—"}</div>
-        <div><span className="text-slate-500">Motivo:</span> {r.reason_display}</div>
-        <div><span className="text-slate-500">Reembolso:</span> {r.refund_method}</div>
-        <div><span className="text-slate-500">Fecha:</span> {new Date(r.date).toLocaleString()}</div>
-        {r.reason && <div className="col-span-2"><span className="text-slate-500">Detalle:</span> {r.reason}</div>}
+      <section className="bg-white dark:bg-slate-800 rounded-lg shadow p-5 text-sm grid grid-cols-2 gap-2 mb-5">
+        <div><span className="text-slate-500 dark:text-slate-400">Venta origen:</span> {r.sale_folio || "Sin ticket"}</div>
+        <div><span className="text-slate-500 dark:text-slate-400">Cliente:</span> {r.customer_name || "—"}</div>
+        <div><span className="text-slate-500 dark:text-slate-400">Motivo:</span> {r.reason_display}</div>
+        <div><span className="text-slate-500 dark:text-slate-400">Reembolso:</span> {r.refund_method}</div>
+        <div><span className="text-slate-500 dark:text-slate-400">Fecha:</span> {new Date(r.date).toLocaleString()}</div>
+        {r.reason && <div className="col-span-2"><span className="text-slate-500 dark:text-slate-400">Detalle:</span> {r.reason}</div>}
       </section>
 
-      <section className="bg-white rounded-lg shadow overflow-hidden">
+      <section className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
         <div className="px-5 py-3 border-b font-semibold">Productos devueltos</div>
         <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-slate-500 text-left"><tr><th className="px-4 py-2">Producto</th><th className="px-4 py-2 text-right">Cant.</th><th className="px-4 py-2 text-right">Precio</th><th className="px-4 py-2 text-right">Importe</th></tr></thead>
+          <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-left"><tr><th className="px-4 py-2">Producto</th><th className="px-4 py-2 text-right">Cant.</th><th className="px-4 py-2 text-right">Precio</th><th className="px-4 py-2 text-right">Importe</th></tr></thead>
           <tbody>
             {r.items.map((it) => (
               <tr key={it.id} className="border-t"><td className="px-4 py-2"><span className="font-mono text-xs text-slate-400">{it.product_sku}</span> {it.product_name}</td>
@@ -83,8 +83,8 @@ export default function ReturnDetail() {
             ))}
           </tbody>
           <tfoot className="text-sm">
-            <tr className="border-t"><td colSpan="3" className="px-4 py-1 text-right text-slate-500">Subtotal</td><td className="px-4 py-1 text-right">Q{r.subtotal}</td></tr>
-            <tr><td colSpan="3" className="px-4 py-1 text-right text-slate-500">IVA</td><td className="px-4 py-1 text-right">Q{r.tax}</td></tr>
+            <tr className="border-t"><td colSpan="3" className="px-4 py-1 text-right text-slate-500 dark:text-slate-400">Subtotal</td><td className="px-4 py-1 text-right">Q{r.subtotal}</td></tr>
+            <tr><td colSpan="3" className="px-4 py-1 text-right text-slate-500 dark:text-slate-400">IVA</td><td className="px-4 py-1 text-right">Q{r.tax}</td></tr>
             <tr className="font-semibold"><td colSpan="3" className="px-4 py-1 text-right">Total reembolsado</td><td className="px-4 py-1 text-right">Q{r.total}</td></tr>
           </tfoot>
         </table>

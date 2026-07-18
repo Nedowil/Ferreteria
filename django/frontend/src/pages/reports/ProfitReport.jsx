@@ -1,5 +1,6 @@
 import { Q, useDateReport, DateRangeBar, KpiCard, ExcelButton } from "./common";
 import { exportToExcel } from "../../utils/exportExcel";
+import { BarChart } from "../../components/Charts";
 
 export default function ProfitReport() {
   const { from, setFrom, to, setTo, data, reload } = useDateReport("/reports/profit/");
@@ -27,11 +28,17 @@ export default function ProfitReport() {
             <KpiCard label="Utilidad bruta" value={Q(data.total_profit)} accent="text-green-600" />
             <KpiCard label="Margen" value={Number(data.margin_pct).toFixed(1) + "%"} />
           </div>
-          <div className="bg-white rounded-lg shadow overflow-hidden">
+          {data.by_day && data.by_day.length > 0 && (
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-100 dark:border-slate-700 p-5 mb-5">
+              <h2 className="text-base font-bold text-slate-700 dark:text-slate-200 mb-3">📈 Utilidad por día</h2>
+              <BarChart data={data.by_day.map((d) => ({ value: d.profit, label: d.day, short: String(d.day).slice(8) }))} color="#16a34a" />
+            </div>
+          )}
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
             <div className="px-5 py-3 border-b font-semibold">Por producto</div>
             <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-slate-500 text-left">
+              <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-left">
                 <tr><th className="px-4 py-2">SKU</th><th className="px-4 py-2">Producto</th><th className="px-4 py-2 text-right">Cant.</th>
                     <th className="px-4 py-2 text-right">Ingreso</th><th className="px-4 py-2 text-right">Costo</th><th className="px-4 py-2 text-right">Utilidad</th><th className="px-4 py-2 text-right">Margen</th></tr>
               </thead>
@@ -44,7 +51,7 @@ export default function ProfitReport() {
                       <td className="px-4 py-2">{r.product__name}</td>
                       <td className="px-4 py-2 text-right">{r.total_quantity}</td>
                       <td className="px-4 py-2 text-right">{Q(r.total_revenue)}</td>
-                      <td className="px-4 py-2 text-right text-slate-500">{Q(r.total_cost)}</td>
+                      <td className="px-4 py-2 text-right text-slate-500 dark:text-slate-400">{Q(r.total_cost)}</td>
                       <td className={"px-4 py-2 text-right font-medium " + (r.gross_profit >= 0 ? "text-green-700" : "text-red-600")}>{Q(r.gross_profit)}</td>
                       <td className="px-4 py-2 text-right">{margin.toFixed(1)}%</td>
                     </tr>

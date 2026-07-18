@@ -119,34 +119,34 @@ export default function SupplierBills() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">🧾 Facturas de proveedor</h1>
-          <p className="text-sm text-slate-500">Control de facturas pagadas a proveedores. Los pagos en efectivo se descuentan del fondo.</p>
+          <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">🧾 Facturas de proveedor</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Control de facturas pagadas a proveedores. Los pagos en efectivo se descuentan del fondo.</p>
         </div>
         <button onClick={exportExcel} disabled={exporting} className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-100 transition">{exporting ? "Exportando…" : "⬇️ Excel"}</button>
       </div>
 
       {/* Fondo de proveedores (caja para pagos en efectivo) */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 mb-4">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4">
         {fund ? (
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-wrap gap-x-8 gap-y-2">
               <div><div className="text-[11px] uppercase tracking-wide text-slate-400">Fondo de proveedores</div><div className="font-semibold text-emerald-700">● Abierto</div></div>
-              <div><div className="text-[11px] uppercase tracking-wide text-slate-400">Inicial + aportes</div><div className="font-semibold text-slate-700">{Q(Number(fund.opening_amount) + Number(fund.added_amount))}</div></div>
+              <div><div className="text-[11px] uppercase tracking-wide text-slate-400">Inicial + aportes</div><div className="font-semibold text-slate-700 dark:text-slate-200">{Q(Number(fund.opening_amount) + Number(fund.added_amount))}</div></div>
               <div><div className="text-[11px] uppercase tracking-wide text-slate-400">Pagado</div><div className="font-semibold text-red-600">−{Q(fund.spent)}</div></div>
-              <div><div className="text-[11px] uppercase tracking-wide text-slate-400">Saldo disponible</div><div className="text-2xl font-bold text-slate-800">{Q(fund.balance)}</div></div>
+              <div><div className="text-[11px] uppercase tracking-wide text-slate-400">Saldo disponible</div><div className="text-2xl font-bold text-slate-800 dark:text-slate-100">{Q(fund.balance)}</div></div>
             </div>
             {canFund && (
               <div className="flex gap-2">
                 <button onClick={addFund} className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-3 py-2 text-sm font-medium hover:bg-emerald-100 transition">+ Agregar fondos</button>
-                <button onClick={closeFund} className="border border-slate-300 text-slate-600 rounded-lg px-3 py-2 text-sm font-medium hover:bg-slate-50 transition">Cerrar fondo</button>
+                <button onClick={closeFund} className="border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg px-3 py-2 text-sm font-medium hover:bg-slate-50 transition">Cerrar fondo</button>
               </div>
             )}
           </div>
         ) : (
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <div className="font-semibold text-slate-700">💵 Fondo de proveedores</div>
-              <div className="text-sm text-slate-500">No hay un fondo abierto. El admin lo abre con el dinero que deja para pagar facturas; cada pago en <b>efectivo</b> lo descuenta.</div>
+              <div className="font-semibold text-slate-700 dark:text-slate-200">💵 Fondo de proveedores</div>
+              <div className="text-sm text-slate-500 dark:text-slate-400">No hay un fondo abierto. El admin lo abre con el dinero que deja para pagar facturas; cada pago en <b>efectivo</b> lo descuenta.</div>
             </div>
             {canFund && <button onClick={openFund} className="bg-emerald-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:bg-emerald-700 transition">Abrir fondo</button>}
           </div>
@@ -155,37 +155,37 @@ export default function SupplierBills() {
 
       {/* Formulario de registro / edición */}
       {canEdit && (
-        <form onSubmit={submit} className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 mb-4">
+        <form onSubmit={submit} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-slate-700">{editing ? "Editar factura" : "Registrar factura pagada"}</h2>
-            {editing && <button type="button" onClick={cancelEdit} className="text-sm text-slate-500">Cancelar edición</button>}
+            <h2 className="font-semibold text-slate-700 dark:text-slate-200">{editing ? "Editar factura" : "Registrar factura pagada"}</h2>
+            {editing && <button type="button" onClick={cancelEdit} className="text-sm text-slate-500 dark:text-slate-400">Cancelar edición</button>}
           </div>
           {error && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm mb-3">{error}</div>}
           <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
             <div className="md:col-span-2">
-              <label className="block text-xs text-slate-500 mb-1">Proveedor *</label>
+              <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Proveedor *</label>
               <input required value={form.supplier_name} onChange={(e) => set("supplier_name", e.target.value)}
-                     placeholder="Nombre del proveedor" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                     placeholder="Nombre del proveedor" className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-xs text-slate-500 mb-1">N° factura</label>
+              <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">N° factura</label>
               <input value={form.invoice_number} onChange={(e) => set("invoice_number", e.target.value)}
-                     placeholder="opcional" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                     placeholder="opcional" className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-xs text-slate-500 mb-1">Total *</label>
+              <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Total *</label>
               <input required type="number" step="any" min="0" value={form.amount} onChange={(e) => set("amount", e.target.value)}
-                     placeholder="0.00" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm text-right outline-none focus:ring-2 focus:ring-blue-500" />
+                     placeholder="0.00" className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm text-right outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-xs text-slate-500 mb-1">Fecha de pago</label>
+              <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Fecha de pago</label>
               <input type="date" value={form.paid_on} onChange={(e) => set("paid_on", e.target.value)}
-                     className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                     className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-xs text-slate-500 mb-1">Forma de pago</label>
+              <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Forma de pago</label>
               <select value={form.payment_method} onChange={(e) => set("payment_method", e.target.value)}
-                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                      className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
                 {METHODS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
               {form.payment_method === "efectivo" && !fund && (
@@ -196,9 +196,9 @@ export default function SupplierBills() {
               )}
             </div>
             <div className="md:col-span-5">
-              <label className="block text-xs text-slate-500 mb-1">Nota</label>
+              <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Nota</label>
               <input value={form.notes} onChange={(e) => set("notes", e.target.value)}
-                     placeholder="opcional" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                     placeholder="opcional" className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div className="flex items-end">
               <button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">
@@ -210,25 +210,25 @@ export default function SupplierBills() {
       )}
 
       {/* Filtros */}
-      <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 mb-4 flex flex-wrap gap-2 items-end">
+      <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex flex-wrap gap-2 items-end">
         <input placeholder="Buscar proveedor" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-               className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-52" />
+               className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-52" />
         <select value={filters.method} onChange={(e) => setFilters({ ...filters, method: e.target.value })}
-                className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
           <option value="">Toda forma de pago</option>
           {METHODS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </select>
-        <input type="date" value={filters.from} onChange={(e) => setFilters({ ...filters, from: e.target.value })} className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
-        <input type="date" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+        <input type="date" value={filters.from} onChange={(e) => setFilters({ ...filters, from: e.target.value })} className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+        <input type="date" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
         <button className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition">Buscar</button>
         <div className="ml-auto text-right">
-          <div className="text-xs text-slate-500">{totals.count} factura(s)</div>
-          <div className="text-lg font-bold text-slate-800">Total: {Q(totals.total)}</div>
+          <div className="text-xs text-slate-500 dark:text-slate-400">{totals.count} factura(s)</div>
+          <div className="text-lg font-bold text-slate-800 dark:text-slate-100">Total: {Q(totals.total)}</div>
         </div>
       </form>
 
       {/* Tabla */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
         <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
@@ -241,13 +241,13 @@ export default function SupplierBills() {
           </thead>
           <tbody>
             {rows.map((b) => (
-              <tr key={b.id} className="border-t border-slate-100 hover:bg-slate-50/70 transition">
-                <td className="px-4 py-2 text-slate-500">{b.paid_on}</td>
-                <td className="px-4 py-2 font-medium text-slate-800">{b.supplier_name}</td>
-                <td className="px-4 py-2 font-mono text-xs text-slate-500">{b.invoice_number || "—"}</td>
-                <td className="px-4 py-2 text-slate-600">{b.payment_method_display}</td>
-                <td className="px-4 py-2 text-slate-500">{b.notes || ""}</td>
-                <td className="px-4 py-2 text-right font-semibold text-slate-700">{Q(b.amount)}</td>
+              <tr key={b.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 transition">
+                <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{b.paid_on}</td>
+                <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">{b.supplier_name}</td>
+                <td className="px-4 py-2 font-mono text-xs text-slate-500 dark:text-slate-400">{b.invoice_number || "—"}</td>
+                <td className="px-4 py-2 text-slate-600 dark:text-slate-300">{b.payment_method_display}</td>
+                <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{b.notes || ""}</td>
+                <td className="px-4 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">{Q(b.amount)}</td>
                 {canEdit && (
                   <td className="px-4 py-2 text-right whitespace-nowrap">
                     <div className="inline-flex flex-wrap gap-1.5 justify-end">

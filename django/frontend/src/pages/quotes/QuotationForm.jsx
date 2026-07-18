@@ -84,12 +84,12 @@ export default function QuotationForm() {
       <h1 className="text-lg font-semibold">Nueva cotización</h1>
       {error && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm">{error}</div>}
 
-      <section className="bg-white rounded-lg shadow p-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <section className="bg-white dark:bg-slate-800 rounded-lg shadow p-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Cliente</label>
           <div className="flex gap-2">
             <select value={header.customer_id} onChange={(e) => setHeader({ ...header, customer_id: e.target.value })}
-                    className="flex-1 border border-slate-300 rounded px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500">
+                    className="flex-1 border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500">
               <option value="">Sin cliente</option>
               {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
@@ -99,25 +99,25 @@ export default function QuotationForm() {
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Fecha</label>
-          <input type="date" value={header.date} onChange={(e) => setHeader({ ...header, date: e.target.value })} className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
+          <input type="date" value={header.date} onChange={(e) => setHeader({ ...header, date: e.target.value })} className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Válida hasta</label>
-          <input type="date" value={header.valid_until} onChange={(e) => setHeader({ ...header, valid_until: e.target.value })} className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
+          <input type="date" value={header.valid_until} onChange={(e) => setHeader({ ...header, valid_until: e.target.value })} className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
         </div>
       </section>
 
-      <section className="bg-white rounded-lg shadow p-5">
+      <section className="bg-white dark:bg-slate-800 rounded-lg shadow p-5">
         <h3 className="font-semibold mb-3">Productos</h3>
         <div className="flex gap-2 mb-3">
           <div className="relative flex-1">
           <input placeholder="Buscar producto…" value={search} onChange={(e) => doSearch(e.target.value)}
-                 className="w-full border border-slate-300 rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                 className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
           {results.length > 0 && (
-            <div className="absolute z-10 bg-white border rounded shadow w-full mt-1 max-h-60 overflow-auto">
+            <div className="absolute z-10 bg-white dark:bg-slate-800 border rounded shadow w-full mt-1 max-h-60 overflow-auto">
               {results.map((p) => measuresFor(p).map((m) => (
                 <button type="button" key={`${p.id}-${m.label}`} onClick={() => addItem(p, m)} className="block w-full text-left px-3 py-2 hover:bg-slate-100 text-sm">
-                  <span className="font-mono text-xs text-slate-400">{p.sku}</span> {p.name} <span className="text-slate-500">({m.label})</span> — Q{Number(m.price).toFixed(2)}
+                  <span className="font-mono text-xs text-slate-400">{p.sku}</span> {p.name} <span className="text-slate-500 dark:text-slate-400">({m.label})</span> — Q{Number(m.price).toFixed(2)}
                 </button>
               )))}
             </div>
@@ -128,7 +128,7 @@ export default function QuotationForm() {
         </div>
         <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="text-slate-500 text-left">
+          <thead className="text-slate-500 dark:text-slate-400 text-left">
             <tr><th className="py-1">Producto</th><th className="py-1 w-24 text-right">Cant.</th><th className="py-1 w-28 text-right">Precio</th>
                 <th className="py-1 w-24">IVA</th><th className="py-1 w-28 text-right">Importe</th><th></th></tr>
           </thead>
@@ -136,9 +136,9 @@ export default function QuotationForm() {
             {items.map((it, idx) => (
               <tr key={idx} className="border-t">
                 <td className="py-2"><div className="font-medium">{it.name}{it.unit_label ? ` (${it.unit_label})` : ""}</div><div className="text-xs font-mono text-slate-400">{it.sku}</div></td>
-                <td className="py-2"><input type="number" step="any" value={it.quantity} onChange={(e) => upd(idx, "quantity", e.target.value)} className="border border-slate-300 rounded px-2 py-1 text-sm w-24 text-right" /></td>
-                <td className="py-2"><input type="number" step="any" value={it.unit_price} onChange={(e) => upd(idx, "unit_price", e.target.value)} className="border border-slate-300 rounded px-2 py-1 text-sm w-28 text-right" /></td>
-                <td className="py-2"><select value={it.tax_type} onChange={(e) => upd(idx, "tax_type", e.target.value)} className="border border-slate-300 rounded px-1 py-1 text-sm"><option value="iva">IVA</option><option value="exento">Exento</option></select></td>
+                <td className="py-2"><input type="number" step="any" value={it.quantity} onChange={(e) => upd(idx, "quantity", e.target.value)} className="border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm w-24 text-right" /></td>
+                <td className="py-2"><input type="number" step="any" value={it.unit_price} onChange={(e) => upd(idx, "unit_price", e.target.value)} className="border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm w-28 text-right" /></td>
+                <td className="py-2"><select value={it.tax_type} onChange={(e) => upd(idx, "tax_type", e.target.value)} className="border border-slate-300 dark:border-slate-600 rounded px-1 py-1 text-sm"><option value="iva">IVA</option><option value="exento">Exento</option></select></td>
                 <td className="py-2 text-right">Q{(Number(it.quantity || 0) * Number(it.unit_price || 0)).toFixed(2)}</td>
                 <td className="py-2 text-right"><button type="button" onClick={() => rm(idx)} className="text-red-600 text-xs hover:underline">Quitar</button></td>
               </tr>
@@ -152,7 +152,7 @@ export default function QuotationForm() {
 
       <div className="flex gap-2">
         <button disabled={busy} className="bg-blue-600 text-white rounded px-6 py-2 font-medium disabled:opacity-50">{busy ? "Guardando…" : "Guardar cotización"}</button>
-        <button type="button" onClick={() => navigate("/cotizaciones")} className="px-6 py-2 text-slate-500">Cancelar</button>
+        <button type="button" onClick={() => navigate("/cotizaciones")} className="px-6 py-2 text-slate-500 dark:text-slate-400">Cancelar</button>
       </div>
 
       {addingCustomer && (

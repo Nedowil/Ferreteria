@@ -28,9 +28,9 @@ function RankingTable({ title, path, columns, filter }) {
       <DateRangeBar from={from} setFrom={setFrom} to={to} setTo={setTo} onApply={reload}>
         {filter && data && (
           <div>
-            <label className="block text-xs text-slate-500 mb-1">{filter.label}</label>
+            <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">{filter.label}</label>
             <select value={filterVal} onChange={(e) => setFilterVal(e.target.value)}
-                    className="border border-slate-300 rounded px-2 py-2 text-sm bg-white">
+                    className="border border-slate-300 dark:border-slate-600 rounded px-2 py-2 text-sm bg-white dark:bg-slate-800">
               <option value="">Todos</option>
               {options.map((o) => <option key={o} value={o}>{o}</option>)}
             </select>
@@ -38,10 +38,10 @@ function RankingTable({ title, path, columns, filter }) {
         )}
       </DateRangeBar>
       {data && (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
           <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-slate-500 text-left">
+            <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-left">
               <tr>{columns.map((c) => <th key={c.key} className={"px-4 py-2 " + (c.right ? "text-right" : "")}>{c.label}</th>)}</tr>
             </thead>
             <tbody>

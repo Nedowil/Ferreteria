@@ -55,16 +55,16 @@ export default function StockCount() {
 
   return (
     <div>
-      <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2 mb-1">🔢 Conteo físico</h1>
-      <p className="text-sm text-slate-500 mb-4">
+      <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 mb-1">🔢 Conteo físico</h1>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
         Contá en <b>unidad base</b> o en <b>empaque</b> (elegilo por producto). Elegí el modo:
         {" "}<b>Fijar</b> deja la existencia en lo que contaste; <b>Sumar</b> agrega lo que encontraste a lo que ya había.
         La columna <b>Resultado</b> muestra en cuánto quedará antes de aplicar.
       </p>
 
       {/* Modo del conteo */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 mb-4 flex flex-wrap items-center gap-4">
-        <span className="text-sm font-medium text-slate-600">Modo:</span>
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex flex-wrap items-center gap-4">
+        <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Modo:</span>
         <label className="flex items-center gap-2 text-sm cursor-pointer">
           <input type="radio" name="mode" checked={mode === "set"} onChange={() => setMode("set")} />
           <span><b>Fijar existencia</b> (recuento total)</span>
@@ -75,21 +75,21 @@ export default function StockCount() {
         </label>
       </div>
 
-      <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 mb-4 flex gap-2 items-end">
+      <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex gap-2 items-end">
         <input placeholder="Nombre, SKU o código" value={search} onChange={(e) => setSearch(e.target.value)}
-               className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-64" />
+               className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-64" />
         <button className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition">Buscar</button>
       </form>
 
       <form onSubmit={submit}>
-        <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 mb-4 flex items-center gap-4">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex items-center gap-4">
           <input placeholder="Motivo (opcional)" value={reason} onChange={(e) => setReason(e.target.value)}
-                 className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 flex-1" />
-          <span className="text-sm text-slate-500">Con cambios: <b>{changed.length}</b></span>
+                 className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 flex-1" />
+          <span className="text-sm text-slate-500 dark:text-slate-400">Con cambios: <b>{changed.length}</b></span>
           <button disabled={busy || !changed.length} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-5 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition disabled:opacity-50">Aplicar conteo</button>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
           <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
@@ -109,13 +109,13 @@ export default function StockCount() {
                 const addedBase = has ? round2(toBase(p, val)) : null;
                 const result = addedBase === null ? null : (mode === "add" ? round2(sys + addedBase) : addedBase);
                 return (
-                  <tr key={p.id} className="border-t border-slate-100 hover:bg-slate-50/70 transition">
-                    <td className="px-4 py-2 font-mono text-xs text-slate-500">{p.sku}</td>
+                  <tr key={p.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 transition">
+                    <td className="px-4 py-2 font-mono text-xs text-slate-500 dark:text-slate-400">{p.sku}</td>
                     <td className="px-4 py-2">
-                      <div className="font-medium text-slate-800">{p.name}</div>
+                      <div className="font-medium text-slate-800 dark:text-slate-100">{p.name}</div>
                       <div className="text-xs text-slate-400">base: {base}{hasContainer ? ` · 1 ${p.container_label} = ${factor} ${base}` : ""}</div>
                     </td>
-                    <td className="px-4 py-2 text-right text-slate-500">
+                    <td className="px-4 py-2 text-right text-slate-500 dark:text-slate-400">
                       <div>{p.branch_stock ?? p.stock} {base}</div>
                       {p.stock_display && <div className="text-xs text-slate-400">{p.stock_display}</div>}
                     </td>
@@ -123,10 +123,10 @@ export default function StockCount() {
                       <div className="flex items-center justify-end gap-1">
                         <input type="number" step="any" min="0" value={val ?? ""} placeholder="0"
                                onChange={(e) => setCounts({ ...counts, [p.id]: e.target.value })}
-                               className="border border-slate-300 rounded-lg px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-24 text-right" />
+                               className="border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-24 text-right" />
                         {hasContainer ? (
                           <select value={units[p.id] || "base"} onChange={(e) => setUnits({ ...units, [p.id]: e.target.value })}
-                                  className="border border-slate-300 rounded-lg px-1 py-1 text-xs outline-none focus:ring-2 focus:ring-blue-500">
+                                  className="border border-slate-300 dark:border-slate-600 rounded-lg px-1 py-1 text-xs outline-none focus:ring-2 focus:ring-blue-500">
                             <option value="base">{base}</option>
                             <option value="container">{p.container_label}</option>
                           </select>
@@ -141,7 +141,7 @@ export default function StockCount() {
                     <td className="px-4 py-2 text-right">
                       {result === null ? <span className="text-slate-300">—</span> : (
                         <div>
-                          <div className="font-semibold text-slate-800">{result} {base}</div>
+                          <div className="font-semibold text-slate-800 dark:text-slate-100">{result} {base}</div>
                           <div className={"text-[11px] " + (result - sys > 0 ? "text-green-600" : result - sys < 0 ? "text-red-600" : "text-slate-400")}>
                             {result - sys > 0 ? "+" : ""}{round2(result - sys)} vs sistema
                           </div>

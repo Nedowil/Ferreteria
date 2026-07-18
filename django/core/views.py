@@ -85,6 +85,45 @@ def dashboard(request):
             "label": f"{MESES[today.month - 1]} {today.year}",
         }
 
+        # --- Datos para las gráficas del tablero ---
+        import datetime
+        from django.db.models.functions import TruncDate
+        from sales.models import SaleItem
+
+        # Ventas de los últimos 14 días (relleno con ceros).
+        desde = today - datetime.timedelta(days=13)
+        por_dia = (Sale.objects
+                   .filter(status=Sale.STATUS_COMPLETADA, date__date__gte=desde, date__date__lte=today)
+                   .annotate(d=TruncDate("date")).values("d")
+                   .annotate(total=Sum("total")))
+        mapa = {r["d"]: float(r["total"] or 0) for r in por_dia}
+        data["ventas_ultimos_dias"] = [
+            {"day": (desde + datetime.timedelta(days=i)).isoformat(),
+             "total": mapa.get(desde + datetime.timedelta(days=i), 0.0)}
+            for i in range(14)
+        ]
+
+        # Mes anterior (para el comparativo).
+        primero = today.replace(day=1)
+        fin_ant = primero - datetime.timedelta(days=1)
+        mes_ant = Sale.objects.filter(
+            status=Sale.STATUS_COMPLETADA, date__year=fin_ant.year, date__month=fin_ant.month)
+        data["ventas_mes_anterior"] = {
+            "total": str(mes_ant.aggregate(t=Sum("total"))["t"] or 0),
+            "label": f"{MESES[fin_ant.month - 1]} {fin_ant.year}",
+        }
+
+        # Top 5 productos del mes (por ingreso).
+        top = (SaleItem.objects
+               .filter(sale__status=Sale.STATUS_COMPLETADA,
+                       sale__date__year=today.year, sale__date__month=today.month)
+               .values("product__name")
+               .annotate(total=Sum("subtotal"))
+               .order_by("-total")[:5])
+        data["top_productos"] = [
+            {"name": r["product__name"], "total": float(r["total"] or 0)} for r in top
+        ]
+
     if can("dashboard.productos_total"):
         data["productos_total"] = Product.objects.filter(active=True).count()
 

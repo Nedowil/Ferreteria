@@ -56,42 +56,42 @@ export default function QuotationList() {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-        <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">📝 Cotizaciones</h1>
+        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">📝 Cotizaciones</h1>
         <div className="flex gap-2">
           <button onClick={exportExcel} disabled={exporting} className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-100 transition">{exporting ? "Exportando…" : "⬇️ Excel"}</button>
           {can("cotizaciones.crear") && <Link to="/cotizaciones/nueva" className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nueva cotización</Link>}
         </div>
       </div>
-      <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 mb-4 flex flex-wrap gap-2 items-end">
+      <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex flex-wrap gap-2 items-end">
         <input placeholder="Folio o cliente" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-               className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-56" />
+               className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-56" />
         <select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
           <option value="">Todos</option>
           {Object.keys(BADGE).map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
-        <div><label className="block text-[11px] text-slate-500 mb-0.5">Desde</label>
-          <input type="date" value={filters.from} onChange={(e) => setFilters({ ...filters, from: e.target.value })} className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" /></div>
-        <div><label className="block text-[11px] text-slate-500 mb-0.5">Hasta</label>
-          <input type="date" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" /></div>
+        <div><label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">Desde</label>
+          <input type="date" value={filters.from} onChange={(e) => setFilters({ ...filters, from: e.target.value })} className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" /></div>
+        <div><label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">Hasta</label>
+          <input type="date" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" /></div>
         <button className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition">Buscar</button>
       </form>
-      <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
         {/* Móvil: tarjetas */}
-        <div className="md:hidden divide-y divide-slate-100">
+        <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-700">
           {data.results.map((q) => (
             <Link key={q.id} to={`/cotizaciones/${q.id}`} className="block p-4 active:bg-slate-50">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <div className="font-medium text-slate-800 break-words">{q.customer_name || "Sin cliente"}</div>
+                  <div className="font-medium text-slate-800 dark:text-slate-100 break-words">{q.customer_name || "Sin cliente"}</div>
                   <div className="text-xs text-slate-400 font-mono">{q.folio}</div>
                 </div>
                 <div className="text-right shrink-0">
-                  <div className="font-semibold text-slate-700">Q{q.total}</div>
+                  <div className="font-semibold text-slate-700 dark:text-slate-200">Q{q.total}</div>
                   <span className={"inline-block mt-0.5 rounded-full px-2 py-0.5 text-xs font-medium " + BADGE[q.status]}>{q.status_display}</span>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-slate-500">
+              <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-slate-500 dark:text-slate-400">
                 <span>Fecha: {q.date}</span>
                 <span>· Vence: {q.valid_until || "—"}</span>
               </div>
@@ -109,12 +109,12 @@ export default function QuotationList() {
           </thead>
           <tbody>
             {data.results.map((q) => (
-              <tr key={q.id} className="border-t border-slate-100 hover:bg-slate-50/70 transition">
+              <tr key={q.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 transition">
                 <td className="px-4 py-2 font-mono text-xs">{q.folio}</td>
-                <td className="px-4 py-2 font-medium text-slate-800">{q.customer_name || "Sin cliente"}</td>
-                <td className="px-4 py-2 text-slate-500">{q.date}</td>
-                <td className="px-4 py-2 text-slate-500">{q.valid_until || "—"}</td>
-                <td className="px-4 py-2 text-right font-semibold text-slate-700">Q{q.total}</td>
+                <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">{q.customer_name || "Sin cliente"}</td>
+                <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{q.date}</td>
+                <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{q.valid_until || "—"}</td>
+                <td className="px-4 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">Q{q.total}</td>
                 <td className="px-4 py-2"><span className={"inline-block rounded-full px-2 py-0.5 text-xs font-medium " + BADGE[q.status]}>{q.status_display}</span></td>
                 <td className="px-4 py-2 text-right"><Link to={`/cotizaciones/${q.id}`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-slate-700 hover:bg-slate-800 text-white">Ver</Link></td>
               </tr>

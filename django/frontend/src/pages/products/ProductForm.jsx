@@ -34,7 +34,7 @@ function TextField({ label, name, form, errors, onChange, type = "text", hint, p
       <label className="block text-sm font-medium mb-1">{label}</label>
       <input type={type} value={form[name] ?? ""} placeholder={placeholder}
              onChange={(e) => onChange(name, e.target.value)}
-             className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
+             className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
       {hint && <p className="text-xs text-slate-400 mt-1">{hint}</p>}
       {errors[name] && <p className="text-red-600 text-xs mt-1">{String(errors[name])}</p>}
     </div>
@@ -46,7 +46,7 @@ function SelectField({ label, name, form, onChange, options, empty, labelKey = "
     <div>
       <label className="block text-sm font-medium mb-1">{label}</label>
       <select value={form[name] ?? ""} onChange={(e) => onChange(name, e.target.value)}
-              className="w-full border border-slate-300 rounded px-3 py-2 text-sm">
+              className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm">
         <option value="">{empty}</option>
         {options.map((o) => <option key={o.id} value={o.id}>{o[labelKey]}</option>)}
       </select>
@@ -65,17 +65,17 @@ function PriceField({ label, raw, mode, onRaw, onMode, error, hasContainer, fact
       <label className="block text-sm font-medium mb-1">{label}</label>
       <div className="flex gap-1">
         <input type="text" inputMode="decimal" value={raw} onChange={(e) => onRaw(e.target.value)}
-               placeholder="0.00" className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
+               placeholder="0.00" className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
         {hasContainer && (
           <select value={mode} onChange={(e) => onMode(e.target.value)}
-                  className="border border-slate-300 rounded px-2 py-2 text-sm bg-slate-50">
+                  className="border border-slate-300 dark:border-slate-600 rounded px-2 py-2 text-sm bg-slate-50 dark:bg-slate-900">
             <option value="base">por {baseUnit || "unidad"}</option>
             <option value="container">por {containerLabel}</option>
           </select>
         )}
       </div>
       {hasContainer && raw && (
-        <p className="text-xs text-slate-500 mt-1">
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
           {mode === "container"
             ? <>= <strong>Q{perBase.toFixed(2)}</strong> / {baseUnit}</>
             : <>= <strong>Q{perContainer.toFixed(2)}</strong> / {containerLabel}</>}
@@ -111,7 +111,7 @@ function PresentationsSection({ rows, setRows }) {
         <button type="button" onClick={add}
                 className="bg-amber-500 hover:bg-amber-600 text-white rounded px-4 py-2 text-sm font-medium">+ Agregar</button>
       </div>
-      <p className="text-xs text-slate-500 mb-3">
+      <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
         Si este producto se vende también por <b>libra, media libra, caja, rollo, yarda, fardo, etc.</b>,
         agregá cada presentación. Podés escribir el factor como decimal (<code>0.5</code>) o como
         fracción (<code>1/2</code>, <code>1/16</code>), o usar los botones rápidos de cada fila.
@@ -123,41 +123,41 @@ function PresentationsSection({ rows, setRows }) {
 
       <div className="space-y-4">
         {rows.map((r, i) => (
-          <div key={i} className="bg-white rounded-lg border p-4">
+          <div key={i} className="bg-white dark:bg-slate-800 rounded-lg border p-4">
             <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_1fr_auto] gap-3 items-end">
               <div>
-                <label className="block text-xs text-slate-500 mb-1">Etiqueta</label>
+                <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Etiqueta</label>
                 <input value={r.label} onChange={(e) => update(i, "label", e.target.value)}
                        placeholder="Ej. Libra, Media libra, Onza"
-                       className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
+                       className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
               </div>
               <div>
-                <label className="block text-xs text-slate-500 mb-1">Factor de stock</label>
+                <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Factor de stock</label>
                 <input value={r.units_factor} onChange={(e) => update(i, "units_factor", e.target.value)}
                        placeholder="Ej. 0.5  o  1/16"
-                       className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
+                       className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
               </div>
               <div>
-                <label className="block text-xs text-slate-500 mb-1">Precio (Q)</label>
+                <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Precio (Q)</label>
                 <input type="number" step="0.01" value={r.price} onChange={(e) => update(i, "price", e.target.value)}
-                       placeholder="0.00" className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
+                       placeholder="0.00" className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
               </div>
               <button type="button" onClick={() => remove(i)}
                       className="bg-red-500 hover:bg-red-600 text-white rounded px-3 py-2">✕</button>
             </div>
 
             <div className="flex flex-wrap items-center gap-2 mt-3 text-xs">
-              <span className="text-slate-500">📐 Equivalencias rápidas:</span>
+              <span className="text-slate-500 dark:text-slate-400">📐 Equivalencias rápidas:</span>
               {QUICK_EQUIV.map((q) => (
                 <button type="button" key={q.value} onClick={() => update(i, "units_factor", q.value)}
-                        className="bg-slate-100 hover:bg-slate-200 rounded px-2 py-1">{q.label}</button>
+                        className="bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 rounded px-2 py-1">{q.label}</button>
               ))}
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-slate-500">
+            <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-slate-500 dark:text-slate-400">
               🧮 O calculá al revés: En <b>1</b> unidad base hay
               <input type="number" min="1" value={r.reverseN} onChange={(e) => update(i, "reverseN", e.target.value)}
-                     className="w-20 border border-slate-300 rounded px-2 py-1" />
+                     className="w-20 border border-slate-300 dark:border-slate-600 rounded px-2 py-1" />
               presentaciones
               <button type="button" onClick={() => reverse(i)}
                       className="bg-blue-500 hover:bg-blue-600 text-white rounded px-3 py-1">→ Calcular</button>
@@ -351,7 +351,7 @@ export default function ProductForm() {
         </div>
       )}
 
-      <section className="bg-white rounded-lg shadow p-5">
+      <section className="bg-white dark:bg-slate-800 rounded-lg shadow p-5">
         <h3 className="font-semibold mb-3">Identificación</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <TextField label="SKU" name="sku" form={form} errors={errors} onChange={set} hint="Se autogenera si lo dejas vacío" />
@@ -361,7 +361,7 @@ export default function ProductForm() {
         <div className="mt-4">
           <label className="block text-sm font-medium mb-1">Descripción</label>
           <textarea value={form.description ?? ""} onChange={(e) => set("description", e.target.value)} rows="2"
-                    className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
+                    className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
           <SelectField label="Marca" name="brand" form={form} onChange={set} options={brands} empty="— Sin marca —" />
@@ -370,13 +370,13 @@ export default function ProductForm() {
         <div className="mt-4">
           <label className="block text-sm font-medium mb-1">Imagen del producto (opcional)</label>
           <div className="flex items-center gap-4">
-            <div className="h-24 w-24 shrink-0 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden">
+            <div className="h-24 w-24 shrink-0 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex items-center justify-center overflow-hidden">
               {imagePreview
                 ? <img src={imagePreview} alt="Vista previa" className="max-h-full max-w-full object-contain" />
                 : <span className="text-3xl text-slate-300">📦</span>}
             </div>
             <div className="text-sm">
-              <label className="inline-block cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg px-4 py-2 font-medium transition">
+              <label className="inline-block cursor-pointer bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded-lg px-4 py-2 font-medium transition">
                 {imagePreview ? "Cambiar imagen" : "Subir imagen"}
                 <input type="file" accept="image/*" onChange={onImagePick} className="hidden" />
               </label>
@@ -393,7 +393,7 @@ export default function ProductForm() {
 
       <section className="bg-sky-50 rounded-lg shadow p-5">
         <h3 className="font-semibold mb-1">Unidad y empaque</h3>
-        <p className="text-xs text-slate-500 mb-3">Ej.: empaque "caja", factor 50 → 1 caja = 50 unidades base.</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">Ej.: empaque "caja", factor 50 → 1 caja = 50 unidades base.</p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <TextField label="Unidad base" name="base_unit_label" form={form} errors={errors} onChange={set} placeholder="unidad" />
           <TextField label="Empaque" name="container_label" form={form} errors={errors} onChange={set} />
@@ -402,7 +402,7 @@ export default function ProductForm() {
         </div>
       </section>
 
-      <section className="bg-white rounded-lg shadow p-5">
+      <section className="bg-white dark:bg-slate-800 rounded-lg shadow p-5">
         <h3 className="font-semibold mb-3">Precios e impuesto</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <PriceField label="Precio de compra" raw={purchaseRaw} mode={purchaseMode}
@@ -429,7 +429,7 @@ export default function ProductForm() {
         </div>
       </section>
 
-      <section className="bg-white rounded-lg shadow p-5">
+      <section className="bg-white dark:bg-slate-800 rounded-lg shadow p-5">
         <h3 className="font-semibold mb-3">Inventario</h3>
         {!editing ? (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
@@ -438,7 +438,7 @@ export default function ProductForm() {
                          options={[{ id: "base", name: "Unidad base" }, { id: "container", name: "Empaque" }]} empty="" />
           </div>
         ) : (
-          <p className="text-sm text-slate-500 mb-4">El stock se ajusta desde <b>Inventario</b> del producto.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">El stock se ajusta desde <b>Inventario</b> del producto.</p>
         )}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
@@ -447,21 +447,21 @@ export default function ProductForm() {
             </label>
             <div className="flex gap-2">
               <input type="number" step="any" min="0" value={minShown} onChange={(e) => onMinChange(e.target.value)} placeholder="0"
-                     className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                     className="flex-1 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
               {hasContainer && (
                 <select value={minUnit} onChange={(e) => { minUnitTouched.current = true; setMinUnit(e.target.value); }}
-                        className="border border-slate-300 rounded-lg px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                        className="border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
                   <option value="container">{containerLabel}</option>
                   <option value="base">{baseUnit}</option>
                 </select>
               )}
             </div>
             {hasContainer && Number(form.min_stock) > 0 ? (
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                 Equivale a <b>{round2(Number(form.min_stock) / factor)}</b> {containerLabel} · <b>{form.min_stock}</b> {baseUnit}.
               </p>
             ) : (
-              <p className="text-xs text-slate-500 mt-1">La alerta salta cuando la existencia baja a este valor o menos.</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">La alerta salta cuando la existencia baja a este valor o menos.</p>
             )}
           </div>
         </div>
@@ -475,7 +475,7 @@ export default function ProductForm() {
 
       <PresentationsSection rows={presentations} setRows={setPresentations} />
 
-      <section className="bg-white rounded-lg shadow p-5">
+      <section className="bg-white dark:bg-slate-800 rounded-lg shadow p-5">
         <h3 className="font-semibold mb-3">Estado</h3>
         <div className="flex gap-6 text-sm">
           <label className="flex items-center gap-2">
@@ -491,7 +491,7 @@ export default function ProductForm() {
         <button disabled={busy} className="bg-blue-600 text-white rounded px-6 py-2 font-medium disabled:opacity-50">
           {busy ? "Guardando…" : "Guardar"}
         </button>
-        <button type="button" onClick={() => navigate("/productos")} className="px-6 py-2 text-slate-500">Cancelar</button>
+        <button type="button" onClick={() => navigate("/productos")} className="px-6 py-2 text-slate-500 dark:text-slate-400">Cancelar</button>
       </div>
     </form>
   );

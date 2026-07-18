@@ -29,10 +29,10 @@ export default function Branches() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">🏢 Sucursales</h1>
+        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">🏢 Sucursales</h1>
         <button onClick={() => setEditing(BLANK)} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nueva sucursal</button>
       </div>
-      <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
         <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
@@ -41,10 +41,10 @@ export default function Branches() {
           </thead>
           <tbody>
             {items.map((b) => (
-              <tr key={b.id} className="border-t border-slate-100 hover:bg-slate-50/70 transition">
-                <td className="px-4 py-2 font-medium text-slate-800">{b.name}</td>
+              <tr key={b.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 transition">
+                <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">{b.name}</td>
                 <td className="px-4 py-2 font-mono text-xs">{b.code}</td>
-                <td className="px-4 py-2 text-slate-500">{b.phone || "—"}</td>
+                <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{b.phone || "—"}</td>
                 <td className="px-4 py-2">{b.is_main ? "★" : ""}</td>
                 <td className="px-4 py-2">{b.active ? <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700">Sí</span> : <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-red-100 text-red-700">No</span>}</td>
                 <td className="px-4 py-2 text-right">
@@ -62,7 +62,7 @@ export default function Branches() {
 
       {editing && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4" onClick={() => setEditing(null)}>
-          <form onClick={(e) => e.stopPropagation()} onSubmit={save} className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 w-full max-w-md">
+          <form onClick={(e) => e.stopPropagation()} onSubmit={save} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 w-full max-w-md">
             <h3 className="font-semibold mb-4">{editing.id ? "Editar" : "Nueva"} sucursal</h3>
             {error && <div className="bg-red-600 text-white font-semibold rounded px-3 py-2 text-xs mb-3">{error}</div>}
             <div className="grid grid-cols-2 gap-3">
@@ -70,7 +70,7 @@ export default function Branches() {
                 <div key={k} className={full ? "col-span-2" : ""}>
                   <label className="block text-sm font-medium mb-1">{label}</label>
                   <input value={editing[k] || ""} onChange={(e) => setEditing({ ...editing, [k]: e.target.value })} required={req}
-                         className="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
+                         className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
                 </div>
               ))}
             </div>
@@ -80,7 +80,7 @@ export default function Branches() {
             </div>
             <div className="flex gap-2 mt-5">
               <button className="bg-blue-600 text-white rounded px-5 py-2 text-sm font-medium">Guardar</button>
-              <button type="button" onClick={() => setEditing(null)} className="px-5 py-2 text-sm text-slate-500">Cancelar</button>
+              <button type="button" onClick={() => setEditing(null)} className="px-5 py-2 text-sm text-slate-500 dark:text-slate-400">Cancelar</button>
             </div>
           </form>
         </div>

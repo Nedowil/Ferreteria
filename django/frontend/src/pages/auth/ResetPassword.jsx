@@ -29,7 +29,7 @@ export default function ResetPassword() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-900 px-4">
-      <div className="w-full max-w-sm bg-white rounded-xl shadow-lg p-8">
+      <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-xl shadow-lg p-8">
         <h1 className="text-xl font-bold mb-5">Nueva contraseña</h1>
         {done ? (
           <>
@@ -47,10 +47,10 @@ export default function ResetPassword() {
             {error && <div className="mb-4 bg-red-600 text-white font-semibold text-sm rounded px-3 py-2">{error}</div>}
             <label className="block text-sm font-medium mb-1">Nueva contraseña</label>
             <div className="mb-4"><PasswordInput value={pw} onChange={(e) => setPw(e.target.value)} required
-                   className="w-full border border-slate-300 rounded px-3 py-2" /></div>
+                   className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2" /></div>
             <label className="block text-sm font-medium mb-1">Repetir contraseña</label>
             <div className="mb-5"><PasswordInput value={pw2} onChange={(e) => setPw2(e.target.value)} required
-                   className="w-full border border-slate-300 rounded px-3 py-2" /></div>
+                   className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2" /></div>
             <button disabled={busy}
                     className="w-full bg-slate-900 text-white rounded py-2 font-medium hover:bg-slate-800 disabled:opacity-50">
               {busy ? "Guardando…" : "Restablecer"}

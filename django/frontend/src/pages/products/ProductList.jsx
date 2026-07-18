@@ -115,7 +115,7 @@ function LabelPrintModal({ product, companyName, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden" onClick={(e) => e.stopPropagation()}>
         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-4">
           <div className="text-lg font-bold">🏷️ Imprimir etiqueta</div>
           <div className="text-xs text-blue-100 truncate">{product.name} · {product.sku}</div>
@@ -126,37 +126,37 @@ function LabelPrintModal({ product, companyName, onClose }) {
           {step === "qty" ? (
             <>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">¿Cuántas etiquetas?</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">¿Cuántas etiquetas?</label>
                 <input type="number" min="1" autoFocus value={copies}
                        onChange={(e) => setCopies(e.target.value)}
                        onKeyDown={(e) => e.key === "Enter" && next()}
-                       className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                       className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div className="flex gap-2">
-                <button onClick={onClose} className="flex-1 border border-slate-300 text-slate-600 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 transition">Cancelar</button>
+                <button onClick={onClose} className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 transition">Cancelar</button>
                 <button onClick={next} className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg py-2.5 text-sm font-semibold shadow hover:from-blue-700 hover:to-indigo-700 transition">Siguiente</button>
               </div>
             </>
           ) : (
             <>
-              <div className="text-sm text-slate-600">Elegí cómo imprimir <b>{copies}</b> etiqueta(s):</div>
+              <div className="text-sm text-slate-600 dark:text-slate-300">Elegí cómo imprimir <b>{copies}</b> etiqueta(s):</div>
               <button onClick={() => { printLabelsPdf(product, copies, companyName); onClose(); }} disabled={busy}
                       className="w-full text-left rounded-xl border-2 border-blue-400 bg-blue-50/50 hover:shadow-md p-3 transition disabled:opacity-50">
-                <div className="font-semibold text-slate-800">🖨️ Imprimir en la Zebra (USB) <span className="text-[10px] bg-blue-600 text-white rounded px-1.5 py-0.5 align-middle">Recomendado</span></div>
-                <div className="text-xs text-slate-500">Abre el cuadro de impresión → elegí tu <b>Zebra ZD421T</b>. Funciona con el sistema en la nube.</div>
+                <div className="font-semibold text-slate-800 dark:text-slate-100">🖨️ Imprimir en la Zebra (USB) <span className="text-[10px] bg-blue-600 text-white rounded px-1.5 py-0.5 align-middle">Recomendado</span></div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">Abre el cuadro de impresión → elegí tu <b>Zebra ZD421T</b>. Funciona con el sistema en la nube.</div>
               </button>
               <button onClick={() => send("system")} disabled={busy}
-                      className="w-full text-left rounded-xl border border-slate-200 hover:border-blue-400 hover:shadow-md p-3 transition disabled:opacity-50">
-                <div className="font-semibold text-slate-800">⬇️ Descargar archivo ZPL</div>
-                <div className="text-xs text-slate-500">Para enviarlo a la Zebra con la utilidad de Zebra (código de barras nativo).</div>
+                      className="w-full text-left rounded-xl border border-slate-200 dark:border-slate-700 hover:border-blue-400 hover:shadow-md p-3 transition disabled:opacity-50">
+                <div className="font-semibold text-slate-800 dark:text-slate-100">⬇️ Descargar archivo ZPL</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">Para enviarlo a la Zebra con la utilidad de Zebra (código de barras nativo).</div>
               </button>
               <button onClick={() => send("network")} disabled={busy}
-                      className="w-full text-left rounded-xl border border-slate-200 hover:border-blue-400 hover:shadow-md p-3 transition disabled:opacity-50">
-                <div className="font-semibold text-slate-800">🌐 Zebra por red (IP)</div>
-                <div className="text-xs text-slate-500">Solo si el servidor está en la misma red que la impresora (no aplica en la nube).</div>
+                      className="w-full text-left rounded-xl border border-slate-200 dark:border-slate-700 hover:border-blue-400 hover:shadow-md p-3 transition disabled:opacity-50">
+                <div className="font-semibold text-slate-800 dark:text-slate-100">🌐 Zebra por red (IP)</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">Solo si el servidor está en la misma red que la impresora (no aplica en la nube).</div>
               </button>
               <div className="flex justify-between items-center pt-1">
-                <button onClick={() => setStep("qty")} className="text-sm text-slate-500 hover:text-slate-700">← Atrás</button>
+                <button onClick={() => setStep("qty")} className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700">← Atrás</button>
                 {busy && <span className="text-xs text-slate-400">Enviando…</span>}
               </div>
             </>
@@ -239,19 +239,19 @@ export default function ProductList() {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-        <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">📦 Productos</h1>
+        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">📦 Productos</h1>
         <div className="flex gap-2">
           <button onClick={exportExcel} disabled={exporting} className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-100 transition">{exporting ? "Exportando…" : "⬇️ Excel"}</button>
           {can("productos.crear") && <Link to="/productos/nuevo" className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nuevo producto</Link>}
         </div>
       </div>
 
-      <form onSubmit={applyFilters} className="bg-white rounded-lg shadow p-4 mb-4 flex flex-wrap gap-2 items-end">
+      <form onSubmit={applyFilters} className="bg-white dark:bg-slate-800 rounded-lg shadow p-4 mb-4 flex flex-wrap gap-2 items-end">
         <input placeholder="Nombre, SKU o código" value={filters.search}
                onChange={(e) => onSearchChange(e.target.value)}
-               className="border border-slate-300 rounded px-3 py-2 text-sm w-64" />
+               className="border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm w-64" />
         <select value={filters.brand} onChange={(e) => setFilters({ ...filters, brand: e.target.value })}
-                className="border border-slate-300 rounded px-2 py-2 text-sm">
+                className="border border-slate-300 dark:border-slate-600 rounded px-2 py-2 text-sm">
           <option value="">Todas las marcas</option>
           {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
         </select>
@@ -262,12 +262,12 @@ export default function ProductList() {
         <button className="bg-slate-700 text-white rounded px-4 py-2 text-sm">Buscar</button>
       </form>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
         {/* Móvil: tarjetas (la tabla no cabe en pantallas angostas) */}
-        <div className="md:hidden divide-y divide-slate-100">
+        <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-700">
           {data.results.map((p) => (
             <div key={p.id} className="p-4 flex gap-3">
-              <div className="h-12 w-12 shrink-0 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden">
+              <div className="h-12 w-12 shrink-0 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex items-center justify-center overflow-hidden">
                 {p.image
                   ? <img src={p.image} alt={p.name} className="h-full w-full object-contain" loading="lazy" />
                   : <span className="text-lg text-slate-300">📦</span>}
@@ -275,20 +275,20 @@ export default function ProductList() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <div className="font-medium text-slate-800 break-words">{p.name}</div>
+                    <div className="font-medium text-slate-800 dark:text-slate-100 break-words">{p.name}</div>
                     <div className="text-xs text-slate-400 font-mono">{p.sku}{p.brand_name ? ` · ${p.brand_name}` : ""}</div>
                   </div>
                   <div className="text-right shrink-0">
-                    <div className="font-semibold text-slate-700">Q{p.sale_price}</div>
+                    <div className="font-semibold text-slate-700 dark:text-slate-200">Q{p.sale_price}</div>
                     {p.is_low_stock
                       ? <span className="inline-block bg-red-100 text-red-700 rounded-full px-2 py-0.5 text-xs font-medium">{p.stock_display}</span>
-                      : <span className="text-xs text-slate-500">{p.stock_display}</span>}
+                      : <span className="text-xs text-slate-500 dark:text-slate-400">{p.stock_display}</span>}
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  <button onClick={() => setLabeling(p)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white border border-slate-300 text-slate-700 hover:bg-slate-50">Etiqueta</button>
-                  <Link to={`/productos/${p.id}/inventario`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white border border-slate-300 text-slate-700 hover:bg-slate-50">Inventario</Link>
-                  {can("auditoria.ver") && <Link to={historyLink(p.id)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white border border-slate-300 text-slate-700 hover:bg-slate-50">Historial</Link>}
+                  <button onClick={() => setLabeling(p)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50">Etiqueta</button>
+                  <Link to={`/productos/${p.id}/inventario`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50">Inventario</Link>
+                  {can("auditoria.ver") && <Link to={historyLink(p.id)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50">Historial</Link>}
                   {can("productos.editar") && <Link to={`/productos/${p.id}/editar`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-blue-600 hover:bg-blue-700 text-white">Editar</Link>}
                   {can("productos.eliminar") && <button onClick={() => remove(p.id)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-red-600 hover:bg-red-700 text-white">Eliminar</button>}
                 </div>
@@ -311,31 +311,31 @@ export default function ProductList() {
           </thead>
           <tbody>
             {data.results.map((p) => (
-              <tr key={p.id} className="border-t border-slate-100 hover:bg-slate-50/70 transition">
+              <tr key={p.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 transition">
                 <td className="px-4 py-2">
-                  <div className="h-10 w-10 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden">
+                  <div className="h-10 w-10 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex items-center justify-center overflow-hidden">
                     {p.image
                       ? <img src={p.image} alt={p.name} className="h-full w-full object-contain" loading="lazy" />
                       : <span className="text-lg text-slate-300">📦</span>}
                   </div>
                 </td>
-                <td className="px-4 py-2 font-mono text-xs text-slate-500">{p.sku}</td>
+                <td className="px-4 py-2 font-mono text-xs text-slate-500 dark:text-slate-400">{p.sku}</td>
                 <td className="px-4 py-2">
-                  <div className="font-medium text-slate-800">{p.name}</div>
+                  <div className="font-medium text-slate-800 dark:text-slate-100">{p.name}</div>
                   {p.barcode && <div className="text-xs text-slate-400 font-mono">{p.barcode}</div>}
                 </td>
-                <td className="px-4 py-2 text-slate-500">{p.brand_name || "—"}</td>
-                <td className="px-4 py-2 text-right font-semibold text-slate-700">Q{p.sale_price}</td>
+                <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{p.brand_name || "—"}</td>
+                <td className="px-4 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">Q{p.sale_price}</td>
                 <td className="px-4 py-2 text-right">
                   {p.is_low_stock
                     ? <span className="inline-block bg-red-100 text-red-700 rounded-full px-2 py-0.5 text-xs font-medium">{p.stock_display}</span>
-                    : <span className="font-medium text-slate-700">{p.stock_display}</span>}
+                    : <span className="font-medium text-slate-700 dark:text-slate-200">{p.stock_display}</span>}
                 </td>
                 <td className="px-4 py-2 text-right whitespace-nowrap">
                   <div className="inline-flex flex-wrap gap-1.5 justify-end">
-                  <button onClick={() => setLabeling(p)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white border border-slate-300 text-slate-700 hover:bg-slate-50" title="Imprimir etiqueta Zebra">Etiqueta</button>
-                  <Link to={`/productos/${p.id}/inventario`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white border border-slate-300 text-slate-700 hover:bg-slate-50">Inventario</Link>
-                  {can("auditoria.ver") && <Link to={historyLink(p.id)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white border border-slate-300 text-slate-700 hover:bg-slate-50" title="Quién creó, editó o eliminó este producto">Historial</Link>}
+                  <button onClick={() => setLabeling(p)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50" title="Imprimir etiqueta Zebra">Etiqueta</button>
+                  <Link to={`/productos/${p.id}/inventario`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50">Inventario</Link>
+                  {can("auditoria.ver") && <Link to={historyLink(p.id)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50" title="Quién creó, editó o eliminó este producto">Historial</Link>}
                   {can("productos.editar") && <Link to={`/productos/${p.id}/editar`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-blue-600 hover:bg-blue-700 text-white">Editar</Link>}
                   {can("productos.eliminar") && <button onClick={() => remove(p.id)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-red-600 hover:bg-red-700 text-white">Eliminar</button>}
                   </div>
@@ -352,9 +352,9 @@ export default function ProductList() {
 
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 mt-4 text-sm">
-          <button disabled={page <= 1} onClick={() => setPage(page - 1)} className="px-3 py-1 bg-white border rounded disabled:opacity-40">‹</button>
-          <span className="text-slate-500">Página {page} de {totalPages}</span>
-          <button disabled={page >= totalPages} onClick={() => setPage(page + 1)} className="px-3 py-1 bg-white border rounded disabled:opacity-40">›</button>
+          <button disabled={page <= 1} onClick={() => setPage(page - 1)} className="px-3 py-1 bg-white dark:bg-slate-800 border rounded disabled:opacity-40">‹</button>
+          <span className="text-slate-500 dark:text-slate-400">Página {page} de {totalPages}</span>
+          <button disabled={page >= totalPages} onClick={() => setPage(page + 1)} className="px-3 py-1 bg-white dark:bg-slate-800 border rounded disabled:opacity-40">›</button>
         </div>
       )}
 

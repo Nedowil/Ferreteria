@@ -3,7 +3,7 @@ import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 
 const Section = ({ title, children }) => (
-  <section className="bg-white rounded-lg shadow overflow-hidden">
+  <section className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
     <div className="px-5 py-3 border-b font-semibold">{title}</div>
     <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">{children}</div>
   </section>
@@ -11,12 +11,12 @@ const Section = ({ title, children }) => (
 
 const Field = ({ label, children, full }) => (
   <div className={full ? "sm:col-span-2" : ""}>
-    <label className="block text-xs text-slate-500 mb-1">{label}</label>
+    <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">{label}</label>
     {children}
   </div>
 );
 
-const input = "w-full border border-slate-300 rounded px-3 py-2 text-sm";
+const input = "w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm";
 
 export default function CompanySettings() {
   const { can } = useAuth();
@@ -185,10 +185,10 @@ export default function CompanySettings() {
             </>
           )}
           <div className="sm:col-span-2">
-            <button type="button" onClick={testPrinter} className="text-sm border border-slate-300 rounded px-4 py-2 hover:bg-slate-50">
+            <button type="button" onClick={testPrinter} className="text-sm border border-slate-300 dark:border-slate-600 rounded px-4 py-2 hover:bg-slate-50">
               Imprimir prueba
             </button>
-            <span className="ml-2 text-xs text-slate-500">Guarda los cambios antes de probar.</span>
+            <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">Guarda los cambios antes de probar.</span>
           </div>
         </Section>
 
@@ -222,10 +222,10 @@ export default function CompanySettings() {
             </>
           )}
           <div className="sm:col-span-2">
-            <button type="button" onClick={testZebra} className="text-sm border border-slate-300 rounded px-4 py-2 hover:bg-slate-50">
+            <button type="button" onClick={testZebra} className="text-sm border border-slate-300 dark:border-slate-600 rounded px-4 py-2 hover:bg-slate-50">
               Imprimir etiqueta de prueba
             </button>
-            <span className="ml-2 text-xs text-slate-500">Guarda los cambios antes de probar.</span>
+            <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">Guarda los cambios antes de probar.</span>
           </div>
         </Section>
 

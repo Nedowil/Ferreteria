@@ -10,7 +10,7 @@ const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionD
 const statusBadge = {
   certificada: "bg-green-100 text-green-700",
   anulada: "bg-red-100 text-red-700",
-  pendiente: "bg-slate-100 text-slate-600",
+  pendiente: "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300",
   error: "bg-amber-100 text-amber-700",
 };
 
@@ -119,7 +119,7 @@ export default function Invoices() {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-        <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">📑 Facturación electrónica (FEL)</h1>
+        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">📑 Facturación electrónica (FEL)</h1>
         <div className="flex items-center gap-2">
           {cfg?.is_stub ? (
             <span className="text-xs bg-indigo-100 text-indigo-700 rounded px-2 py-1">
@@ -139,74 +139,74 @@ export default function Invoices() {
       </div>
 
       {quota && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 mb-4 flex flex-wrap gap-6 text-sm">
-          <div><span className="text-slate-500">DTE emitidos en el ciclo:</span> <b>{quota.used}</b></div>
-          <div><span className="text-slate-500">Cupo:</span> <b>{quota.quota > 0 ? quota.quota : "Sin límite"}</b></div>
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex flex-wrap gap-6 text-sm">
+          <div><span className="text-slate-500 dark:text-slate-400">DTE emitidos en el ciclo:</span> <b>{quota.used}</b></div>
+          <div><span className="text-slate-500 dark:text-slate-400">Cupo:</span> <b>{quota.quota > 0 ? quota.quota : "Sin límite"}</b></div>
           {quota.remaining !== null && (
-            <div><span className="text-slate-500">Restantes:</span>{" "}
+            <div><span className="text-slate-500 dark:text-slate-400">Restantes:</span>{" "}
               <b className={quota.remaining <= 0 ? "text-red-600" : quota.remaining < 20 ? "text-amber-600" : ""}>{quota.remaining}</b>
             </div>
           )}
-          <div><span className="text-slate-500">Inicio de ciclo:</span> {quota.cycle_start}</div>
+          <div><span className="text-slate-500 dark:text-slate-400">Inicio de ciclo:</span> {quota.cycle_start}</div>
         </div>
       )}
 
       {err && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm mb-4">{err}</div>}
 
       <div className="flex gap-2 mb-4 text-sm">
-        <button onClick={() => setTab("emitidas")} className={"px-4 py-2 rounded " + (tab === "emitidas" ? "bg-slate-700 text-white" : "bg-white border")}>
+        <button onClick={() => setTab("emitidas")} className={"px-4 py-2 rounded " + (tab === "emitidas" ? "bg-slate-700 text-white" : "bg-white dark:bg-slate-800 border")}>
           Facturas emitidas
         </button>
-        <button onClick={() => setTab("pendientes")} className={"px-4 py-2 rounded " + (tab === "pendientes" ? "bg-slate-700 text-white" : "bg-white border")}>
+        <button onClick={() => setTab("pendientes")} className={"px-4 py-2 rounded " + (tab === "pendientes" ? "bg-slate-700 text-white" : "bg-white dark:bg-slate-800 border")}>
           Ventas sin facturar {pending.length > 0 && <span className="ml-1 bg-amber-400 text-amber-900 rounded-full px-2 text-xs">{pending.length}</span>}
         </button>
       </div>
 
       {tab === "emitidas" && (
-        <form onSubmit={(e) => { e.preventDefault(); loadInvoices(); }} className="bg-white rounded-xl shadow-sm border border-slate-100 p-3 mb-4 flex flex-wrap gap-2 items-end">
+        <form onSubmit={(e) => { e.preventDefault(); loadInvoices(); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-3 mb-4 flex flex-wrap gap-2 items-end">
           <input placeholder="Folio, NIT/UUID o cliente" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                 className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-56" />
-          <div><label className="block text-[11px] text-slate-500 mb-0.5">Estado</label>
+                 className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-56" />
+          <div><label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">Estado</label>
             <select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                    className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                    className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
               <option value="">Todos</option>
               <option value="certificada">Certificada</option>
               <option value="anulada">Anulada</option>
               <option value="pendiente">Pendiente</option>
               <option value="error">Error</option>
             </select></div>
-          <div><label className="block text-[11px] text-slate-500 mb-0.5">Desde</label>
-            <input type="date" value={filters.from} onChange={(e) => setFilters({ ...filters, from: e.target.value })} className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" /></div>
-          <div><label className="block text-[11px] text-slate-500 mb-0.5">Hasta</label>
-            <input type="date" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} className="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" /></div>
+          <div><label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">Desde</label>
+            <input type="date" value={filters.from} onChange={(e) => setFilters({ ...filters, from: e.target.value })} className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" /></div>
+          <div><label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">Hasta</label>
+            <input type="date" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" /></div>
           <button className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition">Buscar</button>
           {(filters.search || filters.from || filters.to || filters.status) && (
             <button type="button" onClick={() => { setFilters({ search: "", from: "", to: "", status: "" }); api.get("/invoices/").then((r) => setInvoices(r.data.results || r.data)); }}
-                    className="text-sm text-slate-500 px-2 py-2 hover:underline">Limpiar</button>
+                    className="text-sm text-slate-500 dark:text-slate-400 px-2 py-2 hover:underline">Limpiar</button>
           )}
         </form>
       )}
 
       {tab === "emitidas" && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
           {/* Móvil: tarjetas */}
-          <div className="md:hidden divide-y divide-slate-100">
+          <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-700">
             {invoices.map((i) => (
               <div key={i.id} className="p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <div className="font-medium text-slate-800 break-words">{i.customer_name || "Consumidor final"}</div>
+                    <div className="font-medium text-slate-800 dark:text-slate-100 break-words">{i.customer_name || "Consumidor final"}</div>
                     <div className="text-xs text-slate-400 font-mono">{i.document_type} · {i.serie ? `${i.serie}-${i.numero}` : "—"}</div>
                   </div>
                   <div className="text-right shrink-0">
-                    <div className="font-semibold text-slate-700">{Q(i.total)}</div>
+                    <div className="font-semibold text-slate-700 dark:text-slate-200">{Q(i.total)}</div>
                     <span className={"inline-block mt-0.5 rounded-full px-2 py-0.5 text-xs font-medium " + (statusBadge[i.status] || "")}>{i.status_display}</span>
                   </div>
                 </div>
                 <div className="text-[11px] text-slate-400 font-mono break-all mt-1">{i.uuid || ""}</div>
                 <div className="flex flex-wrap gap-2 mt-3">
                   <Link to={`/ventas/${i.sale}/ticket`} className="inline-flex items-center gap-1 bg-slate-700 hover:bg-slate-800 text-white rounded-md px-3 py-1.5 text-xs font-medium shadow-sm transition">🖨️ Ver / Imprimir</Link>
-                  <Link to={`/ventas/${i.sale}`} className="inline-flex items-center gap-1 bg-white border border-slate-300 text-slate-700 rounded-md px-3 py-1.5 text-xs font-medium shadow-sm transition">Ver venta</Link>
+                  <Link to={`/ventas/${i.sale}`} className="inline-flex items-center gap-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-md px-3 py-1.5 text-xs font-medium shadow-sm transition">Ver venta</Link>
                   {i.status === "certificada" && can("facturas.anular") && (
                     <button onClick={() => annul(i)} className="inline-flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white rounded-md px-3 py-1.5 text-xs font-medium shadow-sm transition">Anular</button>
                   )}
@@ -229,13 +229,13 @@ export default function Invoices() {
             </thead>
             <tbody>
               {invoices.map((i) => (
-                <tr key={i.id} className="border-t border-slate-100 hover:bg-slate-50/70 transition">
+                <tr key={i.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 transition">
                   <td className="px-4 py-2"><Link to={`/ventas/${i.sale}`} className="text-blue-600">{i.sale_folio}</Link></td>
-                  <td className="px-4 py-2 font-medium text-slate-800">{i.customer_name || "Consumidor final"}</td>
+                  <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">{i.customer_name || "Consumidor final"}</td>
                   <td className="px-4 py-2">{i.document_type}</td>
                   <td className="px-4 py-2 font-mono text-xs">{i.serie ? `${i.serie}-${i.numero}` : "—"}</td>
                   <td className="px-4 py-2 font-mono text-xs truncate max-w-[180px]" title={i.uuid}>{i.uuid || "—"}</td>
-                  <td className="px-4 py-2 text-right font-semibold text-slate-700">{Q(i.total)}</td>
+                  <td className="px-4 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">{Q(i.total)}</td>
                   <td className="px-4 py-2">
                     <span className={"inline-block rounded-full px-2 py-0.5 text-xs font-medium " + (statusBadge[i.status] || "")}>{i.status_display}</span>
                   </td>
@@ -257,17 +257,17 @@ export default function Invoices() {
       )}
 
       {tab === "pendientes" && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
           {/* Móvil: tarjetas */}
-          <div className="md:hidden divide-y divide-slate-100">
+          <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-700">
             {pending.map((s) => (
               <div key={s.id} className="p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <div className="font-medium text-slate-800 break-words">{s.customer}</div>
+                    <div className="font-medium text-slate-800 dark:text-slate-100 break-words">{s.customer}</div>
                     <div className="text-xs text-slate-400 font-mono">{s.folio} · {new Date(s.date).toLocaleDateString()}</div>
                   </div>
-                  <div className="font-semibold text-slate-700 shrink-0">{Q(s.total)}</div>
+                  <div className="font-semibold text-slate-700 dark:text-slate-200 shrink-0">{Q(s.total)}</div>
                 </div>
                 {can("facturas.emitir") && (
                   <div className="mt-2">
@@ -291,11 +291,11 @@ export default function Invoices() {
             </thead>
             <tbody>
               {pending.map((s) => (
-                <tr key={s.id} className="border-t border-slate-100 hover:bg-slate-50/70 transition">
+                <tr key={s.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 transition">
                   <td className="px-4 py-2"><Link to={`/ventas/${s.id}`} className="text-blue-600">{s.folio}</Link></td>
                   <td className="px-4 py-2">{new Date(s.date).toLocaleDateString()}</td>
-                  <td className="px-4 py-2 font-medium text-slate-800">{s.customer}</td>
-                  <td className="px-4 py-2 text-right font-semibold text-slate-700">{Q(s.total)}</td>
+                  <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">{s.customer}</td>
+                  <td className="px-4 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">{Q(s.total)}</td>
                   <td className="px-4 py-2 text-right">
                     {can("facturas.emitir") && (
                       <button onClick={() => emit(s.id)} className="text-xs bg-blue-600 text-white rounded px-3 py-1">Facturar</button>

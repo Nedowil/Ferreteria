@@ -23,14 +23,14 @@ export function useDateReport(path, defaults = {}) {
 
 export function DateRangeBar({ from, setFrom, to, setTo, onApply, children }) {
   return (
-    <form onSubmit={(e) => { e.preventDefault(); onApply(); }} className="bg-white rounded-lg shadow p-4 mb-4 flex flex-wrap gap-2 items-end">
+    <form onSubmit={(e) => { e.preventDefault(); onApply(); }} className="bg-white dark:bg-slate-800 rounded-lg shadow p-4 mb-4 flex flex-wrap gap-2 items-end">
       <div>
-        <label className="block text-xs text-slate-500 mb-1">Desde</label>
-        <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="border border-slate-300 rounded px-2 py-2 text-sm" />
+        <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Desde</label>
+        <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="border border-slate-300 dark:border-slate-600 rounded px-2 py-2 text-sm" />
       </div>
       <div>
-        <label className="block text-xs text-slate-500 mb-1">Hasta</label>
-        <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="border border-slate-300 rounded px-2 py-2 text-sm" />
+        <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Hasta</label>
+        <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="border border-slate-300 dark:border-slate-600 rounded px-2 py-2 text-sm" />
       </div>
       {children}
       <button className="bg-slate-700 text-white rounded px-4 py-2 text-sm">Aplicar</button>
@@ -49,8 +49,8 @@ export function ExcelButton({ onClick, disabled }) {
 
 export function KpiCard({ label, value, accent = "" }) {
   return (
-    <div className="bg-white rounded-lg shadow p-5">
-      <div className="text-sm text-slate-500">{label}</div>
+    <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-5">
+      <div className="text-sm text-slate-500 dark:text-slate-400">{label}</div>
       <div className={`text-2xl font-bold mt-1 ${accent}`}>{value}</div>
     </div>
   );

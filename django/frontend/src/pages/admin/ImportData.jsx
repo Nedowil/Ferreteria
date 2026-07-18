@@ -51,18 +51,18 @@ function ImportCard({ type }) {
   };
 
   return (
-    <section className="bg-white rounded-lg shadow p-5">
+    <section className="bg-white dark:bg-slate-800 rounded-lg shadow p-5">
       <div className="flex items-center justify-between mb-2">
         <h3 className="font-semibold">{type.label}</h3>
         <button type="button" onClick={downloadTemplate} className="text-sm text-blue-600 hover:underline">
           Descargar plantilla
         </button>
       </div>
-      <p className="text-xs text-slate-500 mb-1"><b>Columnas:</b> {type.columns}</p>
-      <p className="text-xs text-slate-500 mb-3">{type.help}</p>
+      <p className="text-xs text-slate-500 dark:text-slate-400 mb-1"><b>Columnas:</b> {type.columns}</p>
+      <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">{type.help}</p>
       <form onSubmit={submit} className="flex flex-wrap items-center gap-2">
         <input type="file" accept=".csv,.txt" onChange={(e) => setFile(e.target.files[0])}
-               className="text-sm border border-slate-300 rounded px-2 py-1" />
+               className="text-sm border border-slate-300 dark:border-slate-600 rounded px-2 py-1" />
         <button disabled={!file || busy} className="bg-blue-600 text-white rounded px-4 py-2 text-sm font-medium disabled:opacity-50">
           {busy ? "Importando…" : "Importar"}
         </button>
@@ -91,7 +91,7 @@ export default function ImportData() {
   return (
     <div className="max-w-3xl space-y-5">
       <h1 className="text-lg font-semibold">Importar datos (CSV)</h1>
-      <p className="text-sm text-slate-500">
+      <p className="text-sm text-slate-500 dark:text-slate-400">
         Sube archivos CSV (codificación UTF-8). Descarga la plantilla de cada tipo para ver el formato exacto.
       </p>
       {TYPES.map((t) => <ImportCard key={t.key} type={t} />)}

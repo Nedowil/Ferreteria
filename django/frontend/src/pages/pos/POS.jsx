@@ -80,7 +80,7 @@ function MeasureModal({ product, customer, available, onAdd, onClose }) {
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4"
          onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
            onClick={(e) => e.stopPropagation()}>
         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-4">
           <div className="text-xs uppercase tracking-wide text-blue-100">Vender</div>
@@ -90,16 +90,16 @@ function MeasureModal({ product, customer, available, onAdd, onClose }) {
 
         <div className="p-5 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">¿En qué medida?</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">¿En qué medida?</label>
             <div className="grid grid-cols-2 gap-2">
               {measures.map((m) => (
                 <button key={m.key} onClick={() => setSel(m)}
                         className={"text-left rounded-xl border px-3 py-2 transition " +
                           (sel.key === m.key
                             ? "border-blue-500 bg-blue-50 ring-2 ring-blue-500/30"
-                            : "border-slate-200 hover:border-slate-300")}>
-                  <div className="text-sm font-semibold text-slate-800 capitalize">{m.label}</div>
-                  <div className="text-xs text-slate-500">Q{Number(m.price).toFixed(2)}
+                            : "border-slate-200 dark:border-slate-700 hover:border-slate-300")}>
+                  <div className="text-sm font-semibold text-slate-800 dark:text-slate-100 capitalize">{m.label}</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400">Q{Number(m.price).toFixed(2)}
                     {Number(m.units_factor) !== 1 && <span> · {trim(m.units_factor)} {product.base_unit_label || "u"}</span>}
                   </div>
                 </button>
@@ -109,15 +109,15 @@ function MeasureModal({ product, customer, available, onAdd, onClose }) {
 
           <div className="flex items-end gap-3">
             <div className="flex-1">
-              <label className="block text-sm font-medium text-slate-700 mb-1">Cantidad</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Cantidad</label>
               <input ref={qtyRef} type="number" step="any" min="0" value={qty}
                      onChange={(e) => setQty(e.target.value)}
                      onKeyDown={(e) => e.key === "Enter" && confirm()}
-                     className="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                     className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div className="text-right">
-              <div className="text-xs text-slate-500">Importe</div>
-              <div className="text-2xl font-bold text-slate-800">Q{importe.toFixed(2)}</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">Importe</div>
+              <div className="text-2xl font-bold text-slate-800 dark:text-slate-100">Q{importe.toFixed(2)}</div>
             </div>
           </div>
 
@@ -129,7 +129,7 @@ function MeasureModal({ product, customer, available, onAdd, onClose }) {
 
           <div className="flex gap-2 pt-1">
             <button onClick={onClose}
-                    className="flex-1 border border-slate-300 text-slate-600 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 transition">
+                    className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 transition">
               Cancelar
             </button>
             <button onClick={confirm} disabled={!n || n <= 0}
@@ -188,7 +188,7 @@ function CustomerPicker({ customers, value, onChange, onAddNew }) {
     <div className="relative" ref={ref}>
       <div className="flex gap-2">
         <button type="button" onClick={() => setOpen((o) => !o)}
-                className="flex-1 min-w-0 text-left border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white flex items-center justify-between gap-2 outline-none focus:ring-2 focus:ring-blue-500">
+                className="flex-1 min-w-0 text-left border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-800 flex items-center justify-between gap-2 outline-none focus:ring-2 focus:ring-blue-500">
           <span className="truncate">{selected ? `${selected.name}${selected.customer_type === "wholesale" ? " (mayorista)" : ""}` : "Consumidor final"}</span>
           <span className="text-slate-400 shrink-0">▾</span>
         </button>
@@ -198,11 +198,11 @@ function CustomerPicker({ customers, value, onChange, onAddNew }) {
         </button>
       </div>
       {open && (
-        <div className="absolute z-30 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden">
-          <div className="p-2 border-b border-slate-100">
+        <div className="absolute z-30 mt-1 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg overflow-hidden">
+          <div className="p-2 border-b border-slate-100 dark:border-slate-700">
             <input autoFocus value={q} onChange={(e) => setQ(e.target.value)}
                    placeholder="Buscar por nombre, NIT o teléfono…"
-                   className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                   className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div className="max-h-64 overflow-auto text-sm">
             <button type="button" onClick={() => pick("", null)}
@@ -210,7 +210,7 @@ function CustomerPicker({ customers, value, onChange, onAddNew }) {
             {filtered.map((c) => (
               <button key={c.id} type="button" onClick={() => pick(c.id, c)}
                       className="block w-full text-left px-3 py-2 hover:bg-blue-50 border-t border-slate-50 transition">
-                <div className="font-medium text-slate-800">{c.name}
+                <div className="font-medium text-slate-800 dark:text-slate-100">{c.name}
                   {c.customer_type === "wholesale" && <span className="text-xs text-blue-600"> (mayorista)</span>}</div>
                 {(c.tax_id || c.phone) && (
                   <div className="text-xs text-slate-400">
@@ -239,7 +239,7 @@ function CustomerPicker({ customers, value, onChange, onAddNew }) {
 function SaleDoneModal({ sale, onPrint, onView, onNew }) {
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
         <div className="bg-gradient-to-r from-emerald-500 to-green-600 text-white px-5 py-5 text-center">
           <div className="text-4xl">✓</div>
           <div className="text-lg font-bold mt-1">Venta registrada</div>
@@ -265,17 +265,17 @@ function SaleDoneModal({ sale, onPrint, onView, onNew }) {
             </div>
           )}
           <div className="text-sm space-y-1">
-            <div className="flex justify-between"><span className="text-slate-500">Total</span><span className="font-semibold">Q{sale.total.toFixed(2)}</span></div>
+            <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">Total</span><span className="font-semibold">Q{sale.total.toFixed(2)}</span></div>
             {!sale.credit && (
-              <div className="flex justify-between"><span className="text-slate-500">Recibido</span><span className="font-semibold">Q{sale.paid.toFixed(2)}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">Recibido</span><span className="font-semibold">Q{sale.paid.toFixed(2)}</span></div>
             )}
             {sale.credit && (
-              <div className="flex justify-between"><span className="text-slate-500">Saldo al crédito</span><span className="font-semibold text-amber-600">Q{(sale.total - sale.paid).toFixed(2)}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">Saldo al crédito</span><span className="font-semibold text-amber-600">Q{(sale.total - sale.paid).toFixed(2)}</span></div>
             )}
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <button onClick={onPrint} className="border border-slate-300 text-slate-700 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 transition">🖨️ Ticket</button>
-            <button onClick={onView} className="border border-slate-300 text-slate-700 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 transition">🧾 Ver venta</button>
+            <button onClick={onPrint} className="border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 transition">🖨️ Ticket</button>
+            <button onClick={onView} className="border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 transition">🧾 Ver venta</button>
           </div>
           <button onClick={onNew} autoFocus
                   className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg py-3 font-semibold shadow hover:from-blue-700 hover:to-indigo-700 transition">
@@ -669,7 +669,7 @@ export default function POS() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">🛒 Punto de venta</h1>
+        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">🛒 Punto de venta</h1>
         <div className="flex items-center gap-3">
           {!serverOnline
             ? <span className="text-sm text-white bg-red-500 rounded-full px-3 py-1 font-medium">● OFFLINE</span>
@@ -681,7 +681,7 @@ export default function POS() {
             </button>
           )}
           <button onClick={openCustomerDisplay}
-                  className="text-sm border border-slate-300 rounded-lg px-3 py-1.5 hover:bg-slate-50 transition">
+                  className="text-sm border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 hover:bg-slate-50 transition">
             🖥️ Pantalla cliente
           </button>
           {cashOpen === false && can("caja.abrir") && (
@@ -730,13 +730,13 @@ export default function POS() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Catálogo + carrito */}
         <div className="lg:col-span-2 space-y-4">
-          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4">
             <div className="flex gap-2">
               <div className="relative flex-1">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
                 <input ref={searchRef} autoFocus placeholder="Buscar o escanear producto (nombre, SKU o código)…"
                        value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={onSearchKey}
-                       className="w-full border border-slate-300 rounded-lg pl-10 pr-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" />
+                       className="w-full border border-slate-300 dark:border-slate-600 rounded-lg pl-10 pr-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" />
               </div>
               {can("productos.crear") && (
                 <button type="button" onClick={() => setAddingProduct(true)} title="Nuevo producto"
@@ -750,13 +750,13 @@ export default function POS() {
               <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
                 {filtered.length} producto{filtered.length === 1 ? "" : "s"}
               </span>
-              <div className="flex rounded-lg border border-slate-200 overflow-hidden text-sm">
+              <div className="flex rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden text-sm">
                 <button type="button" onClick={() => setView("list")}
-                        className={"px-3 py-1 transition " + (catalogView === "list" ? "bg-slate-800 text-white" : "bg-white text-slate-500 hover:bg-slate-50")}>
+                        className={"px-3 py-1 transition " + (catalogView === "list" ? "bg-slate-800 text-white" : "bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50")}>
                   ☰ Lista
                 </button>
                 <button type="button" onClick={() => setView("grid")}
-                        className={"px-3 py-1 transition " + (catalogView === "grid" ? "bg-slate-800 text-white" : "bg-white text-slate-500 hover:bg-slate-50")}>
+                        className={"px-3 py-1 transition " + (catalogView === "grid" ? "bg-slate-800 text-white" : "bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50")}>
                   🖼️ Imágenes
                 </button>
               </div>
@@ -769,7 +769,7 @@ export default function POS() {
                   <span className="w-28 text-right shrink-0">Existencia</span>
                   <span className="w-24 text-right shrink-0">Precio venta</span>
                 </div>
-                <div className="max-h-[19rem] overflow-auto border border-slate-100 rounded-xl divide-y divide-slate-100">
+                <div className="max-h-[19rem] overflow-auto border border-slate-100 dark:border-slate-700 rounded-xl divide-y divide-slate-100 dark:divide-slate-700">
                   {filtered.map((p) => {
                     const avail = availableFor(p);
                     const unit = p.base_unit_label || "unidad";
@@ -777,12 +777,12 @@ export default function POS() {
                       <button key={p.id} onClick={() => setPicking(p)}
                               className="w-full text-left flex items-center gap-3 px-3 py-2.5 hover:bg-blue-50 transition group">
                         <div className="min-w-0 flex-1">
-                          <div className="text-sm font-medium text-slate-800 truncate group-hover:text-blue-700">{p.name}</div>
+                          <div className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate group-hover:text-blue-700">{p.name}</div>
                           <div className="text-[11px] font-mono text-slate-400">{p.sku}</div>
                         </div>
                         <div className="w-28 text-right shrink-0">
                           <span className={"text-[11px] rounded-full px-2 py-0.5 " +
-                            (avail <= 0 ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-500")}>
+                            (avail <= 0 ? "bg-red-100 text-red-700" : "bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400")}>
                             {trim(avail)} {unit}
                           </span>
                         </div>
@@ -809,18 +809,18 @@ export default function POS() {
                   const unit = p.base_unit_label || "unidad";
                   return (
                     <button key={p.id} onClick={() => setPicking(p)}
-                            className="text-left rounded-xl border border-slate-200 hover:border-blue-400 hover:shadow-md transition overflow-hidden bg-white group">
-                      <div className="h-24 bg-slate-50 flex items-center justify-center overflow-hidden">
+                            className="text-left rounded-xl border border-slate-200 dark:border-slate-700 hover:border-blue-400 hover:shadow-md transition overflow-hidden bg-white dark:bg-slate-800 group">
+                      <div className="h-24 bg-slate-50 dark:bg-slate-900 flex items-center justify-center overflow-hidden">
                         {p.image
                           ? <img src={p.image} alt={p.name} className="h-full w-full object-contain" loading="lazy" />
                           : <span className="text-4xl text-slate-300">📦</span>}
                       </div>
                       <div className="p-2">
-                        <div className="text-sm font-medium text-slate-800 leading-tight line-clamp-2 group-hover:text-blue-700">{p.name}</div>
+                        <div className="text-sm font-medium text-slate-800 dark:text-slate-100 leading-tight line-clamp-2 group-hover:text-blue-700">{p.name}</div>
                         <div className="flex items-center justify-between mt-1">
                           <span className="text-blue-600 font-bold text-sm">Q{p.sale_price}</span>
                           <span className={"text-[10px] rounded-full px-2 py-0.5 " +
-                            (avail <= 0 ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-500")}>
+                            (avail <= 0 ? "bg-red-100 text-red-700" : "bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400")}>
                             {trim(avail)} {unit}
                           </span>
                         </div>
@@ -837,11 +837,11 @@ export default function POS() {
             )}
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-            <div className="flex items-center justify-between bg-slate-50 border-b border-slate-100 px-3 py-2">
-              <span className="text-sm font-semibold text-slate-700">🧾 Detalle de la venta</span>
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+            <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-700 px-3 py-2">
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">🧾 Detalle de la venta</span>
               {cart.length > 0 && (
-                <span className="text-xs text-slate-500">{cart.length} {cart.length === 1 ? "línea" : "líneas"}</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">{cart.length} {cart.length === 1 ? "línea" : "líneas"}</span>
               )}
             </div>
             <table className="w-full text-sm">
@@ -851,9 +851,9 @@ export default function POS() {
               </thead>
               <tbody>
                 {cart.map((it, idx) => (
-                  <tr key={idx} className="border-t border-slate-100 hover:bg-slate-50/70 transition">
+                  <tr key={idx} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 transition">
                     <td className="px-3 py-2">
-                      <div className="font-medium text-slate-800">{it.name}</div>
+                      <div className="font-medium text-slate-800 dark:text-slate-100">{it.name}</div>
                       <div className="text-xs text-slate-400">
                         <span className="font-mono">{it.sku}</span>
                         <span className="ml-1 capitalize text-blue-600">· {it.unit_label}</span>
@@ -861,11 +861,11 @@ export default function POS() {
                     </td>
                     <td className="px-3 py-2"><input type="number" step="any" min="0" value={it.quantity}
                           onChange={(e) => updateQty(idx, e.target.value)}
-                          className="border border-slate-300 rounded-lg px-2 py-1 text-sm w-20 text-right outline-none focus:ring-2 focus:ring-blue-500" /></td>
+                          className="border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1 text-sm w-20 text-right outline-none focus:ring-2 focus:ring-blue-500" /></td>
                     <td className="px-3 py-2"><input type="number" step="any" value={it.unit_price}
                           onChange={(e) => updatePrice(idx, e.target.value)}
-                          className="border border-slate-300 rounded-lg px-2 py-1 text-sm w-24 text-right outline-none focus:ring-2 focus:ring-blue-500" /></td>
-                    <td className="px-3 py-2 text-right font-semibold text-slate-700">Q{(Number(it.quantity || 0) * Number(it.unit_price || 0)).toFixed(2)}</td>
+                          className="border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1 text-sm w-24 text-right outline-none focus:ring-2 focus:ring-blue-500" /></td>
+                    <td className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">Q{(Number(it.quantity || 0) * Number(it.unit_price || 0)).toFixed(2)}</td>
                     <td className="px-3 py-2 text-right"><button onClick={() => removeItem(idx)} className="text-red-500 hover:text-white hover:bg-red-500 rounded-full w-6 h-6 transition" title="Quitar">×</button></td>
                   </tr>
                 ))}
@@ -876,7 +876,7 @@ export default function POS() {
         </div>
 
         {/* Cobro */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5 space-y-4 h-fit sticky top-20">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-5 space-y-4 h-fit sticky top-20">
           <div>
             <label className="block text-sm font-medium mb-1">Cliente</label>
             <CustomerPicker customers={customers} value={customerId}
@@ -897,7 +897,7 @@ export default function POS() {
                    max={todayStr} min={wantFel ? minFelDate : undefined}
                    className={"w-full border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 " +
                      (felDateInvalid ? "border-red-400 bg-red-50 text-red-700"
-                        : saleDate !== todayStr ? "border-amber-400 bg-amber-50 text-amber-800" : "border-slate-300")} />
+                        : saleDate !== todayStr ? "border-amber-400 bg-amber-50 text-amber-800" : "border-slate-300 dark:border-slate-600")} />
             {felDateInvalid ? (
               <div className="text-xs text-red-600 mt-1 flex items-center justify-between">
                 <span>⚠️ La factura electrónica solo admite los últimos 5 días.</span>
@@ -933,7 +933,7 @@ export default function POS() {
               {[5, 10, 15].map((pct) => (
                 <button key={pct} type="button" onClick={() => setDiscount((subtotal * pct / 100).toFixed(2))}
                         disabled={subtotal <= 0}
-                        className="rounded-lg px-3 py-1.5 text-sm border border-slate-200 text-slate-600 hover:bg-slate-50 transition disabled:opacity-40">
+                        className="rounded-lg px-3 py-1.5 text-sm border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 transition disabled:opacity-40">
                   {pct}%
                 </button>
               ))}
@@ -945,7 +945,7 @@ export default function POS() {
               )}
             </div>
             <input type="number" step="any" min="0" value={discount} onChange={(e) => setDiscount(e.target.value)}
-                   placeholder="0.00" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                   placeholder="0.00" className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
 
           {can("facturas.emitir") && (
@@ -955,19 +955,19 @@ export default function POS() {
                 <button type="button" onClick={() => setWantFel(false)}
                         className={"rounded-lg py-2 text-sm font-medium border transition " +
                           (!wantFel ? "bg-slate-800 text-white border-slate-800"
-                                    : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50")}>
+                                    : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50")}>
                   🧾 Recibo
                 </button>
                 <button type="button"
                         onClick={() => { setWantFel(true); if (saleDate < minFelDate || saleDate > todayStr) setSaleDate(todayStr); }}
                         className={"rounded-lg py-2 text-sm font-medium border transition " +
                           (wantFel ? "bg-blue-600 text-white border-blue-600"
-                                   : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50")}>
+                                   : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50")}>
                   📑 Factura FEL
                 </button>
               </div>
               {wantFel && (
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                   {customer && customer.tax_id
                     ? <>Se facturará a NIT <b>{customer.tax_id}</b>.</>
                     : <>Sin NIT del cliente se factura como <b>Consumidor Final (CF)</b>.</>}
@@ -1001,7 +1001,7 @@ export default function POS() {
               <div>
                 <label className="block text-sm font-medium mb-1">Método de pago</label>
                 <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}
-                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                        className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
                   <option value="efectivo">Efectivo</option>
                   <option value="tarjeta">Tarjeta</option>
                   <option value="transferencia">Transferencia</option>
@@ -1020,14 +1020,14 @@ export default function POS() {
                     </button>
                     {QUICK_CASH.filter((v) => v >= total).slice(0, 3).map((v) => (
                       <button key={v} type="button" onClick={() => setPaid(String(v))}
-                              className="rounded-lg px-3 py-1.5 text-sm border border-slate-200 text-slate-600 hover:bg-slate-50 transition">
+                              className="rounded-lg px-3 py-1.5 text-sm border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 transition">
                         Q{v}
                       </button>
                     ))}
                   </div>
                   <input type="number" step="any" value={paid} onChange={(e) => setPaid(e.target.value)}
-                         placeholder={total.toFixed(2)} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
-                  <div className="flex justify-between text-sm mt-2"><span className="text-slate-500">Vuelto</span><span className="font-semibold">Q{change.toFixed(2)}</span></div>
+                         placeholder={total.toFixed(2)} className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                  <div className="flex justify-between text-sm mt-2"><span className="text-slate-500 dark:text-slate-400">Vuelto</span><span className="font-semibold">Q{change.toFixed(2)}</span></div>
                 </div>
               )}
             </>
@@ -1037,7 +1037,7 @@ export default function POS() {
             <div>
               <label className="block text-sm font-medium mb-1">Abono inicial (opcional)</label>
               <input type="number" step="any" value={paid} onChange={(e) => setPaid(e.target.value)}
-                     placeholder="0" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                     placeholder="0" className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
           )}
 
