@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
 import { dialog } from "../../components/Dialog";
+import { toast } from "../../components/Toast";
 
 const SYSTEM = ["admin", "vendedor", "almacenista"];
 
@@ -21,14 +22,15 @@ export default function Roles() {
     try {
       if (editing.id) await api.put(`/roles/${editing.id}/`, { name: editing.name, permissions: editing.permissions });
       else await api.post("/roles/", { name: editing.name, permissions: editing.permissions });
+      toast.success("Guardado correctamente.");
       setEditing(null); load();
-    } catch (err) { setError(JSON.stringify(err.response?.data) || "Error"); }
+    } catch (err) { setError(JSON.stringify(err.response?.data) || "Error"); toast.error(JSON.stringify(err.response?.data) || "Error"); }
   };
 
   const remove = async (id) => {
     if (!(await dialog.confirm("¿Estás seguro de que deseas eliminar este rol?", { danger: true, okText: "Eliminar" }))) return;
-    try { await api.delete(`/roles/${id}/`); load(); }
-    catch (err) { await dialog.alert(err.response?.data?.detail || "No se pudo eliminar."); }
+    try { await api.delete(`/roles/${id}/`); toast.success("Eliminado correctamente."); load(); }
+    catch (err) { await dialog.alert(err.response?.data?.detail || "No se pudo eliminar."); toast.error(err.response?.data?.detail || "No se pudo eliminar."); }
   };
 
   const toggle = (code) => setEditing((e) => ({

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../api/client";
 import { dialog } from "../../components/Dialog";
+import { toast } from "../../components/Toast";
 
 const EMPTY = {
   sku: "", barcode: "", name: "", description: "",
@@ -317,9 +318,11 @@ export default function ProductForm() {
         fd.append("image", imageFile);
         await api.patch(`/inventory/products/${productId}/`, fd);
       }
+      toast.success("Producto guardado.");
       navigate("/productos");
     } catch (err) {
       setErrors(err.response?.data || { detail: "Error al guardar" });
+      toast.error(err.response?.data?.detail || "Error al guardar");
       window.scrollTo(0, 0);
     } finally {
       setBusy(false);

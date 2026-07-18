@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import ScannerRedirect from "./ScannerRedirect";
@@ -31,6 +31,25 @@ export default function Layout({ children }) {
     setDark(next);
     document.documentElement.classList.toggle("dark", next);
     localStorage.setItem("fz_theme", next ? "dark" : "light");
+  };
+
+  // Instalar como app (PWA): el navegador avisa cuándo se puede instalar.
+  const [installPrompt, setInstallPrompt] = useState(null);
+  useEffect(() => {
+    const onBIP = (e) => { e.preventDefault(); setInstallPrompt(e); };
+    const onInstalled = () => setInstallPrompt(null);
+    window.addEventListener("beforeinstallprompt", onBIP);
+    window.addEventListener("appinstalled", onInstalled);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onBIP);
+      window.removeEventListener("appinstalled", onInstalled);
+    };
+  }, []);
+  const doInstall = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    await installPrompt.userChoice;
+    setInstallPrompt(null);
   };
   const showVentas = can("ventas.crear") || can("ventas.ver") || can("caja.ver")
     || can("cotizaciones.ver") || can("facturas.ver") || can("devoluciones.ver")
@@ -154,6 +173,12 @@ export default function Layout({ children }) {
                   {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
                 </select>
               </div>
+            )}
+            {installPrompt && (
+              <button onClick={doInstall} title="Instalar la app en este dispositivo"
+                      className="inline-flex items-center gap-1 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-3 py-1.5 transition">
+                ⬇️ <span className="hidden sm:inline">Instalar app</span>
+              </button>
             )}
             <button onClick={toggleTheme} title={dark ? "Modo claro" : "Modo oscuro"} aria-label="Cambiar tema"
                     className="text-lg leading-none border border-slate-200 dark:border-slate-600 rounded-lg px-2.5 py-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">

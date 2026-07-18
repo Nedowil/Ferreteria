@@ -1,12 +1,25 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import api from "../../api/client";
+import { useAuth } from "../../auth/AuthContext";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 
 export default function LowStock() {
+  const navigate = useNavigate();
+  const { can } = useAuth();
   const [rows, setRows] = useState([]);
   const [exporting, setExporting] = useState(false);
   useEffect(() => { api.get("/inventory/products/low-stock/").then((r) => setRows(r.data)); }, []);
+
+  // Arma una compra sugerida con todos los productos por reponer y sus
+  // cantidades sugeridas, y abre el formulario de compra ya con las partidas.
+  const generarCompra = () => {
+    const prefill = rows.map((r) => ({
+      product_id: r.id, name: r.name, sku: r.sku,
+      quantity: String(r.suggested || 1), unit_cost: "0", tax_type: "iva",
+    }));
+    navigate("/compras/nueva", { state: { prefill } });
+  };
 
   const exportExcel = async () => {
     setExporting(true);
@@ -28,7 +41,12 @@ export default function LowStock() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">⚠️ Productos con stock bajo</h1>
-        <button onClick={exportExcel} disabled={exporting} className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-100 transition">{exporting ? "Exportando…" : "⬇️ Excel"}</button>
+        <div className="flex gap-2">
+          <button onClick={exportExcel} disabled={exporting} className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-100 transition">{exporting ? "Exportando…" : "⬇️ Excel"}</button>
+          {can("compras.crear") && rows.length > 0 && (
+            <button onClick={generarCompra} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">🛒 Generar compra sugerida</button>
+          )}
+        </div>
       </div>
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
         <div className="overflow-x-auto">

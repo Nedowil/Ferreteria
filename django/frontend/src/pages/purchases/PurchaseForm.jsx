@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import api from "../../api/client";
 
 export default function PurchaseForm() {
   const navigate = useNavigate();
+  const location = useLocation();
   const today = new Date().toISOString().slice(0, 10);
   const [suppliers, setSuppliers] = useState([]);
   const [header, setHeader] = useState({
@@ -17,6 +18,12 @@ export default function PurchaseForm() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => { api.get("/suppliers/?active=1&page_size=200").then((r) => setSuppliers(r.data.results || r.data)); }, []);
+
+  // Compra sugerida: si llegamos desde "Stock bajo" con partidas prellenadas.
+  useEffect(() => {
+    if (location.state?.prefill?.length) setItems(location.state.prefill);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const doSearch = async (q) => {
     setSearch(q);

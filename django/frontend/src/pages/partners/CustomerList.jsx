@@ -4,6 +4,7 @@ import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 import { dialog } from "../../components/Dialog";
+import { toast } from "../../components/Toast";
 
 const BLANK = { name: "", tax_id: "", email: "", phone: "", address: "", notes: "",
   active: true, customer_type: "retail", wholesale_discount_percent: "", credit_limit: "", credit_enabled: false };
@@ -74,11 +75,14 @@ export default function CustomerList() {
     if (payload.credit_limit === "" || payload.credit_limit == null) payload.credit_limit = "0";
     if (editing.id) await api.put(`/customers/${editing.id}/`, payload);
     else await api.post("/customers/", payload);
+    toast.success("Guardado correctamente.");
     setEditing(null); load();
   };
   const remove = async (id) => {
     if (!(await dialog.confirm("¿Estás seguro de que deseas eliminar este cliente?", { danger: true, okText: "Eliminar" }))) return;
-    await api.delete(`/customers/${id}/`); load();
+    await api.delete(`/customers/${id}/`);
+    toast.success("Eliminado correctamente.");
+    load();
   };
 
   return (

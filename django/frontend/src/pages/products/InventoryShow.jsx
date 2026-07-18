@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import api from "../../api/client";
+import { exportToExcel } from "../../utils/exportExcel";
 
 const TYPE_BADGE = {
   entrada: "bg-green-100 text-green-700",
@@ -38,9 +39,21 @@ export default function InventoryShow() {
 
   if (!product) return <div className="text-slate-400">Cargando…</div>;
 
+  // Totales del kardex (en unidad base, según el saldo antes/después).
+  const entradas = movements.reduce((a, m) => a + Math.max(0, Number(m.new_stock) - Number(m.previous_stock)), 0);
+  const salidas = movements.reduce((a, m) => a + Math.max(0, Number(m.previous_stock) - Number(m.new_stock)), 0);
+  const exportKardex = () => exportToExcel(`kardex-${product.sku}`, [
+    { header: "Fecha", value: (m) => new Date(m.created_at).toLocaleString("es-GT") },
+    { header: "Tipo", value: (m) => m.type_display },
+    { header: "Cantidad", value: (m) => Number(m.quantity) },
+    { header: "Saldo antes", value: (m) => Number(m.previous_stock) },
+    { header: "Saldo después", value: (m) => Number(m.new_stock) },
+    { header: "Motivo", value: (m) => m.reason || "" },
+  ], movements);
+
   return (
     <div>
-      <h1 className="text-lg font-semibold mb-4">Inventario: {product.name}</h1>
+      <h1 className="text-lg font-semibold mb-4">Kardex de inventario: {product.name}</h1>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="space-y-5">
           <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-5">
@@ -86,7 +99,15 @@ export default function InventoryShow() {
         </div>
 
         <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
-          <div className="px-5 py-3 border-b font-semibold">Historial de movimientos</div>
+          <div className="px-5 py-3 border-b flex items-center justify-between gap-2">
+            <span className="font-semibold">Kardex (movimientos)</span>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-green-600 font-medium">▲ Entradas: {entradas}</span>
+              <span className="text-xs text-red-600 font-medium">▼ Salidas: {salidas}</span>
+              <button onClick={exportKardex} disabled={!movements.length}
+                      className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-3 py-1 text-xs font-medium hover:bg-emerald-100 transition disabled:opacity-50">⬇️ Excel</button>
+            </div>
+          </div>
           <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-left">

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
 import { dialog } from "../../components/Dialog";
+import { toast } from "../../components/Toast";
 
 const BLANK = { name: "", code: "", address: "", phone: "", email: "", is_main: false, active: true };
 
@@ -17,13 +18,14 @@ export default function Branches() {
     try {
       if (editing.id) await api.put(`/branches/${editing.id}/`, editing);
       else await api.post("/branches/", editing);
+      toast.success("Guardado correctamente.");
       setEditing(null); load();
-    } catch (err) { setError(JSON.stringify(err.response?.data) || "Error"); }
+    } catch (err) { setError(JSON.stringify(err.response?.data) || "Error"); toast.error(JSON.stringify(err.response?.data) || "Error"); }
   };
   const remove = async (id) => {
     if (!(await dialog.confirm("¿Estás seguro de que deseas eliminar esta sucursal?", { danger: true, okText: "Eliminar" }))) return;
-    try { await api.delete(`/branches/${id}/`); load(); }
-    catch (err) { await dialog.alert(err.response?.data?.detail || "No se pudo eliminar."); }
+    try { await api.delete(`/branches/${id}/`); toast.success("Eliminado correctamente."); load(); }
+    catch (err) { await dialog.alert(err.response?.data?.detail || "No se pudo eliminar."); toast.error(err.response?.data?.detail || "No se pudo eliminar."); }
   };
 
   return (

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { dialog } from "../../components/Dialog";
+import { toast } from "../../components/Toast";
 
 const CONFIG = {
   categories: { title: "Categorías", endpoint: "/inventory/categories/", hasDescription: true },
@@ -27,6 +28,7 @@ export default function CatalogList({ kind }) {
     e.preventDefault();
     if (editing.id) await api.put(`${cfg.endpoint}${editing.id}/`, editing);
     else await api.post(cfg.endpoint, editing);
+    toast.success("Guardado correctamente.");
     setEditing(null);
     load();
   };
@@ -35,9 +37,11 @@ export default function CatalogList({ kind }) {
     if (!(await dialog.confirm("¿Estás seguro de que deseas eliminar este registro?", { danger: true, okText: "Eliminar" }))) return;
     try {
       await api.delete(`${cfg.endpoint}${id}/`);
+      toast.success("Eliminado correctamente.");
       load();
     } catch (err) {
       await dialog.alert(err.response?.data?.detail || "No se pudo eliminar.");
+      toast.error(err.response?.data?.detail || "No se pudo eliminar.");
     }
   };
 

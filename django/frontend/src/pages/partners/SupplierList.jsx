@@ -3,6 +3,7 @@ import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 import { dialog } from "../../components/Dialog";
+import { toast } from "../../components/Toast";
 
 const BLANK = { name: "", tax_id: "", contact_name: "", email: "", phone: "", address: "", notes: "", active: true };
 
@@ -62,11 +63,14 @@ export default function SupplierList() {
     e.preventDefault();
     if (editing.id) await api.put(`/suppliers/${editing.id}/`, editing);
     else await api.post("/suppliers/", editing);
+    toast.success("Guardado correctamente.");
     setEditing(null); load();
   };
   const remove = async (id) => {
     if (!(await dialog.confirm("¿Estás seguro de que deseas eliminar este proveedor?", { danger: true, okText: "Eliminar" }))) return;
-    await api.delete(`/suppliers/${id}/`); load();
+    await api.delete(`/suppliers/${id}/`);
+    toast.success("Eliminado correctamente.");
+    load();
   };
 
   return (

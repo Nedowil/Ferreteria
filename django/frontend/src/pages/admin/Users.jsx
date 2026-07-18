@@ -3,6 +3,7 @@ import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import PasswordInput from "../../components/PasswordInput";
 import { dialog } from "../../components/Dialog";
+import { toast } from "../../components/Toast";
 
 export default function Users() {
   const { can } = useAuth();
@@ -49,16 +50,18 @@ export default function Users() {
     try {
       if (editing.id) await api.put(`/users/${editing.id}/`, payload);
       else await api.post("/users/", payload);
+      toast.success("Guardado correctamente.");
       setEditing(null); load();
     } catch (err) {
       setError(JSON.stringify(err.response?.data) || "Error");
+      toast.error(JSON.stringify(err.response?.data) || "Error");
     }
   };
 
   const remove = async (id) => {
     if (!(await dialog.confirm("¿Estás seguro de que deseas eliminar este usuario?", { danger: true, okText: "Eliminar" }))) return;
-    try { await api.delete(`/users/${id}/`); load(); }
-    catch (err) { await dialog.alert(err.response?.data?.detail || "No se pudo eliminar."); }
+    try { await api.delete(`/users/${id}/`); toast.success("Eliminado correctamente."); load(); }
+    catch (err) { await dialog.alert(err.response?.data?.detail || "No se pudo eliminar."); toast.error(err.response?.data?.detail || "No se pudo eliminar."); }
   };
 
   const toggleBranch = (id) => setEditing((e) => ({
