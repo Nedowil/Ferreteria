@@ -138,63 +138,174 @@ export default function Ticket() {
     window.open(`${base}?text=${encodeURIComponent(text)}`, "_blank");
   };
 
-  // Genera el PDF del comprobante EN EL FORMATO ELEGIDO (ticket 80mm o carta).
-  const buildPdfBlob = async () => {
+  // Ticket térmico (80mm): se captura como imagen (respeta el diseño de tira).
+  const buildTicketPdfBlob = async () => {
     const html2canvas = (await import("html2canvas")).default;
     const { jsPDF } = await import("jspdf");
     const el = printRef.current;
-
-    // El formato carta debe capturarse a su ANCHO REAL (~190mm). En el teléfono
-    // el contenedor es angosto y la tabla se cortaría a la derecha, así que le
-    // fijamos el ancho mientras se captura y luego lo restauramos.
-    const prevWidth = el.style.width;
-    // Los navegadores de celular "inflan" el texto (text boosting) y las letras
-    // se dibujan más abajo al capturar. Lo desactivamos mientras generamos el PDF
-    // para que en el teléfono salga igual que en la computadora.
-    const prevTSA = el.style.textSizeAdjust;
-    const prevWTSA = el.style.webkitTextSizeAdjust;
-    el.style.textSizeAdjust = "100%";
-    el.style.webkitTextSizeAdjust = "100%";
-    if (mode === "carta") el.style.width = "760px";
+    const prevTSA = el.style.textSizeAdjust, prevWTSA = el.style.webkitTextSizeAdjust;
+    el.style.textSizeAdjust = "100%"; el.style.webkitTextSizeAdjust = "100%";
     let canvas;
     try {
-      canvas = await html2canvas(el, {
-        scale: 3, backgroundColor: "#ffffff", useCORS: true,   // más resolución = texto nítido
-        windowWidth: mode === "carta" ? 820 : undefined,
-        onclone: (doc) => {
-          // Refuerzo: desactivar el text-size-adjust también en el clon que
-          // html2canvas renderiza internamente.
-          doc.documentElement.style.webkitTextSizeAdjust = "100%";
-          doc.documentElement.style.textSizeAdjust = "100%";
-        },
-      });
+      canvas = await html2canvas(el, { scale: 3, backgroundColor: "#ffffff", useCORS: true });
     } finally {
-      el.style.width = prevWidth;
-      el.style.textSizeAdjust = prevTSA;
-      el.style.webkitTextSizeAdjust = prevWTSA;
+      el.style.textSizeAdjust = prevTSA; el.style.webkitTextSizeAdjust = prevWTSA;
     }
-    // JPEG de alta calidad: texto nítido y el comprobante sigue liviano para WhatsApp.
     const img = canvas.toDataURL("image/jpeg", 0.96);
-    let pdf;
-    if (mode === "carta") {
-      pdf = new jsPDF({ unit: "mm", format: "letter", orientation: "portrait" });
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
-      const margin = 8;
-      let w = pageW - margin * 2;
-      let h = (w * canvas.height) / canvas.width;
-      const maxH = pageH - margin * 2;
-      if (h > maxH) { h = maxH; w = (h * canvas.width) / canvas.height; }
-      pdf.addImage(img, "JPEG", (pageW - w) / 2, margin, w, h);
-    } else {
-      // Ticket térmico: hoja angosta de 80mm de ancho y alto según el contenido.
-      const w = 80;
-      const h = (w * canvas.height) / canvas.width;
-      pdf = new jsPDF({ unit: "mm", format: [w, h], orientation: "portrait" });
-      pdf.addImage(img, "JPEG", 0, 0, w, h);
-    }
+    const w = 80, h = (w * canvas.height) / canvas.width;
+    const pdf = new jsPDF({ unit: "mm", format: [w, h], orientation: "portrait" });
+    pdf.addImage(img, "JPEG", 0, 0, w, h);
     return pdf.output("blob");
   };
+
+  // Formato carta: PDF NATIVO (texto vectorial real, no imagen). Se ve idéntico y
+  // nítido en cualquier dispositivo (teléfono o computadora) y pesa muy poco.
+  const buildCartaPdfBlob = async () => {
+    const { jsPDF } = await import("jspdf");
+    const autoTable = (await import("jspdf-autotable")).default;
+    const doc = new jsPDF({ unit: "pt", format: "letter", orientation: "portrait" });
+    const PW = doc.internal.pageSize.getWidth();   // 612
+    const PH = doc.internal.pageSize.getHeight();  // 792
+    const M = 40, R = PW - M;
+    const GRN = [21, 159, 115];                    // #159f73
+    const rate = Number(company.tax_rate || 12);
+    const isFel = !!fel;
+    const B = (s) => doc.setFont("helvetica", s ? "bold" : "normal");
+
+    const greenBar = (x, y, w, h, text, align = "center", size = 9) => {
+      doc.setFillColor(...GRN); doc.rect(x, y, w, h, "F");
+      doc.setTextColor(255); B(true); doc.setFontSize(size);
+      doc.text(text, align === "left" ? x + 6 : x + w / 2, y + h / 2 + size * 0.36, { align });
+      doc.setTextColor(0); B(false);
+    };
+    // Escribe "Etiqueta: valor" con la etiqueta en negrita.
+    const kv = (x, y, k, v, size = 9) => {
+      doc.setFontSize(size); B(true); doc.text(k, x, y);
+      const w = doc.getTextWidth(k + " "); B(false);
+      if (v !== "" && v != null) doc.text(String(v), x + w, y);
+      return w;
+    };
+
+    // ---------- Logo ----------
+    try {
+      const img = await new Promise((res, rej) => {
+        const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = logo;
+      });
+      const lw = 66, lh = lw * (img.naturalHeight / img.naturalWidth || 0.75);
+      doc.addImage(img, "JPEG", M, M, lw, lh);
+    } catch { /* si no carga el logo, seguimos sin él */ }
+
+    // ---------- Empresa (izquierda) ----------
+    let cy = M + 10; const cx = M + 78;
+    B(true); doc.setFontSize(12); doc.text(String(company.name || ""), cx, cy); cy += 14;
+    B(false); doc.setFontSize(9);
+    [company.legal_name, company.address, `NIT: ${company.tax_id || "CF"}`,
+     company.phone && `Tel: ${company.phone}`, company.email]
+      .filter(Boolean).forEach((l) => { doc.text(String(l), cx, cy); cy += 11; });
+
+    // ---------- Documento (derecha) ----------
+    B(true); doc.setFontSize(11);
+    doc.text(isFel ? "DOCUMENTO TRIBUTARIO ELECTRÓNICO" : "COMPROBANTE DE VENTA", R, M + 6, { align: "right" });
+    const boxX = 352, boxW = R - boxX;
+    greenBar(boxX, M + 14, boxW, 18, isFel ? `Factura Electrónica # ${fel.numero || "—"}` : `Recibo No. ${sale.folio}`);
+    autoTable(doc, {
+      startY: M + 36, margin: { left: boxX }, tableWidth: boxW,
+      head: [["DÍA", "MES", "AÑO"]],
+      body: [[String(d.getDate()), meses[d.getMonth()], String(d.getFullYear())]],
+      theme: "grid",
+      styles: { fontSize: 9, halign: "center", cellPadding: 3, lineColor: [200, 200, 200], lineWidth: 0.5 },
+      headStyles: { fillColor: GRN, textColor: 255 },
+    });
+
+    // ---------- Detalle del documento (izq) + NIT/Email (der) ----------
+    let y = Math.max(cy, doc.lastAutoTable.finalY) + 16;
+    const colW = (R - M - 20) / 2;
+    greenBar(M, y, colW, 16, "Detalle del Documento", "left");
+    const detLines = [
+      ["Forma de Pago:", formaPago(sale.payment_status)],
+      ["Métodos de Pago:", ""],
+      ["   " + metodoLabel(sale.payment_method) + ":", Q(sale.paid)],
+      ["Moneda:", company.currency === "GTQ" ? "Quetzal" : company.currency],
+      ["Fecha de Emisión:", d.toLocaleString("es-GT")],
+      ...(sale.seller ? [["Vendedor:", sale.seller]] : []),
+    ];
+    const detTop = y + 16, detH = detLines.length * 13 + 8;
+    doc.setDrawColor(210); doc.rect(M, detTop, colW, detH);
+    let dy = detTop + 13;
+    detLines.forEach(([k, v]) => { kv(M + 6, dy, k, v); dy += 13; });
+    // NIT / Email (derecha)
+    const rx = M + colW + 20; let ry = detTop + 13;
+    kv(rx, ry, "NIT:", sale.customer_nit || "CF"); ry += 13;
+    kv(rx, ry, "Email:", sale.customer_email || "N/A");
+
+    // ---------- Receptor ----------
+    y = detTop + detH + 16;
+    [["Nombre Receptor:", sale.customer], ["Teléfono:", sale.customer_phone || "N/A"],
+     ["Dirección:", sale.customer_address || "N/A"]]
+      .forEach(([k, v]) => { kv(M, y, k, v); y += 13; });
+
+    // ---------- Partidas ----------
+    const body = sale.items.map((it) => {
+      const sub = Number(it.subtotal), iva = sub * rate / (100 + rate);
+      return [String(Number(it.qty)), it.unit_label || "Unidad", it.name,
+        Number(it.unit_price).toFixed(2), Number(it.discount || 0).toFixed(2),
+        `IVA (${rate}%): ${iva.toFixed(2)}`, sub.toFixed(2)];
+    });
+    autoTable(doc, {
+      startY: y + 4, margin: { left: M, right: M },
+      head: [["CANTIDAD", "UNIDAD", "DESCRIPCIÓN", "P. UNIT", "DESC", "IMPUESTOS", "TOTAL"]],
+      body, theme: "grid",
+      styles: { fontSize: 8.5, cellPadding: 4, lineColor: [210, 210, 210], lineWidth: 0.5 },
+      headStyles: { fillColor: GRN, textColor: 255, halign: "center", fontSize: 8 },
+      columnStyles: { 0: { halign: "center" }, 1: { halign: "center" },
+        3: { halign: "right" }, 4: { halign: "right" }, 5: { halign: "right" }, 6: { halign: "right" } },
+    });
+
+    // ---------- Total en letras + TOTAL ----------
+    y = doc.lastAutoTable.finalY + 12;
+    const totW = 160, lettersW = R - M - totW, labelW = 62;
+    doc.setDrawColor(210); doc.rect(M, y, lettersW, 34);
+    B(false); doc.setFontSize(8); doc.setTextColor(120);
+    doc.text("TOTAL EN LETRAS:", M + 6, y + 12);
+    doc.setTextColor(0); B(true); doc.setFontSize(9);
+    doc.text(String(enLetras(sale.total)).toUpperCase(), M + 6, y + 25, { maxWidth: lettersW - 12 });
+    greenBar(M + lettersW, y, labelW, 34, "TOTAL:", "center", 10);
+    doc.setDrawColor(210); doc.rect(M + lettersW + labelW, y, totW - labelW, 34);
+    B(true); doc.setFontSize(13); doc.text(Q(sale.total), R - 8, y + 22, { align: "right" });
+    y += 34 + 16;
+
+    // ---------- FEL (autorización + frases + QR) ----------
+    if (isFel) {
+      doc.setDrawColor(210); doc.setTextColor(0);
+      const felH = 46; doc.rect(M, y, R - M, felH);
+      let fy = y + 13;
+      kv(M + 6, fy, "Número de Autorización:", ""); fy += 12;
+      B(false); doc.setFontSize(8.5); doc.text(String(fel.uuid || "—"), M + 6, fy); fy += 13;
+      doc.setFontSize(9);
+      kv(M + 6, fy, "Serie:", fel.serie || "—");
+      kv(M + 200, fy, "No:", fel.numero || "—");
+      kv(M + 320, fy, "Certificación:", fel.fecha_certificacion ? new Date(fel.fecha_certificacion).toLocaleDateString("es-GT") : "—");
+      y += felH + 12;
+      // Frases SAT + certificador + QR
+      const qy = y;
+      B(false); doc.setFontSize(8); doc.setTextColor(90);
+      if (phrases.length) { B(true); doc.text("Frases SAT:", M, y); B(false); y += 11; }
+      phrases.forEach((p) => { doc.text(String(typeof p === "string" ? p : Object.values(p).join(" ")), M + 6, y, { maxWidth: 380 }); y += 10; });
+      doc.setTextColor(0); B(false); doc.setFontSize(8.5);
+      doc.text(`Certificador: ${fel.certificador || "INFILE, S.A."}  ·  NIT: ${fel.certificador_nit || "12521337"}`, M, y + 4);
+      if (qr) { try { doc.addImage(qr, "PNG", R - 90, qy - 6, 84, 84); } catch { /* sin QR */ } }
+    }
+
+    // ---------- Pie ----------
+    B(false); doc.setFontSize(8); doc.setTextColor(150);
+    doc.text(isFel ? "Representación impresa de la Factura Electrónica."
+                   : "Comprobante de venta — no es una factura electrónica.", PW / 2, PH - 30, { align: "center" });
+    doc.text("Página 1 de 1", PW / 2, PH - 18, { align: "center" });
+
+    return doc.output("blob");
+  };
+
+  const buildPdfBlob = async () => (mode === "carta" ? buildCartaPdfBlob() : buildTicketPdfBlob());
 
   // Compartir el comprobante como PDF ADJUNTO (ticket o carta, según lo elegido).
   // En el celular usa el menú nativo (Web Share API) para mandarlo por WhatsApp;
