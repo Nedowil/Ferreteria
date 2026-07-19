@@ -152,14 +152,14 @@ export default function Ticket() {
     let canvas;
     try {
       canvas = await html2canvas(el, {
-        scale: 2, backgroundColor: "#ffffff", useCORS: true,
+        scale: 3, backgroundColor: "#ffffff", useCORS: true,   // más resolución = texto nítido
         windowWidth: mode === "carta" ? 820 : undefined,
       });
     } finally {
       el.style.width = prevWidth;
     }
-    // JPEG (no PNG): el comprobante pesa mucho menos, ideal para WhatsApp.
-    const img = canvas.toDataURL("image/jpeg", 0.92);
+    // JPEG de alta calidad: texto nítido y el comprobante sigue liviano para WhatsApp.
+    const img = canvas.toDataURL("image/jpeg", 0.96);
     let pdf;
     if (mode === "carta") {
       pdf = new jsPDF({ unit: "mm", format: "letter", orientation: "portrait" });
