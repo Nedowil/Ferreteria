@@ -141,6 +141,13 @@ export default function Layout({ children }) {
               {can("sucursales.gestionar") && <NavItem to="/admin/sucursales" icon="🏢" label="Sucursales" />}
               {can("auditoria.ver") && <NavItem to="/admin/auditoria" icon="🕵️" label="Auditoría" />}
               {can("configuracion.gestionar") && <NavItem to="/admin/empresa" icon="⚙️" label="Empresa" />}
+              {can("configuracion.gestionar") && (
+                <a href="/catalogo" target="_blank" rel="noreferrer"
+                   className="mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition text-slate-300 hover:bg-white/5 hover:text-white">
+                  <span className="w-5 text-center text-base leading-none">🌐</span>
+                  <span>Catálogo público ↗</span>
+                </a>
+              )}
               {can("imports.gestionar") && <NavItem to="/admin/importar" icon="📂" label="Importar datos" />}
               {can("backup.gestionar") && <NavItem to="/admin/respaldos" icon="💾" label="Respaldos" />}
             </>
