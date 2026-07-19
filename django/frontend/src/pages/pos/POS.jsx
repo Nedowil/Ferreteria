@@ -422,6 +422,9 @@ export default function POS() {
 
   const updateQty = (idx, qty) => setCart((c) => c.map((it, i) => i === idx ? { ...it, quantity: qty } : it));
   const updatePrice = (idx, price) => setCart((c) => c.map((it, i) => i === idx ? { ...it, unit_price: price } : it));
+  const updateDiscount = (idx, d) => setCart((c) => c.map((it, i) => i === idx ? { ...it, discount: d } : it));
+  // Descuento de una línea, limitado al importe de esa línea.
+  const lineDisc = (it) => Math.min(Math.max(0, Number(it.discount || 0)), Number(it.quantity || 0) * Number(it.unit_price || 0));
   const removeItem = (idx) => setCart((c) => c.filter((_, i) => i !== idx));
 
   // Recalcula precio de las líneas base al cambiar de cliente (nivel mayorista).
@@ -432,8 +435,10 @@ export default function POS() {
   }, [customerId]);
 
   const subtotal = cart.reduce((s, i) => s + Number(i.quantity || 0) * Number(i.unit_price || 0), 0);
-  const discountNum = Math.min(Math.max(0, Number(discount || 0)), subtotal);
-  const total = Math.max(0, subtotal - discountNum);
+  const lineDiscTotal = cart.reduce((s, i) => s + lineDisc(i), 0);
+  // El descuento GENERAL se limita a lo que queda después de los descuentos por línea.
+  const discountNum = Math.min(Math.max(0, Number(discount || 0)), Math.max(0, subtotal - lineDiscTotal));
+  const total = Math.max(0, subtotal - lineDiscTotal - discountNum);
   const change = paymentMethod === "efectivo" && !credit ? Math.max(0, Number(paid || 0) - total) : 0;
   const exactPaid = paid !== "" && Math.abs(Number(paid) - total) < 0.005 && total > 0;
 
@@ -549,7 +554,7 @@ export default function POS() {
       paid_amount: credit ? (paid || 0) : (paymentMethod === "efectivo" ? (paid || total) : total),
       items: cart.map((i) => ({
         product_id: i.product_id, quantity: i.quantity, unit_price: i.unit_price,
-        units_factor: i.units_factor, unit_label: i.unit_label, tax_type: i.tax_type,
+        discount: lineDisc(i), units_factor: i.units_factor, unit_label: i.unit_label, tax_type: i.tax_type,
       })),
     };
     setBusy(true);
@@ -784,8 +789,9 @@ export default function POS() {
             </div>
             <table className="w-full text-sm">
               <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
-                <tr><th className="px-3 py-2.5">Producto</th><th className="px-3 py-2.5 w-24 text-right">Cant.</th>
-                    <th className="px-3 py-2.5 w-28 text-right">Precio</th><th className="px-3 py-2.5 w-28 text-right">Importe</th><th></th></tr>
+                <tr><th className="px-3 py-2.5">Producto</th><th className="px-3 py-2.5 w-20 text-right">Cant.</th>
+                    <th className="px-3 py-2.5 w-24 text-right">Precio</th><th className="px-3 py-2.5 w-24 text-right">Desc.</th>
+                    <th className="px-3 py-2.5 w-24 text-right">Importe</th><th></th></tr>
               </thead>
               <tbody>
                 {cart.map((it, idx) => (
@@ -802,12 +808,15 @@ export default function POS() {
                           className="border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1 text-sm w-20 text-right outline-none focus:ring-2 focus:ring-blue-500" /></td>
                     <td className="px-3 py-2"><input type="number" step="any" value={it.unit_price}
                           onChange={(e) => updatePrice(idx, e.target.value)}
-                          className="border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1 text-sm w-24 text-right outline-none focus:ring-2 focus:ring-blue-500" /></td>
-                    <td className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">Q{(Number(it.quantity || 0) * Number(it.unit_price || 0)).toFixed(2)}</td>
+                          className="border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1 text-sm w-20 text-right outline-none focus:ring-2 focus:ring-blue-500" /></td>
+                    <td className="px-3 py-2"><input type="number" step="any" min="0" value={it.discount ?? ""} placeholder="0"
+                          onChange={(e) => updateDiscount(idx, e.target.value)}
+                          className="border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1 text-sm w-20 text-right outline-none focus:ring-2 focus:ring-amber-500" title="Descuento en Q para esta línea" /></td>
+                    <td className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">Q{(Number(it.quantity || 0) * Number(it.unit_price || 0) - lineDisc(it)).toFixed(2)}</td>
                     <td className="px-3 py-2 text-right"><button onClick={() => removeItem(idx)} className="text-red-500 hover:text-white hover:bg-red-500 rounded-full w-6 h-6 transition" title="Quitar">×</button></td>
                   </tr>
                 ))}
-                {cart.length === 0 && <tr><td colSpan="5" className="px-3 py-10 text-center text-slate-400">Toca un producto para agregarlo al carrito.</td></tr>}
+                {cart.length === 0 && <tr><td colSpan="6" className="px-3 py-10 text-center text-slate-400">Toca un producto para agregarlo al carrito.</td></tr>}
               </tbody>
             </table>
           </div>
@@ -920,10 +929,11 @@ export default function POS() {
           )}
 
           <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-xl px-4 py-3">
-            {discountNum > 0 && (
+            {(discountNum + lineDiscTotal) > 0 && (
               <div className="text-xs space-y-0.5 mb-2 pb-2 border-b border-white/10">
                 <div className="flex justify-between text-slate-300"><span>Subtotal</span><span>Q{subtotal.toFixed(2)}</span></div>
-                <div className="flex justify-between text-emerald-300"><span>Descuento</span><span>− Q{discountNum.toFixed(2)}</span></div>
+                {lineDiscTotal > 0 && <div className="flex justify-between text-emerald-300"><span>Desc. por producto</span><span>− Q{lineDiscTotal.toFixed(2)}</span></div>}
+                {discountNum > 0 && <div className="flex justify-between text-emerald-300"><span>Descuento general</span><span>− Q{discountNum.toFixed(2)}</span></div>}
               </div>
             )}
             <div className="text-xs text-slate-300 uppercase tracking-wide">Total a cobrar</div>
