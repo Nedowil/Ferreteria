@@ -142,25 +142,41 @@ export default function Ticket() {
   const buildPdfBlob = async () => {
     const html2canvas = (await import("html2canvas")).default;
     const { jsPDF } = await import("jspdf");
-    const canvas = await html2canvas(printRef.current, { scale: 2, backgroundColor: "#ffffff", useCORS: true });
-    const img = canvas.toDataURL("image/png");
+    const el = printRef.current;
+
+    // El formato carta debe capturarse a su ANCHO REAL (~190mm). En el teléfono
+    // el contenedor es angosto y la tabla se cortaría a la derecha, así que le
+    // fijamos el ancho mientras se captura y luego lo restauramos.
+    const prevWidth = el.style.width;
+    if (mode === "carta") el.style.width = "760px";
+    let canvas;
+    try {
+      canvas = await html2canvas(el, {
+        scale: 2, backgroundColor: "#ffffff", useCORS: true,
+        windowWidth: mode === "carta" ? 820 : undefined,
+      });
+    } finally {
+      el.style.width = prevWidth;
+    }
+    // JPEG (no PNG): el comprobante pesa mucho menos, ideal para WhatsApp.
+    const img = canvas.toDataURL("image/jpeg", 0.92);
     let pdf;
     if (mode === "carta") {
       pdf = new jsPDF({ unit: "mm", format: "letter", orientation: "portrait" });
       const pageW = pdf.internal.pageSize.getWidth();
       const pageH = pdf.internal.pageSize.getHeight();
-      const margin = 10;
+      const margin = 8;
       let w = pageW - margin * 2;
       let h = (w * canvas.height) / canvas.width;
       const maxH = pageH - margin * 2;
       if (h > maxH) { h = maxH; w = (h * canvas.width) / canvas.height; }
-      pdf.addImage(img, "PNG", (pageW - w) / 2, margin, w, h);
+      pdf.addImage(img, "JPEG", (pageW - w) / 2, margin, w, h);
     } else {
       // Ticket térmico: hoja angosta de 80mm de ancho y alto según el contenido.
       const w = 80;
       const h = (w * canvas.height) / canvas.width;
       pdf = new jsPDF({ unit: "mm", format: [w, h], orientation: "portrait" });
-      pdf.addImage(img, "PNG", 0, 0, w, h);
+      pdf.addImage(img, "JPEG", 0, 0, w, h);
     }
     return pdf.output("blob");
   };
