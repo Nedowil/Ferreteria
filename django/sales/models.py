@@ -82,8 +82,11 @@ class Sale(models.Model):
 
     @property
     def balance(self):
-        """Saldo pendiente (para ventas al crédito)."""
-        return Decimal(self.total) - Decimal(self.paid_amount)
+        """Saldo pendiente. En una venta de contado, ``paid_amount`` es el efectivo
+        recibido (que puede superar el total) y ``change_amount`` es el vuelto que
+        se devolvió; por eso se resta el vuelto para que quede en 0. En una venta al
+        crédito el vuelto es 0, así que el saldo = total − abonos."""
+        return Decimal(self.total) - Decimal(self.paid_amount) + Decimal(self.change_amount)
 
 
 class SaleItem(models.Model):

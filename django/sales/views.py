@@ -138,7 +138,7 @@ class SaleViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.ModelVie
         qs = (self.get_queryset()
               .filter(status=Sale.STATUS_COMPLETADA)
               .exclude(payment_status=Sale.PAY_PAGADA))
-        agg = qs.aggregate(total=Sum(F("total") - F("paid_amount")))
+        agg = qs.aggregate(total=Sum(F("total") - F("paid_amount") + F("change_amount")))
         total_balance = agg["total"] or Decimal("0")
         page = self.paginate_queryset(qs)
         if page is not None:
