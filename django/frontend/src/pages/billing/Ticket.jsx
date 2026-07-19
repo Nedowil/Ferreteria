@@ -359,7 +359,9 @@ function TicketPaper({ company, sale, fel, qr, phrases }) {
 
 // ---------- HOJA COMPLETA (carta) ----------
 function CartaPaper({ company, sale, fel, qr, phrases, d, meses }) {
-  const cell = "border border-slate-300 px-1.5 py-0.5";
+  // py-1 (no py-0.5): al convertir a PDF con html2canvas el texto se dibuja un
+  // poco abajo; con más espacio vertical no se corta dentro de las celdas.
+  const cell = "border border-slate-300 px-1.5 py-1 leading-none align-middle";
   const rate = Number(company.tax_rate || 12);
   return (
     <div className="bg-white p-6 text-[10px] leading-snug text-slate-900 max-w-[190mm] mx-auto">
@@ -381,12 +383,12 @@ function CartaPaper({ company, sale, fel, qr, phrases, d, meses }) {
             {fel ? "DOCUMENTO TRIBUTARIO ELECTRÓNICO" : "COMPROBANTE DE VENTA"}
           </div>
           <div className="border border-slate-300">
-            <div className="text-white text-center font-bold py-0.5" style={{ background: GREEN }}>
+            <div className="text-white text-center font-bold py-1 leading-none" style={{ background: GREEN }}>
               {fel ? `Factura Electrónica # ${fel.numero || "—"}` : `Recibo No. ${sale.folio}`}
             </div>
             {fel && (
               <>
-                <div className="text-white text-center text-[9px] py-0.5" style={{ background: GREEN }}>
+                <div className="text-white text-center text-[9px] py-1 leading-none" style={{ background: GREEN }}>
                   {regimeLabel(company.regime)}
                 </div>
                 <div className="text-center text-[10px] py-1 font-semibold">
@@ -410,7 +412,7 @@ function CartaPaper({ company, sale, fel, qr, phrases, d, meses }) {
       {/* Detalle del documento (izq) · NIT/Email receptor (der) */}
       <div className="grid grid-cols-2 gap-6 mt-3 items-start">
         <div>
-          <div className="text-white font-bold px-2 py-0.5" style={{ background: GREEN }}>Detalle del Documento</div>
+          <div className="text-white font-bold px-2 py-1 leading-none" style={{ background: GREEN }}>Detalle del Documento</div>
           <div className="border border-slate-300 border-t-0 p-2 space-y-0.5">
             <div><b>Forma de Pago:</b> {formaPago(sale.payment_status)}</div>
             <div><b>Métodos de Pago:</b></div>
