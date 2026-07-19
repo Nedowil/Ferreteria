@@ -83,6 +83,117 @@ async function printLabelsPdf(product, copies, companyName, labelW = 51, labelH 
   w.document.close();
 }
 
+// Precio y unidad a mostrar en una etiqueta de estante.
+function priceUnit(p) {
+  const cf = Number(p.container_factor) || 0;
+  if (p.container_label && cf > 0) {
+    const price = Number(p.container_price) || Number(p.sale_price) * cf;
+    return { price, unit: (p.container_label || "").toUpperCase() };
+  }
+  return { price: Number(p.sale_price) || 0, unit: (p.base_unit_label || "UNIDAD").toUpperCase() };
+}
+
+// Etiquetas de PRECIO para estante: precio grande, sin código de barras. Se
+// imprime por el navegador (una etiqueta por página al tamaño físico exacto).
+async function printPriceTags(products, companyName, copiesEach = 1, labelW = 51, labelH = 25) {
+  const esc = (s) => (s || "").replace(/</g, "&lt;");
+  const tags = [];
+  products.forEach((p) => {
+    const { price, unit } = priceUnit(p);
+    if (!(price > 0)) return;
+    const one = `
+      <div class="tag">
+        ${companyName ? `<div class="biz">${esc(companyName)}</div>` : ""}
+        <div class="name">${esc((p.name || "").toUpperCase())}</div>
+        <div class="price">Q${price.toFixed(2)}</div>
+        <div class="unit">${esc(unit)}${p.sku ? ` · ${esc(p.sku)}` : ""}</div>
+      </div>`;
+    for (let i = 0; i < Math.max(1, Number(copiesEach) || 1); i++) tags.push(one);
+  });
+  if (!tags.length) { await dialog.alert("Los productos seleccionados no tienen precio para etiquetar."); return; }
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Etiquetas de precio</title>
+    <style>
+      @page { size: ${labelW}mm ${labelH}mm; margin: 0; }
+      html, body { margin: 0; padding: 0; }
+      body { font-family: Arial, sans-serif; }
+      .tag { width: ${labelW}mm; height: ${labelH}mm; box-sizing: border-box;
+             padding: 1mm 1.5mm; text-align: center; overflow: hidden;
+             display: flex; flex-direction: column; justify-content: center;
+             align-items: center; page-break-after: always; }
+      .tag:last-child { page-break-after: auto; }
+      .biz { font-size: 6pt; font-weight: 600; line-height: 1; }
+      .name { font-size: 8pt; font-weight: 800; line-height: 1.02; margin: 0.3mm 0;
+              max-height: 2.1em; overflow: hidden; word-break: break-word; }
+      .price { font-size: 17pt; font-weight: 900; line-height: 1; }
+      .unit { font-size: 6.5pt; color: #333; margin-top: 0.3mm; }
+    </style></head>
+    <body>${tags.join("")}
+    <script>window.onload=function(){setTimeout(function(){window.print();},250);};<\/script>
+    </body></html>`;
+  const w = window.open("", "_blank");
+  if (!w) { await dialog.alert("Permití las ventanas emergentes para imprimir las etiquetas."); return; }
+  w.document.write(html); w.document.close();
+}
+
+// Modal para imprimir etiquetas de precio: de un solo producto o de todos los
+// del filtro actual (lote).
+function PriceTagsModal({ single, filters, companyName, count, onClose }) {
+  const [copies, setCopies] = useState("1");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const doPrint = async () => {
+    setBusy(true); setErr("");
+    try {
+      let products;
+      if (single) products = [single];
+      else {
+        const params = {};
+        if (filters.search) params.search = filters.search;
+        if (filters.brand) params.brand = filters.brand;
+        if (filters.low_stock) params.low_stock = 1;
+        products = await fetchAll("/inventory/products/", params);
+      }
+      await printPriceTags(products, companyName, Number(copies) || 1);
+      onClose();
+    } catch (e) {
+      setErr("No se pudieron generar las etiquetas.");
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-4">
+          <div className="text-lg font-bold">🏷️ Etiquetas de precio</div>
+          <div className="text-xs text-blue-100 truncate">
+            {single ? `${single.name} · ${single.sku}` : `${count} producto(s) del filtro actual`}
+          </div>
+        </div>
+        <div className="p-5 space-y-4">
+          {err && <div className="bg-red-600 text-white font-semibold text-sm rounded-lg px-3 py-2">{err}</div>}
+          <div>
+            <label className="block text-sm font-medium mb-1">Copias por producto</label>
+            <input type="number" min="1" value={copies} onChange={(e) => setCopies(e.target.value)}
+                   className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Se abre una ventana para imprimir/guardar como PDF. Cada etiqueta trae el
+            <b> nombre</b> y el <b>precio grande</b> (sin código de barras), lista para el estante.
+          </p>
+          <div className="flex gap-2">
+            <button onClick={onClose} className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 transition">Cancelar</button>
+            <button onClick={doPrint} disabled={busy}
+                    className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg py-2.5 text-sm font-semibold shadow hover:from-blue-700 hover:to-indigo-700 transition disabled:opacity-50">
+              {busy ? "Generando…" : "Imprimir"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Ventana de dos pasos: cantidad de etiquetas → impresora de destino.
 function LabelPrintModal({ product, companyName, onClose }) {
   const [step, setStep] = useState("qty");
@@ -175,6 +286,7 @@ export default function ProductList() {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [labeling, setLabeling] = useState(null); // producto a etiquetar (modal)
+  const [priceTag, setPriceTag] = useState(null); // {single?} para etiquetas de precio
   const [companyName, setCompanyName] = useState("Ferretería Central");
   const { can } = useAuth();
 
@@ -241,6 +353,7 @@ export default function ProductList() {
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">📦 Productos</h1>
         <div className="flex gap-2">
+          <button onClick={() => setPriceTag({})} className="border border-amber-300 text-amber-700 bg-amber-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-amber-100 transition">🏷️ Etiquetas de precio</button>
           <button onClick={exportExcel} disabled={exporting} className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-100 transition">{exporting ? "Exportando…" : "⬇️ Excel"}</button>
           {can("productos.crear") && <Link to="/productos/nuevo" className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nuevo producto</Link>}
         </div>
@@ -333,7 +446,8 @@ export default function ProductList() {
                 </td>
                 <td className="px-4 py-2 text-right whitespace-nowrap">
                   <div className="inline-flex flex-wrap gap-1.5 justify-end">
-                  <button onClick={() => setLabeling(p)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50" title="Imprimir etiqueta Zebra">Etiqueta</button>
+                  <button onClick={() => setLabeling(p)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50" title="Imprimir etiqueta con código de barras (Zebra)">Etiqueta</button>
+                  <button onClick={() => setPriceTag({ single: p })} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white dark:bg-slate-800 border border-amber-300 text-amber-700 hover:bg-amber-50" title="Imprimir etiqueta de precio para estante">Precio</button>
                   <Link to={`/productos/${p.id}/inventario`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50">Inventario</Link>
                   {can("auditoria.ver") && <Link to={historyLink(p.id)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50" title="Quién creó, editó o eliminó este producto">Historial</Link>}
                   {can("productos.editar") && <Link to={`/productos/${p.id}/editar`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-blue-600 hover:bg-blue-700 text-white">Editar</Link>}
@@ -359,6 +473,7 @@ export default function ProductList() {
       )}
 
       {labeling && <LabelPrintModal product={labeling} companyName={companyName} onClose={() => setLabeling(null)} />}
+      {priceTag && <PriceTagsModal single={priceTag.single} filters={filters} companyName={companyName} count={data.count} onClose={() => setPriceTag(null)} />}
     </div>
   );
 }
