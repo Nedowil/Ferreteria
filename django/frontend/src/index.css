@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Evita que los navegadores de celular "inflen" el texto (text boosting), lo
+   que desalineaba las letras al generar el PDF en el teléfono. */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
 /* Modo oscuro: color base del fondo y del texto. */
 html.dark body { background-color: #0f172a; color: #e2e8f0; }
 

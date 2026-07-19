@@ -148,15 +148,30 @@ export default function Ticket() {
     // el contenedor es angosto y la tabla se cortaría a la derecha, así que le
     // fijamos el ancho mientras se captura y luego lo restauramos.
     const prevWidth = el.style.width;
+    // Los navegadores de celular "inflan" el texto (text boosting) y las letras
+    // se dibujan más abajo al capturar. Lo desactivamos mientras generamos el PDF
+    // para que en el teléfono salga igual que en la computadora.
+    const prevTSA = el.style.textSizeAdjust;
+    const prevWTSA = el.style.webkitTextSizeAdjust;
+    el.style.textSizeAdjust = "100%";
+    el.style.webkitTextSizeAdjust = "100%";
     if (mode === "carta") el.style.width = "760px";
     let canvas;
     try {
       canvas = await html2canvas(el, {
         scale: 3, backgroundColor: "#ffffff", useCORS: true,   // más resolución = texto nítido
         windowWidth: mode === "carta" ? 820 : undefined,
+        onclone: (doc) => {
+          // Refuerzo: desactivar el text-size-adjust también en el clon que
+          // html2canvas renderiza internamente.
+          doc.documentElement.style.webkitTextSizeAdjust = "100%";
+          doc.documentElement.style.textSizeAdjust = "100%";
+        },
       });
     } finally {
       el.style.width = prevWidth;
+      el.style.textSizeAdjust = prevTSA;
+      el.style.webkitTextSizeAdjust = prevWTSA;
     }
     // JPEG de alta calidad: texto nítido y el comprobante sigue liviano para WhatsApp.
     const img = canvas.toDataURL("image/jpeg", 0.96);
