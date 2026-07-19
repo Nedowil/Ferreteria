@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../../api/client";
 import { dialog } from "../../components/Dialog";
+import { exportToExcel } from "../../utils/exportExcel";
+
+const signedAmount = (m) => (["egreso", "devolucion"].includes(m.type) ? -Number(m.amount) : Number(m.amount));
 
 export default function CashBox() {
   const [session, setSession] = useState(null);
@@ -10,6 +13,47 @@ export default function CashBox() {
   const [opening, setOpening] = useState({ opening_amount: "", opening_notes: "" });
   const [mov, setMov] = useState({ type: "ingreso", amount: "", description: "" });
   const [counted, setCounted] = useState("");
+  const [exporting, setExporting] = useState("");
+
+  // Columnas comunes para exportar los movimientos de la caja abierta.
+  const movCols = () => [
+    { header: "Hora", value: (m) => new Date(m.created_at).toLocaleString("es-GT") },
+    { header: "Tipo", value: (m) => m.type_display },
+    { header: "Método", value: (m) => m.payment_method || "" },
+    { header: "Usuario", value: (m) => m.user_name || "" },
+    { header: "Descripción", value: (m) => m.description || "" },
+    { header: "Monto (Q)", value: (m) => signedAmount(m) },
+  ];
+
+  const exportMovExcel = () => {
+    const cols = movCols();
+    exportToExcel(`movimientos-caja`, cols, session.movements);
+  };
+
+  const exportMovPdf = async () => {
+    setExporting("pdf");
+    try {
+      const { jsPDF } = await import("jspdf");
+      const autoTable = (await import("jspdf-autotable")).default;
+      const doc = new jsPDF({ unit: "pt", format: "letter" });
+      doc.setFontSize(14); doc.text("Movimientos de caja", 40, 40);
+      doc.setFontSize(9); doc.setTextColor(120);
+      doc.text(`Efectivo esperado: Q${Number(session.current_expected ?? 0).toFixed(2)}   ·   Fondo inicial: Q${Number(session.opening_amount ?? 0).toFixed(2)}`, 40, 58);
+      const cols = movCols();
+      autoTable(doc, {
+        startY: 72,
+        head: [cols.map((c) => c.header)],
+        body: session.movements.map((m) => cols.map((c) => {
+          const v = c.value(m);
+          return typeof v === "number" ? v.toFixed(2) : v;
+        })),
+        styles: { fontSize: 8.5, cellPadding: 4 },
+        headStyles: { fillColor: [51, 65, 85] },
+        columnStyles: { 5: { halign: "right" } },
+      });
+      doc.save("movimientos-caja.pdf");
+    } finally { setExporting(""); }
+  };
 
   const load = () => {
     setLoading(true);
@@ -111,7 +155,19 @@ export default function CashBox() {
           </div>
 
           <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
-            <div className="px-5 py-3 border-b font-semibold">Movimientos</div>
+            <div className="px-5 py-3 border-b flex items-center justify-between gap-2">
+              <span className="font-semibold">Movimientos</span>
+              <div className="flex gap-2">
+                <button onClick={exportMovPdf} disabled={!!exporting || !session.movements.length}
+                        className="border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg px-3 py-1 text-xs font-medium hover:bg-slate-50 transition disabled:opacity-50">
+                  {exporting === "pdf" ? "Generando…" : "⬇️ PDF"}
+                </button>
+                <button onClick={exportMovExcel} disabled={!session.movements.length}
+                        className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-3 py-1 text-xs font-medium hover:bg-emerald-100 transition disabled:opacity-50">
+                  ⬇️ Excel
+                </button>
+              </div>
+            </div>
             <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-left">
