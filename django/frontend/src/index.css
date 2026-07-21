@@ -9,6 +9,23 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 /* Modo oscuro: color base del fondo y del texto. */
 html.dark body { background-color: #0f172a; color: #e2e8f0; }
 
+/* Modo oscuro: le dice al navegador que los controles nativos (campos, selects,
+   barras de scroll) usen su estilo oscuro. Sin esto, los campos quedaban con
+   fondo blanco y texto claro heredado => las letras no se veían al escribir. */
+html.dark { color-scheme: dark; }
+
+/* Estilo consistente (paleta slate) para campos que no traen su propio fondo
+   oscuro. Las clases dark:bg-* de Tailwind, cuando existen, tienen prioridad. */
+html.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+html.dark select,
+html.dark textarea {
+  background-color: #1e293b;   /* slate-800 */
+  border-color: #475569;       /* slate-600 */
+  color: #f1f5f9;              /* slate-100 */
+}
+html.dark input::placeholder,
+html.dark textarea::placeholder { color: #94a3b8; }  /* slate-400 */
+
 /* Ocultar las flechitas (spinners) de los campos numéricos en toda la app. */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
