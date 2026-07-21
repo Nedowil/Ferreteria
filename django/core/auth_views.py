@@ -30,8 +30,11 @@ from .throttling import LoginRateThrottle, PasswordResetThrottle
 
 User = get_user_model()
 
-# La sesión del EQUIPO (caja) dura mucho: se inicia una vez y queda lista.
-DEVICE_REFRESH_LIFETIME = timedelta(days=30)
+# La sesión del EQUIPO (caja) prácticamente no caduca: se inicia una vez en la
+# computadora del mostrador y queda lista "para siempre". Además se renueva sola
+# cada vez que se usa (device-refresh), así que el reloj se reinicia solo.
+# Para revocarla, basta con desactivar la cuenta de equipo (is_active=False).
+DEVICE_REFRESH_LIFETIME = timedelta(days=3650)  # ~10 años
 
 
 class EmailOrUsernameTokenSerializer(TokenObtainPairSerializer):
