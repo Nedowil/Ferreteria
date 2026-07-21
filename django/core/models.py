@@ -125,6 +125,10 @@ class CompanySetting(models.Model):
     zebra_label_height = models.PositiveSmallIntegerField(default=25)
     zebra_dpi = models.PositiveSmallIntegerField(default=203)
 
+    # Punto de venta / login rápido
+    # Muestra a los cajeros como botones en la pantalla de PIN (compu compartida).
+    pin_quick_login = models.BooleanField(default=True)
+
     # Catálogo público
     public_catalog_enabled = models.BooleanField(default=False)
     public_catalog_show_prices = models.BooleanField(default=True)

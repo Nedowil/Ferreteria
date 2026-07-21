@@ -46,6 +46,29 @@ class ThrottledTokenObtainPairView(TokenObtainPairView):
     serializer_class = EmailOrUsernameTokenSerializer
 
 
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def pin_users(request):
+    """Lista de cajeros con PIN para mostrarlos como botones en el login.
+
+    Pensado para una computadora compartida en el mostrador: en vez de escribir
+    usuario + PIN, el cajero toca su nombre y solo marca su PIN. Se puede apagar
+    desde Configuración de empresa (para no mostrar los nombres en público).
+    """
+    from .models import CompanySetting
+
+    if not CompanySetting.current().pin_quick_login:
+        return Response({"enabled": False, "users": []})
+    users = (
+        User.objects.filter(is_active=True)
+        .exclude(pin_hash="")
+        .order_by("name", "username")
+        .values("name", "username")
+    )
+    data = [{"name": u["name"] or u["username"], "username": u["username"]} for u in users]
+    return Response({"enabled": True, "users": data})
+
+
 @api_view(["POST"])
 @permission_classes([AllowAny])
 @throttle_classes([LoginRateThrottle])

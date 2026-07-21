@@ -291,7 +291,7 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_THROTTLE_RATES": {
         "anon": os.getenv("THROTTLE_ANON", "60/min"),
-        "login": os.getenv("THROTTLE_LOGIN", "10/min"),
+        "login": os.getenv("THROTTLE_LOGIN", "20/min"),  # margen para cambios de cajero (PIN) en compu compartida
         "password_reset": os.getenv("THROTTLE_PASSWORD_RESET", "5/min"),
     },
 }
