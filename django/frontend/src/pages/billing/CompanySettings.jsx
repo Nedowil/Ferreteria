@@ -229,19 +229,6 @@ export default function CompanySettings() {
           </div>
         </Section>
 
-        <Section title="Punto de venta">
-          <Field label="Login rápido con PIN" full>
-            <select className={input} value={c.pin_quick_login ? "1" : "0"} onChange={(e) => set("pin_quick_login", e.target.value === "1")}>
-              <option value="1">Mostrar cajeros como botones en la pantalla de PIN</option>
-              <option value="0">No mostrar — cada quien escribe su usuario</option>
-            </select>
-            <p className="text-xs text-slate-400 mt-1">
-              Ideal para una computadora compartida: el cajero toca su nombre y solo marca su PIN.
-              Los nombres aparecen en la pantalla de inicio de sesión.
-            </p>
-          </Field>
-        </Section>
-
         <Section title="Catálogo público (en línea)">
           <Field label="Catálogo habilitado">
             <select className={input} value={c.public_catalog_enabled ? "1" : "0"} onChange={(e) => set("public_catalog_enabled", e.target.value === "1")}>

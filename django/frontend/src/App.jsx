@@ -5,6 +5,7 @@ import Layout from "./components/Layout";
 import { DialogHost } from "./components/Dialog";
 import { ToastHost } from "./components/Toast";
 import Login from "./pages/Login"; // eager: es la puerta de entrada
+import Profiles from "./pages/Profiles"; // eager: pantalla de perfiles (estilo Netflix)
 
 // Code-splitting: cada pantalla se carga en su propio "chunk" solo cuando se
 // visita, así la primera carga de la app es mucho más liviana.
@@ -122,10 +123,10 @@ class ErrorBoundary extends Component {
 // `perm` opcional: si el usuario no lo tiene, ve la pantalla "Sin acceso"
 // (aunque escriba la URL directo). El backend igual valida cada endpoint.
 function Protected({ children, perm }) {
-  const { user, loading, can } = useAuth();
+  const { user, loading, can, needsProfile } = useAuth();
   const location = useLocation();
   if (loading) return <div className="p-10 text-center text-slate-400">Cargando…</div>;
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to={needsProfile ? "/perfiles" : "/login"} replace />;
   if (perm && !can(perm)) return <Layout><NoAccess /></Layout>;
   return (
     <Layout>
@@ -143,6 +144,7 @@ export default function App() {
     <ToastHost />
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/perfiles" element={<Profiles />} />
       <Route path="/recuperar-contrasena" element={<ForgotPassword />} />
       <Route path="/restablecer-contrasena" element={<ResetPassword />} />
       <Route path="/catalogo" element={<PublicCatalog />} />

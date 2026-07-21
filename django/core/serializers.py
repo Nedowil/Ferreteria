@@ -28,7 +28,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["id", "name", "email", "is_staff", "is_superuser", "roles", "permissions"]
+        fields = ["id", "name", "email", "is_staff", "is_superuser", "is_device", "roles", "permissions"]
 
     def get_roles(self, obj):
         return list(obj.groups.values_list("name", flat=True))
@@ -53,7 +53,7 @@ class UserAdminSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["id", "name", "username", "email", "is_active", "has_pin", "roles", "branches"]
+        fields = ["id", "name", "username", "email", "is_active", "is_device", "has_pin", "roles", "branches"]
 
     def get_has_pin(self, obj):
         return bool(obj.pin_hash)
@@ -78,7 +78,7 @@ class UserWriteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["id", "name", "username", "email", "is_active", "password", "pin", "has_pin", "role", "branches"]
+        fields = ["id", "name", "username", "email", "is_active", "is_device", "password", "pin", "has_pin", "role", "branches"]
 
     def get_has_pin(self, obj):
         return bool(obj.pin_hash)

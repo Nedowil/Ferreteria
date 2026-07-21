@@ -17,6 +17,10 @@ class User(AbstractUser):
     email = models.EmailField("correo", unique=True)
     # PIN numérico (hasheado) para entrar rápido en el punto de venta.
     pin_hash = models.CharField(max_length=128, blank=True, default="")
+    # Cuenta "de equipo" (caja): inicia sesión una vez en la computadora del
+    # mostrador y luego muestra los perfiles (estilo Netflix). No opera por sí
+    # misma: solo sirve para elegir un perfil con PIN.
+    is_device = models.BooleanField("cuenta de equipo (caja)", default=False)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["username"]

@@ -31,11 +31,11 @@ export default function Users() {
     if (search === "") load();
   }, [search]);
 
-  const blank = { name: "", username: "", email: "", password: "", pin: "", role: "vendedor", is_active: true, branch_ids: [], default_branch: null };
+  const blank = { name: "", username: "", email: "", password: "", pin: "", role: "vendedor", is_active: true, is_device: false, branch_ids: [], default_branch: null };
 
   const openEdit = (u) => setEditing({
     id: u.id, name: u.name, username: u.username || "", email: u.email, password: "", pin: "", role: u.roles[0] || "",
-    is_active: u.is_active, has_pin: u.has_pin,
+    is_active: u.is_active, is_device: u.is_device, has_pin: u.has_pin,
     branch_ids: u.branches.map((b) => b.branch_id),
     default_branch: (u.branches.find((b) => b.is_default) || {}).branch_id || null,
   });
@@ -48,6 +48,7 @@ export default function Users() {
     };
     if (editing.password) payload.password = editing.password;
     if (editing.pin !== "") payload.pin = editing.pin;  // "" = no tocar; valor = fijar/borrar
+    payload.is_device = editing.is_device;
     try {
       if (editing.id) await api.put(`/users/${editing.id}/`, payload);
       else await api.post("/users/", payload);
@@ -178,6 +179,12 @@ export default function Users() {
                 </select>
               </div>
               <label className="flex items-center gap-2 text-sm mt-6"><input type="checkbox" checked={editing.is_active} onChange={(e) => setEditing({ ...editing, is_active: e.target.checked })} /> Activo</label>
+              <label className="flex items-start gap-2 text-sm sm:col-span-2 mt-1">
+                <input type="checkbox" className="mt-0.5" checked={editing.is_device} onChange={(e) => setEditing({ ...editing, is_device: e.target.checked })} />
+                <span>Cuenta de equipo (caja)
+                  <span className="block text-xs text-slate-400">La computadora inicia sesión con esta cuenta y luego muestra los perfiles. No opera por sí sola.</span>
+                </span>
+              </label>
             </div>
             <div className="mt-4">
               <label className="block text-sm font-medium mb-1">Sucursales asignadas</label>

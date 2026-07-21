@@ -1,4 +1,14 @@
-"""Autenticación: login con throttle, cambio y reseteo de contraseña."""
+"""Autenticación: login con throttle, cambio y reseteo de contraseña.
+
+Modelo "estilo Netflix" para el mostrador compartido:
+ 1. La computadora inicia sesión UNA vez con una cuenta de equipo (``is_device``)
+    usando correo + contraseña. Esa sesión dura semanas (refresh extendido).
+ 2. Con esa sesión ya abierta se piden los PERFILES (``profiles``) y se cambia a
+    un perfil con su PIN (``switch_profile``). El PIN solo funciona desde un
+    equipo que ya inició sesión, así que no queda expuesto en internet.
+"""
+
+from datetime import timedelta
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -20,6 +30,9 @@ from .throttling import LoginRateThrottle, PasswordResetThrottle
 
 User = get_user_model()
 
+# La sesión del EQUIPO (caja) dura mucho: se inicia una vez y queda lista.
+DEVICE_REFRESH_LIFETIME = timedelta(days=30)
+
 
 class EmailOrUsernameTokenSerializer(TokenObtainPairSerializer):
     """Permite iniciar sesión con el CORREO o con el NOMBRE DE USUARIO.
@@ -38,6 +51,15 @@ class EmailOrUsernameTokenSerializer(TokenObtainPairSerializer):
                 attrs[self.username_field] = user.email
         return super().validate(attrs)
 
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        # Las cuentas de equipo (caja) llevan un refresh de larga duración para
+        # no tener que reingresar la contraseña cada día en el mostrador.
+        if getattr(user, "is_device", False):
+            token.set_exp(lifetime=DEVICE_REFRESH_LIFETIME)
+        return token
+
 
 class ThrottledTokenObtainPairView(TokenObtainPairView):
     """Login JWT con límite de intentos por IP. Acepta correo o usuario."""
@@ -46,41 +68,86 @@ class ThrottledTokenObtainPairView(TokenObtainPairView):
     serializer_class = EmailOrUsernameTokenSerializer
 
 
+def _require_device(request):
+    """Valida que quien llama sea una cuenta de EQUIPO (caja). Devuelve None si
+    está bien, o un Response de error si no."""
+    if not getattr(request.user, "is_device", False):
+        return Response(
+            {"detail": "Esta acción solo está disponible desde una cuenta de equipo (caja)."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+    return None
+
+
 @api_view(["GET"])
-@permission_classes([AllowAny])
-def pin_users(request):
-    """Lista de cajeros con PIN para mostrarlos como botones en el login.
+@permission_classes([IsAuthenticated])
+def profiles(request):
+    """Perfiles disponibles para elegir (cajeros con PIN activo).
 
-    Pensado para una computadora compartida en el mostrador: en vez de escribir
-    usuario + PIN, el cajero toca su nombre y solo marca su PIN. Se puede apagar
-    desde Configuración de empresa (para no mostrar los nombres en público).
+    Solo se puede consultar desde una cuenta de equipo ya autenticada, así que
+    los nombres NO quedan expuestos públicamente en internet.
     """
-    from .models import CompanySetting
-
-    if not CompanySetting.current().pin_quick_login:
-        return Response({"enabled": False, "users": []})
+    err = _require_device(request)
+    if err:
+        return err
     users = (
-        User.objects.filter(is_active=True)
+        User.objects.filter(is_active=True, is_device=False)
         .exclude(pin_hash="")
         .order_by("name", "username")
-        .values("name", "username")
     )
-    data = [{"name": u["name"] or u["username"], "username": u["username"]} for u in users]
-    return Response({"enabled": True, "users": data})
+    data = [
+        {
+            "name": u.name or u.username,
+            "username": u.username,
+            "role": (u.groups.values_list("name", flat=True).first()
+                     or ("Admin" if u.is_superuser else "")),
+        }
+        for u in users
+    ]
+    return Response({"profiles": data})
 
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
+def device_refresh(request):
+    """Renueva la sesión del EQUIPO manteniendo su larga duración (30 días).
+
+    El endpoint normal de refresh rota el token con la duración estándar (11 h),
+    lo que acortaría la sesión del equipo. Este emite un refresh nuevo de equipo.
+    """
+    from rest_framework_simplejwt.exceptions import TokenError
+
+    raw = request.data.get("refresh") or ""
+    try:
+        old = RefreshToken(raw)
+    except TokenError:
+        return Response({"detail": "Sesión de equipo inválida."}, status=status.HTTP_401_UNAUTHORIZED)
+    user = User.objects.filter(id=old.get("user_id"), is_device=True, is_active=True).first()
+    if not user:
+        return Response({"detail": "Sesión de equipo inválida."}, status=status.HTTP_401_UNAUTHORIZED)
+    new = RefreshToken.for_user(user)
+    new.set_exp(lifetime=DEVICE_REFRESH_LIFETIME)
+    return Response({"access": str(new.access_token), "refresh": str(new)})
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
 @throttle_classes([LoginRateThrottle])
-def pin_token(request):
-    """Login rápido con usuario + PIN numérico (para el punto de venta)."""
-    login = (request.data.get("username") or request.data.get("email") or "").strip()
+def switch_profile(request):
+    """Cambia al perfil de un cajero validando su PIN.
+
+    Requiere una sesión de equipo (caja) ya iniciada: por eso el PIN no sirve
+    desde fuera. Devuelve tokens normales (sesión de turno) para ese usuario.
+    """
+    err = _require_device(request)
+    if err:
+        return err
+    login = (request.data.get("username") or "").strip()
     pin = (request.data.get("pin") or "").strip()
-    user = (User.objects.filter(username__iexact=login).first()
-            or User.objects.filter(email__iexact=login).first())
+    user = (User.objects.filter(username__iexact=login, is_device=False).first()
+            or User.objects.filter(email__iexact=login, is_device=False).first())
     if not user or not user.is_active or not user.check_pin(pin):
-        return Response({"detail": "Usuario o PIN incorrecto."},
-                        status=status.HTTP_400_BAD_REQUEST)
+        return Response({"detail": "PIN incorrecto."}, status=status.HTTP_400_BAD_REQUEST)
     refresh = RefreshToken.for_user(user)
     return Response({"access": str(refresh.access_token), "refresh": str(refresh)})
 

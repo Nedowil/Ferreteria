@@ -23,7 +23,7 @@ const Section = ({ title }) => (
 );
 
 export default function Layout({ children }) {
-  const { user, branches, currentBranchId, setBranch, logout, can } = useAuth();
+  const { user, branches, currentBranchId, setBranch, logout, deviceLogout, hasDevice, can } = useAuth();
   const [open, setOpen] = useState(false); // cajón del menú en móvil
   const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
   const toggleTheme = () => {
@@ -158,7 +158,14 @@ export default function Layout({ children }) {
           <span className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white font-bold flex items-center justify-center shrink-0">{initial}</span>
           <div className="min-w-0">
             <div className="text-sm text-white truncate">{user?.name || user?.email}</div>
-            <NavLink to="/cambiar-contrasena" className="text-xs text-slate-400 hover:text-white">Cambiar contraseña</NavLink>
+            <div className="flex flex-col">
+              <NavLink to="/cambiar-contrasena" className="text-xs text-slate-400 hover:text-white">Cambiar contraseña</NavLink>
+              {hasDevice && (
+                <button onClick={deviceLogout} className="text-xs text-slate-500 hover:text-red-300 text-left">
+                  Cerrar sesión del equipo
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </aside>
@@ -191,9 +198,9 @@ export default function Layout({ children }) {
                     className="text-lg leading-none border border-slate-200 dark:border-slate-600 rounded-lg px-2.5 py-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
               {dark ? "☀️" : "🌙"}
             </button>
-            <button onClick={logout}
+            <button onClick={logout} title={hasDevice ? "Volver a la pantalla de perfiles" : "Cerrar sesión"}
                     className="text-sm text-slate-600 dark:text-slate-300 hover:text-white hover:bg-red-500 border border-slate-200 dark:border-slate-600 hover:border-red-500 rounded-lg px-3 py-1.5 transition">
-              Salir
+              {hasDevice ? "🔄 Cambiar de perfil" : "Salir"}
             </button>
           </div>
         </header>
