@@ -31,7 +31,7 @@ function parseFrac(s) {
 // Campos a nivel de módulo (identidad estable → no pierden el foco al escribir)
 function TextField({ label, name, form, errors, onChange, type = "text", hint, placeholder }) {
   return (
-    <div>
+    <div className="min-w-0">
       <label className="block text-sm font-medium mb-1">{label}</label>
       <input type={type} value={form[name] ?? ""} placeholder={placeholder}
              onChange={(e) => onChange(name, e.target.value)}
@@ -44,7 +44,7 @@ function TextField({ label, name, form, errors, onChange, type = "text", hint, p
 
 function SelectField({ label, name, form, onChange, options, empty, labelKey = "name" }) {
   return (
-    <div>
+    <div className="min-w-0">
       <label className="block text-sm font-medium mb-1">{label}</label>
       <select value={form[name] ?? ""} onChange={(e) => onChange(name, e.target.value)}
               className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm">
@@ -62,14 +62,14 @@ function PriceField({ label, raw, mode, onRaw, onMode, error, hasContainer, fact
   const perBase = mode === "container" && factor > 0 ? v / factor : v;
   const perContainer = mode === "base" && factor > 0 ? v * factor : v;
   return (
-    <div>
+    <div className="min-w-0">
       <label className="block text-sm font-medium mb-1">{label}</label>
-      <div className="flex gap-1">
+      <div className="flex gap-1 min-w-0">
         <input type="text" inputMode="decimal" value={raw} onChange={(e) => onRaw(e.target.value)}
-               placeholder="0.00" className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
+               placeholder="0.00" className="w-full min-w-0 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
         {hasContainer && (
           <select value={mode} onChange={(e) => onMode(e.target.value)}
-                  className="border border-slate-300 dark:border-slate-600 rounded px-2 py-2 text-sm bg-slate-50 dark:bg-slate-900">
+                  className="shrink-0 border border-slate-300 dark:border-slate-600 rounded px-2 py-2 text-sm bg-slate-50 dark:bg-slate-900">
             <option value="base">por {baseUnit || "unidad"}</option>
             <option value="container">por {containerLabel}</option>
           </select>
@@ -126,19 +126,19 @@ function PresentationsSection({ rows, setRows }) {
         {rows.map((r, i) => (
           <div key={i} className="bg-white dark:bg-slate-800 rounded-lg border p-4">
             <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_1fr_auto] gap-3 items-end">
-              <div>
+              <div className="min-w-0">
                 <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Etiqueta</label>
                 <input value={r.label} onChange={(e) => update(i, "label", e.target.value)}
                        placeholder="Ej. Libra, Media libra, Onza"
                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Factor de stock</label>
                 <input value={r.units_factor} onChange={(e) => update(i, "units_factor", e.target.value)}
                        placeholder="Ej. 0.5  o  1/16"
                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Precio (Q)</label>
                 <input type="number" step="0.01" value={r.price} onChange={(e) => update(i, "price", e.target.value)}
                        placeholder="0.00" className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
@@ -397,7 +397,7 @@ export default function ProductForm() {
       <section className="bg-sky-50 dark:bg-sky-500/15 rounded-lg shadow p-5">
         <h3 className="font-semibold mb-1">Unidad y empaque</h3>
         <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">Ej.: empaque "caja", factor 50 → 1 caja = 50 unidades base.</p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <TextField label="Unidad base" name="base_unit_label" form={form} errors={errors} onChange={set} placeholder="unidad" />
           <TextField label="Empaque" name="container_label" form={form} errors={errors} onChange={set} />
           <TextField label="Factor de empaque" name="container_factor" form={form} errors={errors} onChange={set} />
