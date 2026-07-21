@@ -31,10 +31,10 @@ export default function Users() {
     if (search === "") load();
   }, [search]);
 
-  const blank = { name: "", email: "", password: "", role: "vendedor", is_active: true, branch_ids: [], default_branch: null };
+  const blank = { name: "", username: "", email: "", password: "", role: "vendedor", is_active: true, branch_ids: [], default_branch: null };
 
   const openEdit = (u) => setEditing({
-    id: u.id, name: u.name, email: u.email, password: "", role: u.roles[0] || "",
+    id: u.id, name: u.name, username: u.username || "", email: u.email, password: "", role: u.roles[0] || "",
     is_active: u.is_active,
     branch_ids: u.branches.map((b) => b.branch_id),
     default_branch: (u.branches.find((b) => b.is_default) || {}).branch_id || null,
@@ -43,7 +43,7 @@ export default function Users() {
   const save = async (e) => {
     e.preventDefault(); setError("");
     const payload = {
-      name: editing.name, email: editing.email, role: editing.role, is_active: editing.is_active,
+      name: editing.name, username: editing.username, email: editing.email, role: editing.role, is_active: editing.is_active,
       branches: editing.branch_ids.map((id) => ({ branch_id: id, is_default: id === editing.default_branch })),
     };
     if (editing.password) payload.password = editing.password;
@@ -148,6 +148,13 @@ export default function Users() {
               <div>
                 <label className="block text-sm font-medium mb-1">Correo</label>
                 <input type="email" value={editing.email} onChange={(e) => setEditing({ ...editing, email: e.target.value })} required className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Usuario <span className="text-xs text-slate-400">(para iniciar sesión, ej. juan)</span></label>
+                <input value={editing.username} autoCapitalize="none" autoCorrect="off"
+                       onChange={(e) => setEditing({ ...editing, username: e.target.value.trim() })}
+                       placeholder="nombre de usuario"
+                       className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Contraseña {editing.id && <span className="text-xs text-slate-400">(dejar vacío para no cambiar)</span>}</label>

@@ -12,6 +12,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .throttling import LoginRateThrottle, PasswordResetThrottle
@@ -19,10 +20,29 @@ from .throttling import LoginRateThrottle, PasswordResetThrottle
 User = get_user_model()
 
 
+class EmailOrUsernameTokenSerializer(TokenObtainPairSerializer):
+    """Permite iniciar sesión con el CORREO o con el NOMBRE DE USUARIO.
+
+    El campo de login se sigue llamando ``email`` (para no cambiar el frontend),
+    pero si el valor no parece un correo se busca por ``username`` y se resuelve
+    al correo real del usuario antes de autenticar.
+    """
+
+    def validate(self, attrs):
+        login = (attrs.get(self.username_field) or "").strip()
+        if login and "@" not in login:
+            user = (User.objects.filter(username__iexact=login).first()
+                    or User.objects.filter(email__iexact=login).first())
+            if user:
+                attrs[self.username_field] = user.email
+        return super().validate(attrs)
+
+
 class ThrottledTokenObtainPairView(TokenObtainPairView):
-    """Login JWT con límite de intentos por IP."""
+    """Login JWT con límite de intentos por IP. Acepta correo o usuario."""
 
     throttle_classes = [LoginRateThrottle]
+    serializer_class = EmailOrUsernameTokenSerializer
 
 
 @api_view(["POST"])
