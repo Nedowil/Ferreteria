@@ -54,11 +54,23 @@ export default function CustomerPicker({ value, onChange, customers = [], onAddN
   return (
     <div className="relative" ref={ref}>
       <div className="flex gap-2">
-        <button type="button" onClick={() => setOpen((o) => !o)}
-                className="flex-1 min-w-0 text-left border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm bg-white dark:bg-slate-800 flex items-center justify-between gap-2 outline-none focus:ring-2 focus:ring-blue-500">
-          <span className="truncate">{selected ? `${selected.name}${selected.customer_type === "wholesale" ? " (mayorista)" : ""}` : emptyLabel}</span>
-          <span className="text-slate-400 shrink-0">▾</span>
-        </button>
+        <div className="relative flex-1 min-w-0">
+          <button type="button" onClick={() => setOpen((o) => !o)}
+                  className="w-full text-left border border-slate-300 dark:border-slate-600 rounded px-3 py-2 pr-14 text-sm bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500">
+            <span className="block truncate">{selected ? `${selected.name}${selected.customer_type === "wholesale" ? " (mayorista)" : ""}` : emptyLabel}</span>
+          </button>
+          {/* Controles a la derecha: ✕ para quitar el cliente y ▾ para abrir */}
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none">
+            {selected && (
+              <button type="button" title="Quitar cliente" aria-label="Quitar cliente"
+                      onClick={(e) => { e.stopPropagation(); onChange("", null); setSelectedObj(null); setQ(""); setResults(null); setOpen(false); }}
+                      className="pointer-events-auto w-5 h-5 flex items-center justify-center rounded-full text-slate-400 hover:text-white hover:bg-red-500 transition text-xs leading-none">
+                ✕
+              </button>
+            )}
+            <span className="text-slate-400">▾</span>
+          </div>
+        </div>
         {onAddNew && (
           <button type="button" onClick={onAddNew} title="Nuevo cliente"
                   className="shrink-0 inline-flex items-center gap-1 bg-blue-600 text-white rounded px-3 py-2 text-sm font-medium hover:bg-blue-700 transition whitespace-nowrap">
