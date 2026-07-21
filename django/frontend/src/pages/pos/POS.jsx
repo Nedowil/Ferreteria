@@ -11,6 +11,7 @@ import { useServerOnline } from "../../offline/net";
 import { saveCatalog, getCatalog, setMeta, getMeta, addPending, countPending } from "../../offline/db";
 import { syncPending } from "../../offline/sync";
 import { printOfflineReceipt } from "./offlineReceipt";
+import { dialog } from "../../components/Dialog";
 
 // Elige el precio base según el nivel del cliente (público o mayorista).
 function basePriceFor(product, qty, customer) {
@@ -228,6 +229,12 @@ export default function POS() {
   const [pendingCount, setPendingCount] = useState(0);   // ventas offline sin sincronizar
   const [syncing, setSyncing] = useState(false);
   const [offlineNote, setOfflineNote] = useState("");    // aviso temporal
+  // Ventas en pausa: carritos guardados para atender a otro cliente y retomar.
+  const [held, setHeld] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("pos_held_sales") || "[]"); } catch { return []; }
+  });
+  const [showHeld, setShowHeld] = useState(false);
+  useEffect(() => { localStorage.setItem("pos_held_sales", JSON.stringify(held)); }, [held]);
   const doSyncRef = useRef(() => {});
   const onReconnect = useCallback(() => doSyncRef.current(), []);
   const serverOnline = useServerOnline({ onReconnect });
@@ -609,6 +616,44 @@ export default function POS() {
     return () => clearTimeout(t);
   }, [offlineNote]);
 
+  // ---- Ventas en pausa ----
+  const snapshotSale = () => ({
+    id: Date.now(),
+    ts: new Date().toISOString(),
+    customerId, customerName: customer?.name || "",
+    cart, discount, wantFel, credit, saleDate, paymentMethod, paid,
+  });
+  const clearSale = () => {
+    setCart([]); setPaid(""); setDiscount(""); setWantFel(false); setCredit(false); setCustomerId(""); setSaleDate(todayStr);
+  };
+  const loadSale = (e) => {
+    setCart(e.cart || []); setCustomerId(e.customerId || ""); setDiscount(e.discount || "");
+    setWantFel(!!e.wantFel); setCredit(!!e.credit); setSaleDate(e.saleDate || todayStr);
+    setPaymentMethod(e.paymentMethod || "efectivo"); setPaid(e.paid || "");
+  };
+  const pauseSale = () => {
+    if (cart.length === 0) { setError("No hay nada en el carrito para pausar."); return; }
+    setHeld((h) => [snapshotSale(), ...h]);
+    clearSale();
+    setOfflineNote("Venta puesta en pausa. Podés retomarla desde «En pausa».");
+  };
+  const resumeSale = (id) => {
+    const e = held.find((x) => x.id === id);
+    if (!e) return;
+    // Si hay un carrito en curso, se guarda también para no perderlo.
+    setHeld((h) => {
+      const rest = h.filter((x) => x.id !== id);
+      return cart.length > 0 ? [snapshotSale(), ...rest] : rest;
+    });
+    loadSale(e);
+    setShowHeld(false);
+  };
+  const discardHeld = async (id) => {
+    if (!(await dialog.confirm("¿Descartar esta venta en pausa?", { danger: true, okText: "Descartar" }))) return;
+    setHeld((h) => h.filter((x) => x.id !== id));
+  };
+  const heldTotal = (e) => (e.cart || []).reduce((s, it) => s + Number(it.quantity || 0) * Number(it.unit_price || 0), 0);
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
@@ -619,8 +664,20 @@ export default function POS() {
             : <span className="text-sm text-green-700 bg-green-100 rounded-full px-3 py-1 font-medium">● En línea</span>}
           {can("ventas.crear") && (
             <button onClick={() => setReturning(true)}
-                    className="text-sm border border-amber-300 text-amber-700 bg-amber-50 rounded-lg px-3 py-1.5 hover:bg-amber-100 transition">
+                    className="text-sm border border-amber-300 text-amber-700 bg-amber-50 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30 rounded-lg px-3 py-1.5 hover:bg-amber-100 transition">
               ↩️ Devolución
+            </button>
+          )}
+          {cart.length > 0 && (
+            <button onClick={pauseSale} title="Guardar esta venta y atender a otro cliente"
+                    className="text-sm border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700 transition">
+              ⏸️ Pausar
+            </button>
+          )}
+          {held.length > 0 && (
+            <button onClick={() => setShowHeld(true)} title="Ventas guardadas en pausa"
+                    className="text-sm border border-blue-300 text-blue-700 bg-blue-50 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/30 rounded-lg px-3 py-1.5 hover:bg-blue-100 transition font-medium">
+              ⏯️ En pausa ({held.length})
             </button>
           )}
           <button onClick={openCustomerDisplay}
@@ -1046,6 +1103,39 @@ export default function POS() {
       )}
 
       {returning && <ReturnModal onClose={() => setReturning(false)} />}
+
+      {showHeld && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4"
+             onClick={() => setShowHeld(false)}>
+          <div onClick={(e) => e.stopPropagation()}
+               className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[85vh] overflow-hidden flex flex-col">
+            <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+              <h3 className="font-semibold text-slate-800 dark:text-slate-100">⏯️ Ventas en pausa ({held.length})</h3>
+              <button onClick={() => setShowHeld(false)} className="text-slate-400 hover:text-slate-600 text-xl leading-none">×</button>
+            </div>
+            <div className="overflow-auto divide-y divide-slate-100 dark:divide-slate-700">
+              {held.length === 0 && <div className="p-8 text-center text-slate-400">No hay ventas en pausa.</div>}
+              {held.map((e) => (
+                <div key={e.id} className="p-4 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-medium text-slate-800 dark:text-slate-100 truncate">{e.customerName || "Consumidor final"}</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                      {(e.cart || []).length} artículo(s) · Q{heldTotal(e).toFixed(2)}
+                      {e.ts && <> · {new Date(e.ts).toLocaleTimeString("es-GT", { hour: "2-digit", minute: "2-digit" })}</>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button onClick={() => resumeSale(e.id)}
+                            className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-3 py-1.5 text-sm font-medium transition">Retomar</button>
+                    <button onClick={() => discardHeld(e.id)} title="Descartar"
+                            className="text-red-500 hover:text-white hover:bg-red-500 rounded-lg w-8 h-8 flex items-center justify-center transition">🗑️</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {lastSale && (
         <SaleDoneModal sale={lastSale}
