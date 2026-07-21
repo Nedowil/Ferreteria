@@ -57,8 +57,23 @@ const trim = (n) => {
 
 // Normaliza texto para buscar sin importar tildes ni mayúsculas
 // ("María" ↔ "maria"). Quita los diacríticos con Unicode NFD.
-const norm = (s) =>
-  (s || "").toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const norm = (s) => {
+  let t = (s || "").toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  t = t
+    .replace(/[^a-z0-9\u00f1 ]+/g, " ")  // deja letras/n\u00fameros/\u00f1/espacios
+    .replace(/ll/g, "y")             // "ll" y "y" suenan igual
+    .replace(/y/g, "i")              // y -> i  (naylo -> nailo)
+    .replace(/v/g, "b")              // b <-> v
+    .replace(/z/g, "s")              // z -> s
+    .replace(/qu/g, "k")             // que/qui -> ke/ki
+    .replace(/gu([ei])/g, "g$1")     // gue/gui -> ge/gi
+    .replace(/c([ei])/g, "s$1")      // ce/ci -> se/si  (celeste -> seleste)
+    .replace(/c/g, "k")              // resto de "c" -> k
+    .replace(/h/g, "")               // h muda
+    .replace(/(.)\1+/g, "$1")       // colapsa letras repetidas (carro -> caro)
+    .replace(/\s+/g, " ").trim();
+  return t;
+};
 
 // Ventana flotante para elegir en qué medida se vende el producto.
 function MeasureModal({ product, customer, available, onAdd, onClose }) {
