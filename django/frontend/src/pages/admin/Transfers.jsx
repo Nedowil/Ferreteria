@@ -6,7 +6,7 @@ const BADGE = {
   pendiente: "bg-amber-100 text-amber-700",
   en_transito: "bg-blue-100 text-blue-700",
   recibida: "bg-green-100 text-green-700",
-  cancelada: "bg-slate-200 text-slate-500 dark:text-slate-400",
+  cancelada: "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400",
 };
 
 export default function Transfers() {
@@ -42,7 +42,7 @@ export default function Transfers() {
           </thead>
           <tbody>
             {data.results.map((t) => (
-              <tr key={t.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 transition">
+              <tr key={t.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700 transition">
                 <td className="px-4 py-2 font-mono text-xs">{t.folio}</td>
                 <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">{t.from_branch_name}</td>
                 <td className="px-4 py-2">{t.to_branch_name}</td>

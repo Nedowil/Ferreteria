@@ -27,7 +27,7 @@ export default function CustomerHistory() {
         <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
           🧾 Historial de {cliente?.name || "cliente"}
         </h1>
-        <button onClick={() => navigate("/clientes")} className="inline-flex items-center gap-1 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2 shadow-sm hover:bg-slate-50 hover:border-slate-400 transition">← Volver</button>
+        <button onClick={() => navigate("/clientes")} className="inline-flex items-center gap-1 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-slate-400 transition">← Volver</button>
       </div>
 
       {/* Resumen */}
@@ -50,7 +50,7 @@ export default function CustomerHistory() {
         {/* Móvil: tarjetas */}
         <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-700">
           {sales.map((s) => (
-            <Link key={s.id} to={`/ventas/${s.id}`} className="block p-4 active:bg-slate-50">
+            <Link key={s.id} to={`/ventas/${s.id}`} className="block p-4 active:bg-slate-50 dark:active:bg-slate-700">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div className="font-mono text-sm text-slate-700 dark:text-slate-200">{s.folio}</div>
@@ -76,7 +76,7 @@ export default function CustomerHistory() {
           </thead>
           <tbody>
             {sales.map((s) => (
-              <tr key={s.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 transition">
+              <tr key={s.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700 transition">
                 <td className="px-4 py-2 font-mono text-xs">{s.folio}</td>
                 <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{new Date(s.date).toLocaleString()}</td>
                 <td className="px-4 py-2 text-xs text-slate-500 dark:text-slate-400">{s.payment_status_display}</td>

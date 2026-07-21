@@ -96,7 +96,7 @@ export default function SupplierList() {
           </thead>
           <tbody>
             {items.map((s) => (
-              <tr key={s.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 transition">
+              <tr key={s.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700 transition">
                 <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">{s.name}</td>
                 <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{s.tax_id || "—"}</td>
                 <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{s.contact_name || "—"}</td>

@@ -185,7 +185,7 @@ export default function CompanySettings() {
             </>
           )}
           <div className="sm:col-span-2">
-            <button type="button" onClick={testPrinter} className="text-sm border border-slate-300 dark:border-slate-600 rounded px-4 py-2 hover:bg-slate-50">
+            <button type="button" onClick={testPrinter} className="text-sm border border-slate-300 dark:border-slate-600 rounded px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-700">
               Imprimir prueba
             </button>
             <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">Guarda los cambios antes de probar.</span>
@@ -222,7 +222,7 @@ export default function CompanySettings() {
             </>
           )}
           <div className="sm:col-span-2">
-            <button type="button" onClick={testZebra} className="text-sm border border-slate-300 dark:border-slate-600 rounded px-4 py-2 hover:bg-slate-50">
+            <button type="button" onClick={testZebra} className="text-sm border border-slate-300 dark:border-slate-600 rounded px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-700">
               Imprimir etiqueta de prueba
             </button>
             <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">Guarda los cambios antes de probar.</span>

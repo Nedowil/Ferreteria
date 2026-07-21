@@ -53,7 +53,7 @@ export default function Roles() {
           </thead>
           <tbody>
             {roles.map((r) => (
-              <tr key={r.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 transition">
+              <tr key={r.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700 transition">
                 <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">{r.name} {SYSTEM.includes(r.name) && <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">sistema</span>}</td>
                 <td className="px-4 py-2 text-right">{r.permissions.length}</td>
                 <td className="px-4 py-2 text-right">{r.user_count}</td>
@@ -81,7 +81,7 @@ export default function Roles() {
               <label className="block text-sm font-medium mb-1">Nombre</label>
               <input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} required disabled={SYSTEM.includes(editing.name)}
                      className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm disabled:bg-slate-100" />
-              {isAdmin && <p className="text-sm text-amber-700 bg-amber-50 rounded px-3 py-2 mt-3">El rol admin siempre tiene todos los permisos.</p>}
+              {isAdmin && <p className="text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 rounded px-3 py-2 mt-3">El rol admin siempre tiene todos los permisos.</p>}
             </div>
 
             {/* Permisos (con scroll) */}

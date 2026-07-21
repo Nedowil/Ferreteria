@@ -85,12 +85,12 @@ export default function ReturnModal({ onClose, initialFolio = "" }) {
           <div className="p-6 text-center space-y-4">
             <div className="text-5xl">✓</div>
             <div className="text-lg font-bold text-slate-800 dark:text-slate-100">Devolución procesada</div>
-            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-              <div className="text-xs text-amber-700 uppercase tracking-wide">Reembolso</div>
-              <div className="text-3xl font-extrabold text-amber-700">{Q(done.total ?? done.refund_total ?? refundTotal)}</div>
+            <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-xl px-4 py-3">
+              <div className="text-xs text-amber-700 dark:text-amber-300 uppercase tracking-wide">Reembolso</div>
+              <div className="text-3xl font-extrabold text-amber-700 dark:text-amber-300">{Q(done.total ?? done.refund_total ?? refundTotal)}</div>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => navigate(`/devoluciones/${done.id}`)} className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 transition">Ver devolución</button>
+              <button onClick={() => navigate(`/devoluciones/${done.id}`)} className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition">Ver devolución</button>
               <button onClick={onClose} className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg py-2.5 text-sm font-semibold shadow hover:from-blue-700 hover:to-indigo-700 transition">Cerrar</button>
             </div>
           </div>

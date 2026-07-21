@@ -118,7 +118,7 @@ export default function CustomerList() {
               <div className="flex items-center justify-between gap-2 mt-2">
                 <span className="text-sm text-slate-500 dark:text-slate-400">Saldo: <b className="text-slate-700 dark:text-slate-200">Q{c.credit_balance}</b></span>
                 <div className="flex flex-wrap gap-2">
-                  <Link to={`/clientes/${c.id}/historial`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50">🧾 Historial</Link>
+                  <Link to={`/clientes/${c.id}/historial`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">🧾 Historial</Link>
                   {can("clientes.editar") && <button onClick={() => { setSatMsg(""); setEditing(c); }} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-blue-600 hover:bg-blue-700 text-white">Editar</button>}
                   {can("clientes.eliminar") && <button onClick={() => remove(c.id)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-red-600 hover:bg-red-700 text-white">Eliminar</button>}
                 </div>
@@ -137,7 +137,7 @@ export default function CustomerList() {
           </thead>
           <tbody>
             {items.map((c) => (
-              <tr key={c.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 transition">
+              <tr key={c.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700 transition">
                 <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">{c.name}</td>
                 <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{c.tax_id || "—"}</td>
                 <td className="px-4 py-2"><span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">{c.type_label}</span></td>
@@ -145,7 +145,7 @@ export default function CustomerList() {
                 <td className="px-4 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">Q{c.credit_balance}</td>
                 <td className="px-4 py-2 text-right">
                   <div className="inline-flex flex-wrap gap-1.5 justify-end">
-                    <Link to={`/clientes/${c.id}/historial`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50">🧾 Historial</Link>
+                    <Link to={`/clientes/${c.id}/historial`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">🧾 Historial</Link>
                     {can("clientes.editar") && <button onClick={() => { setSatMsg(""); setEditing(c); }} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-blue-600 hover:bg-blue-700 text-white">Editar</button>}
                     {can("clientes.eliminar") && <button onClick={() => remove(c.id)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-red-600 hover:bg-red-700 text-white">Eliminar</button>}
                   </div>

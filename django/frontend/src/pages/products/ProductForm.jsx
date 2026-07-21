@@ -106,7 +106,7 @@ function PresentationsSection({ rows, setRows }) {
   };
 
   return (
-    <section className="bg-amber-50 border-l-4 border-amber-400 rounded-lg shadow p-5">
+    <section className="bg-amber-50 dark:bg-amber-500/10 border-l-4 border-amber-400 rounded-lg shadow p-5">
       <div className="flex items-center justify-between mb-1">
         <h3 className="font-semibold flex items-center gap-2">📦 Presentaciones adicionales (opcional)</h3>
         <button type="button" onClick={add}
@@ -151,7 +151,7 @@ function PresentationsSection({ rows, setRows }) {
               <span className="text-slate-500 dark:text-slate-400">📐 Equivalencias rápidas:</span>
               {QUICK_EQUIV.map((q) => (
                 <button type="button" key={q.value} onClick={() => update(i, "units_factor", q.value)}
-                        className="bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 rounded px-2 py-1">{q.label}</button>
+                        className="bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded px-2 py-1">{q.label}</button>
               ))}
             </div>
 
@@ -379,7 +379,7 @@ export default function ProductForm() {
                 : <span className="text-3xl text-slate-300">📦</span>}
             </div>
             <div className="text-sm">
-              <label className="inline-block cursor-pointer bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded-lg px-4 py-2 font-medium transition">
+              <label className="inline-block cursor-pointer bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg px-4 py-2 font-medium transition">
                 {imagePreview ? "Cambiar imagen" : "Subir imagen"}
                 <input type="file" accept="image/*" onChange={onImagePick} className="hidden" />
               </label>
@@ -394,7 +394,7 @@ export default function ProductForm() {
         </div>
       </section>
 
-      <section className="bg-sky-50 rounded-lg shadow p-5">
+      <section className="bg-sky-50 dark:bg-sky-500/15 rounded-lg shadow p-5">
         <h3 className="font-semibold mb-1">Unidad y empaque</h3>
         <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">Ej.: empaque "caja", factor 50 → 1 caja = 50 unidades base.</p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

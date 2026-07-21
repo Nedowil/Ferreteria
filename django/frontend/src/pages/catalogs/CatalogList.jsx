@@ -76,7 +76,7 @@ export default function CatalogList({ kind }) {
           </thead>
           <tbody>
             {items.map((o) => (
-              <tr key={o.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 transition">
+              <tr key={o.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700 transition">
                 <td className="px-5 py-2 font-medium text-slate-800 dark:text-slate-100">{o.name}</td>
                 {cfg.isUnit && <td className="px-5 py-2">{o.abbreviation}</td>}
                 {cfg.hasDescription && <td className="px-5 py-2 text-slate-500 dark:text-slate-400">{o.description || "—"}</td>}

@@ -72,7 +72,7 @@ export default function TransferCreate() {
           {results.length > 0 && (
             <div className="absolute z-10 bg-white dark:bg-slate-800 border rounded shadow w-full mt-1 max-h-60 overflow-auto">
               {results.map((p) => (
-                <button type="button" key={p.id} onClick={() => addItem(p)} className="block w-full text-left px-3 py-2 hover:bg-slate-100 text-sm">
+                <button type="button" key={p.id} onClick={() => addItem(p)} className="block w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm">
                   <span className="font-mono text-xs text-slate-400">{p.sku}</span> {p.name} — stock {p.branch_stock ?? p.stock}
                 </button>
               ))}

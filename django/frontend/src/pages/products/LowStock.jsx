@@ -58,7 +58,7 @@ export default function LowStock() {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 transition">
+              <tr key={r.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700/70 transition">
                 <td className="px-4 py-2 font-mono text-xs text-slate-500 dark:text-slate-400">{r.sku}</td>
                 <td className="px-4 py-2">
                   <div className="font-medium text-slate-800 dark:text-slate-100">{r.name}</div>
@@ -67,7 +67,7 @@ export default function LowStock() {
                 <td className="px-4 py-2 text-right"><span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-red-100 text-red-700">{r.stock}</span></td>
                 <td className="px-4 py-2 text-right">{r.min_stock}</td>
                 <td className="px-4 py-2 text-right font-semibold text-blue-700">{r.suggested}</td>
-                <td className="px-4 py-2 text-right"><div className="inline-flex flex-wrap gap-1.5 justify-end"><Link to={`/productos/${r.id}/inventario`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50">Inventario</Link></div></td>
+                <td className="px-4 py-2 text-right"><div className="inline-flex flex-wrap gap-1.5 justify-end"><Link to={`/productos/${r.id}/inventario`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">Inventario</Link></div></td>
               </tr>
             ))}
             {rows.length === 0 && <tr><td colSpan="6" className="px-5 py-10 text-center text-slate-400">Ningún producto con stock bajo 🎉</td></tr>}

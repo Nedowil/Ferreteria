@@ -174,7 +174,7 @@ export default function ReturnCreate() {
           {prodSales.length > 0 && (
             <div className="mt-2 divide-y text-sm">
               {prodSales.map((s) => (
-                <button key={s.sale_id} onClick={() => loadSale(s.sale_id)} className="block w-full text-left px-2 py-2 hover:bg-slate-100">
+                <button key={s.sale_id} onClick={() => loadSale(s.sale_id)} className="block w-full text-left px-2 py-2 hover:bg-slate-100 dark:hover:bg-slate-700">
                   <span className="font-mono text-xs text-slate-400">{s.folio}</span> · {new Date(s.date).toLocaleDateString()} · {s.customer || "Consumidor final"} · {s.quantity} × Q{s.unit_price}
                 </button>
               ))}
@@ -192,7 +192,7 @@ export default function ReturnCreate() {
             {results.length > 0 && (
               <div className="absolute z-10 bg-white dark:bg-slate-800 border rounded shadow w-full mt-1 max-h-60 overflow-auto">
                 {results.map((p) => (
-                  <button type="button" key={p.id} onClick={() => addItem(p)} className="block w-full text-left px-3 py-2 hover:bg-slate-100 text-sm">
+                  <button type="button" key={p.id} onClick={() => addItem(p)} className="block w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm">
                     <span className="font-mono text-xs text-slate-400">{p.sku}</span> {p.name} — Q{p.sale_price}
                   </button>
                 ))}

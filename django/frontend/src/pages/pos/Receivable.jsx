@@ -60,7 +60,7 @@ export default function Receivable() {
           </thead>
           <tbody>
             {data.results.map((s) => (
-              <tr key={s.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 transition">
+              <tr key={s.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700 transition">
                 <td className="px-4 py-2 font-mono text-xs">{s.folio}</td>
                 <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">{s.customer_name || "Consumidor final"}</td>
                 <td className="px-4 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">Q{s.total}</td>

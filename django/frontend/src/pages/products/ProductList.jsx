@@ -182,7 +182,7 @@ function PriceTagsModal({ single, filters, companyName, count, onClose }) {
             <b> nombre</b> y el <b>precio grande</b> (sin código de barras), lista para el estante.
           </p>
           <div className="flex gap-2">
-            <button onClick={onClose} className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 transition">Cancelar</button>
+            <button onClick={onClose} className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition">Cancelar</button>
             <button onClick={doPrint} disabled={busy}
                     className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg py-2.5 text-sm font-semibold shadow hover:from-blue-700 hover:to-indigo-700 transition disabled:opacity-50">
               {busy ? "Generando…" : "Imprimir"}
@@ -244,7 +244,7 @@ function LabelPrintModal({ product, companyName, onClose }) {
                        className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div className="flex gap-2">
-                <button onClick={onClose} className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 transition">Cancelar</button>
+                <button onClick={onClose} className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition">Cancelar</button>
                 <button onClick={next} className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg py-2.5 text-sm font-semibold shadow hover:from-blue-700 hover:to-indigo-700 transition">Siguiente</button>
               </div>
             </>
@@ -252,7 +252,7 @@ function LabelPrintModal({ product, companyName, onClose }) {
             <>
               <div className="text-sm text-slate-600 dark:text-slate-300">Elegí cómo imprimir <b>{copies}</b> etiqueta(s):</div>
               <button onClick={() => { printLabelsPdf(product, copies, companyName); onClose(); }} disabled={busy}
-                      className="w-full text-left rounded-xl border-2 border-blue-400 bg-blue-50/50 hover:shadow-md p-3 transition disabled:opacity-50">
+                      className="w-full text-left rounded-xl border-2 border-blue-400 bg-blue-50/50 dark:bg-blue-500/15 hover:shadow-md p-3 transition disabled:opacity-50">
                 <div className="font-semibold text-slate-800 dark:text-slate-100">🖨️ Imprimir en la Zebra (USB) <span className="text-[10px] bg-blue-600 text-white rounded px-1.5 py-0.5 align-middle">Recomendado</span></div>
                 <div className="text-xs text-slate-500 dark:text-slate-400">Abre el cuadro de impresión → elegí tu <b>Zebra ZD421T</b>. Funciona con el sistema en la nube.</div>
               </button>
@@ -399,9 +399,9 @@ export default function ProductList() {
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  <button onClick={() => setLabeling(p)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50">Etiqueta</button>
-                  <Link to={`/productos/${p.id}/inventario`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50">Inventario</Link>
-                  {can("auditoria.ver") && <Link to={historyLink(p.id)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50">Historial</Link>}
+                  <button onClick={() => setLabeling(p)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">Etiqueta</button>
+                  <Link to={`/productos/${p.id}/inventario`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">Inventario</Link>
+                  {can("auditoria.ver") && <Link to={historyLink(p.id)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">Historial</Link>}
                   {can("productos.editar") && <Link to={`/productos/${p.id}/editar`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-blue-600 hover:bg-blue-700 text-white">Editar</Link>}
                   {can("productos.eliminar") && <button onClick={() => remove(p.id)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-red-600 hover:bg-red-700 text-white">Eliminar</button>}
                 </div>
@@ -424,7 +424,7 @@ export default function ProductList() {
           </thead>
           <tbody>
             {data.results.map((p) => (
-              <tr key={p.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 transition">
+              <tr key={p.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700/70 transition">
                 <td className="px-4 py-2">
                   <div className="h-10 w-10 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex items-center justify-center overflow-hidden">
                     {p.image
@@ -446,10 +446,10 @@ export default function ProductList() {
                 </td>
                 <td className="px-4 py-2 text-right whitespace-nowrap">
                   <div className="inline-flex flex-wrap gap-1.5 justify-end">
-                  <button onClick={() => setLabeling(p)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50" title="Imprimir etiqueta con código de barras (Zebra)">Etiqueta</button>
+                  <button onClick={() => setLabeling(p)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700" title="Imprimir etiqueta con código de barras (Zebra)">Etiqueta</button>
                   <button onClick={() => setPriceTag({ single: p })} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white dark:bg-slate-800 border border-amber-300 text-amber-700 hover:bg-amber-50" title="Imprimir etiqueta de precio para estante">Precio</button>
-                  <Link to={`/productos/${p.id}/inventario`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50">Inventario</Link>
-                  {can("auditoria.ver") && <Link to={historyLink(p.id)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50" title="Quién creó, editó o eliminó este producto">Historial</Link>}
+                  <Link to={`/productos/${p.id}/inventario`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">Inventario</Link>
+                  {can("auditoria.ver") && <Link to={historyLink(p.id)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700" title="Quién creó, editó o eliminó este producto">Historial</Link>}
                   {can("productos.editar") && <Link to={`/productos/${p.id}/editar`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-blue-600 hover:bg-blue-700 text-white">Editar</Link>}
                   {can("productos.eliminar") && <button onClick={() => remove(p.id)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-red-600 hover:bg-red-700 text-white">Eliminar</button>}
                   </div>

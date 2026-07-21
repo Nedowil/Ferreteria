@@ -97,8 +97,8 @@ function MeasureModal({ product, customer, available, onAdd, onClose }) {
                 <button key={m.key} onClick={() => setSel(m)}
                         className={"text-left rounded-xl border px-3 py-2 transition " +
                           (sel.key === m.key
-                            ? "border-blue-500 bg-blue-50 ring-2 ring-blue-500/30"
-                            : "border-slate-200 dark:border-slate-700 hover:border-slate-300")}>
+                            ? "border-blue-500 bg-blue-50 dark:bg-blue-500/20 dark:border-blue-400 ring-2 ring-blue-500/30"
+                            : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-500")}>
                   <div className="text-sm font-semibold text-slate-800 dark:text-slate-100 capitalize">{m.label}</div>
                   <div className="text-xs text-slate-500 dark:text-slate-400">Q{Number(m.price).toFixed(2)}
                     {Number(m.units_factor) !== 1 && <span> · {trim(m.units_factor)} {product.base_unit_label || "u"}</span>}
@@ -123,7 +123,7 @@ function MeasureModal({ product, customer, available, onAdd, onClose }) {
           </div>
 
           {exceeds && (
-            <div className="bg-amber-50 border border-amber-200 text-amber-700 text-xs rounded-lg px-3 py-2">
+            <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs rounded-lg px-3 py-2">
               ⚠️ Requiere {trim(physical)} {product.base_unit_label || "u"} y solo hay {trim(available)} disponibles.
             </div>
           )}
@@ -161,20 +161,20 @@ function SaleDoneModal({ sale, onPrint, onView, onNew }) {
         </div>
         <div className="p-5 space-y-4">
           {!sale.credit && sale.method === "efectivo" && (
-            <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-center">
-              <div className="text-xs text-emerald-700 uppercase tracking-wide">Vuelto</div>
-              <div className="text-4xl font-extrabold text-emerald-700">Q{sale.change.toFixed(2)}</div>
+            <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 rounded-xl px-4 py-3 text-center">
+              <div className="text-xs text-emerald-700 dark:text-emerald-300 uppercase tracking-wide">Vuelto</div>
+              <div className="text-4xl font-extrabold text-emerald-700 dark:text-emerald-300">Q{sale.change.toFixed(2)}</div>
             </div>
           )}
           {sale.fel && sale.fel.ok && (
-            <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-2 text-center">
-              <div className="text-xs text-blue-700 uppercase tracking-wide">Factura electrónica (FEL)</div>
-              <div className="text-sm font-semibold text-blue-800">{sale.fel.serie ? `${sale.fel.serie}-` : ""}{sale.fel.numero || "certificada"}</div>
-              {sale.fel.uuid && <div className="text-[10px] text-blue-500 font-mono break-all">{sale.fel.uuid}</div>}
+            <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 rounded-xl px-4 py-2 text-center">
+              <div className="text-xs text-blue-700 dark:text-blue-300 uppercase tracking-wide">Factura electrónica (FEL)</div>
+              <div className="text-sm font-semibold text-blue-800 dark:text-blue-200">{sale.fel.serie ? `${sale.fel.serie}-` : ""}{sale.fel.numero || "certificada"}</div>
+              {sale.fel.uuid && <div className="text-[10px] text-blue-500 dark:text-blue-400 font-mono break-all">{sale.fel.uuid}</div>}
             </div>
           )}
           {sale.fel && !sale.fel.ok && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2 text-xs text-amber-700">
+            <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-xl px-4 py-2 text-xs text-amber-700 dark:text-amber-300">
               ⚠️ La venta quedó registrada, pero la factura FEL no se emitió: {sale.fel.error} Podés emitirla luego en <b>Facturación</b>.
             </div>
           )}
@@ -718,9 +718,9 @@ export default function POS() {
                     const unit = p.base_unit_label || "unidad";
                     return (
                       <button key={p.id} onClick={() => setPicking(p)}
-                              className="w-full text-left flex items-center gap-3 px-3 py-2.5 hover:bg-blue-50 transition group">
+                              className="w-full text-left flex items-center gap-3 px-3 py-2.5 hover:bg-blue-50 dark:hover:bg-slate-700 transition group">
                         <div className="min-w-0 flex-1">
-                          <div className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate group-hover:text-blue-700">{p.name}</div>
+                          <div className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate group-hover:text-blue-700 dark:group-hover:text-blue-300">{p.name}</div>
                           <div className="text-[11px] font-mono text-slate-400">{p.sku}</div>
                         </div>
                         <div className="w-28 text-right shrink-0">

@@ -12,16 +12,16 @@ function Keypad({ onDigit, onBackspace, onEnter, busy }) {
     <div className="grid grid-cols-3 gap-2 mt-4">
       {keys.map((k) => (
         <button key={k} type="button" onClick={() => onDigit(k)}
-                className="py-4 rounded-xl bg-white border border-slate-200 text-2xl font-semibold text-slate-700 shadow-sm active:scale-95 hover:bg-slate-50 transition">
+                className="py-4 rounded-xl bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-2xl font-semibold text-slate-700 dark:text-slate-100 shadow-sm active:scale-95 hover:bg-slate-50 dark:hover:bg-slate-600 transition">
           {k}
         </button>
       ))}
       <button type="button" onClick={onBackspace}
-              className="py-4 rounded-xl bg-slate-100 text-2xl text-slate-600 active:scale-95 hover:bg-slate-200 transition">
+              className="py-4 rounded-xl bg-slate-100 dark:bg-slate-700 text-2xl text-slate-600 dark:text-slate-300 active:scale-95 hover:bg-slate-200 dark:hover:bg-slate-600 transition">
         ⌫
       </button>
       <button type="button" onClick={() => onDigit("0")}
-              className="py-4 rounded-xl bg-white border border-slate-200 text-2xl font-semibold text-slate-700 shadow-sm active:scale-95 hover:bg-slate-50 transition">
+              className="py-4 rounded-xl bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-2xl font-semibold text-slate-700 dark:text-slate-100 shadow-sm active:scale-95 hover:bg-slate-50 dark:hover:bg-slate-600 transition">
         0
       </button>
       <button type="button" onClick={onEnter} disabled={busy}
@@ -132,15 +132,15 @@ export default function Login() {
       </div>
 
       {/* Panel del formulario */}
-      <div className="flex-1 flex items-center justify-center bg-slate-50 px-4 py-10">
+      <div className="flex-1 flex items-center justify-center bg-slate-50 dark:bg-slate-900 px-4 py-10">
         <form onSubmit={submit} className="w-full max-w-sm">
           <div className="text-center mb-8">
             <div className="flex justify-center mb-5">
               <img src={logo} alt="Ferretería Central"
                    className="w-56 max-w-full rounded-xl shadow ring-1 ring-slate-200" />
             </div>
-            <h2 className="text-2xl font-bold text-slate-800">Bienvenido</h2>
-            <p className="text-sm text-slate-500">Ingresá a tu cuenta para continuar</p>
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Bienvenido</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Ingresá a tu cuenta para continuar</p>
           </div>
 
           {error && (
@@ -150,13 +150,13 @@ export default function Login() {
           )}
 
           {/* Selector: Contraseña o PIN */}
-          <div className="flex gap-1 bg-slate-100 rounded-lg p-1 mb-4 text-sm">
+          <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-1 mb-4 text-sm">
             <button type="button" onClick={() => switchMode("password")}
-                    className={"flex-1 rounded-md py-1.5 font-medium transition " + (mode === "password" ? "bg-white shadow text-slate-800" : "text-slate-500")}>
+                    className={"flex-1 rounded-md py-1.5 font-medium transition " + (mode === "password" ? "bg-white dark:bg-slate-700 shadow text-slate-800 dark:text-slate-100" : "text-slate-500 dark:text-slate-400")}>
               🔒 Contraseña
             </button>
             <button type="button" onClick={() => switchMode("pin")}
-                    className={"flex-1 rounded-md py-1.5 font-medium transition " + (mode === "pin" ? "bg-white shadow text-slate-800" : "text-slate-500")}>
+                    className={"flex-1 rounded-md py-1.5 font-medium transition " + (mode === "pin" ? "bg-white dark:bg-slate-700 shadow text-slate-800 dark:text-slate-100" : "text-slate-500 dark:text-slate-400")}>
               🔢 PIN
             </button>
           </div>
@@ -164,15 +164,15 @@ export default function Login() {
           {/* ---------- MODO PIN: botones de cajeros ---------- */}
           {showTiles && (
             <div>
-              <p className="text-sm text-slate-500 text-center mb-3">¿Quién va a ingresar?</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 text-center mb-3">¿Quién va a ingresar?</p>
               <div className="grid grid-cols-2 gap-2">
                 {pinUsers.map((u) => (
                   <button key={u.username} type="button" onClick={() => chooseUser(u)}
-                          className="flex flex-col items-center gap-2 py-4 rounded-xl bg-white border border-slate-200 shadow-sm hover:border-blue-400 hover:shadow transition">
+                          className="flex flex-col items-center gap-2 py-4 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:border-blue-400 dark:hover:border-blue-500 hover:shadow transition">
                     <span className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center text-xl font-bold">
                       {(u.name || "?").trim().charAt(0).toUpperCase()}
                     </span>
-                    <span className="text-sm font-medium text-slate-700 text-center leading-tight px-1 break-words">{u.name}</span>
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-200 text-center leading-tight px-1 break-words">{u.name}</span>
                   </button>
                 ))}
               </div>
@@ -188,16 +188,16 @@ export default function Login() {
             <div>
               {selected ? (
                 <div className="text-center mb-1">
-                  <span className="inline-flex items-center gap-2 bg-slate-100 rounded-full pl-1 pr-3 py-1">
+                  <span className="inline-flex items-center gap-2 bg-slate-100 dark:bg-slate-700 rounded-full pl-1 pr-3 py-1">
                     <span className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center text-sm font-bold">
                       {(selected.name || "?").trim().charAt(0).toUpperCase()}
                     </span>
-                    <span className="text-sm font-semibold text-slate-700">{selected.name}</span>
+                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{selected.name}</span>
                   </span>
                 </div>
               ) : (
                 <div className="mb-3">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Correo o usuario</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Correo o usuario</label>
                   <input type="text" autoCapitalize="none" autoCorrect="off" value={email}
                          onChange={(e) => setEmail(e.target.value)} required
                          placeholder="tu correo o nombre de usuario"
@@ -205,7 +205,7 @@ export default function Login() {
                 </div>
               )}
 
-              <label className="block text-sm font-medium text-slate-700 mb-1 mt-2">PIN</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 mt-2">PIN</label>
               <input type="password" inputMode="numeric" pattern="[0-9]*" maxLength={6} autoComplete="off" autoFocus
                      value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
                      placeholder="• • • •"
@@ -230,7 +230,7 @@ export default function Login() {
           {/* ---------- MODO CONTRASEÑA ---------- */}
           {mode === "password" && (
             <>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Correo o usuario</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Correo o usuario</label>
               <div className="relative mb-4">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">👤</span>
                 <input type="text" autoCapitalize="none" autoCorrect="off" value={email} onChange={(e) => setEmail(e.target.value)} required
@@ -238,7 +238,7 @@ export default function Login() {
                        className="w-full border border-slate-300 rounded-lg pl-10 pr-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" />
               </div>
 
-              <label className="block text-sm font-medium text-slate-700 mb-1">Contraseña</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Contraseña</label>
               <div className="relative mb-6">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔒</span>
                 <input type={showPass ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required

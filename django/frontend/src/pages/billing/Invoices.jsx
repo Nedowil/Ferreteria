@@ -229,7 +229,7 @@ export default function Invoices() {
             </thead>
             <tbody>
               {invoices.map((i) => (
-                <tr key={i.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 transition">
+                <tr key={i.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700 transition">
                   <td className="px-4 py-2"><Link to={`/ventas/${i.sale}`} className="text-blue-600">{i.sale_folio}</Link></td>
                   <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">{i.customer_name || "Consumidor final"}</td>
                   <td className="px-4 py-2">{i.document_type}</td>
@@ -291,7 +291,7 @@ export default function Invoices() {
             </thead>
             <tbody>
               {pending.map((s) => (
-                <tr key={s.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 transition">
+                <tr key={s.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700 transition">
                   <td className="px-4 py-2"><Link to={`/ventas/${s.id}`} className="text-blue-600">{s.folio}</Link></td>
                   <td className="px-4 py-2">{new Date(s.date).toLocaleDateString()}</td>
                   <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">{s.customer}</td>

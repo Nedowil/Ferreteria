@@ -7,8 +7,8 @@ import { dialog } from "../../components/Dialog";
 
 const BADGE = {
   vigente: "bg-blue-100 text-blue-700", aceptada: "bg-green-100 text-green-700",
-  expirada: "bg-amber-100 text-amber-700", convertida: "bg-slate-200 text-slate-600 dark:text-slate-300",
-  cancelada: "bg-slate-200 text-slate-500 dark:text-slate-400",
+  expirada: "bg-amber-100 text-amber-700", convertida: "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300",
+  cancelada: "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400",
 };
 
 const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -75,7 +75,7 @@ export default function QuotationDetail() {
         <h1 className="text-lg font-semibold">Cotización {q.folio}
           <span className={"ml-3 text-xs px-2 py-0.5 rounded align-middle " + BADGE[q.status]}>{q.status_display}</span>
         </h1>
-        <button onClick={() => navigate("/cotizaciones")} className="inline-flex items-center gap-1 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2 shadow-sm hover:bg-slate-50 hover:border-slate-400 transition">← Volver</button>
+        <button onClick={() => navigate("/cotizaciones")} className="inline-flex items-center gap-1 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-slate-400 transition">← Volver</button>
       </div>
       {error && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm mb-4">{error}</div>}
 
@@ -98,7 +98,7 @@ export default function QuotationDetail() {
             <div><span className="text-slate-500 dark:text-slate-400">Cliente:</span> <b>{q.customer_name || "Sin cliente"}</b></div>
             <div><span className="text-slate-500 dark:text-slate-400">Fecha:</span> {q.date}</div>
             <div><span className="text-slate-500 dark:text-slate-400">Vence:</span> {q.valid_until || "—"}</div>
-            {q.converted_sale && <div><span className="text-slate-500 dark:text-slate-400">Venta:</span> <button onClick={() => navigate(`/ventas/${q.converted_sale}`)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50">ver venta</button></div>}
+            {q.converted_sale && <div><span className="text-slate-500 dark:text-slate-400">Venta:</span> <button onClick={() => navigate(`/ventas/${q.converted_sale}`)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">ver venta</button></div>}
           </section>
           <section className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
             <div className="px-5 py-3 border-b font-semibold">Partidas</div>

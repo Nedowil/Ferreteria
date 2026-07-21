@@ -159,7 +159,7 @@ export default function CashBox() {
               <span className="font-semibold">Movimientos</span>
               <div className="flex gap-2">
                 <button onClick={exportMovPdf} disabled={!!exporting || !session.movements.length}
-                        className="border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg px-3 py-1 text-xs font-medium hover:bg-slate-50 transition disabled:opacity-50">
+                        className="border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg px-3 py-1 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition disabled:opacity-50">
                   {exporting === "pdf" ? "Generando…" : "⬇️ PDF"}
                 </button>
                 <button onClick={exportMovExcel} disabled={!session.movements.length}

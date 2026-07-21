@@ -117,7 +117,7 @@ export default function SupplierPayments() {
                 <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{dt(f.opened_at)}</td>
                 <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{f.closed_at ? dt(f.closed_at) : "—"}</td>
                 <td className="px-4 py-2">
-                  <span className={"text-xs px-2 py-0.5 rounded " + (f.status === "abierto" ? "bg-green-100 text-green-700" : "bg-slate-200 text-slate-500 dark:text-slate-400")}>{f.status_display}</span>
+                  <span className={"text-xs px-2 py-0.5 rounded " + (f.status === "abierto" ? "bg-green-100 text-green-700" : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400")}>{f.status_display}</span>
                 </td>
                 <td className="px-4 py-2 text-right">{Q(f.opening_amount)}</td>
                 <td className="px-4 py-2 text-right">{Q(f.added_amount)}</td>

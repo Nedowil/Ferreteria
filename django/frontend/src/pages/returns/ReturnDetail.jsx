@@ -63,7 +63,7 @@ export default function ReturnDetail() {
     <div className="max-w-3xl">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-lg font-semibold">Devolución {r.folio}
-          <span className={"ml-3 text-xs px-2 py-0.5 rounded align-middle " + (r.status === "procesada" ? "bg-green-100 text-green-700" : "bg-slate-200 text-slate-500 dark:text-slate-400")}>{r.status_display}</span>
+          <span className={"ml-3 text-xs px-2 py-0.5 rounded align-middle " + (r.status === "procesada" ? "bg-green-100 text-green-700" : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400")}>{r.status_display}</span>
         </h1>
         <div className="flex items-center gap-3">
           <button onClick={printReturnTicket} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-emerald-600 hover:bg-emerald-700 text-white">🎟️ Ticket</button>
@@ -104,9 +104,9 @@ export default function ReturnDetail() {
 
       {/* Nota de Crédito electrónica (FEL) */}
       {r.credit_note && r.credit_note.status === "certificada" ? (
-        <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm">
-          <div className="font-semibold text-blue-800">📄 Nota de crédito electrónica emitida</div>
-          <div className="text-blue-700">{r.credit_note.serie ? `${r.credit_note.serie}-` : ""}{r.credit_note.numero}</div>
+        <div className="mt-4 bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 rounded-lg px-4 py-3 text-sm">
+          <div className="font-semibold text-blue-800 dark:text-blue-300">📄 Nota de crédito electrónica emitida</div>
+          <div className="text-blue-700 dark:text-blue-300">{r.credit_note.serie ? `${r.credit_note.serie}-` : ""}{r.credit_note.numero}</div>
           {r.credit_note.uuid && <div className="text-xs text-blue-500 font-mono break-all">{r.credit_note.uuid}</div>}
         </div>
       ) : r.status === "procesada" && r.sale_invoice_certified && can("facturas.emitir") ? (

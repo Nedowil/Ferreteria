@@ -74,7 +74,7 @@ export default function SalesList() {
         {/* Móvil: tarjetas (la tabla no cabe en pantallas angostas) */}
         <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-700">
           {data.results.map((s) => (
-            <Link key={s.id} to={`/ventas/${s.id}`} className="block p-4 active:bg-slate-50">
+            <Link key={s.id} to={`/ventas/${s.id}`} className="block p-4 active:bg-slate-50 dark:active:bg-slate-700">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div className="font-medium text-slate-800 dark:text-slate-100 break-words">{s.customer_name || "Consumidor final"}</div>
@@ -105,7 +105,7 @@ export default function SalesList() {
           </thead>
           <tbody>
             {data.results.map((s) => (
-              <tr key={s.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 transition">
+              <tr key={s.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700 transition">
                 <td className="px-4 py-2 font-mono text-xs">{s.folio}</td>
                 <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">{s.customer_name || "Consumidor final"}</td>
                 <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{new Date(s.date).toLocaleString()}</td>

@@ -43,7 +43,7 @@ export default function Branches() {
           </thead>
           <tbody>
             {items.map((b) => (
-              <tr key={b.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 transition">
+              <tr key={b.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700 transition">
                 <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">{b.name}</td>
                 <td className="px-4 py-2 font-mono text-xs">{b.code}</td>
                 <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{b.phone || "—"}</td>

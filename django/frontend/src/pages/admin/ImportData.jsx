@@ -69,14 +69,14 @@ function ImportCard({ type }) {
       </form>
       {error && <div className="bg-red-600 text-white font-semibold rounded px-3 py-2 text-sm mt-3">{error}</div>}
       {result && (
-        <div className="bg-green-50 border border-green-200 rounded px-3 py-2 text-sm mt-3">
+        <div className="bg-green-50 dark:bg-emerald-500/15 border border-green-200 dark:border-emerald-500/30 dark:text-emerald-300 rounded px-3 py-2 text-sm mt-3">
           {"imported" in result
             ? <div>Ventas importadas: <b>{result.imported}</b></div>
             : <div>Creados: <b>{result.created}</b> · Actualizados: <b>{result.updated}</b></div>}
           {result.errors?.length > 0 && (
             <details className="mt-2">
-              <summary className="cursor-pointer text-amber-700">{result.errors.length} advertencia(s)</summary>
-              <ul className="list-disc ml-5 mt-1 text-amber-800">
+              <summary className="cursor-pointer text-amber-700 dark:text-amber-300">{result.errors.length} advertencia(s)</summary>
+              <ul className="list-disc ml-5 mt-1 text-amber-800 dark:text-amber-300">
                 {result.errors.map((e, i) => <li key={i}>{e}</li>)}
               </ul>
             </details>

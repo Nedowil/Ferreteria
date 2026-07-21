@@ -94,7 +94,7 @@ export default function AuditLog() {
           <tbody>
             {data.results.map((l) => (
               <Fragment key={l.id}>
-                <tr className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 transition">
+                <tr className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700 transition">
                   <td className="px-4 py-2 text-xs text-slate-500 dark:text-slate-400">{new Date(l.created_at).toLocaleString()}</td>
                   <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">{l.user_name || "—"}</td>
                   <td className="px-4 py-2"><span className={"inline-block rounded-full px-2 py-0.5 text-xs font-medium " + EVENT_BADGE[l.event]}>{l.event_display}</span></td>

@@ -54,7 +54,7 @@ export default function SaleDetail() {
     <div className="max-w-4xl">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-lg font-semibold">Venta {s.folio}
-          <span className={"ml-3 text-xs px-2 py-0.5 rounded align-middle " + (s.status === "completada" ? "bg-green-100 text-green-700" : "bg-slate-200 text-slate-500 dark:text-slate-400")}>{s.status_display}</span>
+          <span className={"ml-3 text-xs px-2 py-0.5 rounded align-middle " + (s.status === "completada" ? "bg-green-100 text-green-700" : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400")}>{s.status_display}</span>
         </h1>
         <button onClick={() => navigate("/ventas")} className="inline-flex items-center gap-1 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2 shadow-sm hover:bg-slate-50 hover:border-slate-400 transition">← Volver</button>
       </div>
