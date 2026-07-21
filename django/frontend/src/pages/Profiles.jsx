@@ -51,6 +51,20 @@ export default function Profiles() {
     }
   };
 
+  // Al tocar un perfil: si tiene PIN, muestra el teclado; si no, entra directo.
+  const choose = async (p) => {
+    if (p.has_pin) { setSelected(p); setPin(""); setError(""); return; }
+    setBusy(true); setError("");
+    try {
+      await switchProfile(p.username, "");
+      navigate("/", { replace: true });
+    } catch {
+      setError("No se pudo entrar a ese perfil.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 text-slate-100 flex">
       {/* Ambiente: manchas de color difuminadas */}
@@ -76,11 +90,16 @@ export default function Profiles() {
             ) : (
               <div className="flex flex-col gap-1.5">
                 {profiles.map((p, i) => (
-                  <button key={p.username} onClick={() => { setSelected(p); setPin(""); setError(""); }}
+                  <button key={p.username} onClick={() => choose(p)} disabled={busy}
                           style={{ animation: "riseIn .4s ease-out both", animationDelay: `${i * 60}ms` }}
-                          className="group flex items-center gap-4 p-2.5 rounded-2xl hover:bg-white/10 focus:bg-white/10 focus:outline-none transition text-left">
-                    <span className={`w-16 h-16 shrink-0 rounded-2xl bg-gradient-to-br ${roleAccent(p.role)} text-white flex items-center justify-center text-3xl font-bold shadow-lg ring-2 ring-white/10 group-hover:ring-white/70 transition`}>
-                      {initials(p.name)}
+                          className="group flex items-center gap-4 p-2.5 rounded-2xl hover:bg-white/10 focus:bg-white/10 focus:outline-none disabled:opacity-60 transition text-left">
+                    <span className="relative shrink-0">
+                      <span className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${roleAccent(p.role)} text-white flex items-center justify-center text-3xl font-bold shadow-lg ring-2 ring-white/10 group-hover:ring-white/70 transition`}>
+                        {initials(p.name)}
+                      </span>
+                      {p.has_pin && (
+                        <span className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-slate-900 border border-white/15 flex items-center justify-center text-[11px]" title="Requiere PIN">🔒</span>
+                      )}
                     </span>
                     <span className="min-w-0">
                       <span className="block text-lg font-semibold text-white truncate group-hover:text-white">{p.name}</span>

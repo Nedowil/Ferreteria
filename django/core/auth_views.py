@@ -95,7 +95,6 @@ def profiles(request):
         return err
     users = (
         User.objects.filter(is_active=True, is_device=False)
-        .exclude(pin_hash="")
         .order_by("name", "username")
     )
     data = [
@@ -104,6 +103,7 @@ def profiles(request):
             "username": u.username,
             "role": (u.groups.values_list("name", flat=True).first()
                      or ("Admin" if u.is_superuser else "")),
+            "has_pin": bool(u.pin_hash),   # con PIN => pide PIN; sin PIN => entra directo
         }
         for u in users
     ]
@@ -149,7 +149,11 @@ def switch_profile(request):
     pin = (request.data.get("pin") or "").strip()
     user = (User.objects.filter(username__iexact=login, is_device=False).first()
             or User.objects.filter(email__iexact=login, is_device=False).first())
-    if not user or not user.is_active or not user.check_pin(pin):
+    if not user or not user.is_active:
+        return Response({"detail": "Perfil no disponible."}, status=status.HTTP_400_BAD_REQUEST)
+    # Si el perfil tiene PIN, se valida. Si no tiene, entra directo (ya está
+    # autorizado por la sesión de equipo del mostrador).
+    if user.pin_hash and not user.check_pin(pin):
         return Response({"detail": "PIN incorrecto."}, status=status.HTTP_400_BAD_REQUEST)
     refresh = RefreshToken.for_user(user)
     return Response({"access": str(refresh.access_token), "refresh": str(refresh)})
