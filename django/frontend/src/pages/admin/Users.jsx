@@ -31,11 +31,11 @@ export default function Users() {
     if (search === "") load();
   }, [search]);
 
-  const blank = { name: "", username: "", email: "", password: "", role: "vendedor", is_active: true, branch_ids: [], default_branch: null };
+  const blank = { name: "", username: "", email: "", password: "", pin: "", role: "vendedor", is_active: true, branch_ids: [], default_branch: null };
 
   const openEdit = (u) => setEditing({
-    id: u.id, name: u.name, username: u.username || "", email: u.email, password: "", role: u.roles[0] || "",
-    is_active: u.is_active,
+    id: u.id, name: u.name, username: u.username || "", email: u.email, password: "", pin: "", role: u.roles[0] || "",
+    is_active: u.is_active, has_pin: u.has_pin,
     branch_ids: u.branches.map((b) => b.branch_id),
     default_branch: (u.branches.find((b) => b.is_default) || {}).branch_id || null,
   });
@@ -47,6 +47,7 @@ export default function Users() {
       branches: editing.branch_ids.map((id) => ({ branch_id: id, is_default: id === editing.default_branch })),
     };
     if (editing.password) payload.password = editing.password;
+    if (editing.pin !== "") payload.pin = editing.pin;  // "" = no tocar; valor = fijar/borrar
     try {
       if (editing.id) await api.put(`/users/${editing.id}/`, payload);
       else await api.post("/users/", payload);
@@ -159,6 +160,16 @@ export default function Users() {
               <div>
                 <label className="block text-sm font-medium mb-1">Contraseña {editing.id && <span className="text-xs text-slate-400">(dejar vacío para no cambiar)</span>}</label>
                 <PasswordInput value={editing.password} onChange={(e) => setEditing({ ...editing, password: e.target.value })} className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  PIN <span className="text-xs text-slate-400">(4 a 6 dígitos, para el punto de venta{editing.id && editing.has_pin ? " · ya tiene uno" : ""})</span>
+                </label>
+                <input type="text" inputMode="numeric" maxLength={6} autoComplete="off"
+                       value={editing.pin}
+                       onChange={(e) => setEditing({ ...editing, pin: e.target.value.replace(/\D/g, "") })}
+                       placeholder={editing.id ? (editing.has_pin ? "•••• (dejar vacío para no cambiar)" : "sin PIN") : "opcional"}
+                       className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm tracking-widest" />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Rol</label>

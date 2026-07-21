@@ -5,10 +5,12 @@ import { EyeIcon, EyeOffIcon } from "../components/PasswordInput";
 import logo from "../assets/logo.jpg";
 
 export default function Login() {
-  const { login, user } = useAuth();
+  const { login, loginWithPin, user } = useAuth();
   const navigate = useNavigate();
+  const [mode, setMode] = useState("password"); // "password" | "pin"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [pin, setPin] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -22,13 +24,14 @@ export default function Login() {
     e.preventDefault();
     setBusy(true); setError("");
     try {
-      await login(email, password);
+      if (mode === "pin") await loginWithPin(email, pin);
+      else await login(email, password);
       navigate("/", { replace: true });
     } catch (err) {
       if (err.response?.status === 429) {
         setError("Demasiados intentos. Espera un momento e inténtalo de nuevo.");
       } else {
-        setError("Credenciales inválidas.");
+        setError(mode === "pin" ? "Usuario o PIN incorrecto." : "Credenciales inválidas.");
       }
     } finally {
       setBusy(false);
@@ -84,6 +87,18 @@ export default function Login() {
             </div>
           )}
 
+          {/* Selector: Contraseña o PIN */}
+          <div className="flex gap-1 bg-slate-100 rounded-lg p-1 mb-4 text-sm">
+            <button type="button" onClick={() => { setMode("password"); setError(""); }}
+                    className={"flex-1 rounded-md py-1.5 font-medium transition " + (mode === "password" ? "bg-white shadow text-slate-800" : "text-slate-500")}>
+              🔒 Contraseña
+            </button>
+            <button type="button" onClick={() => { setMode("pin"); setError(""); }}
+                    className={"flex-1 rounded-md py-1.5 font-medium transition " + (mode === "pin" ? "bg-white shadow text-slate-800" : "text-slate-500")}>
+              🔢 PIN
+            </button>
+          </div>
+
           <label className="block text-sm font-medium text-slate-700 mb-1">Correo o usuario</label>
           <div className="relative mb-4">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">👤</span>
@@ -92,19 +107,34 @@ export default function Login() {
                    className="w-full border border-slate-300 rounded-lg pl-10 pr-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" />
           </div>
 
-          <label className="block text-sm font-medium text-slate-700 mb-1">Contraseña</label>
-          <div className="relative mb-6">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔒</span>
-            <input type={showPass ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required
-                   placeholder="••••••••"
-                   className="w-full border border-slate-300 rounded-lg pl-10 pr-11 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" />
-            <button type="button" onClick={() => setShowPass((v) => !v)}
-                    title={showPass ? "Ocultar contraseña" : "Ver contraseña"}
-                    aria-label={showPass ? "Ocultar contraseña" : "Ver contraseña"}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 rounded transition">
-              {showPass ? <EyeOffIcon /> : <EyeIcon />}
-            </button>
-          </div>
+          {mode === "pin" ? (
+            <>
+              <label className="block text-sm font-medium text-slate-700 mb-1">PIN</label>
+              <div className="relative mb-6">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔢</span>
+                <input type="password" inputMode="numeric" pattern="[0-9]*" maxLength={6} autoComplete="off"
+                       value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} required
+                       placeholder="• • • •"
+                       className="w-full border border-slate-300 rounded-lg pl-10 pr-3 py-2.5 text-sm tracking-[0.5em] text-center outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" />
+              </div>
+            </>
+          ) : (
+            <>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Contraseña</label>
+              <div className="relative mb-6">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔒</span>
+                <input type={showPass ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required
+                       placeholder="••••••••"
+                       className="w-full border border-slate-300 rounded-lg pl-10 pr-11 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" />
+                <button type="button" onClick={() => setShowPass((v) => !v)}
+                        title={showPass ? "Ocultar contraseña" : "Ver contraseña"}
+                        aria-label={showPass ? "Ocultar contraseña" : "Ver contraseña"}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 rounded transition">
+                  {showPass ? <EyeOffIcon /> : <EyeIcon />}
+                </button>
+              </div>
+            </>
+          )}
 
           <button disabled={busy}
                   className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg py-2.5 font-semibold shadow-lg shadow-blue-600/20 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 transition">

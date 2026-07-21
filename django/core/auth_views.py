@@ -13,6 +13,7 @@ from rest_framework.decorators import api_view, permission_classes, throttle_cla
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .throttling import LoginRateThrottle, PasswordResetThrottle
@@ -43,6 +44,22 @@ class ThrottledTokenObtainPairView(TokenObtainPairView):
 
     throttle_classes = [LoginRateThrottle]
     serializer_class = EmailOrUsernameTokenSerializer
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+@throttle_classes([LoginRateThrottle])
+def pin_token(request):
+    """Login rápido con usuario + PIN numérico (para el punto de venta)."""
+    login = (request.data.get("username") or request.data.get("email") or "").strip()
+    pin = (request.data.get("pin") or "").strip()
+    user = (User.objects.filter(username__iexact=login).first()
+            or User.objects.filter(email__iexact=login).first())
+    if not user or not user.is_active or not user.check_pin(pin):
+        return Response({"detail": "Usuario o PIN incorrecto."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    refresh = RefreshToken.for_user(user)
+    return Response({"access": str(refresh.access_token), "refresh": str(refresh)})
 
 
 @api_view(["POST"])

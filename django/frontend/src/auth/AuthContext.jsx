@@ -49,6 +49,14 @@ export function AuthProvider({ children }) {
     await loadProfile();
   };
 
+  // Login rápido con usuario + PIN (para el punto de venta).
+  const loginWithPin = async (username, pin) => {
+    const { data } = await api.post("/auth/pin-token/", { username, pin });
+    tokenStore.set({ access: data.access, refresh: data.refresh });
+    tokenStore.startSession();
+    await loadProfile();
+  };
+
   const logout = () => {
     tokenStore.clear();
     setUser(null);
@@ -70,7 +78,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, branches, loading, login, logout, setBranch, currentBranchId, can }}>
+    <AuthContext.Provider value={{ user, branches, loading, login, loginWithPin, logout, setBranch, currentBranchId, can }}>
       {children}
     </AuthContext.Provider>
   );

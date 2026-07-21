@@ -15,9 +15,20 @@ class User(AbstractUser):
 
     name = models.CharField("nombre", max_length=255, blank=True)
     email = models.EmailField("correo", unique=True)
+    # PIN numérico (hasheado) para entrar rápido en el punto de venta.
+    pin_hash = models.CharField(max_length=128, blank=True, default="")
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["username"]
+
+    def set_pin(self, raw_pin):
+        """Guarda el PIN (hasheado). Un valor vacío desactiva el PIN."""
+        from django.contrib.auth.hashers import make_password
+        self.pin_hash = make_password(str(raw_pin)) if raw_pin else ""
+
+    def check_pin(self, raw_pin):
+        from django.contrib.auth.hashers import check_password
+        return bool(self.pin_hash) and check_password(str(raw_pin or ""), self.pin_hash)
 
     branches = models.ManyToManyField(
         "core.Branch",

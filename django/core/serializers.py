@@ -49,10 +49,14 @@ class UserBranchSerializer(serializers.Serializer):
 class UserAdminSerializer(serializers.ModelSerializer):
     roles = serializers.SerializerMethodField()
     branches = serializers.SerializerMethodField()
+    has_pin = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ["id", "name", "username", "email", "is_active", "roles", "branches"]
+        fields = ["id", "name", "username", "email", "is_active", "has_pin", "roles", "branches"]
+
+    def get_has_pin(self, obj):
+        return bool(obj.pin_hash)
 
     def get_roles(self, obj):
         return list(obj.groups.values_list("name", flat=True))
@@ -67,12 +71,22 @@ class UserAdminSerializer(serializers.ModelSerializer):
 class UserWriteSerializer(serializers.ModelSerializer):
     username = serializers.CharField(required=False, allow_blank=True)  # se autocompleta con el email
     password = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    pin = serializers.CharField(write_only=True, required=False, allow_blank=True)  # PIN numérico (opcional)
+    has_pin = serializers.SerializerMethodField()
     role = serializers.CharField(required=False, allow_blank=True)  # un rol (nombre de grupo)
     branches = UserBranchSerializer(many=True, required=False)
 
     class Meta:
         model = User
-        fields = ["id", "name", "username", "email", "is_active", "password", "role", "branches"]
+        fields = ["id", "name", "username", "email", "is_active", "password", "pin", "has_pin", "role", "branches"]
+
+    def get_has_pin(self, obj):
+        return bool(obj.pin_hash)
+
+    def validate_pin(self, value):
+        if value and (not value.isdigit() or not (4 <= len(value) <= 6)):
+            raise serializers.ValidationError("El PIN debe ser de 4 a 6 dígitos.")
+        return value
 
     def validate_email(self, value):
         qs = User.objects.filter(email__iexact=value)
@@ -104,6 +118,7 @@ class UserWriteSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         password = validated_data.pop("password", "") or None
+        pin = validated_data.pop("pin", None)
         role = validated_data.pop("role", None)
         branches = validated_data.pop("branches", None)
         if not validated_data.get("username"):
@@ -113,18 +128,23 @@ class UserWriteSerializer(serializers.ModelSerializer):
             user.set_password(password)
         else:
             user.set_unusable_password()
+        if pin is not None:
+            user.set_pin(pin)
         user.save()
         self._apply_relations(user, role, branches)
         return user
 
     def update(self, instance, validated_data):
         password = validated_data.pop("password", "") or None
+        pin = validated_data.pop("pin", None)
         role = validated_data.pop("role", None)
         branches = validated_data.pop("branches", None)
         for k, v in validated_data.items():
             setattr(instance, k, v)
         if password:
             instance.set_password(password)
+        if pin is not None:
+            instance.set_pin(pin)  # "" borra el PIN
         instance.save()
         self._apply_relations(instance, role, branches)
         return instance
