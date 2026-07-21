@@ -35,7 +35,7 @@ function TextField({ label, name, form, errors, onChange, type = "text", hint, p
       <label className="block text-sm font-medium mb-1">{label}</label>
       <input type={type} value={form[name] ?? ""} placeholder={placeholder}
              onChange={(e) => onChange(name, e.target.value)}
-             className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
+             className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
       {hint && <p className="text-xs text-slate-400 mt-1">{hint}</p>}
       {errors[name] && <p className="text-red-600 text-xs mt-1">{String(errors[name])}</p>}
     </div>
@@ -47,7 +47,7 @@ function SelectField({ label, name, form, onChange, options, empty, labelKey = "
     <div>
       <label className="block text-sm font-medium mb-1">{label}</label>
       <select value={form[name] ?? ""} onChange={(e) => onChange(name, e.target.value)}
-              className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm">
+              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm">
         <option value="">{empty}</option>
         {options.map((o) => <option key={o.id} value={o.id}>{o[labelKey]}</option>)}
       </select>
@@ -66,7 +66,7 @@ function PriceField({ label, raw, mode, onRaw, onMode, error, hasContainer, fact
       <label className="block text-sm font-medium mb-1">{label}</label>
       <div className="flex gap-1">
         <input type="text" inputMode="decimal" value={raw} onChange={(e) => onRaw(e.target.value)}
-               placeholder="0.00" className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
+               placeholder="0.00" className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
         {hasContainer && (
           <select value={mode} onChange={(e) => onMode(e.target.value)}
                   className="border border-slate-300 dark:border-slate-600 rounded px-2 py-2 text-sm bg-slate-50 dark:bg-slate-900">
@@ -130,18 +130,18 @@ function PresentationsSection({ rows, setRows }) {
                 <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Etiqueta</label>
                 <input value={r.label} onChange={(e) => update(i, "label", e.target.value)}
                        placeholder="Ej. Libra, Media libra, Onza"
-                       className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
+                       className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
               </div>
               <div>
                 <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Factor de stock</label>
                 <input value={r.units_factor} onChange={(e) => update(i, "units_factor", e.target.value)}
                        placeholder="Ej. 0.5  o  1/16"
-                       className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
+                       className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
               </div>
               <div>
                 <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Precio (Q)</label>
                 <input type="number" step="0.01" value={r.price} onChange={(e) => update(i, "price", e.target.value)}
-                       placeholder="0.00" className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
+                       placeholder="0.00" className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
               </div>
               <button type="button" onClick={() => remove(i)}
                       className="bg-red-500 hover:bg-red-600 text-white rounded px-3 py-2">✕</button>
@@ -158,7 +158,7 @@ function PresentationsSection({ rows, setRows }) {
             <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-slate-500 dark:text-slate-400">
               🧮 O calculá al revés: En <b>1</b> unidad base hay
               <input type="number" min="1" value={r.reverseN} onChange={(e) => update(i, "reverseN", e.target.value)}
-                     className="w-20 border border-slate-300 dark:border-slate-600 rounded px-2 py-1" />
+                     className="w-20 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-2 py-1" />
               presentaciones
               <button type="button" onClick={() => reverse(i)}
                       className="bg-blue-500 hover:bg-blue-600 text-white rounded px-3 py-1">→ Calcular</button>
@@ -364,7 +364,7 @@ export default function ProductForm() {
         <div className="mt-4">
           <label className="block text-sm font-medium mb-1">Descripción</label>
           <textarea value={form.description ?? ""} onChange={(e) => set("description", e.target.value)} rows="2"
-                    className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
           <SelectField label="Marca" name="brand" form={form} onChange={set} options={brands} empty="— Sin marca —" />
@@ -450,10 +450,10 @@ export default function ProductForm() {
             </label>
             <div className="flex gap-2">
               <input type="number" step="any" min="0" value={minShown} onChange={(e) => onMinChange(e.target.value)} placeholder="0"
-                     className="flex-1 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                     className="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
               {hasContainer && (
                 <select value={minUnit} onChange={(e) => { minUnitTouched.current = true; setMinUnit(e.target.value); }}
-                        className="border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                        className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
                   <option value="container">{containerLabel}</option>
                   <option value="base">{baseUnit}</option>
                 </select>
