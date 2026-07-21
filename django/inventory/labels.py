@@ -37,6 +37,29 @@ def _money(value):
         return "Q 0.00"
 
 
+def price_code(purchase, sale):
+    """Código oculto de precio para la etiqueta.
+
+    Empaqueta compra y venta como: [centavos de compra][venta][quetzales de
+    compra]. Ejemplo: compra 59.70 y venta 90 → "709059" (el cliente no sabe
+    el costo, pero el personal lee compra 59.70 y venta 90).
+    """
+    try:
+        p = Decimal(str(purchase or 0))
+        s = Decimal(str(sale or 0))
+    except Exception:
+        return ""
+    if p <= 0:
+        return ""
+    q = int(p)                                   # quetzales de compra
+    cents = int((p - q) * 100 + Decimal("0.5"))  # centavos (2 dígitos)
+    if s == s.to_integral_value():
+        sale_str = str(int(s))                   # venta entera → sin decimales
+    else:
+        sale_str = f"{s:.2f}".replace(".", "")   # venta con decimales pegados
+    return f"{cents:02d}{sale_str}{q}"
+
+
 def _label_price_text(product):
     """Precio a mostrar en la etiqueta: el del EMPAQUE si el producto lo tiene
     (ej. 'Q60.00 / CAJA'); si no, el de la unidad base."""
@@ -81,6 +104,13 @@ def build_label_zpl(product, company, *, show_price=True, copies=1):
     parts.append(f"^FO{margin},{y}^A0N,{f_name},{f_name}^FB{width - 2 * margin},2,0,L^FD{name}^FS")
     y += f_name + 6
     parts.append(f"^FO{margin},{y}^A0N,{f_small},{f_small}^FD{sku}^FS")
+    # Código de costo oculto: mismo renglón del SKU, alineado a la derecha.
+    pcode = price_code(product.purchase_price, product.sale_price)
+    if pcode:
+        parts.append(
+            f"^FO{margin},{y}^A0N,{f_small},{f_small}"
+            f"^FB{width - 2 * margin},1,0,R^FD{pcode}^FS"
+        )
     y += f_small + 10
 
     # Código de barras (EAN-13 si aplica, si no Code128).

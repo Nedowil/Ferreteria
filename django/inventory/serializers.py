@@ -61,6 +61,7 @@ class ProductListSerializer(serializers.ModelSerializer):
     is_low_stock = serializers.BooleanField(read_only=True)
     branch_stock = serializers.SerializerMethodField()
     presentations = ProductPresentationSerializer(many=True, read_only=True)
+    price_code = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
@@ -70,8 +71,12 @@ class ProductListSerializer(serializers.ModelSerializer):
             "tax_type", "sells_by_measure", "measure_step",
             "base_unit_label", "container_label", "container_factor", "container_price",
             "stock", "branch_stock", "min_stock",
-            "stock_display", "is_low_stock", "active", "image", "presentations",
+            "stock_display", "is_low_stock", "active", "image", "presentations", "price_code",
         ]
+
+    def get_price_code(self, obj):
+        from .labels import price_code
+        return price_code(obj.purchase_price, obj.sale_price)
 
     def get_branch_stock(self, obj):
         """Existencia en la sucursal activa (header X-Branch-Id). Si no hay

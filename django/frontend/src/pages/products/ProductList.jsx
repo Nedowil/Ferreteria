@@ -95,14 +95,16 @@ function priceUnit(p) {
 
 // Etiquetas de PRECIO para estante: precio grande, sin código de barras. Se
 // imprime por el navegador (una etiqueta por página al tamaño físico exacto).
-async function printPriceTags(products, companyName, copiesEach = 1, labelW = 51, labelH = 25) {
+async function printPriceTags(products, companyName, copiesEach = 1, labelW = 51, labelH = 25, showCode = true) {
   const esc = (s) => (s || "").replace(/</g, "&lt;");
   const tags = [];
   products.forEach((p) => {
     const { price, unit } = priceUnit(p);
     if (!(price > 0)) return;
+    const code = showCode && p.price_code ? `<div class="code">${esc(p.price_code)}</div>` : "";
     const one = `
       <div class="tag">
+        ${code}
         ${companyName ? `<div class="biz">${esc(companyName)}</div>` : ""}
         <div class="name">${esc((p.name || "").toUpperCase())}</div>
         <div class="price">Q${price.toFixed(2)}</div>
@@ -116,11 +118,12 @@ async function printPriceTags(products, companyName, copiesEach = 1, labelW = 51
       @page { size: ${labelW}mm ${labelH}mm; margin: 0; }
       html, body { margin: 0; padding: 0; }
       body { font-family: Arial, sans-serif; }
-      .tag { width: ${labelW}mm; height: ${labelH}mm; box-sizing: border-box;
+      .tag { position: relative; width: ${labelW}mm; height: ${labelH}mm; box-sizing: border-box;
              padding: 1mm 1.5mm; text-align: center; overflow: hidden;
              display: flex; flex-direction: column; justify-content: center;
              align-items: center; page-break-after: always; }
       .tag:last-child { page-break-after: auto; }
+      .code { position: absolute; top: 0.6mm; right: 1mm; font-size: 6pt; color: #444; letter-spacing: 0.5px; }
       .biz { font-size: 6pt; font-weight: 600; line-height: 1; }
       .name { font-size: 8pt; font-weight: 800; line-height: 1.02; margin: 0.3mm 0;
               max-height: 2.1em; overflow: hidden; word-break: break-word; }
@@ -139,6 +142,7 @@ async function printPriceTags(products, companyName, copiesEach = 1, labelW = 51
 // del filtro actual (lote).
 function PriceTagsModal({ single, filters, companyName, count, onClose }) {
   const [copies, setCopies] = useState("1");
+  const [showCode, setShowCode] = useState(true);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -154,7 +158,7 @@ function PriceTagsModal({ single, filters, companyName, count, onClose }) {
         if (filters.low_stock) params.low_stock = 1;
         products = await fetchAll("/inventory/products/", params);
       }
-      await printPriceTags(products, companyName, Number(copies) || 1);
+      await printPriceTags(products, companyName, Number(copies) || 1, 51, 25, showCode);
       onClose();
     } catch (e) {
       setErr("No se pudieron generar las etiquetas.");
@@ -177,6 +181,12 @@ function PriceTagsModal({ single, filters, companyName, count, onClose }) {
             <input type="number" min="1" value={copies} onChange={(e) => setCopies(e.target.value)}
                    className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm" />
           </div>
+          <label className="flex items-start gap-2 text-sm">
+            <input type="checkbox" className="mt-0.5" checked={showCode} onChange={(e) => setShowCode(e.target.checked)} />
+            <span>Incluir código de costo oculto
+              <span className="block text-xs text-slate-400">Un código pequeño en la esquina (ej. 709059) con la compra y la venta, ilegible para el cliente.</span>
+            </span>
+          </label>
           <p className="text-xs text-slate-500 dark:text-slate-400">
             Se abre una ventana para imprimir/guardar como PDF. Cada etiqueta trae el
             <b> nombre</b> y el <b>precio grande</b> (sin código de barras), lista para el estante.
