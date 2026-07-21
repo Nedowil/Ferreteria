@@ -10,9 +10,17 @@ from .models import Customer, Supplier, normalize_search
 
 class NormalizeSearchTests(TestCase):
     def test_quita_tildes_y_minimiza(self):
+        # Quita tildes y minimiza; además pliega letras que suenan igual en
+        # español (z→s, v→b, c→k/s, y→i…) para tolerar errores de escritura.
         self.assertEqual(normalize_search("María"), "maria")
-        self.assertEqual(normalize_search("José PÉREZ"), "jose perez")
+        self.assertEqual(normalize_search("José PÉREZ"), "jose peres")
         self.assertEqual(normalize_search("Ñandú"), "nandu")
+
+    def test_tolera_errores_de_escritura(self):
+        # "Naylo" y "Nailo" deben normalizar a lo mismo; igual "seleste"/"celeste".
+        self.assertEqual(normalize_search("Naylo"), normalize_search("Nailo"))
+        self.assertEqual(normalize_search("seleste"), normalize_search("celeste"))
+        self.assertEqual(normalize_search("balbula"), normalize_search("válvula"))
 
     def test_search_index_se_llena_al_guardar(self):
         c = Customer.objects.create(name="María Peña", phone="5555-1234")

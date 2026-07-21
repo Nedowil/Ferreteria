@@ -13,6 +13,7 @@ from rest_framework.response import Response
 from rest_framework import serializers
 
 from core.models import CompanySetting
+from core.textsearch import TolerantSearchFilter
 from .models import Product
 
 
@@ -44,8 +45,7 @@ class PublicCatalogView(ListAPIView):
     permission_classes = [AllowAny]
     authentication_classes = []
     serializer_class = PublicProductSerializer
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ["name", "sku", "barcode", "description"]
+    filter_backends = [TolerantSearchFilter, filters.OrderingFilter]
     ordering_fields = ["name", "sale_price"]
     ordering = ["name"]
 

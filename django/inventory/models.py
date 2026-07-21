@@ -157,6 +157,10 @@ class Product(models.Model):
         blank=True,
     )
 
+    # Índice de búsqueda tolerante (nombre, SKU, código, empaque). Se recalcula
+    # en cada save; permite buscar sin importar tildes ni errores de escritura.
+    search_index = models.CharField(max_length=400, blank=True, default="", db_index=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     deleted_at = models.DateTimeField(null=True, blank=True)  # soft delete
@@ -167,6 +171,14 @@ class Product(models.Model):
         verbose_name = "producto"
         verbose_name_plural = "productos"
         ordering = ["name"]
+
+    def save(self, *args, **kwargs):
+        from core.textsearch import search_norm
+        self.search_index = search_norm(self.name, self.sku, self.barcode, self.container_label)
+        uf = kwargs.get("update_fields")
+        if uf is not None and "search_index" not in uf:
+            kwargs["update_fields"] = list(uf) + ["search_index"]
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.sku} — {self.name}"

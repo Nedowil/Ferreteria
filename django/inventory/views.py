@@ -15,6 +15,7 @@ import base64
 from core.api_utils import BranchContextMixin, get_request_branch
 from core.models import CompanySetting
 from core.permissions import HasPermission, PermissionByActionMixin
+from core.textsearch import TolerantSearchFilter
 from . import labels
 from .models import Brand, Category, InventoryMovement, Product, ProductPresentation, Unit
 from .serializers import (
@@ -139,9 +140,8 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
         .prefetch_related("presentations")
         .order_by("-created_at")
     )
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [DjangoFilterBackend, TolerantSearchFilter, filters.OrderingFilter]
     filterset_fields = ["category", "brand", "active"]
-    search_fields = ["name", "sku", "barcode"]
     ordering_fields = ["name", "sale_price", "stock", "created_at"]
 
     def get_serializer_class(self):

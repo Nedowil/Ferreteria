@@ -1,21 +1,14 @@
 """Modelos de Proveedores y Clientes."""
 
-import unicodedata
-
 from django.db import models
 
 
 def normalize_search(*parts):
-    """Texto normalizado para búsquedas sin importar tildes ni mayúsculas.
-
-    Une las partes, quita los diacríticos (NFKD) y pasa a minúsculas, de modo
-    que "María" y "maria" coincidan. Se guarda denormalizado en `search_index`
-    para poder buscar en la base de datos aunque haya miles de registros.
-    """
-    text = " ".join(str(p) for p in parts if p)
-    text = unicodedata.normalize("NFKD", text)
-    text = "".join(c for c in text if not unicodedata.combining(c))
-    return text.lower().strip()
+    """Texto normalizado para búsquedas tolerantes (tildes, mayúsculas y errores
+    comunes de escritura). Delega en la función compartida ``search_norm`` para
+    que clientes, proveedores y productos usen el MISMO criterio."""
+    from core.textsearch import search_norm
+    return search_norm(*parts)
 
 
 def _merge_update_fields(kwargs):
