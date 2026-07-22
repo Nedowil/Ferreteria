@@ -71,11 +71,16 @@ async function printLabelsPdf(product, copies, companyName, labelW = 51, labelH 
   const esc = (s) => (s || "").replace(/</g, "&lt;");
   // En lugar del precio a la vista se imprime el CÓDIGO oculto (compra+venta).
   const big = product.price_code || labelPrice(product);
-  const name = esc(product.name || "").toUpperCase();
+  const nameRaw = (product.name || "").toUpperCase();
+  const name = esc(nameRaw);
+  // El nombre largo se achica solo para que quepa COMPLETO (hasta 3 líneas) sin
+  // cortarse. Cuantos más caracteres, más chica la letra.
+  const nameFs = nameRaw.length > 46 ? 6 : nameRaw.length > 36 ? 6.8
+               : nameRaw.length > 28 ? 7.6 : 8.5; // pt
   const one = `
     <div class="label">
       ${companyName ? `<div class="biz">${esc(companyName)}</div>` : ""}
-      ${name ? `<div class="name">${name}</div>` : ""}
+      ${name ? `<div class="name" style="font-size:${nameFs}pt">${name}</div>` : ""}
       ${big ? `<div class="price">${esc(big)}</div>` : ""}
       <div class="bc">${barcodeSvg(product.barcode || product.sku, 34)}</div>
     </div>`;
@@ -91,8 +96,11 @@ async function printLabelsPdf(product, copies, companyName, labelW = 51, labelH 
                align-items: center; page-break-after: always; }
       .label:last-child { page-break-after: auto; }
       .biz { font-size: 6.5pt; font-weight: 600; color: #000; line-height: 1; }
-      .name { font-size: 8.5pt; font-weight: 800; line-height: 1.02; margin: 0.2mm 0;
-              max-height: 2.1em; overflow: hidden; word-break: break-word; }
+      /* Muestra líneas COMPLETAS (hasta 3) sin cortar a media línea. El tamaño
+         de letra se pasa por estilo en línea según el largo del nombre. */
+      .name { font-weight: 800; line-height: 1.05; margin: 0.2mm 0; overflow: hidden;
+              display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+              word-break: break-word; }
       .price { font-size: 10pt; font-weight: 800; line-height: 1; }
       .bc { width: 100%; line-height: 0; margin-top: 0.2mm; }
       .bc svg { max-width: 100%; height: auto; }
