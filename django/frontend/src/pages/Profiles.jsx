@@ -73,7 +73,7 @@ export default function Profiles() {
 
       {/* Cerrar sesión del equipo: discreto, en la esquina superior derecha */}
       <button onClick={deviceLogout} title="Cierra la sesión del equipo (pide la contraseña para volver a entrar)"
-              className="absolute top-4 right-4 z-20 text-xs text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/25 rounded-full px-4 py-1.5 transition">
+              className="absolute bottom-4 right-4 z-20 text-xs text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/25 rounded-full px-4 py-1.5 transition">
         Cerrar sesión del equipo
       </button>
 
