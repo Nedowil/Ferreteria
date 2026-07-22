@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import api from "../../api/client";
+import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 
 const EVENT_BADGE = {
   created: "bg-green-100 text-green-700",
@@ -45,20 +46,76 @@ export default function AuditLog() {
     q: searchParams.get("q") || "", from: searchParams.get("from") || "", to: searchParams.get("to") || "",
   });
   const [expanded, setExpanded] = useState(null);
+  const [exporting, setExporting] = useState("");
 
-  const load = () => {
+  const activeParams = () => {
     const params = {};
     Object.entries(filters).forEach(([k, v]) => { if (v) params[k] = v; });
-    api.get("/audit-logs/", { params }).then((r) => setData(r.data));
+    return params;
+  };
+
+  const load = () => {
+    api.get("/audit-logs/", { params: activeParams() }).then((r) => setData(r.data));
   };
   useEffect(() => {
     load();
     api.get("/audit-logs/summary/").then((r) => setSummary(r.data));
   }, []);
 
+  // Columnas para exportar (mismas que la tabla).
+  const cols = () => [
+    { header: "Fecha", value: (l) => new Date(l.created_at).toLocaleString("es-GT") },
+    { header: "Usuario", value: (l) => l.user_name || "—" },
+    { header: "Evento", value: (l) => l.event_display },
+    { header: "Recurso", value: (l) => resourceLabel(l.auditable_type) },
+    { header: "Detalle", value: (l) => l.description || `#${l.auditable_id}` },
+  ];
+
+  const exportExcel = async () => {
+    setExporting("excel");
+    try {
+      const rows = await fetchAll("/audit-logs/", activeParams());
+      exportToExcel("auditoria", cols(), rows);
+    } finally { setExporting(""); }
+  };
+
+  const exportPdf = async () => {
+    setExporting("pdf");
+    try {
+      const rows = await fetchAll("/audit-logs/", activeParams());
+      const { jsPDF } = await import("jspdf");
+      const autoTable = (await import("jspdf-autotable")).default;
+      const doc = new jsPDF({ unit: "pt", format: "letter", orientation: "landscape" });
+      doc.setFontSize(14); doc.text("Auditoría", 40, 40);
+      doc.setFontSize(9); doc.setTextColor(120);
+      doc.text(`${rows.length} registro(s) · generado ${new Date().toLocaleString("es-GT")}`, 40, 56);
+      const c = cols();
+      autoTable(doc, {
+        startY: 70,
+        head: [c.map((x) => x.header)],
+        body: rows.map((l) => c.map((x) => x.value(l))),
+        styles: { fontSize: 8, cellPadding: 3, overflow: "linebreak" },
+        headStyles: { fillColor: [51, 65, 85] },
+      });
+      doc.save("auditoria.pdf");
+    } finally { setExporting(""); }
+  };
+
   return (
     <div>
-      <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 mb-4">🕵️ Auditoría</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">🕵️ Auditoría</h1>
+        <div className="flex gap-2">
+          <button onClick={exportExcel} disabled={!!exporting}
+                  className="text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg px-3 py-2 font-medium transition disabled:opacity-50">
+            {exporting === "excel" ? "Generando…" : "⬇️ Excel"}
+          </button>
+          <button onClick={exportPdf} disabled={!!exporting}
+                  className="text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg px-3 py-2 font-medium transition disabled:opacity-50">
+            {exporting === "pdf" ? "Generando…" : "⬇️ PDF"}
+          </button>
+        </div>
+      </div>
       {summary && (
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-4">
           {[["Total", summary.counts.total, ""], ["Creados", summary.counts.created, "text-green-600"],
