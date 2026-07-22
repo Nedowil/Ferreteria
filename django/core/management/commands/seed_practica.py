@@ -2,7 +2,11 @@
 
 Pensado para el sitio demo (base de datos aparte). Crea, de forma idempotente:
   - roles/permisos y una sucursal principal (si faltan),
-  - un usuario de práctica:  usuario "demo" / contraseña "demo123" (acceso total),
+  - una CUENTA DE EQUIPO (caja):  usuario "demo" / contraseña "demo123".
+    Al entrar con ella se muestran los PERFILES (estilo Netflix), igual que en
+    el sistema real,
+  - varios PERFILES de cajero con su PIN (uno de ellos con acceso total para
+    explorar),
   - productos de ferretería de ejemplo con precio y existencia,
   - algunos clientes de ejemplo.
 
@@ -18,6 +22,15 @@ from core.models import Branch, BranchUser
 from core.permissions import ROLE_MATRIX, sync_permissions
 
 User = get_user_model()
+
+# Perfiles de cajero que se muestran en la pantalla estilo Netflix del demo.
+# (username, correo, nombre, rol, PIN, acceso_total)
+PROFILES = [
+    ("miguel", "miguel@ferreteria.demo", "Miguel Lux", "admin", "1234", True),
+    ("juan", "juan@ferreteria.demo", "Juan Pérez", "vendedor", "1111", False),
+    ("keidy", "keidy@ferreteria.demo", "Keidy", "vendedor", "2222", False),
+    ("nelson", "nelson@ferreteria.demo", "Nelson", "almacenista", "3333", False),
+]
 
 PRODUCTS = [
     # (sku, nombre, unidad_base, precio_venta, precio_compra, existencia)
@@ -41,7 +54,7 @@ CUSTOMERS = [
 
 
 class Command(BaseCommand):
-    help = "Carga datos de ejemplo y el usuario 'demo' para el ambiente de práctica."
+    help = "Carga datos de ejemplo, la caja 'demo' y los perfiles de práctica."
 
     def handle(self, *args, **options):
         from inventory.models import Product, ProductStock
@@ -56,20 +69,41 @@ class Command(BaseCommand):
                   or Branch.objects.first()
                   or Branch.objects.create(name="Casa Matriz", code="MATRIZ", is_main=True, active=True))
 
-        # 2) Usuario de práctica: demo / demo123 (acceso total para explorar)
-        demo, created = User.objects.get_or_create(
+        # 2) Cuenta de EQUIPO (caja): demo / demo123. Al entrar con ella se
+        #    muestran los perfiles (estilo Netflix), igual que en producción.
+        caja, created = User.objects.get_or_create(
             username="demo",
-            defaults={"email": "demo@ferreteria.demo", "name": "Usuario Demo",
-                      "is_staff": True, "is_superuser": True},
+            defaults={"email": "demo@ferreteria.demo", "name": "Caja Demo"},
         )
-        demo.set_password("demo123")
-        demo.is_active = True
-        demo.save()
-        demo.groups.add(Group.objects.get(name="admin"))
-        BranchUser.objects.get_or_create(branch=branch, user=demo, defaults={"is_default": True})
-        self.stdout.write(f"  usuario demo/demo123 {'creado' if created else 'actualizado'}")
+        caja.set_password("demo123")
+        caja.is_active = True
+        caja.is_device = True          # <- muestra los perfiles al iniciar sesión
+        caja.is_staff = False
+        caja.is_superuser = False
+        caja.pin_hash = ""             # la caja no opera por sí misma
+        caja.save()
+        BranchUser.objects.get_or_create(branch=branch, user=caja, defaults={"is_default": True})
+        self.stdout.write(f"  caja demo/demo123 {'creada' if created else 'actualizada'}")
 
-        # 3) Productos de ejemplo
+        # 3) Perfiles de cajero (con PIN) que se ven en la pantalla de perfiles.
+        for username, email, name, role, pin, full in PROFILES:
+            u, _ = User.objects.get_or_create(
+                username=username,
+                defaults={"email": email, "name": name},
+            )
+            u.email = email
+            u.name = name
+            u.is_active = True
+            u.is_device = False
+            u.is_staff = full
+            u.is_superuser = full
+            u.set_pin(pin)
+            u.save()
+            u.groups.set([Group.objects.get(name=role)])
+            BranchUser.objects.get_or_create(branch=branch, user=u, defaults={"is_default": True})
+            self.stdout.write(f"  perfil {name} ({role}) · PIN {pin}")
+
+        # 4) Productos de ejemplo
         n_prod = 0
         for sku, name, unit, price, cost, stock in PRODUCTS:
             p, was_new = Product.objects.get_or_create(
@@ -88,7 +122,7 @@ class Command(BaseCommand):
                 n_prod += 1
         self.stdout.write(f"  {n_prod} producto(s) de ejemplo")
 
-        # 4) Clientes de ejemplo
+        # 5) Clientes de ejemplo
         n_cust = 0
         for name, nit, phone in CUSTOMERS:
             _, was_new = Customer.objects.get_or_create(
@@ -98,4 +132,9 @@ class Command(BaseCommand):
         self.stdout.write(f"  {n_cust} cliente(s) de ejemplo")
 
         self.stdout.write(self.style.SUCCESS(
-            "\nDemo listo. Entrá con usuario 'demo' y contraseña 'demo123'."))
+            "\nDemo listo. Entrá con la caja 'demo' / 'demo123' y elegí un "
+            "perfil:\n"
+            "  Miguel Lux (acceso total) · PIN 1234\n"
+            "  Juan Pérez (vendedor)     · PIN 1111\n"
+            "  Keidy (vendedor)          · PIN 2222\n"
+            "  Nelson (almacenista)      · PIN 3333"))
