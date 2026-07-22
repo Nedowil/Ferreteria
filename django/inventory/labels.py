@@ -37,27 +37,36 @@ def _money(value):
         return "Q 0.00"
 
 
+def _code_digits(value):
+    """Dígitos de un precio: con 2 decimales si los tiene, si no el entero.
+    Ej.: 59.70 → "5970", 211 → "211", 400 → "400"."""
+    d = Decimal(str(value or 0))
+    s = str(int(d)) if d == d.to_integral_value() else f"{d:.2f}"
+    return s.replace(".", "")
+
+
 def price_code(purchase, sale):
     """Código oculto de precio para la etiqueta.
 
-    Empaqueta compra y venta como: [centavos de compra][venta][quetzales de
-    compra]. Ejemplo: compra 59.70 y venta 90 → "709059" (el cliente no sabe
-    el costo, pero el personal lee compra 59.70 y venta 90).
+    Toma los dígitos de la COMPRA, separa los últimos 2 del frente, y arma:
+    [últimos 2 de la compra][venta][frente de la compra]. Como la venta va a la
+    vista en la etiqueta, el personal la resta y reconstruye la compra
+    (frente + últimos 2).
+
+    Ejemplos: compra 59.70 / venta 90 → "709059";  compra 211 / venta 400 →
+    "114002". El cliente no puede descifrar el costo de un vistazo.
     """
     try:
         p = Decimal(str(purchase or 0))
-        s = Decimal(str(sale or 0))
     except Exception:
         return ""
     if p <= 0:
         return ""
-    q = int(p)                                   # quetzales de compra
-    cents = int((p - q) * 100 + Decimal("0.5"))  # centavos (2 dígitos)
-    if s == s.to_integral_value():
-        sale_str = str(int(s))                   # venta entera → sin decimales
-    else:
-        sale_str = f"{s:.2f}".replace(".", "")   # venta con decimales pegados
-    return f"{cents:02d}{sale_str}{q}"
+    pc = _code_digits(p)               # dígitos de la compra
+    sc = _code_digits(sale)            # dígitos de la venta
+    last2 = pc[-2:]                     # últimos 2 dígitos de la compra
+    front = pc[:-2]                    # lo que queda al frente
+    return f"{last2}{sc}{front}"
 
 
 def _label_price_text(product):
