@@ -65,27 +65,26 @@ function labelPrice(product) {
   return p > 0 ? `Q${p.toFixed(2)} / ${(product.base_unit_label || "UNIDAD").toUpperCase()}` : "";
 }
 
-// Imprime HTML usando un marco (iframe) dentro de la misma página: abre el
-// cuadro de impresión sin abrir otra pestaña ni salir de la aplicación.
-//
-// IMPORTANTE: el marco se coloca FUERA DE PANTALLA pero con TAMAÑO REAL (no 0x0)
-// y SIN visibility:hidden. Si se deja en tamaño cero u oculto, el navegador
-// dibuja el código de barras casi sin resolución y luego lo estira → sale
-// borroso y el lector no lo escanea. Con tamaño real, se rasteriza nítido.
+// Imprime HTML abriendo una PESTAÑA/VENTANA nueva. Se hace así (y no con un
+// marco oculto) porque en una ventana real el navegador dibuja el código de
+// barras a tamaño y resolución completos → sale NÍTIDO y el lector lo escanea.
+// Un marco oculto de tamaño cero lo dibujaba borroso y no escaneaba.
 function printHtml(html) {
-  const iframe = document.createElement("iframe");
-  iframe.setAttribute("aria-hidden", "true");
-  iframe.style.cssText = "position:fixed;left:-10000px;top:0;width:210mm;height:297mm;border:0;";
-  document.body.appendChild(iframe);
-  const remove = () => { try { iframe.remove(); } catch { /* ya removido */ } };
-  const win = iframe.contentWindow;
-  win.onafterprint = () => setTimeout(remove, 300);
-  const doc = win.document;
-  doc.open(); doc.write(html); doc.close();
-  // Da un instante a que el navegador dibuje (código de barras, etc.).
-  setTimeout(() => { try { win.focus(); win.print(); } catch { remove(); } }, 350);
-  // Red de seguridad: quita el marco pase lo que pase.
-  setTimeout(remove, 60000);
+  const w = window.open("", "_blank");
+  if (!w) {
+    // El navegador bloqueó la ventana emergente.
+    dialog.alert("El navegador bloqueó la ventana de impresión. Permití las ventanas emergentes para este sitio e intentá de nuevo.");
+    return;
+  }
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  // Da un instante a que dibuje (código de barras, etc.) y abre el diálogo de
+  // impresión. La pestaña se cierra sola al terminar (onafterprint).
+  const go = () => { try { w.focus(); w.print(); } catch { /* el usuario cerró */ } };
+  w.onafterprint = () => { try { w.close(); } catch { /* ya cerrada */ } };
+  if (w.document.readyState === "complete") setTimeout(go, 350);
+  else w.onload = () => setTimeout(go, 350);
 }
 
 // Abre una ventana imprimible con las etiquetas (para "Guardar como PDF").
