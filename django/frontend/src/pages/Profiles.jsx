@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import Keypad from "../components/Keypad";
+import { dialog } from "../components/Dialog";
 import logo from "../assets/logo.jpg";
 
 // Color de avatar según el rol (le da identidad a cada perfil).
@@ -51,6 +52,15 @@ export default function Profiles() {
     }
   };
 
+  // Pide confirmación antes de cerrar la sesión del equipo (evita cierres por error).
+  const confirmDeviceLogout = async () => {
+    const ok = await dialog.confirm(
+      "¿Cerrar la sesión del equipo? Vas a tener que ingresar el correo y la contraseña de la caja para volver a mostrar los perfiles.",
+      { danger: true, okText: "Sí, cerrar sesión", cancelText: "No, seguir" }
+    );
+    if (ok) deviceLogout();
+  };
+
   // Al tocar un perfil: si tiene PIN, muestra el teclado; si no, entra directo.
   const choose = async (p) => {
     if (p.has_pin) { setSelected(p); setPin(""); setError(""); return; }
@@ -72,7 +82,7 @@ export default function Profiles() {
       <div className="pointer-events-none absolute -bottom-40 -left-24 w-[26rem] h-[26rem] bg-emerald-500/15 rounded-full blur-3xl" />
 
       {/* Cerrar sesión del equipo: discreto, en la esquina superior derecha */}
-      <button onClick={deviceLogout} title="Cierra la sesión del equipo (pide la contraseña para volver a entrar)"
+      <button onClick={confirmDeviceLogout} title="Cierra la sesión del equipo (pide la contraseña para volver a entrar)"
               className="absolute bottom-4 right-4 z-20 text-xs text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/25 rounded-full px-4 py-1.5 transition">
         Cerrar sesión del equipo
       </button>
