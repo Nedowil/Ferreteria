@@ -95,19 +95,22 @@ function priceUnit(p) {
 
 // Etiquetas de PRECIO para estante: precio grande, sin código de barras. Se
 // imprime por el navegador (una etiqueta por página al tamaño físico exacto).
-async function printPriceTags(products, companyName, copiesEach = 1, labelW = 51, labelH = 25, showCode = true) {
+// mode: "code" = imprime el CÓDIGO oculto en lugar del precio (como lo escriben
+// a mano); "price" = precio a la vista (Q grande) con el código chico en la esquina.
+async function printPriceTags(products, companyName, copiesEach = 1, labelW = 51, labelH = 25, mode = "code") {
   const esc = (s) => (s || "").replace(/</g, "&lt;");
   const tags = [];
   products.forEach((p) => {
     const { price, unit } = priceUnit(p);
     if (!(price > 0)) return;
-    const code = showCode && p.price_code ? `<div class="code">${esc(p.price_code)}</div>` : "";
+    const big = mode === "code" ? (p.price_code || `Q${price.toFixed(2)}`) : `Q${price.toFixed(2)}`;
+    const corner = mode === "price" && p.price_code ? `<div class="code">${esc(p.price_code)}</div>` : "";
     const one = `
       <div class="tag">
-        ${code}
+        ${corner}
         ${companyName ? `<div class="biz">${esc(companyName)}</div>` : ""}
         <div class="name">${esc((p.name || "").toUpperCase())}</div>
-        <div class="price">Q${price.toFixed(2)}</div>
+        <div class="price">${esc(big)}</div>
         <div class="unit">${esc(unit)}${p.sku ? ` · ${esc(p.sku)}` : ""}</div>
       </div>`;
     for (let i = 0; i < Math.max(1, Number(copiesEach) || 1); i++) tags.push(one);
@@ -142,7 +145,7 @@ async function printPriceTags(products, companyName, copiesEach = 1, labelW = 51
 // del filtro actual (lote).
 function PriceTagsModal({ single, filters, companyName, count, onClose }) {
   const [copies, setCopies] = useState("1");
-  const [showCode, setShowCode] = useState(true);
+  const [mode, setMode] = useState("code");   // "code" = código oculto; "price" = precio a la vista
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -158,7 +161,7 @@ function PriceTagsModal({ single, filters, companyName, count, onClose }) {
         if (filters.low_stock) params.low_stock = 1;
         products = await fetchAll("/inventory/products/", params);
       }
-      await printPriceTags(products, companyName, Number(copies) || 1, 51, 25, showCode);
+      await printPriceTags(products, companyName, Number(copies) || 1, 51, 25, mode);
       onClose();
     } catch (e) {
       setErr("No se pudieron generar las etiquetas.");
@@ -181,15 +184,22 @@ function PriceTagsModal({ single, filters, companyName, count, onClose }) {
             <input type="number" min="1" value={copies} onChange={(e) => setCopies(e.target.value)}
                    className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm" />
           </div>
-          <label className="flex items-start gap-2 text-sm">
-            <input type="checkbox" className="mt-0.5" checked={showCode} onChange={(e) => setShowCode(e.target.checked)} />
-            <span>Incluir código de costo oculto
-              <span className="block text-xs text-slate-400">Un código pequeño en la esquina (ej. 709059) con la compra y la venta, ilegible para el cliente.</span>
-            </span>
-          </label>
+          <div>
+            <label className="block text-sm font-medium mb-1">¿Qué mostrar en la etiqueta?</label>
+            <select value={mode} onChange={(e) => setMode(e.target.value)}
+                    className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm">
+              <option value="code">Código oculto (compra + venta) — como lo escriben a mano</option>
+              <option value="price">Precio a la vista (Q grande) + código chico en la esquina</option>
+            </select>
+            <p className="text-xs text-slate-400 mt-1">
+              {mode === "code"
+                ? "En la etiqueta va el código (ej. 709059) en lugar del precio. El cliente no lo descifra; el personal sí."
+                : "Precio grande para el cliente y el código pequeño en la esquina para el personal."}
+            </p>
+          </div>
           <p className="text-xs text-slate-500 dark:text-slate-400">
             Se abre una ventana para imprimir/guardar como PDF. Cada etiqueta trae el
-            <b> nombre</b> y el <b>precio grande</b> (sin código de barras), lista para el estante.
+            <b> nombre</b> y el número elegido (sin código de barras), lista para el estante.
           </p>
           <div className="flex gap-2">
             <button onClick={onClose} className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition">Cancelar</button>
