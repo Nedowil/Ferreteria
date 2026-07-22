@@ -98,36 +98,38 @@ def build_label_zpl(product, company, *, show_price=True, copies=1):
     sku = _zpl_escape(product.sku)
     code = (product.barcode or product.sku or "").strip()
 
-    # Tamaños de fuente proporcionales a la altura de la etiqueta.
-    f_biz = max(12, height // 12)
-    f_name = max(18, height // 7)
-    f_small = max(14, height // 10)
-    bc_height = max(40, height // 3)
+    # Tamaños de fuente compactos: deben caber nombre + código + SKU + barras.
+    f_biz = max(11, height // 14)
+    f_name = max(16, height // 8)
+    f_small = max(12, height // 13)
+    code_f = max(20, height // 7)
 
     parts = ["^XA", "^CI28", f"^PW{width}", f"^LL{height}"]
 
     y = margin
     if biz:
         parts.append(f"^FO{margin},{y}^A0N,{f_biz},{f_biz}^FD{biz}^FS")
-        y += f_biz + 4
-    parts.append(f"^FO{margin},{y}^A0N,{f_name},{f_name}^FB{width - 2 * margin},2,0,L^FD{name}^FS")
-    y += f_name + 6
+        y += f_biz + 3
+    # Nombre en 1 línea (altura predecible para que las barras siempre quepan).
+    parts.append(f"^FO{margin},{y}^A0N,{f_name},{f_name}^FB{width - 2 * margin},1,0,L^FD{name}^FS")
+    y += f_name + 4
 
     # El "precio" (código oculto compra+venta) va ARRIBA, grande, como el precio.
     if show_price:
         pcode = price_code(product.purchase_price, product.sale_price)
         big = pcode or _zpl_escape(_label_price_text(product))
-        code_f = max(22, height // 6)
         parts.append(
             f"^FO{margin},{y}^A0N,{code_f},{code_f}"
             f"^FB{width - 2 * margin},1,0,L^FD{big}^FS"
         )
-        y += code_f + 8
+        y += code_f + 5
 
     parts.append(f"^FO{margin},{y}^A0N,{f_small},{f_small}^FD{sku}^FS")
-    y += f_small + 6
+    y += f_small + 3
 
-    # Código de barras abajo (su número al pie = SKU/código de barras).
+    # Código de barras: su alto se ajusta al espacio que queda (menos la línea
+    # de dígitos y el margen), para que SIEMPRE quepa y se pueda escanear.
+    bc_height = max(40, height - y - f_small - margin)
     if _is_ean13(code):
         parts.append(f"^FO{margin},{y}^BY2^BEN,{bc_height},Y,N^FD{code[:12]}^FS")
     elif code:
