@@ -11,16 +11,7 @@ const historyLink = (id) => `/admin/auditoria?type=inventory.Product&q=${id}`;
 
 // Genera un <svg> de código de barras (EAN-13 si son 13 dígitos, si no Code128)
 // y devuelve su HTML. Igual criterio que la etiqueta Zebra del backend.
-//
-// Claves para que ESCANEE al imprimir en una Zebra térmica (USB) con el driver
-// de Windows:
-//  - El SVG se fija a un TAMAÑO FÍSICO (mm) con viewBox, para que el navegador
-//    lo dibuje como vector directo a la resolución real de la impresora, sin
-//    ENCOGER una imagen (encogerla es lo que difumina y pega las barras).
-//  - Bordes DUROS (shape-rendering=crispEdges) y zona muda amplia a los lados.
-//  - Fondo blanco y barras negras puras.
-// widthMm = ancho físico del código en la etiqueta (debe caber en el ancho útil).
-function barcodeSvg(code, widthMm = 46) {
+function barcodeSvg(code, height = 45) {
   const value = String(code || "").trim();
   if (!value) return "";
   const isEan13 = /^\d{13}$/.test(value);
@@ -28,27 +19,11 @@ function barcodeSvg(code, widthMm = 46) {
   try {
     JsBarcode(svg, value, {
       format: isEan13 ? "EAN13" : "CODE128",
-      width: 2,            // ancho del módulo en el lienzo interno
-      height: 70,          // alto en el lienzo interno (el físico sale del viewBox)
-      fontSize: 16,
-      margin: 10,          // zona muda a los lados (necesaria para leer)
-      background: "#ffffff",
-      lineColor: "#000000",
-      displayValue: true,
+      width: 2, height, fontSize: 14, margin: 4, displayValue: true,
     });
   } catch {
     return `<div style="font-family:monospace;font-size:12px">${value}</div>`;
   }
-  // Convierte el lienzo interno (px) en un dibujo vectorial de tamaño físico:
-  // viewBox = medidas internas, y ancho/alto en mm. Así el navegador rasteriza
-  // UNA sola vez a los puntos reales de la Zebra (nítido), sin reescalar imagen.
-  const wpx = parseFloat(svg.getAttribute("width")) || 200;
-  const hpx = parseFloat(svg.getAttribute("height")) || 70;
-  svg.setAttribute("viewBox", `0 0 ${wpx} ${hpx}`);
-  svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
-  svg.setAttribute("width", `${widthMm}mm`);
-  svg.setAttribute("height", `${(widthMm * hpx / wpx).toFixed(2)}mm`);
-  svg.setAttribute("shape-rendering", "crispEdges");
   return svg.outerHTML;
 }
 
@@ -102,7 +77,7 @@ async function printLabelsPdf(product, copies, companyName, labelW = 51, labelH 
       ${companyName ? `<div class="biz">${esc(companyName)}</div>` : ""}
       ${name ? `<div class="name">${name}</div>` : ""}
       ${big ? `<div class="price">${esc(big)}</div>` : ""}
-      <div class="bc">${barcodeSvg(product.barcode || product.sku, labelW - 5)}</div>
+      <div class="bc">${barcodeSvg(product.barcode || product.sku, 34)}</div>
     </div>`;
   const labels = Array.from({ length: Math.max(1, Number(copies) || 1) }, () => one).join("");
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>Etiquetas ${product.sku}</title>
@@ -115,13 +90,12 @@ async function printLabelsPdf(product, copies, companyName, labelW = 51, labelH 
                display: flex; flex-direction: column; justify-content: center;
                align-items: center; page-break-after: always; }
       .label:last-child { page-break-after: auto; }
-      .biz { font-size: 6pt; font-weight: 600; color: #000; line-height: 1; }
-      .name { font-size: 8pt; font-weight: 800; line-height: 1; margin: 0.1mm 0;
-              max-height: 2em; overflow: hidden; word-break: break-word; }
-      .price { font-size: 9.5pt; font-weight: 800; line-height: 1; }
-      .bc { width: 100%; line-height: 0; margin-top: 0.4mm; text-align: center; }
-      /* El SVG ya trae su tamaño físico (mm); NO lo reescalamos para no difuminar. */
-      .bc svg { display: inline-block; shape-rendering: crispEdges; }
+      .biz { font-size: 6.5pt; font-weight: 600; color: #000; line-height: 1; }
+      .name { font-size: 8.5pt; font-weight: 800; line-height: 1.02; margin: 0.2mm 0;
+              max-height: 2.1em; overflow: hidden; word-break: break-word; }
+      .price { font-size: 10pt; font-weight: 800; line-height: 1; }
+      .bc { width: 100%; line-height: 0; margin-top: 0.2mm; }
+      .bc svg { max-width: 100%; height: auto; }
     </style></head>
     <body>${labels}</body></html>`;
   printHtml(html);
