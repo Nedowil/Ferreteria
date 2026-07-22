@@ -11,7 +11,13 @@ const historyLink = (id) => `/admin/auditoria?type=inventory.Product&q=${id}`;
 
 // Genera un <svg> de código de barras (EAN-13 si son 13 dígitos, si no Code128)
 // y devuelve su HTML. Igual criterio que la etiqueta Zebra del backend.
-function barcodeSvg(code, height = 45) {
+//
+// Claves para que ESCANEE al imprimir en una Zebra térmica (USB) desde el
+// navegador: las barras se dibujan con bordes DUROS (shape-rendering=crispEdges)
+// para que la impresora no las difumine, con una zona muda (margin) amplia a los
+// lados y sobre fondo blanco. Sin esto, la impresora térmica "emborrona" las
+// barras finas y el lector pita sin leer.
+function barcodeSvg(code, height = 55) {
   const value = String(code || "").trim();
   if (!value) return "";
   const isEan13 = /^\d{13}$/.test(value);
@@ -19,11 +25,19 @@ function barcodeSvg(code, height = 45) {
   try {
     JsBarcode(svg, value, {
       format: isEan13 ? "EAN13" : "CODE128",
-      width: 2, height, fontSize: 14, margin: 4, displayValue: true,
+      width: 2,            // ancho del módulo (barra angosta)
+      height,
+      fontSize: 15,
+      margin: 12,          // zona muda amplia a los lados (necesaria para leer)
+      background: "#ffffff",
+      lineColor: "#000000",
+      displayValue: true,
     });
   } catch {
     return `<div style="font-family:monospace;font-size:12px">${value}</div>`;
   }
+  // Bordes nítidos: evita el "antialias" que difumina las barras en térmica.
+  svg.setAttribute("shape-rendering", "crispEdges");
   return svg.outerHTML;
 }
 
@@ -73,7 +87,7 @@ async function printLabelsPdf(product, copies, companyName, labelW = 51, labelH 
       ${companyName ? `<div class="biz">${esc(companyName)}</div>` : ""}
       ${name ? `<div class="name">${name}</div>` : ""}
       ${big ? `<div class="price">${esc(big)}</div>` : ""}
-      <div class="bc">${barcodeSvg(product.barcode || product.sku, 34)}</div>
+      <div class="bc">${barcodeSvg(product.barcode || product.sku, 50)}</div>
     </div>`;
   const labels = Array.from({ length: Math.max(1, Number(copies) || 1) }, () => one).join("");
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>Etiquetas ${product.sku}</title>
@@ -86,12 +100,14 @@ async function printLabelsPdf(product, copies, companyName, labelW = 51, labelH 
                display: flex; flex-direction: column; justify-content: center;
                align-items: center; page-break-after: always; }
       .label:last-child { page-break-after: auto; }
-      .biz { font-size: 6.5pt; font-weight: 600; color: #000; line-height: 1; }
-      .name { font-size: 8.5pt; font-weight: 800; line-height: 1.02; margin: 0.2mm 0;
-              max-height: 2.1em; overflow: hidden; word-break: break-word; }
-      .price { font-size: 10pt; font-weight: 800; line-height: 1; }
-      .bc { width: 100%; line-height: 0; margin-top: 0.2mm; }
-      .bc svg { max-width: 100%; height: auto; }
+      .biz { font-size: 6pt; font-weight: 600; color: #000; line-height: 1; }
+      .name { font-size: 8pt; font-weight: 800; line-height: 1; margin: 0.1mm 0;
+              max-height: 2em; overflow: hidden; word-break: break-word; }
+      .price { font-size: 9.5pt; font-weight: 800; line-height: 1; }
+      .bc { width: 100%; line-height: 0; margin-top: 0.4mm; }
+      /* Nítido y sin reducir de más: la barra debe conservar su grosor para leer. */
+      .bc svg { max-width: 100%; height: auto; shape-rendering: crispEdges;
+                image-rendering: crisp-edges; }
     </style></head>
     <body>${labels}</body></html>`;
   printHtml(html);

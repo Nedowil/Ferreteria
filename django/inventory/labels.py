@@ -130,10 +130,13 @@ def build_label_zpl(product, company, *, show_price=True, copies=1):
     # Código de barras: su alto se ajusta al espacio que queda (menos la línea
     # de dígitos y el margen), para que SIEMPRE quepa y se pueda escanear.
     bc_height = max(40, height - y - f_small - margin)
+    # Zona muda (quiet zone) a la izquierda: ~3 mm. Sin ella el lector no
+    # engancha el inicio del código y pita sin leer.
+    qz = max(margin, _dots(3, dpi))
     if _is_ean13(code):
-        parts.append(f"^FO{margin},{y}^BY2^BEN,{bc_height},Y,N^FD{code[:12]}^FS")
+        parts.append(f"^FO{qz},{y}^BY2^BEN,{bc_height},Y,N^FD{code[:12]}^FS")
     elif code:
-        parts.append(f"^FO{margin},{y}^BY2^BCN,{bc_height},Y,N,N^FD{_zpl_escape(code)}^FS")
+        parts.append(f"^FO{qz},{y}^BY2^BCN,{bc_height},Y,N,N^FD{_zpl_escape(code)}^FS")
 
     parts.append(f"^PQ{copies}")
     parts.append("^XZ")
