@@ -47,13 +47,14 @@ function labelPrice(product) {
 // computadora, no desde el servidor). labelW/labelH en mm.
 async function printLabelsPdf(product, copies, companyName, labelW = 51, labelH = 25) {
   const esc = (s) => (s || "").replace(/</g, "&lt;");
-  const price = labelPrice(product);
+  // En lugar del precio a la vista se imprime el CÓDIGO oculto (compra+venta).
+  const big = product.price_code || labelPrice(product);
   const name = esc(product.name || "").toUpperCase();
   const one = `
     <div class="label">
       ${companyName ? `<div class="biz">${esc(companyName)}</div>` : ""}
       ${name ? `<div class="name">${name}</div>` : ""}
-      ${price ? `<div class="price">${price}</div>` : ""}
+      ${big ? `<div class="price">${esc(big)}</div>` : ""}
       <div class="bc">${barcodeSvg(product.barcode || product.sku, 34)}</div>
     </div>`;
   const labels = Array.from({ length: Math.max(1, Number(copies) || 1) }, () => one).join("");
