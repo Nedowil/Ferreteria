@@ -112,25 +112,26 @@ def build_label_zpl(product, company, *, show_price=True, copies=1):
         y += f_biz + 4
     parts.append(f"^FO{margin},{y}^A0N,{f_name},{f_name}^FB{width - 2 * margin},2,0,L^FD{name}^FS")
     y += f_name + 6
-    parts.append(f"^FO{margin},{y}^A0N,{f_small},{f_small}^FD{sku}^FS")
-    y += f_small + 10
 
-    # Código de barras (EAN-13 si aplica, si no Code128).
+    # El "precio" (código oculto compra+venta) va ARRIBA, grande, como el precio.
+    if show_price:
+        pcode = price_code(product.purchase_price, product.sale_price)
+        big = pcode or _zpl_escape(_label_price_text(product))
+        code_f = max(22, height // 6)
+        parts.append(
+            f"^FO{margin},{y}^A0N,{code_f},{code_f}"
+            f"^FB{width - 2 * margin},1,0,L^FD{big}^FS"
+        )
+        y += code_f + 8
+
+    parts.append(f"^FO{margin},{y}^A0N,{f_small},{f_small}^FD{sku}^FS")
+    y += f_small + 6
+
+    # Código de barras abajo (su número al pie = SKU/código de barras).
     if _is_ean13(code):
         parts.append(f"^FO{margin},{y}^BY2^BEN,{bc_height},Y,N^FD{code[:12]}^FS")
     elif code:
         parts.append(f"^FO{margin},{y}^BY2^BCN,{bc_height},Y,N,N^FD{_zpl_escape(code)}^FS")
-
-    if show_price:
-        # En lugar del precio a la vista, se imprime el CÓDIGO oculto
-        # (compra+venta). Si el producto no tiene código, cae al precio.
-        pcode = price_code(product.purchase_price, product.sale_price)
-        big = pcode or _zpl_escape(_label_price_text(product))
-        price_f = max(24, height // 5)
-        parts.append(
-            f"^FO{margin},{height - price_f - margin}"
-            f"^A0N,{price_f},{price_f}^FD{big}^FS"
-        )
 
     parts.append(f"^PQ{copies}")
     parts.append("^XZ")
