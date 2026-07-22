@@ -312,18 +312,19 @@ function LabelPrintModal({ product, companyName, onClose }) {
             <>
               <div className="text-sm text-slate-600 dark:text-slate-300">Elegí cómo imprimir <b>{copies}</b> etiqueta(s):</div>
 
-              {/* --- ZEBRA: código NATIVO (la impresora dibuja las barras; siempre escanea) --- */}
-              <button onClick={() => send("system")} disabled={busy}
-                      className="w-full text-left rounded-xl border-2 border-emerald-500 bg-emerald-50/60 dark:bg-emerald-500/15 hover:shadow-md p-3 transition disabled:opacity-50">
-                <div className="font-semibold text-slate-800 dark:text-slate-100">🏷️ Zebra (código nativo) <span className="text-[10px] bg-emerald-600 text-white rounded px-1.5 py-0.5 align-middle">Escanea siempre</span></div>
-                <div className="text-xs text-slate-500 dark:text-slate-400">La Zebra dibuja el código de barras (nítido). Se baja un archivo <b>.zpl</b>: ábrelo con <b>Zebra Setup Utilities → Send file</b> (o hacé doble clic si ya lo asociaste a la impresora).</div>
+              {/* --- USB (imagen del navegador): abre el cuadro de impresión. Es el
+                     método que el usuario usaba y le escaneaba. NO descarga archivo. --- */}
+              <button onClick={() => { printLabelsPdf(product, copies, companyName); onClose(); }} disabled={busy}
+                      className="w-full text-left rounded-xl border-2 border-blue-500 bg-blue-50/60 dark:bg-blue-500/15 hover:shadow-md p-3 transition disabled:opacity-50">
+                <div className="font-semibold text-slate-800 dark:text-slate-100">🖨️ Imprimir por USB (Zebra o impresora normal) <span className="text-[10px] bg-blue-600 text-white rounded px-1.5 py-0.5 align-middle">Recomendado</span></div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">Abre el cuadro de impresión (no descarga nada) → elegí tu <b>Zebra ZD421T</b> y dale Imprimir. También sirve para una impresora común o "Guardar como PDF".</div>
               </button>
 
-              {/* --- IMPRESORA NORMAL / PDF: imagen del navegador (separada de la Zebra) --- */}
-              <button onClick={() => { printLabelsPdf(product, copies, companyName); onClose(); }} disabled={busy}
-                      className="w-full text-left rounded-xl border border-slate-200 dark:border-slate-700 hover:border-blue-400 hover:shadow-md p-3 transition disabled:opacity-50">
-                <div className="font-semibold text-slate-800 dark:text-slate-100">🖨️ Impresora normal o PDF</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400">Imprime una <b>imagen</b> desde el navegador. Sirve para una impresora común o "Guardar como PDF". <b>No recomendado para la Zebra térmica</b> (la imagen puede salir borrosa y no escanear).</div>
+              {/* --- ZEBRA: código NATIVO (.zpl). Respaldo para máxima nitidez. --- */}
+              <button onClick={() => send("system")} disabled={busy}
+                      className="w-full text-left rounded-xl border border-slate-200 dark:border-slate-700 hover:border-emerald-400 hover:shadow-md p-3 transition disabled:opacity-50">
+                <div className="font-semibold text-slate-800 dark:text-slate-100">🏷️ Zebra (código nativo .zpl)</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">Descarga un archivo <b>.zpl</b> para abrir con <b>Zebra Setup Utilities → Send file</b>. Es la etiqueta más nítida posible; usalo solo si el de arriba saliera borroso.</div>
               </button>
 
               <button onClick={() => send("network")} disabled={busy}
