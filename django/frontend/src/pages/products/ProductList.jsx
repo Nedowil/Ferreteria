@@ -40,6 +40,24 @@ function labelPrice(product) {
   return p > 0 ? `Q${p.toFixed(2)} / ${(product.base_unit_label || "UNIDAD").toUpperCase()}` : "";
 }
 
+// Imprime HTML usando un marco (iframe) OCULTO dentro de la misma página:
+// abre el cuadro de impresión sin abrir otra pestaña ni salir de la aplicación.
+function printHtml(html) {
+  const iframe = document.createElement("iframe");
+  iframe.setAttribute("aria-hidden", "true");
+  iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;";
+  document.body.appendChild(iframe);
+  const remove = () => { try { iframe.remove(); } catch { /* ya removido */ } };
+  const win = iframe.contentWindow;
+  win.onafterprint = () => setTimeout(remove, 300);
+  const doc = win.document;
+  doc.open(); doc.write(html); doc.close();
+  // Da un instante a que el navegador dibuje (código de barras, etc.).
+  setTimeout(() => { try { win.focus(); win.print(); } catch { remove(); } }, 350);
+  // Red de seguridad: quita el marco pase lo que pase.
+  setTimeout(remove, 60000);
+}
+
 // Abre una ventana imprimible con las etiquetas (para "Guardar como PDF").
 // Imprime las etiquetas mediante el navegador. Cada etiqueta ocupa UNA página
 // del tamaño físico exacto de la etiqueta (por defecto 2"x1" = 51x25 mm), así
@@ -75,13 +93,8 @@ async function printLabelsPdf(product, copies, companyName, labelW = 51, labelH 
       .bc { width: 100%; line-height: 0; margin-top: 0.2mm; }
       .bc svg { max-width: 100%; height: auto; }
     </style></head>
-    <body>${labels}
-    <script>window.onload = function(){ setTimeout(function(){ window.print(); }, 250); };<\/script>
-    </body></html>`;
-  const w = window.open("", "_blank");
-  if (!w) { await dialog.alert("Permití las ventanas emergentes para imprimir la etiqueta."); return; }
-  w.document.write(html);
-  w.document.close();
+    <body>${labels}</body></html>`;
+  printHtml(html);
 }
 
 // Precio y unidad a mostrar en una etiqueta de estante.
@@ -134,12 +147,8 @@ async function printPriceTags(products, companyName, copiesEach = 1, labelW = 51
       .price { font-size: 17pt; font-weight: 900; line-height: 1; }
       .unit { font-size: 6.5pt; color: #333; margin-top: 0.3mm; }
     </style></head>
-    <body>${tags.join("")}
-    <script>window.onload=function(){setTimeout(function(){window.print();},250);};<\/script>
-    </body></html>`;
-  const w = window.open("", "_blank");
-  if (!w) { await dialog.alert("Permití las ventanas emergentes para imprimir las etiquetas."); return; }
-  w.document.write(html); w.document.close();
+    <body>${tags.join("")}</body></html>`;
+  printHtml(html);
 }
 
 // Modal para imprimir etiquetas de precio: de un solo producto o de todos los
