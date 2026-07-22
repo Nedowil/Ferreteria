@@ -71,6 +71,12 @@ export default function Profiles() {
       <div className="pointer-events-none absolute -top-32 -right-24 w-[30rem] h-[30rem] bg-blue-600/20 rounded-full blur-3xl" />
       <div className="pointer-events-none absolute -bottom-40 -left-24 w-[26rem] h-[26rem] bg-emerald-500/15 rounded-full blur-3xl" />
 
+      {/* Cerrar sesión del equipo: discreto, en la esquina superior derecha */}
+      <button onClick={deviceLogout} title="Cierra la sesión del equipo (pide la contraseña para volver a entrar)"
+              className="absolute top-4 right-4 z-20 text-xs text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/25 rounded-full px-4 py-1.5 transition">
+        Cerrar sesión del equipo
+      </button>
+
       {/* ----- Columna izquierda: perfiles en vertical ----- */}
       <div className="relative z-10 w-full lg:w-[460px] shrink-0 flex flex-col justify-center px-6 sm:px-10 py-10 max-h-screen overflow-y-auto">
         <img src={logo} alt="Ferretería Central" className="w-24 rounded-xl shadow-lg ring-1 ring-white/10 mb-6" />
@@ -111,10 +117,6 @@ export default function Profiles() {
               </div>
             )}
 
-            <button onClick={deviceLogout}
-                    className="mt-8 self-start text-sm text-slate-400 hover:text-white border border-white/10 hover:border-white/30 rounded-full px-5 py-2 transition">
-              Cerrar sesión del equipo
-            </button>
           </>
         ) : (
           /* ----- Marcar PIN del perfil elegido ----- */
