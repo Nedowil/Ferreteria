@@ -64,9 +64,17 @@ def price_code(purchase, sale):
         return ""
     pc = _code_digits(p)               # dígitos de la compra
     sc = _code_digits(sale)            # dígitos de la venta
-    last2 = pc[-2:]                     # últimos 2 dígitos de la compra
-    front = pc[:-2]                    # lo que queda al frente
-    return f"{last2}{sc}{front}"
+    # La compra se parte en [cola][frente] de modo que la VENTA quede en el
+    # MEDIO. Normalmente la cola son los 2 últimos dígitos; pero si la compra
+    # tiene solo 2 dígitos (costo barato), eso dejaría el frente vacío y la
+    # venta al final, así que en ese caso la cola es de 1 solo dígito.
+    #   Ej.: compra 59.70 / venta 90 → 70·90·59 = 709059
+    #        compra 25    / venta 50 → 5·50·2   = 5502
+    if len(pc) > 2:
+        tail, front = pc[-2:], pc[:-2]
+    else:
+        tail, front = pc[-1:], pc[:-1]
+    return f"{tail}{sc}{front}"
 
 
 def _label_price_text(product):

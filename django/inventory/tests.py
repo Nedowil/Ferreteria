@@ -199,6 +199,15 @@ class ZebraLabelTests(TestCase):
         self.assertIn("^PQ3", zpl)
         self.assertIn("Q75.00 / UNIDAD", zpl)  # precio por unidad base
 
+    def test_price_code(self):
+        """Código oculto: la VENTA queda en el medio; si el costo tiene 2
+        dígitos, la cola es de 1 dígito para que la venta no quede al final."""
+        from inventory.labels import price_code
+        self.assertEqual(price_code("59.70", "90"), "709059")
+        self.assertEqual(price_code("211", "400"), "114002")
+        self.assertEqual(price_code("583.50", "1000"), "501000583")
+        self.assertEqual(price_code("25", "50"), "5502")   # costo barato (2 dígitos)
+
     def test_label_precio_por_empaque(self):
         from decimal import Decimal
         from inventory.labels import build_label_zpl
