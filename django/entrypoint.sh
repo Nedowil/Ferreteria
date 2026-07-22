@@ -17,6 +17,13 @@ if [ "${SEED_DEMO:-false}" = "true" ]; then
   python manage.py seed_demo || true
 fi
 
+# Datos de PRÁCTICA para el sitio demo (usuario demo/demo123 + productos y
+# clientes de ejemplo). Se activa poniendo SEED_PRACTICA=true en ese servicio.
+if [ "${SEED_PRACTICA:-false}" = "true" ]; then
+  echo "==> Sembrando datos de PRÁCTICA (demo)…"
+  python manage.py seed_practica || true
+fi
+
 echo "==> Iniciando gunicorn…"
 # Optimizado para planes con poca RAM (p. ej. Render Starter, 512 MB):
 #  - Menos procesos (workers) + hilos (threads) para atender varias peticiones
