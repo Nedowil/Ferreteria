@@ -21,7 +21,19 @@ export function exportToExcel(filename, columns, rows, sheetName = "Datos") {
 }
 
 // Trae TODAS las filas de un endpoint paginado (respeta los filtros dados).
+// Recorre TODAS las páginas hasta juntar el total real: la API tiene un tope de
+// 200 por página, así que pedir "todo" de un solo golpe dejaba registros afuera.
 export async function fetchAll(url, params = {}) {
-  const { data } = await api.get(url, { params: { ...params, page_size: 10000 } });
-  return data.results || data || [];
+  const pageSize = 200; // el máximo que permite la API
+  const first = (await api.get(url, { params: { ...params, page: 1, page_size: pageSize } })).data;
+  // Endpoints que no paginan (devuelven un arreglo): se devuelven tal cual.
+  if (Array.isArray(first)) return first;
+  let rows = first.results || [];
+  const total = first.count ?? rows.length;
+  const pages = Math.ceil(total / pageSize);
+  for (let p = 2; p <= pages; p++) {
+    const { data } = await api.get(url, { params: { ...params, page: p, page_size: pageSize } });
+    rows = rows.concat(data.results || []);
+  }
+  return rows;
 }

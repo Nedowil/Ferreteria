@@ -193,14 +193,18 @@ class Product(models.Model):
 
     def stock_for(self, branch_id):
         """Existencia en una sucursal. Si el producto aún no se distribuyó a
-        ninguna sucursal, devuelve el stock global (fallback)."""
+        ninguna sucursal, devuelve el stock global (fallback).
+
+        Recorre ``self.stocks.all()`` en memoria: si la vista hizo
+        ``prefetch_related('stocks')``, NO genera una consulta por producto
+        (evita el N+1 al listar/exportar muchos productos)."""
         if not branch_id:
             return Decimal(self.stock)
-        row = self.stocks.filter(branch_id=branch_id).first()
-        if row:
-            return Decimal(row.stock)
-        has_any = self.stocks.exists()
-        return Decimal("0") if has_any else Decimal(self.stock)
+        rows = list(self.stocks.all())
+        for row in rows:
+            if row.branch_id == branch_id:
+                return Decimal(row.stock)
+        return Decimal("0") if rows else Decimal(self.stock)
 
     def location_for(self, branch_id):
         if not branch_id:

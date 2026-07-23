@@ -137,7 +137,7 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
     queryset = (
         Product.objects.filter(deleted_at__isnull=True)
         .select_related("category", "brand", "unit")
-        .prefetch_related("presentations")
+        .prefetch_related("presentations", "stocks")
         .order_by("-created_at")
     )
     filter_backends = [DjangoFilterBackend, TolerantSearchFilter, filters.OrderingFilter]
