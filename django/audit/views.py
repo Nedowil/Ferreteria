@@ -33,7 +33,9 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
         if p.get("event"):
             qs = qs.filter(event=p["event"])
         if p.get("type"):
-            qs = qs.filter(auditable_type__icontains=p["type"])
+            # Coincidencia EXACTA (el frontend envía el tipo completo, p. ej.
+            # "inventory.Product"): así usa el índice y no escanea toda la tabla.
+            qs = qs.filter(auditable_type=p["type"])
         if p.get("user_id"):
             qs = qs.filter(user_id=p["user_id"])
         if p.get("q"):

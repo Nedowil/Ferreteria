@@ -34,7 +34,12 @@ class AuditLog(models.Model):
         verbose_name = "registro de auditoría"
         verbose_name_plural = "registros de auditoría"
         ordering = ["-id"]
-        indexes = [models.Index(fields=["event"]), models.Index(fields=["created_at"])]
+        indexes = [
+            models.Index(fields=["event"]),
+            models.Index(fields=["created_at"]),
+            # Para filtrar rápido el historial de un recurso (p. ej. un producto).
+            models.Index(fields=["auditable_type", "auditable_id"]),
+        ]
 
     def __str__(self):
         return f"{self.event} {self.auditable_type}#{self.auditable_id}"

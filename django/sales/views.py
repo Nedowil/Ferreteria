@@ -33,7 +33,7 @@ class SaleViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.ModelVie
     }
     queryset = (
         Sale.objects.select_related("customer", "branch", "user")
-        .prefetch_related("items", "payments")
+        .prefetch_related("items__product", "payments")
         # Orden por momento de REGISTRO (no por la fecha del documento): así una
         # venta creada hoy con fecha anterior o adelantada aparece igual arriba,
         # en el orden en que realmente se hizo.

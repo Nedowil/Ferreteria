@@ -21,7 +21,13 @@ AUDITED = {
     "cashbox.CashSession", "transfers.BranchTransfer",
 }
 
-EXCLUDED_FIELDS = {"password", "last_login", "updated_at", "created_at"}
+# Campos internos/calculados que NO son ediciones del usuario: se excluyen de la
+# auditoría para no ensuciar el historial (ni disparar "cambios" falsos).
+EXCLUDED_FIELDS = {
+    "password", "last_login", "updated_at", "created_at",
+    "search_index",   # índice de búsqueda (se recalcula solo al guardar)
+    "times_sold",     # contador de más vendidos (se actualiza en cada venta)
+}
 
 
 def _label(model_cls):
