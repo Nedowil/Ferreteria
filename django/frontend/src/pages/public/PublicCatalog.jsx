@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
+import logo from "../../assets/logo.jpg";
 
 const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -40,10 +41,26 @@ export default function PublicCatalog() {
       const { jsPDF } = await import("jspdf");
       const autoTable = (await import("jspdf-autotable")).default;
       const doc = new jsPDF({ unit: "pt", format: "letter" });
-      doc.setFontSize(16); doc.text(info?.title || `Catálogo — ${bizName}`, 40, 40);
+
+      // ---- Encabezado con LOGO + NOMBRE del negocio ----
+      let textX = 40;      // dónde empieza el texto (se corre si hay logo)
+      try {
+        const img = await new Promise((res, rej) => {
+          const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = logo;
+        });
+        const lw = 46, lh = lw * (img.naturalHeight / img.naturalWidth || 1);
+        doc.addImage(img, "JPEG", 40, 30, lw, lh);
+        textX = 40 + lw + 12;
+      } catch { /* si no carga el logo, seguimos sin él */ }
+
+      doc.setFontSize(17); doc.setTextColor(20); doc.setFont(undefined, "bold");
+      doc.text(bizName, textX, 46);
+      doc.setFont(undefined, "normal"); doc.setFontSize(11); doc.setTextColor(90);
+      doc.text(info?.title || "Catálogo de productos", textX, 62);
       doc.setFontSize(9); doc.setTextColor(120);
       const sub = [info?.company?.phone && `Tel: ${info.company.phone}`, info?.company?.address].filter(Boolean).join("   ");
-      if (sub) doc.text(sub, 40, 58);
+      if (sub) doc.text(sub, textX, 77);
+
       const head = ["Producto", "Marca", ...(showPrices ? ["Precio (Q)"] : []), "Disponibilidad"];
       const body = rows.map((p) => [
         p.name,
@@ -52,7 +69,7 @@ export default function PublicCatalog() {
         p.in_stock ? "Disponible" : "Agotado",
       ]);
       autoTable(doc, {
-        head: [head], body, startY: 70, styles: { fontSize: 9, cellPadding: 4 },
+        head: [head], body, startY: 92, styles: { fontSize: 9, cellPadding: 4 },
         headStyles: { fillColor: [15, 118, 110] },
       });
       doc.save(`catalogo-${bizName}.pdf`);

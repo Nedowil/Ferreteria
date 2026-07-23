@@ -80,6 +80,11 @@ def public_catalog_info(request):
         return Response({"enabled": False}, status=404)
     wa = (company.public_catalog_whatsapp or "").strip()
     wa_digits = "".join(ch for ch in wa if ch.isdigit())
+    # WhatsApp (wa.me) exige el número CON código de país. Si el usuario cargó un
+    # número local de Guatemala (8 dígitos, sin el 502), se lo anteponemos para
+    # que el enlace no dé "número no válido".
+    if wa_digits and len(wa_digits) == 8 and not wa_digits.startswith("502"):
+        wa_digits = "502" + wa_digits
     return Response({
         "enabled": True,
         "title": company.public_catalog_title or company.commercial_name,
