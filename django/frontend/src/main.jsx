@@ -11,6 +11,15 @@ if (localStorage.getItem("fz_theme") === "dark") {
   document.documentElement.classList.add("dark");
 }
 
+// Evita que la RUEDA del mouse cambie el valor de los campos numéricos: si uno
+// está escribiendo una cantidad y hace scroll, el número subía/bajaba solo (y
+// podía alterar el stock sin querer). Al girar la rueda sobre un campo numérico,
+// se le quita el foco para que solo se desplace la página, sin tocar el valor.
+document.addEventListener("wheel", () => {
+  const el = document.activeElement;
+  if (el && el.tagName === "INPUT" && el.type === "number") el.blur();
+}, { passive: true });
+
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
