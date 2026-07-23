@@ -305,7 +305,7 @@ export default function POS() {
   const searchRef = useRef(null);
 
   const reloadProducts = () =>
-    api.get("/inventory/products/", { params: { page_size: 500, active: 1 } })
+    api.get("/inventory/products/", { params: { page_size: 1500, active: 1, ordering: "-times_sold" } })
        .then((r) => r.data.results || r.data);
 
   useEffect(() => {
@@ -317,7 +317,7 @@ export default function POS() {
 
       // Productos (lo esencial para vender).
       try {
-        const { data } = await api.get("/inventory/products/", { params: { page_size: 500, active: 1 } });
+        const { data } = await api.get("/inventory/products/", { params: { page_size: 1500, active: 1, ordering: "-times_sold" } });
         const list = data.results || data;
         if (alive) { setProducts(list); saveCatalog(list).catch(() => {}); }
       } catch {

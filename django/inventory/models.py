@@ -161,6 +161,10 @@ class Product(models.Model):
     # en cada save; permite buscar sin importar tildes ni errores de escritura.
     search_index = models.CharField(max_length=400, blank=True, default="", db_index=True)
 
+    # Cuántas veces se ha vendido (frecuencia). Se usa para priorizar la copia
+    # que el POS guarda para trabajar SIN internet: cachea los más vendidos.
+    times_sold = models.PositiveIntegerField(default=0, db_index=True, editable=False)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     deleted_at = models.DateTimeField(null=True, blank=True)  # soft delete

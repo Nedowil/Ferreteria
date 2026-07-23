@@ -142,7 +142,7 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
     )
     filter_backends = [DjangoFilterBackend, TolerantSearchFilter, filters.OrderingFilter]
     filterset_fields = ["category", "brand", "active"]
-    ordering_fields = ["name", "sale_price", "stock", "created_at"]
+    ordering_fields = ["name", "sale_price", "stock", "created_at", "times_sold"]
 
     def get_serializer_class(self):
         if self.action == "list":

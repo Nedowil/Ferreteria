@@ -4,6 +4,7 @@ from decimal import Decimal
 from datetime import datetime, timedelta
 
 from django.db import transaction
+from django.db.models import F
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 
@@ -129,6 +130,9 @@ def create_sale(data, items, *, user=None, branch=None, offline_uuid=None):
             l["product"], InventoryMovement.SALIDA, l["physical_qty"],
             reason=reason, user=user, branch=branch,
         )
+        # Cuenta de "más vendido" (para priorizar la copia offline del POS).
+        # F() evita condiciones de carrera si dos ventas ocurren a la vez.
+        Product.objects.filter(pk=l["product"].pk).update(times_sold=F("times_sold") + 1)
 
     # Vincular a la caja abierta del usuario (si la hay)
     cash.register_sale(sale)
