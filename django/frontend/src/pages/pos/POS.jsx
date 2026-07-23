@@ -224,6 +224,7 @@ export default function POS() {
   const [cashOpen, setCashOpen] = useState(null); // null=cargando, false=cerrada, obj=abierta
   const [search, setSearch] = useState("");
   const [products, setProducts] = useState([]);
+  const [serverHits, setServerHits] = useState(null); // resultados de la búsqueda en el servidor
   const [cart, setCart] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [customerId, setCustomerId] = useState("");
@@ -369,21 +370,42 @@ export default function POS() {
     return stock - used;
   };
 
+  // Búsqueda de productos EN EL SERVIDOR (con retardo/debounce), para que
+  // encuentre TODO el catálogo aunque tenga miles/millones de productos, no solo
+  // los que se precargaron para trabajar sin internet. Si no hay internet, se
+  // filtra la copia local como respaldo.
+  useEffect(() => {
+    const q = search.trim();
+    if (!q || !serverOnline) { setServerHits(null); return undefined; }
+    let alive = true;
+    const t = setTimeout(() => {
+      api.get("/inventory/products/", { params: { search: q, active: 1, page_size: 50 } })
+        .then((r) => { if (alive) setServerHits(r.data.results || r.data); })
+        .catch(() => { if (alive) setServerHits(null); });
+    }, 250);
+    return () => { alive = false; clearTimeout(t); };
+  }, [search, serverOnline]);
+
   const filtered = useMemo(() => {
     const q = norm(search.trim());
     if (!q) return products;
+    // Con internet: usa lo que devolvió el servidor (todo el catálogo). Mientras
+    // llega la respuesta, o sin internet, filtra la copia local para no quedar
+    // en blanco.
+    if (serverHits) return serverHits;
     return products.filter((p) =>
       norm(p.name).includes(q) ||
       norm(p.sku).includes(q) ||
       norm(p.barcode).includes(q));
-  }, [products, search]);
+  }, [products, search, serverHits]);
 
   // Al escanear/Enter: si hay coincidencia exacta de código o un único resultado, abre la medida.
   const onSearchKey = (e) => {
     if (e.key !== "Enter") return;
     const q = search.trim().toLowerCase();
     if (!q) return;
-    const exact = products.find((p) =>
+    const pool = filtered.length ? filtered : products;
+    const exact = pool.find((p) =>
       (p.barcode || "").toLowerCase() === q || (p.sku || "").toLowerCase() === q);
     const target = exact || (filtered.length === 1 ? filtered[0] : null);
     if (target) { setPicking(target); setSearch(""); }
