@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import JsBarcode from "jsbarcode";
 import api from "../../api/client";
@@ -430,15 +430,33 @@ export default function ProductList() {
     api.get("/company-settings/").then((r) => setCompanyName(r.data.commercial_name || "Ferretería Central")).catch(() => {});
   }, []);
 
-  const load = (f = filters, pg = page) => {
-    setLoading(true);
+  const load = (f = filters, pg = page, { silent = false } = {}) => {
+    if (!silent) setLoading(true);
     const params = { page: pg };
     if (f.search) params.search = f.search;
     if (f.brand) params.brand = f.brand;
     if (f.low_stock) params.low_stock = 1;
-    api.get("/inventory/products/", { params }).then((r) => setData(r.data)).finally(() => setLoading(false));
+    api.get("/inventory/products/", { params })
+      .then((r) => setData(r.data))
+      .finally(() => { if (!silent) setLoading(false); });
   };
   useEffect(() => { load(); }, [page]);
+
+  // Auto-actualización: si OTRA computadora registra un producto, aparece solo
+  // (sin darle refresh). Útil cuando una compu registra y otra —la de la
+  // impresora Zebra— imprime. Se pausa mientras escribís en la búsqueda o con un
+  // modal abierto, y no corre si la pestaña está en segundo plano.
+  const searchRef = useRef(null);
+  useEffect(() => {
+    const t = setInterval(() => {
+      if (document.hidden) return;
+      if (labeling || priceTag || bulkLoc) return;
+      if (searchRef.current && document.activeElement === searchRef.current) return;
+      load(filters, page, { silent: true });
+    }, 15000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters, page, labeling, priceTag, bulkLoc]);
 
   const applyFilters = (e) => { e.preventDefault(); setPage(1); load(filters, 1); };
 
@@ -497,7 +515,9 @@ export default function ProductList() {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">📦 Productos</h1>
+        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">📦 Productos
+          <span className="text-[11px] font-normal text-emerald-600 dark:text-emerald-400 flex items-center gap-1" title="La lista se actualiza sola cada pocos segundos">🔄 se actualiza sola</span>
+        </h1>
         <div className="flex gap-2">
           {can("productos.editar") && <button onClick={() => setBulkLoc({ ids: null })} className="border border-teal-300 text-teal-700 bg-teal-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-teal-100 transition">📍 Asignar ubicación</button>}
           <button onClick={() => setPriceTag({})} className="border border-amber-300 text-amber-700 bg-amber-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-amber-100 transition">🏷️ Etiquetas de precio</button>
@@ -507,7 +527,7 @@ export default function ProductList() {
       </div>
 
       <form onSubmit={applyFilters} className="bg-white dark:bg-slate-800 rounded-lg shadow p-4 mb-4 flex flex-wrap gap-2 items-end">
-        <input placeholder="Nombre, SKU o código" value={filters.search}
+        <input ref={searchRef} placeholder="Nombre, SKU o código" value={filters.search}
                onChange={(e) => onSearchChange(e.target.value)}
                className="border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm w-64" />
         <select value={filters.brand} onChange={(e) => setFilters({ ...filters, brand: e.target.value })}
