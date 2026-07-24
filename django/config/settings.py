@@ -174,7 +174,11 @@ STORAGES = {
 }
 
 MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+# Carpeta donde se guardan las imágenes de productos. En Render el disco del
+# contenedor se BORRA en cada actualización, así que en producción se apunta a
+# un DISCO PERSISTENTE montado (variable MEDIA_ROOT, p. ej. /var/media). En
+# desarrollo usa la carpeta local del proyecto.
+MEDIA_ROOT = os.getenv("MEDIA_ROOT") or (BASE_DIR / "media")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
