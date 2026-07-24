@@ -12,6 +12,7 @@ from .models import (
     Product,
     ProductPresentation,
     ProductStock,
+    Ubicacion,
     Unit,
 )
 
@@ -29,6 +30,14 @@ class BrandSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Brand
+        fields = ["id", "name", "description", "active", "product_count"]
+
+
+class UbicacionSerializer(serializers.ModelSerializer):
+    product_count = serializers.IntegerField(source="products.count", read_only=True)
+
+    class Meta:
+        model = Ubicacion
         fields = ["id", "name", "description", "active", "product_count"]
 
 
@@ -60,7 +69,7 @@ class ProductListSerializer(serializers.ModelSerializer):
     stock_display = serializers.CharField(source="format_stock_mixed", read_only=True)
     is_low_stock = serializers.BooleanField(read_only=True)
     branch_stock = serializers.SerializerMethodField()
-    branch_location = serializers.SerializerMethodField()
+    ubicacion_name = serializers.CharField(source="ubicacion.name", read_only=True, default=None)
     presentations = ProductPresentationSerializer(many=True, read_only=True)
     price_code = serializers.SerializerMethodField()
 
@@ -71,7 +80,7 @@ class ProductListSerializer(serializers.ModelSerializer):
             "purchase_price", "sale_price", "wholesale_price", "wholesale_min_quantity",
             "tax_type", "sells_by_measure", "measure_step",
             "base_unit_label", "container_label", "container_factor", "container_price",
-            "stock", "branch_stock", "branch_location", "min_stock",
+            "stock", "branch_stock", "ubicacion", "ubicacion_name", "min_stock",
             "stock_display", "is_low_stock", "active", "image", "presentations", "price_code",
         ]
 
@@ -84,11 +93,6 @@ class ProductListSerializer(serializers.ModelSerializer):
         sucursal en contexto, devuelve el stock global."""
         branch = self.context.get("branch")
         return obj.stock_for(branch.pk if branch else None)
-
-    def get_branch_location(self, obj):
-        """Ubicación física (pasillo/estante) en la sucursal activa."""
-        branch = self.context.get("branch")
-        return obj.location_for(branch.pk if branch else None)
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -113,18 +117,14 @@ class ProductSerializer(serializers.ModelSerializer):
     stock_input_mode = serializers.ChoiceField(
         choices=["base", "container"], required=False, write_only=True, default="base"
     )
-    # Ubicación física (pasillo/estante) en la sucursal activa. Se lee y se
-    # escribe; se guarda en el ProductStock de esa sucursal.
-    branch_location = serializers.SerializerMethodField(read_only=True)
-    location = serializers.CharField(
-        required=False, allow_blank=True, allow_null=True, write_only=True, max_length=60
-    )
+    ubicacion_name = serializers.CharField(source="ubicacion.name", read_only=True, default=None)
 
     class Meta:
         model = Product
         fields = [
             "id", "sku", "barcode", "name", "description",
-            "category", "brand", "unit", "category_name", "brand_name", "unit_name",
+            "category", "brand", "unit", "ubicacion", "category_name", "brand_name", "unit_name",
+            "ubicacion_name",
             "base_unit_label", "container_label", "container_factor", "container_price",
             "tax_type", "purchase_price", "sale_price",
             "wholesale_price", "wholesale_min_quantity", "container_wholesale_price",
@@ -134,17 +134,12 @@ class ProductSerializer(serializers.ModelSerializer):
             "image", "active", "public_visible",
             "presentations", "presentations_input",
             "initial_stock", "stock_input_mode",
-            "branch_location", "location",
         ]
         read_only_fields = ["stock"]
         extra_kwargs = {
             "sku": {"required": False, "allow_blank": True},
             "barcode": {"required": False, "allow_blank": True, "allow_null": True},
         }
-
-    def get_branch_location(self, obj):
-        branch = self.context.get("branch")
-        return obj.location_for(branch.pk if branch else None)
 
     def validate(self, attrs):
         # Si falta etiqueta o factor de empaque, limpiar campos de empaque

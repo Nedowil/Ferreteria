@@ -9,6 +9,7 @@ router = DefaultRouter()
 router.register("products", views.ProductViewSet, basename="product")
 router.register("categories", views.CategoryViewSet, basename="category")
 router.register("brands", views.BrandViewSet, basename="brand")
+router.register("locations", views.UbicacionViewSet, basename="ubicacion")
 router.register("units", views.UnitViewSet, basename="unit")
 
 urlpatterns = [

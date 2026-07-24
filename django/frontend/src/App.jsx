@@ -158,6 +158,7 @@ export default function App() {
       <Route path="/conteo" element={<Protected perm="inventario.ajustar"><StockCount /></Protected>} />
       <Route path="/categorias" element={<Protected perm="productos.ver"><CatalogList kind="categories" /></Protected>} />
       <Route path="/marcas" element={<Protected perm="productos.ver"><CatalogList kind="brands" /></Protected>} />
+      <Route path="/ubicaciones" element={<Protected perm="productos.ver"><CatalogList kind="locations" /></Protected>} />
       <Route path="/unidades" element={<Protected perm="productos.ver"><CatalogList kind="units" /></Protected>} />
       <Route path="/proveedores" element={<Protected perm="proveedores.ver"><SupplierList /></Protected>} />
       <Route path="/clientes" element={<Protected perm="clientes.ver"><CustomerList /></Protected>} />

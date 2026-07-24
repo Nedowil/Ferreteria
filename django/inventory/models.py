@@ -58,6 +58,25 @@ class Unit(models.Model):
         return f"{self.name} ({self.abbreviation})"
 
 
+class Ubicacion(models.Model):
+    """Ubicación física en la tienda (pasillo/estante). Catálogo reutilizable,
+    igual que Marca: se registra una vez y se asigna a los productos."""
+
+    name = models.CharField("nombre", max_length=120, unique=True)
+    description = models.CharField("descripción", max_length=255, blank=True, null=True)
+    active = models.BooleanField("activa", default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "ubicación"
+        verbose_name_plural = "ubicaciones"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
 class ProductQuerySet(models.QuerySet):
     def active(self):
         return self.filter(active=True)
@@ -90,6 +109,10 @@ class Product(models.Model):
     )
     unit = models.ForeignKey(
         Unit, on_delete=models.SET_NULL, null=True, blank=True, related_name="products"
+    )
+    ubicacion = models.ForeignKey(
+        Ubicacion, on_delete=models.SET_NULL, null=True, blank=True, related_name="products",
+        verbose_name="ubicación",
     )
 
     # Unidad base: la más pequeña en que se mide el stock (libra, onza, metro...)

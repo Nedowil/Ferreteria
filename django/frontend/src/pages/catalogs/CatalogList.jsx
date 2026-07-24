@@ -7,6 +7,7 @@ import { toast } from "../../components/Toast";
 const CONFIG = {
   categories: { title: "Categorías", endpoint: "/inventory/categories/", hasDescription: true },
   brands: { title: "Marcas", endpoint: "/inventory/brands/", hasDescription: true },
+  locations: { title: "Ubicaciones", endpoint: "/inventory/locations/", hasDescription: true },
   units: { title: "Unidades", endpoint: "/inventory/units/", isUnit: true },
 };
 
