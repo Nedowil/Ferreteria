@@ -38,7 +38,7 @@ class PurchaseViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Mode
     }
     queryset = (
         Purchase.objects.select_related("supplier", "branch", "user")
-        .prefetch_related("items", "payments")
+        .prefetch_related("items__product", "payments")
         .order_by("-date", "-id")
     )
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]

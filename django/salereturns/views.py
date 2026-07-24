@@ -30,7 +30,7 @@ class SaleReturnViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Mo
     queryset = (
         SaleReturn.objects.filter(deleted_at__isnull=True)
         .select_related("sale", "customer", "user", "branch")
-        .prefetch_related("items").order_by("-date", "-id")
+        .prefetch_related("items__product").order_by("-date", "-id")
     )
     http_method_names = ["get", "post", "head", "options"]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]

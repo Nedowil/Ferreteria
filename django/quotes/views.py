@@ -27,7 +27,7 @@ class QuotationViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Mod
     }
     queryset = (
         Quotation.objects.select_related("customer", "user", "branch", "converted_sale")
-        .prefetch_related("items").order_by("-date", "-id")
+        .prefetch_related("items__product").order_by("-date", "-id")
     )
     http_method_names = ["get", "post", "head", "options"]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
