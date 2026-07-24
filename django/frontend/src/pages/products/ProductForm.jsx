@@ -479,7 +479,7 @@ export default function ProductForm() {
             )}
           </div>
           <div>
-            <SelectField label="📍 Ubicación" name="ubicacion" form={form} onChange={set}
+            <SelectField label="Ubicación" name="ubicacion" form={form} onChange={set}
                          options={ubicaciones} empty="— Sin ubicación —" />
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
               Pasillo/estante donde está el producto. Se administran en <b>Ubicaciones</b>.
