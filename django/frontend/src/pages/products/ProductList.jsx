@@ -453,7 +453,7 @@ export default function ProductList() {
       if (labeling || priceTag || bulkLoc) return;
       if (searchRef.current && document.activeElement === searchRef.current) return;
       load(filters, page, { silent: true });
-    }, 15000);
+    }, 7000);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, page, labeling, priceTag, bulkLoc]);
