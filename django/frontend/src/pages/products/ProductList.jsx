@@ -9,6 +9,10 @@ import { dialog } from "../../components/Dialog";
 // Enlace a la auditoría del producto (quién lo creó, editó o eliminó).
 const historyLink = (id) => `/admin/auditoria?type=inventory.Product&q=${id}`;
 
+// La "Marca" no se usa por el momento: se oculta el filtro. Para reactivarla,
+// poné SHOW_MARCA = true (y descomentar el enlace del menú en Layout).
+const SHOW_MARCA = false;
+
 // Genera un <svg> de código de barras (EAN-13 si son 13 dígitos, si no Code128)
 // y devuelve su HTML. Igual criterio que la etiqueta Zebra del backend.
 function barcodeSvg(code, height = 45) {
@@ -534,11 +538,13 @@ export default function ProductList() {
         <input ref={searchRef} placeholder="Nombre, SKU o código" value={filters.search}
                onChange={(e) => onSearchChange(e.target.value)}
                className="border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm w-64" />
-        <select value={filters.brand} onChange={(e) => setFilters({ ...filters, brand: e.target.value })}
-                className="border border-slate-300 dark:border-slate-600 rounded px-2 py-2 text-sm">
-          <option value="">Todas las marcas</option>
-          {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-        </select>
+        {SHOW_MARCA && (
+          <select value={filters.brand} onChange={(e) => setFilters({ ...filters, brand: e.target.value })}
+                  className="border border-slate-300 dark:border-slate-600 rounded px-2 py-2 text-sm">
+            <option value="">Todas las marcas</option>
+            {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+          </select>
+        )}
         <label className="flex items-center gap-1 text-sm">
           <input type="checkbox" checked={filters.low_stock}
                  onChange={(e) => setFilters({ ...filters, low_stock: e.target.checked })} /> Stock bajo

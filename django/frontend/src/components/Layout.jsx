@@ -102,7 +102,8 @@ export default function Layout({ children }) {
             <>
               <Section title="Inventario" />
               {can("productos.ver") && <NavItem to="/productos" icon="📦" label="Productos" />}
-              {can("productos.ver") && <NavItem to="/marcas" icon="🔖" label="Marcas" />}
+              {/* Marcas oculto por ahora (no lo usan). Para reactivar, descomentar. */}
+              {/* {can("productos.ver") && <NavItem to="/marcas" icon="🔖" label="Marcas" />} */}
               {can("productos.ver") && <NavItem to="/ubicaciones" icon="📍" label="Ubicaciones" />}
               {can("productos.ver") && <NavItem to="/bajo-stock" icon="⚠️" label="Stock bajo" />}
               {can("inventario.ajustar") && <NavItem to="/conteo" icon="🔢" label="Conteo físico" />}

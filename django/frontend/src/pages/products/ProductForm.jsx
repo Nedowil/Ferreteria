@@ -16,6 +16,10 @@ const EMPTY = {
   ubicacion: "",
 };
 
+// La "Marca" no se usa por el momento: se oculta del formulario, del filtro y
+// del menú. Para volver a mostrarla, poné SHOW_MARCA = true.
+const SHOW_MARCA = false;
+
 // Parsea "1/2", "0,5", "10" -> número (0 si inválido)
 function parseFrac(s) {
   if (s === null || s === undefined) return 0;
@@ -369,9 +373,13 @@ export default function ProductForm() {
           <textarea value={form.description ?? ""} onChange={(e) => set("description", e.target.value)} rows="2"
                     className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
-          <SelectField label="Marca" name="brand" form={form} onChange={set} options={brands} empty="— Sin marca —" />
-        </div>
+        {/* Marca oculta temporalmente (no la usan por ahora). Para reactivar,
+            cambiar SHOW_MARCA a true arriba del archivo. */}
+        {SHOW_MARCA && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+            <SelectField label="Marca" name="brand" form={form} onChange={set} options={brands} empty="— Sin marca —" />
+          </div>
+        )}
 
         <div className="mt-4">
           <label className="block text-sm font-medium mb-1">Imagen del producto (opcional)</label>
