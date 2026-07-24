@@ -103,6 +103,11 @@ function MeasureModal({ product, customer, available, onAdd, onClose }) {
           <div className="text-xs uppercase tracking-wide text-blue-100">Vender</div>
           <div className="text-lg font-bold leading-tight">{product.name}</div>
           <div className="text-xs text-blue-100 font-mono mt-0.5">{product.sku} · disponible {trim(available)} {product.base_unit_label || "u"}</div>
+          {product.ubicacion_name && (
+            <div className="mt-1.5 inline-flex items-center gap-1 bg-white/20 rounded-full px-2.5 py-1 text-sm font-semibold">
+              📍 {product.ubicacion_name}
+            </div>
+          )}
         </div>
 
         <div className="p-5 space-y-4">
@@ -854,6 +859,7 @@ export default function POS() {
                       </div>
                       <div className="p-2">
                         <div className="text-sm font-medium text-slate-800 dark:text-slate-100 leading-tight line-clamp-2 group-hover:text-blue-700">{p.name}</div>
+                        {p.ubicacion_name && <div className="text-[10px] text-teal-600 dark:text-teal-400 truncate">📍 {p.ubicacion_name}</div>}
                         <div className="flex items-center justify-between mt-1">
                           <span className="text-blue-600 font-bold text-sm">Q{p.sale_price}</span>
                           <span className={"text-[10px] rounded-full px-2 py-0.5 " +
