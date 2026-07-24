@@ -815,7 +815,7 @@ export default function POS() {
                               className="w-full text-left flex items-center gap-3 px-3 py-2.5 hover:bg-blue-50 dark:hover:bg-slate-700 transition group">
                         <div className="min-w-0 flex-1">
                           <div className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate group-hover:text-blue-700 dark:group-hover:text-blue-300">{p.name}</div>
-                          <div className="text-[11px] font-mono text-slate-400">{p.sku}</div>
+                          <div className="text-[11px] font-mono text-slate-400">{p.sku}{p.branch_location ? <span className="text-teal-600 dark:text-teal-400 font-sans"> · 📍 {p.branch_location}</span> : ""}</div>
                         </div>
                         <div className="w-28 text-right shrink-0">
                           <span className={"text-[11px] rounded-full px-2 py-0.5 " +

@@ -13,6 +13,7 @@ const EMPTY = {
   min_stock: "", sells_by_measure: false, measure_step: "",
   active: true, public_visible: true,
   initial_stock: "", stock_input_mode: "container",
+  location: "",
 };
 
 // Parsea "1/2", "0,5", "10" -> número (0 si inválido)
@@ -195,7 +196,11 @@ export default function ProductForm() {
       api.get(`/inventory/products/${id}/`).then((r) => {
         const d = r.data;
         if (d.image) setImagePreview(d.image);
-        setForm({ ...EMPTY, ...Object.fromEntries(Object.entries(d).map(([k, v]) => [k, v === null ? "" : v])) });
+        setForm({
+          ...EMPTY,
+          ...Object.fromEntries(Object.entries(d).map(([k, v]) => [k, v === null ? "" : v])),
+          location: d.branch_location || "",   // ubicación de la sucursal activa
+        });
         // En BD el precio se guarda por unidad base. Si hay empaque, el de COMPRA
         // se muestra por empaque (precio_base × factor) para que cuadre el round-trip.
         const cf = Number(d.container_factor) || 0;
@@ -466,6 +471,15 @@ export default function ProductForm() {
             ) : (
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">La alerta salta cuando la existencia baja a este valor o menos.</p>
             )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              📍 Ubicación <span className="text-slate-400 font-normal">(pasillo/estante)</span>
+            </label>
+            <input type="text" value={form.location ?? ""} onChange={(e) => set("location", e.target.value)}
+                   placeholder="Ej: Pasillo 3, Estante B" maxLength={60}
+                   className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Dónde está físicamente el producto en esta sucursal.</p>
           </div>
         </div>
         <div className="flex gap-6 mt-4 text-sm items-end">

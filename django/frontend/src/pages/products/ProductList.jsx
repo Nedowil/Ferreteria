@@ -438,6 +438,7 @@ export default function ProductList() {
                   <div className="min-w-0">
                     <div className="font-medium text-slate-800 dark:text-slate-100 break-words">{p.name}</div>
                     <div className="text-xs text-slate-400 font-mono">{p.sku}{p.brand_name ? ` · ${p.brand_name}` : ""}</div>
+                    {p.branch_location && <div className="text-xs text-teal-600 dark:text-teal-400">📍 {p.branch_location}</div>}
                   </div>
                   <div className="text-right shrink-0">
                     <div className="font-semibold text-slate-700 dark:text-slate-200">Q{p.sale_price}</div>
@@ -484,6 +485,7 @@ export default function ProductList() {
                 <td className="px-4 py-2">
                   <div className="font-medium text-slate-800 dark:text-slate-100">{p.name}</div>
                   {p.barcode && <div className="text-xs text-slate-400 font-mono">{p.barcode}</div>}
+                  {p.branch_location && <div className="text-xs text-teal-600 dark:text-teal-400">📍 {p.branch_location}</div>}
                 </td>
                 <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{p.brand_name || "—"}</td>
                 <td className="px-4 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">Q{p.sale_price}</td>

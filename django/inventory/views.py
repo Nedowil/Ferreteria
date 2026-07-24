@@ -156,9 +156,24 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
             qs = qs.filter(stock__lte=F("min_stock"), active=True)
         return qs
 
+    def _save_location(self, product, location):
+        """Guarda la ubicación física en el ProductStock de la sucursal activa
+        (o la principal si no hay sucursal en contexto)."""
+        if location is None:
+            return
+        from core.models import Branch
+        from .models import ProductStock
+        branch = self.branch or Branch.objects.filter(is_main=True).first() or Branch.objects.first()
+        if not branch:
+            return
+        ProductStock.objects.update_or_create(
+            product=product, branch=branch, defaults={"location": (location or "").strip()},
+        )
+
     def perform_create(self, serializer):
         initial_stock = serializer.validated_data.pop("initial_stock", Decimal("0"))
         input_mode = serializer.validated_data.pop("stock_input_mode", "base")
+        location = serializer.validated_data.pop("location", None)
         presentations = serializer.validated_data.pop("presentations_input", None)
 
         product = serializer.save(created_by=self.request.user, stock=Decimal("0"))
@@ -178,12 +193,15 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
                 reason="Stock inicial", user=self.request.user, branch=self.branch,
             )
             product.refresh_from_db()
+        self._save_location(product, location)
 
     def perform_update(self, serializer):
         serializer.validated_data.pop("initial_stock", None)
         serializer.validated_data.pop("stock_input_mode", None)
+        location = serializer.validated_data.pop("location", None)
         presentations = serializer.validated_data.pop("presentations_input", None)
         product = serializer.save()
+        self._save_location(product, location)
         if not product.sku:
             product.sku = generate_sku(product.name, Product)
         if not product.barcode:
