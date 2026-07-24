@@ -263,11 +263,17 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
         los que aún no tienen ubicación. ubicacion=null la quita."""
         ubicacion_id = request.data.get("ubicacion") or None
         only_empty = str(request.data.get("only_empty") or "").lower() in ("1", "true", "yes")
+        ids = request.data.get("ids") or None
         if ubicacion_id and not Ubicacion.objects.filter(pk=ubicacion_id).exists():
             return Response({"detail": "Ubicación no encontrada."}, status=status.HTTP_400_BAD_REQUEST)
-        qs = self.filter_queryset(self.get_queryset())
-        if only_empty:
-            qs = qs.filter(ubicacion__isnull=True)
+        if ids:
+            # Selección explícita (casillas): se aplica a esos productos.
+            qs = self.get_queryset().filter(id__in=ids)
+        else:
+            # Sin selección: se aplica al filtro actual (viene en la URL).
+            qs = self.filter_queryset(self.get_queryset())
+            if only_empty:
+                qs = qs.filter(ubicacion__isnull=True)
         updated = qs.update(ubicacion_id=ubicacion_id)
         return Response({"updated": updated})
 

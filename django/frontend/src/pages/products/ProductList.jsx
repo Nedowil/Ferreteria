@@ -326,13 +326,16 @@ function LabelPrintModal({ product, companyName, onClose }) {
   );
 }
 
-// Asigna una ubicación a MUCHOS productos a la vez (respeta el filtro actual).
-function BulkLocationModal({ filters, count, onClose, onDone }) {
+// Asigna una ubicación a varios productos: a una SELECCIÓN (ids) o, si no hay
+// selección, a todos los del filtro actual.
+function BulkLocationModal({ filters, count, ids, onClose, onDone }) {
   const [ubicaciones, setUbicaciones] = useState([]);
   const [ubicacion, setUbicacion] = useState("");
   const [onlyEmpty, setOnlyEmpty] = useState(true);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const isSelection = Array.isArray(ids) && ids.length > 0;
+  const hasFilter = filters.search || filters.brand || filters.low_stock;
 
   useEffect(() => {
     api.get("/inventory/locations/?page_size=200").then((r) => setUbicaciones(r.data.results || r.data)).catch(() => {});
@@ -340,18 +343,23 @@ function BulkLocationModal({ filters, count, onClose, onDone }) {
 
   const apply = async () => {
     if (!ubicacion) { setErr("Elegí una ubicación."); return; }
-    const alcance = filters.search || filters.brand || filters.low_stock
-      ? "los productos del filtro actual" : "TODOS los productos";
-    const extra = onlyEmpty ? " que aún no tengan ubicación" : "";
+    const alcance = isSelection ? `los ${ids.length} producto(s) seleccionados`
+      : (hasFilter ? "los productos del filtro actual" : "TODOS los productos");
+    const extra = !isSelection && onlyEmpty ? " que aún no tengan ubicación" : "";
     if (!(await dialog.confirm(`Se asignará esta ubicación a ${alcance}${extra}. ¿Continuar?`, { okText: "Sí, asignar" }))) return;
     setBusy(true); setErr("");
     try {
-      const params = {};
-      if (filters.search) params.search = filters.search;
-      if (filters.brand) params.brand = filters.brand;
-      if (filters.low_stock) params.low_stock = 1;
-      const { data } = await api.post("/inventory/products/bulk-location/",
-        { ubicacion, only_empty: onlyEmpty, ...params });
+      let data;
+      if (isSelection) {
+        ({ data } = await api.post("/inventory/products/bulk-location/", { ubicacion, ids }));
+      } else {
+        const params = {};
+        if (filters.search) params.search = filters.search;
+        if (filters.brand) params.brand = filters.brand;
+        if (filters.low_stock) params.low_stock = 1;
+        ({ data } = await api.post("/inventory/products/bulk-location/",
+          { ubicacion, only_empty: onlyEmpty }, { params }));
+      }
       await dialog.alert(`Listo. Se asignó la ubicación a ${data.updated} producto(s).`);
       onDone();
     } catch (e) {
@@ -364,7 +372,7 @@ function BulkLocationModal({ filters, count, onClose, onDone }) {
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden" onClick={(e) => e.stopPropagation()}>
         <div className="bg-gradient-to-r from-teal-600 to-emerald-600 text-white px-5 py-4">
           <div className="text-lg font-bold">📍 Asignar ubicación</div>
-          <div className="text-xs text-teal-100">A varios productos de una sola vez</div>
+          <div className="text-xs text-teal-100">{isSelection ? `${ids.length} producto(s) seleccionados` : "A varios productos de una sola vez"}</div>
         </div>
         <div className="p-5 space-y-4">
           {err && <div className="bg-red-600 text-white font-semibold text-sm rounded-lg px-3 py-2">{err}</div>}
@@ -379,13 +387,16 @@ function BulkLocationModal({ filters, count, onClose, onDone }) {
               <p className="text-xs text-amber-600 mt-1">Primero creá ubicaciones en <b>Inventario → Ubicaciones</b>.</p>
             )}
           </div>
-          <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
-            <input type="checkbox" checked={onlyEmpty} onChange={(e) => setOnlyEmpty(e.target.checked)} />
-            Solo los que <b>no tienen</b> ubicación aún
-          </label>
+          {!isSelection && (
+            <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+              <input type="checkbox" checked={onlyEmpty} onChange={(e) => setOnlyEmpty(e.target.checked)} />
+              Solo los que <b>no tienen</b> ubicación aún
+            </label>
+          )}
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Se aplicará a {filters.search || filters.brand || filters.low_stock ? "los productos del filtro actual" : <b>todos los productos</b>}
-            {filters.search || filters.brand || filters.low_stock ? "" : ` (${count})`}.
+            {isSelection
+              ? <>Se aplicará a los <b>{ids.length}</b> producto(s) que marcaste.</>
+              : <>Se aplicará a {hasFilter ? "los productos del filtro actual" : <b>todos los productos</b>}{hasFilter ? "" : ` (${count})`}.</>}
           </p>
           <div className="flex gap-2">
             <button onClick={onClose} className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition">Cancelar</button>
@@ -409,7 +420,8 @@ export default function ProductList() {
   const [exporting, setExporting] = useState(false);
   const [labeling, setLabeling] = useState(null); // producto a etiquetar (modal)
   const [priceTag, setPriceTag] = useState(null); // {single?} para etiquetas de precio
-  const [bulkLoc, setBulkLoc] = useState(false);  // modal asignar ubicación en masa
+  const [bulkLoc, setBulkLoc] = useState(null);   // {ids:[...]|null} con el modal abierto
+  const [selected, setSelected] = useState(new Set()); // ids marcados con casillas
   const [companyName, setCompanyName] = useState("Ferretería Central");
   const { can } = useAuth();
 
@@ -429,6 +441,17 @@ export default function ProductList() {
   useEffect(() => { load(); }, [page]);
 
   const applyFilters = (e) => { e.preventDefault(); setPage(1); load(filters, 1); };
+
+  // --- Selección con casillas (para asignar ubicación a los marcados) ---
+  const toggleOne = (id) => setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const pageIds = (data.results || []).map((p) => p.id);
+  const allOnPageSelected = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
+  const toggleAllOnPage = () => setSelected((s) => {
+    const n = new Set(s);
+    if (allOnPageSelected) pageIds.forEach((id) => n.delete(id));
+    else pageIds.forEach((id) => n.add(id));
+    return n;
+  });
 
   // Al escribir en la búsqueda: si se borra todo el texto, se recargan todos
   // los productos automáticamente (sin tener que presionar "Filtrar").
@@ -476,7 +499,7 @@ export default function ProductList() {
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">📦 Productos</h1>
         <div className="flex gap-2">
-          {can("productos.editar") && <button onClick={() => setBulkLoc(true)} className="border border-teal-300 text-teal-700 bg-teal-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-teal-100 transition">📍 Asignar ubicación</button>}
+          {can("productos.editar") && <button onClick={() => setBulkLoc({ ids: null })} className="border border-teal-300 text-teal-700 bg-teal-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-teal-100 transition">📍 Asignar ubicación</button>}
           <button onClick={() => setPriceTag({})} className="border border-amber-300 text-amber-700 bg-amber-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-amber-100 transition">🏷️ Etiquetas de precio</button>
           <button onClick={exportExcel} disabled={exporting} className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-100 transition">{exporting ? "Exportando…" : "⬇️ Excel"}</button>
           {can("productos.crear") && <Link to="/productos/nuevo" className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nuevo producto</Link>}
@@ -499,11 +522,28 @@ export default function ProductList() {
         <button className="bg-slate-700 text-white rounded px-4 py-2 text-sm">Buscar</button>
       </form>
 
+      {selected.size > 0 && (
+        <div className="bg-teal-600 text-white rounded-lg px-4 py-2.5 mb-4 flex flex-wrap items-center gap-3 shadow">
+          <span className="font-semibold text-sm">{selected.size} seleccionado(s)</span>
+          {can("productos.editar") && (
+            <button onClick={() => setBulkLoc({ ids: [...selected] })}
+                    className="bg-white text-teal-700 rounded-lg px-3 py-1.5 text-sm font-semibold hover:bg-teal-50 transition">
+              📍 Asignar ubicación
+            </button>
+          )}
+          <button onClick={() => setSelected(new Set())} className="text-teal-100 hover:text-white text-sm ml-auto">Limpiar selección</button>
+        </div>
+      )}
+
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
         {/* Móvil: tarjetas (la tabla no cabe en pantallas angostas) */}
         <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-700">
           {data.results.map((p) => (
             <div key={p.id} className="p-4 flex gap-3">
+              {can("productos.editar") && (
+                <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggleOne(p.id)}
+                       className="mt-1 h-4 w-4 shrink-0 accent-teal-600" aria-label="Seleccionar" />
+              )}
               <div className="h-12 w-12 shrink-0 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex items-center justify-center overflow-hidden">
                 {p.image
                   ? <img src={p.image} alt={p.name} className="h-full w-full object-contain" loading="lazy" />
@@ -542,14 +582,17 @@ export default function ProductList() {
         <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
-            <tr><th className="px-4 py-2.5 w-14"></th><th className="px-4 py-2.5">SKU</th><th className="px-4 py-2.5">Producto</th>
+            <tr>
+                {can("productos.editar") && <th className="px-3 py-2.5 w-8"><input type="checkbox" checked={allOnPageSelected} onChange={toggleAllOnPage} className="h-4 w-4 accent-teal-600 align-middle" aria-label="Seleccionar todos" /></th>}
+                <th className="px-4 py-2.5 w-14"></th><th className="px-4 py-2.5">SKU</th><th className="px-4 py-2.5">Producto</th>
                 <th className="px-4 py-2.5">Marca</th>
                 <th className="px-4 py-2.5 text-right">Precio</th><th className="px-4 py-2.5 text-right">Stock</th>
                 <th className="px-4 py-2.5 text-right">Acciones</th></tr>
           </thead>
           <tbody>
             {data.results.map((p) => (
-              <tr key={p.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700/70 transition">
+              <tr key={p.id} className={"border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700/70 transition" + (selected.has(p.id) ? " bg-teal-50/60 dark:bg-teal-900/20" : "")}>
+                {can("productos.editar") && <td className="px-3 py-2"><input type="checkbox" checked={selected.has(p.id)} onChange={() => toggleOne(p.id)} className="h-4 w-4 accent-teal-600 align-middle" aria-label="Seleccionar" /></td>}
                 <td className="px-4 py-2">
                   <div className="h-10 w-10 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex items-center justify-center overflow-hidden">
                     {p.image
@@ -583,7 +626,7 @@ export default function ProductList() {
               </tr>
             ))}
             {!loading && data.results.length === 0 && (
-              <tr><td colSpan="7" className="px-5 py-10 text-center text-slate-400">No hay productos.</td></tr>
+              <tr><td colSpan={can("productos.editar") ? 8 : 7} className="px-5 py-10 text-center text-slate-400">No hay productos.</td></tr>
             )}
           </tbody>
         </table>
@@ -600,7 +643,9 @@ export default function ProductList() {
 
       {labeling && <LabelPrintModal product={labeling} companyName={companyName} onClose={() => setLabeling(null)} />}
       {priceTag && <PriceTagsModal single={priceTag.single} filters={filters} companyName={companyName} count={data.count} onClose={() => setPriceTag(null)} />}
-      {bulkLoc && <BulkLocationModal filters={filters} count={data.count} onClose={() => setBulkLoc(false)} onDone={() => { setBulkLoc(false); load(); }} />}
+      {bulkLoc && <BulkLocationModal filters={filters} count={data.count} ids={bulkLoc.ids}
+                    onClose={() => setBulkLoc(null)}
+                    onDone={() => { setBulkLoc(null); setSelected(new Set()); load(); }} />}
     </div>
   );
 }
