@@ -326,6 +326,80 @@ function LabelPrintModal({ product, companyName, onClose }) {
   );
 }
 
+// Asigna una ubicación a MUCHOS productos a la vez (respeta el filtro actual).
+function BulkLocationModal({ filters, count, onClose, onDone }) {
+  const [ubicaciones, setUbicaciones] = useState([]);
+  const [ubicacion, setUbicacion] = useState("");
+  const [onlyEmpty, setOnlyEmpty] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    api.get("/inventory/locations/?page_size=200").then((r) => setUbicaciones(r.data.results || r.data)).catch(() => {});
+  }, []);
+
+  const apply = async () => {
+    if (!ubicacion) { setErr("Elegí una ubicación."); return; }
+    const alcance = filters.search || filters.brand || filters.low_stock
+      ? "los productos del filtro actual" : "TODOS los productos";
+    const extra = onlyEmpty ? " que aún no tengan ubicación" : "";
+    if (!(await dialog.confirm(`Se asignará esta ubicación a ${alcance}${extra}. ¿Continuar?`, { okText: "Sí, asignar" }))) return;
+    setBusy(true); setErr("");
+    try {
+      const params = {};
+      if (filters.search) params.search = filters.search;
+      if (filters.brand) params.brand = filters.brand;
+      if (filters.low_stock) params.low_stock = 1;
+      const { data } = await api.post("/inventory/products/bulk-location/",
+        { ubicacion, only_empty: onlyEmpty, ...params });
+      await dialog.alert(`Listo. Se asignó la ubicación a ${data.updated} producto(s).`);
+      onDone();
+    } catch (e) {
+      setErr(e.response?.data?.detail || "No se pudo asignar la ubicación.");
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-gradient-to-r from-teal-600 to-emerald-600 text-white px-5 py-4">
+          <div className="text-lg font-bold">📍 Asignar ubicación</div>
+          <div className="text-xs text-teal-100">A varios productos de una sola vez</div>
+        </div>
+        <div className="p-5 space-y-4">
+          {err && <div className="bg-red-600 text-white font-semibold text-sm rounded-lg px-3 py-2">{err}</div>}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Ubicación</label>
+            <select value={ubicacion} onChange={(e) => setUbicacion(e.target.value)}
+                    className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 outline-none focus:ring-2 focus:ring-teal-500">
+              <option value="">— Elegí una ubicación —</option>
+              {ubicaciones.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </select>
+            {ubicaciones.length === 0 && (
+              <p className="text-xs text-amber-600 mt-1">Primero creá ubicaciones en <b>Inventario → Ubicaciones</b>.</p>
+            )}
+          </div>
+          <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+            <input type="checkbox" checked={onlyEmpty} onChange={(e) => setOnlyEmpty(e.target.checked)} />
+            Solo los que <b>no tienen</b> ubicación aún
+          </label>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Se aplicará a {filters.search || filters.brand || filters.low_stock ? "los productos del filtro actual" : <b>todos los productos</b>}
+            {filters.search || filters.brand || filters.low_stock ? "" : ` (${count})`}.
+          </p>
+          <div className="flex gap-2">
+            <button onClick={onClose} className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition">Cancelar</button>
+            <button onClick={apply} disabled={busy}
+                    className="flex-1 bg-gradient-to-r from-teal-600 to-emerald-600 text-white rounded-lg py-2.5 text-sm font-semibold shadow hover:from-teal-700 hover:to-emerald-700 transition disabled:opacity-50">
+              {busy ? "Asignando…" : "Asignar"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ProductList() {
   const [data, setData] = useState({ results: [], count: 0 });
   const [filters, setFilters] = useState({ search: "", brand: "", low_stock: false });
@@ -335,6 +409,7 @@ export default function ProductList() {
   const [exporting, setExporting] = useState(false);
   const [labeling, setLabeling] = useState(null); // producto a etiquetar (modal)
   const [priceTag, setPriceTag] = useState(null); // {single?} para etiquetas de precio
+  const [bulkLoc, setBulkLoc] = useState(false);  // modal asignar ubicación en masa
   const [companyName, setCompanyName] = useState("Ferretería Central");
   const { can } = useAuth();
 
@@ -401,6 +476,7 @@ export default function ProductList() {
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">📦 Productos</h1>
         <div className="flex gap-2">
+          {can("productos.editar") && <button onClick={() => setBulkLoc(true)} className="border border-teal-300 text-teal-700 bg-teal-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-teal-100 transition">📍 Asignar ubicación</button>}
           <button onClick={() => setPriceTag({})} className="border border-amber-300 text-amber-700 bg-amber-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-amber-100 transition">🏷️ Etiquetas de precio</button>
           <button onClick={exportExcel} disabled={exporting} className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-100 transition">{exporting ? "Exportando…" : "⬇️ Excel"}</button>
           {can("productos.crear") && <Link to="/productos/nuevo" className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nuevo producto</Link>}
@@ -524,6 +600,7 @@ export default function ProductList() {
 
       {labeling && <LabelPrintModal product={labeling} companyName={companyName} onClose={() => setLabeling(null)} />}
       {priceTag && <PriceTagsModal single={priceTag.single} filters={filters} companyName={companyName} count={data.count} onClose={() => setPriceTag(null)} />}
+      {bulkLoc && <BulkLocationModal filters={filters} count={data.count} onClose={() => setBulkLoc(false)} onDone={() => { setBulkLoc(false); load(); }} />}
     </div>
   );
 }

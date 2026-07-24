@@ -136,6 +136,7 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
         "retrieve": ("productos.ver", "ventas.crear"),
         "low_stock": "productos.ver", "label": "productos.ver",
         "offline_catalog": ("productos.ver", "ventas.crear"),
+        "bulk_location": "productos.editar",
         "create": "productos.crear", "update": "productos.editar",
         "partial_update": "productos.editar", "destroy": "productos.eliminar",
         "movements": {"GET": "productos.ver", "POST": "inventario.ajustar"},
@@ -254,6 +255,21 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
         """Imprime una etiqueta de prueba en la impresora Zebra."""
         company = CompanySetting.current()
         return _deliver_zpl(company, labels.build_test_zpl(company))
+
+    @action(detail=False, methods=["post"], url_path="bulk-location")
+    def bulk_location(self, request):
+        """Asigna una ubicación a MUCHOS productos de una sola vez. Respeta los
+        filtros actuales (búsqueda/marca/etc.). Con only_empty=true, solo cambia
+        los que aún no tienen ubicación. ubicacion=null la quita."""
+        ubicacion_id = request.data.get("ubicacion") or None
+        only_empty = str(request.data.get("only_empty") or "").lower() in ("1", "true", "yes")
+        if ubicacion_id and not Ubicacion.objects.filter(pk=ubicacion_id).exists():
+            return Response({"detail": "Ubicación no encontrada."}, status=status.HTTP_400_BAD_REQUEST)
+        qs = self.filter_queryset(self.get_queryset())
+        if only_empty:
+            qs = qs.filter(ubicacion__isnull=True)
+        updated = qs.update(ubicacion_id=ubicacion_id)
+        return Response({"updated": updated})
 
     @action(detail=False, methods=["get"], url_path="offline-catalog")
     def offline_catalog(self, request):
