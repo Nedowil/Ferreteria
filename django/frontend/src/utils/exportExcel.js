@@ -23,17 +23,26 @@ export function exportToExcel(filename, columns, rows, sheetName = "Datos") {
 // Trae TODAS las filas de un endpoint paginado (respeta los filtros dados).
 // Recorre TODAS las páginas hasta juntar el total real: la API tiene un tope de
 // 200 por página, así que pedir "todo" de un solo golpe dejaba registros afuera.
+// Red de seguridad: aunque recorra todas las páginas, no intenta cargar más de
+// esto en memoria (evita colgar el navegador con millones de filas). Para
+// exportar volúmenes enormes, filtrá antes por fecha/criterio.
+const FETCH_ALL_MAX = 100000;
+
 export async function fetchAll(url, params = {}) {
   const pageSize = 200; // el máximo que permite la API
   const first = (await api.get(url, { params: { ...params, page: 1, page_size: pageSize } })).data;
   // Endpoints que no paginan (devuelven un arreglo): se devuelven tal cual.
   if (Array.isArray(first)) return first;
   let rows = first.results || [];
-  const total = first.count ?? rows.length;
+  const total = Math.min(first.count ?? rows.length, FETCH_ALL_MAX);
   const pages = Math.ceil(total / pageSize);
-  for (let p = 2; p <= pages; p++) {
+  for (let p = 2; p <= pages && rows.length < FETCH_ALL_MAX; p++) {
     const { data } = await api.get(url, { params: { ...params, page: p, page_size: pageSize } });
     rows = rows.concat(data.results || []);
   }
-  return rows;
+  if ((first.count ?? 0) > FETCH_ALL_MAX) {
+    // Aviso para el desarrollador; el usuario debería filtrar por fecha.
+    console.warn(`Exportación limitada a ${FETCH_ALL_MAX} filas de ${first.count}. Filtrá por fecha para exportar todo.`);
+  }
+  return rows.slice(0, FETCH_ALL_MAX);
 }

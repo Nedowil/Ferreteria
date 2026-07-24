@@ -129,6 +129,7 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
         "list": ("productos.ver", "ventas.crear"),
         "retrieve": ("productos.ver", "ventas.crear"),
         "low_stock": "productos.ver", "label": "productos.ver",
+        "offline_catalog": ("productos.ver", "ventas.crear"),
         "create": "productos.crear", "update": "productos.editar",
         "partial_update": "productos.editar", "destroy": "productos.eliminar",
         "movements": {"GET": "productos.ver", "POST": "inventario.ajustar"},
@@ -247,6 +248,18 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
         """Imprime una etiqueta de prueba en la impresora Zebra."""
         company = CompanySetting.current()
         return _deliver_zpl(company, labels.build_test_zpl(company))
+
+    @action(detail=False, methods=["get"], url_path="offline-catalog")
+    def offline_catalog(self, request):
+        """Catálogo reducido para trabajar SIN internet: los productos MÁS
+        vendidos (activos). El límite lo fija el servidor (no el cliente), así se
+        pueden traer más que el tope normal de página (200) sin abrir la puerta a
+        pedidos gigantes de abuso."""
+        limit = 1500
+        qs = (self.get_queryset().filter(active=True)
+              .order_by("-times_sold", "-created_at")[:limit])
+        ser = ProductListSerializer(qs, many=True, context=self.get_serializer_context())
+        return Response(ser.data)
 
     @action(detail=False, methods=["get"], url_path="low-stock")
     def low_stock(self, request):
