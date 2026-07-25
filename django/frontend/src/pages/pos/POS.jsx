@@ -8,7 +8,7 @@ import QuickCustomerModal from "../../components/QuickCustomerModal";
 import QuickProductModal from "../../components/QuickProductModal";
 import CustomerPicker from "../../components/CustomerPicker";
 import { useServerOnline } from "../../offline/net";
-import { saveCatalog, getCatalog, setMeta, getMeta, addPending, countPending } from "../../offline/db";
+import { saveCatalog, getCatalog, setMeta, getMeta, addPending, countPending, removePending } from "../../offline/db";
 import { syncPending } from "../../offline/sync";
 import { printOfflineReceipt } from "./offlineReceipt";
 import { dialog } from "../../components/Dialog";
@@ -254,6 +254,8 @@ export default function POS() {
   const [pendingCount, setPendingCount] = useState(0);   // ventas offline sin sincronizar
   const [syncing, setSyncing] = useState(false);
   const [offlineNote, setOfflineNote] = useState("");    // aviso temporal
+  const [conflicts, setConflicts] = useState([]);        // ventas offline sin stock (conflicto)
+  const [showConflicts, setShowConflicts] = useState(false);
   // Ventas en pausa: carritos guardados para atender a otro cliente y retomar.
   const [held, setHeld] = useState(() => {
     try { return JSON.parse(localStorage.getItem("pos_held_sales") || "[]"); } catch { return []; }
@@ -556,6 +558,7 @@ export default function POS() {
     try {
       const r = await syncPending();
       await refreshPending();
+      setConflicts(r.conflicts || []);
       if (r.sent || r.duplicated || r.failed) {
         let msg = "";
         if (r.sent) msg += `Sincronizadas ${r.sent} venta(s). `;
@@ -565,10 +568,28 @@ export default function POS() {
         setOfflineNote(msg.trim());
         reloadProducts().then((list) => { setProducts(list); saveCatalog(list).catch(() => {}); }).catch(() => {});
       }
+      if ((r.conflicts || []).length > 0) setShowConflicts(true);
     } catch { /* sigue sin servidor */ }
     finally { setSyncing(false); }
   };
   doSyncRef.current = doSync;
+
+  // Descarta una venta offline en conflicto (el supervisor acepta que no se
+  // puede registrar porque ya no hay stock). La saca de la cola de pendientes.
+  const discardConflict = async (uuid) => {
+    const ok = await dialog.confirm(
+      "¿Descartar esta venta? No se va a registrar (no hay stock del producto). Esta acción no se puede deshacer.",
+      { danger: true, okText: "Sí, descartar" }
+    );
+    if (!ok) return;
+    await removePending(uuid).catch(() => {});
+    await refreshPending();
+    setConflicts((cs) => {
+      const next = cs.filter((c) => c.uuid !== uuid);
+      if (next.length === 0) setShowConflicts(false);
+      return next;
+    });
+  };
 
   const checkout = async () => {
     setError("");
@@ -758,6 +779,20 @@ export default function POS() {
         </div>
       )}
       {offlineNote && <div className="bg-blue-50 border border-blue-200 text-blue-800 rounded-lg px-4 py-2 text-sm mb-4">{offlineNote}</div>}
+
+      {/* Conflicto: ventas offline que NO se pudieron registrar por falta de stock. */}
+      {conflicts.length > 0 && (
+        <div className="bg-red-600 text-white rounded-lg px-4 py-3 mb-4 flex items-center justify-between gap-3 shadow">
+          <div className="text-sm font-semibold flex items-center gap-2">
+            <span className="text-xl">⚠️</span>
+            {conflicts.length} venta(s) hecha(s) sin internet <b>NO se pudieron registrar por falta de stock</b>. Requiere revisión.
+          </div>
+          <button onClick={() => setShowConflicts(true)}
+                  className="shrink-0 bg-white text-red-700 rounded-lg px-3 py-1.5 text-sm font-semibold hover:bg-red-50">
+            Ver / Resolver
+          </button>
+        </div>
+      )}
 
       {/* Aviso flotante (toast): aparece arriba-centro y se cierra solo. */}
       {error && (
@@ -1140,6 +1175,50 @@ export default function POS() {
       {picking && (
         <MeasureModal product={picking} customer={customer} available={availableFor(picking)}
                       onAdd={addMeasure} onClose={() => setPicking(null)} />
+      )}
+
+      {/* Conflictos de sincronización offline (sin stock): el supervisor decide. */}
+      {showConflicts && conflicts.length > 0 && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowConflicts(false)}>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-red-600 text-white px-5 py-4">
+              <div className="text-lg font-bold">⚠️ Ventas offline sin stock</div>
+              <div className="text-xs text-red-100">Estas ventas se hicieron sin internet, pero el producto ya no tiene existencia. No se pueden registrar solas.</div>
+            </div>
+            <div className="p-5 space-y-3 max-h-[60vh] overflow-auto">
+              <p className="text-sm text-slate-600 dark:text-slate-300">
+                Opciones para cada una: <b>reponé el stock</b> del producto (una compra/ajuste) y volvé a
+                <b> Sincronizar</b> — entonces se registra sola. O <b>descartala</b> si aceptás que no se registrará.
+              </p>
+              {conflicts.map((c) => {
+                const s = c.sale || {};
+                const nItems = (s.items || []).length;
+                const total = (s.items || []).reduce((a, it) => a + Number(it.quantity || 0) * Number(it.unit_price || 0), 0);
+                return (
+                  <div key={c.uuid} className="border border-red-200 dark:border-red-500/30 bg-red-50/60 dark:bg-red-900/20 rounded-xl p-3">
+                    <div className="text-sm font-semibold text-red-800 dark:text-red-300">{c.error}</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      {nItems} producto(s){total > 0 ? ` · Q${total.toFixed(2)}` : ""}{s.date ? ` · ${s.date}` : ""}
+                    </div>
+                    <div className="mt-2 flex justify-end">
+                      <button onClick={() => discardConflict(c.uuid)}
+                              className="text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg px-3 py-1.5">
+                        Descartar venta
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="px-5 py-3 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center">
+              <button onClick={() => { setShowConflicts(false); doSync(); }} disabled={syncing}
+                      className="text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg px-3 py-1.5 font-medium disabled:opacity-50">
+                {syncing ? "Sincronizando…" : "Ya repuse stock · Reintentar"}
+              </button>
+              <button onClick={() => setShowConflicts(false)} className="text-sm text-slate-500 hover:text-slate-700">Cerrar</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {addingCustomer && (

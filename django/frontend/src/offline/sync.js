@@ -31,6 +31,7 @@ export async function syncPending() {
 
   let sent = 0, duplicated = 0, failed = 0, felOk = 0, felFail = 0;
   const errors = [];
+  const conflicts = [];   // ventas que no pudieron registrarse por falta de stock
   for (const r of results) {
     if (r.ok) {
       await removePending(r.uuid);
@@ -42,10 +43,13 @@ export async function syncPending() {
         try { await api.post(`/sales/${r.id}/emit-invoice/`); felOk++; }
         catch { felFail++; }
       }
+    } else if (r.conflict) {
+      // Conflicto de stock: no se reintenta a ciegas; se avisa al supervisor.
+      conflicts.push({ uuid: r.uuid, error: r.error, sale: byUuid[r.uuid] || null });
     } else {
       failed++;
       errors.push({ uuid: r.uuid, error: r.error });
     }
   }
-  return { sent, duplicated, failed, felOk, felFail, errors };
+  return { sent, duplicated, failed, felOk, felFail, errors, conflicts };
 }

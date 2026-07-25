@@ -19,6 +19,12 @@ class SaleError(Exception):
     """Error de dominio en una operación de venta."""
 
 
+class StockConflictError(SaleError):
+    """No hay stock suficiente para registrar la venta. Se usa para distinguir
+    los CONFLICTOS de sincronización offline (venta que ya ocurrió físicamente
+    pero el producto ya no existe) y avisar al supervisor."""
+
+
 def generate_folio():
     from core.folios import next_folio
     return next_folio(Sale, "V")
@@ -55,7 +61,7 @@ def create_sale(data, items, *, user=None, branch=None, offline_uuid=None):
         physical_qty = quantity * units_factor
         available = product.stock_for(branch_id)
         if physical_qty > available:
-            raise SaleError(
+            raise StockConflictError(
                 f"Stock insuficiente de {product.name}: disponible {available}, requerido {physical_qty}."
             )
         lines.append({
@@ -165,6 +171,10 @@ def sync_offline_sale(entry, *, user=None, branch=None):
     }
     try:
         sale = create_sale(data, items, user=user, branch=branch, offline_uuid=uuid)
+    except StockConflictError as e:
+        # Conflicto: la venta ya ocurrió offline pero ya no hay stock. No se
+        # puede registrar sola; requiere que el supervisor reponga o la descarte.
+        return {"uuid": uuid, "ok": False, "conflict": True, "error": str(e)}
     except SaleError as e:
         return {"uuid": uuid, "ok": False, "error": str(e)}
     except Exception as e:  # noqa: BLE001 — no frenar el lote por un caso raro
