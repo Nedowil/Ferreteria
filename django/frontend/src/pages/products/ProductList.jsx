@@ -339,7 +339,7 @@ function BulkLocationModal({ filters, count, ids, onClose, onDone }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const isSelection = Array.isArray(ids) && ids.length > 0;
-  const hasFilter = filters.search || filters.brand || filters.low_stock;
+  const hasFilter = filters.search || filters.brand || filters.ubicacion || filters.low_stock;
 
   useEffect(() => {
     api.get("/inventory/locations/?page_size=200").then((r) => setUbicaciones(r.data.results || r.data)).catch(() => {});
@@ -360,6 +360,7 @@ function BulkLocationModal({ filters, count, ids, onClose, onDone }) {
         const params = {};
         if (filters.search) params.search = filters.search;
         if (filters.brand) params.brand = filters.brand;
+        if (filters.ubicacion) params.ubicacion = filters.ubicacion;
         if (filters.low_stock) params.low_stock = 1;
         ({ data } = await api.post("/inventory/products/bulk-location/",
           { ubicacion, only_empty: onlyEmpty }, { params }));
@@ -417,8 +418,9 @@ function BulkLocationModal({ filters, count, ids, onClose, onDone }) {
 
 export default function ProductList() {
   const [data, setData] = useState({ results: [], count: 0 });
-  const [filters, setFilters] = useState({ search: "", brand: "", low_stock: false });
+  const [filters, setFilters] = useState({ search: "", brand: "", ubicacion: "", low_stock: false });
   const [brands, setBrands] = useState([]);
+  const [ubicaciones, setUbicaciones] = useState([]);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
@@ -431,6 +433,7 @@ export default function ProductList() {
 
   useEffect(() => {
     api.get("/inventory/brands/?page_size=200").then((r) => setBrands(r.data.results || r.data));
+    api.get("/inventory/locations/?page_size=200").then((r) => setUbicaciones(r.data.results || r.data)).catch(() => {});
     api.get("/company-settings/").then((r) => setCompanyName(r.data.commercial_name || "Ferretería Central")).catch(() => {});
   }, []);
 
@@ -439,6 +442,7 @@ export default function ProductList() {
     const params = { page: pg };
     if (f.search) params.search = f.search;
     if (f.brand) params.brand = f.brand;
+    if (f.ubicacion) params.ubicacion = f.ubicacion;
     if (f.low_stock) params.low_stock = 1;
     api.get("/inventory/products/", { params })
       .then((r) => setData(r.data))
@@ -504,6 +508,7 @@ export default function ProductList() {
       const params = {};
       if (filters.search) params.search = filters.search;
       if (filters.brand) params.brand = filters.brand;
+      if (filters.ubicacion) params.ubicacion = filters.ubicacion;
       if (filters.low_stock) params.low_stock = 1;
       const rows = await fetchAll("/inventory/products/", params);
       exportToExcel("productos", [
@@ -546,6 +551,13 @@ export default function ProductList() {
             {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
         )}
+        <select value={filters.ubicacion}
+                onChange={(e) => { const next = { ...filters, ubicacion: e.target.value }; setFilters(next); setPage(1); load(next, 1); }}
+                title="Filtrar por ubicación (pasillo/estante)"
+                className="border border-slate-300 dark:border-slate-600 rounded px-2 py-2 text-sm">
+          <option value="">Todas las ubicaciones</option>
+          {ubicaciones.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+        </select>
         <label className="flex items-center gap-1 text-sm">
           <input type="checkbox" checked={filters.low_stock}
                  onChange={(e) => setFilters({ ...filters, low_stock: e.target.checked })} /> Stock bajo

@@ -149,7 +149,7 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
         .order_by("-created_at")
     )
     filter_backends = [DjangoFilterBackend, TolerantSearchFilter, filters.OrderingFilter]
-    filterset_fields = ["category", "brand", "active"]
+    filterset_fields = ["category", "brand", "active", "ubicacion"]
     ordering_fields = ["name", "sale_price", "stock", "created_at", "times_sold"]
 
     def get_serializer_class(self):
