@@ -463,3 +463,63 @@ class ProductPresentationApiTests(ApiTestBase):
         self.assertEqual(len(pres), 1)
         self.assertEqual(pres[0]["label"], "Caja")
         self.assertEqual(Decimal(pres[0]["units_factor"]), Decimal("50"))
+
+
+class PinLockoutTests(APITestCase):
+    """Anti fuerza bruta del PIN de perfil (switch-profile)."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from django.core.cache import cache
+        cache.clear()  # el bloqueo vive en caché; aislamos cada caso
+        self.User = get_user_model()
+        self.branch = Branch.objects.create(name="Matriz", code="M", is_main=True)
+        # Cuenta de EQUIPO (caja) con la que se piden los cambios de perfil.
+        self.device = self.User.objects.create_user(
+            username="caja1", email="caja1@test.com", password="device123",
+            is_device=True,
+        )
+        # Perfil de supervisor con PIN 4321.
+        self.super = self.User.objects.create_user(
+            username="jefe", email="jefe@test.com", password="x", name="Jefe",
+        )
+        self.super.set_pin("4321")
+        self.super.save(update_fields=["pin_hash"])
+
+    def _device_client(self):
+        from rest_framework.test import APIClient
+        c = APIClient()
+        r = c.post("/api/auth/token/", {"email": "caja1@test.com", "password": "device123"}, format="json")
+        c.credentials(HTTP_AUTHORIZATION=f"Bearer {r.json()['access']}")
+        return c
+
+    def _try(self, c, pin):
+        return c.post("/api/auth/switch-profile/", {"username": "jefe", "pin": pin}, format="json")
+
+    def test_pin_correcto_entra(self):
+        r = self._try(self._device_client(), "4321")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("access", r.json())
+
+    def test_bloqueo_tras_intentos_fallidos(self):
+        c = self._device_client()
+        # 5 intentos fallidos (PIN_MAX_ATTEMPTS) -> el 5º bloquea.
+        for _ in range(4):
+            self.assertEqual(self._try(c, "0000").status_code, 400)
+        self.assertEqual(self._try(c, "0000").status_code, 429)  # bloqueado
+        # Aun con el PIN CORRECTO, sigue bloqueado.
+        self.assertEqual(self._try(c, "4321").status_code, 429)
+        # Queda constancia del bloqueo en la bitácora.
+        from audit.models import AuditLog
+        self.assertTrue(
+            AuditLog.objects.filter(auditable_type="auth.PinLockout", auditable_id="jefe").exists()
+        )
+
+    def test_exito_reinicia_contador(self):
+        c = self._device_client()
+        for _ in range(3):
+            self._try(c, "0000")
+        self.assertEqual(self._try(c, "4321").status_code, 200)  # entra y resetea
+        # Tras el éxito, vuelve a tener los 5 intentos disponibles.
+        for _ in range(4):
+            self.assertEqual(self._try(c, "0000").status_code, 400)

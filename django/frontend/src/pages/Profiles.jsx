@@ -45,7 +45,9 @@ export default function Profiles() {
       await switchProfile(selected.username, pin);
       navigate("/", { replace: true });
     } catch (err) {
-      setError(err.response?.status === 429 ? "Demasiados intentos. Esperá un momento." : "PIN incorrecto.");
+      // El backend explica cuántos intentos quedan o cuánto dura el bloqueo.
+      const detail = err.response?.data?.detail;
+      setError(detail || (err.response?.status === 429 ? "Demasiados intentos. Esperá un momento." : "PIN incorrecto."));
       setPin("");
     } finally {
       setBusy(false);

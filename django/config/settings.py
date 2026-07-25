@@ -300,6 +300,8 @@ REST_FRAMEWORK = {
         "anon": os.getenv("THROTTLE_ANON", "60/min"),
         "login": os.getenv("THROTTLE_LOGIN", "20/min"),  # margen para cambios de cajero (PIN) en compu compartida
         "password_reset": os.getenv("THROTTLE_PASSWORD_RESET", "5/min"),
+        # Intentos de PIN por equipo (funciona aunque la caja esté autenticada).
+        "pin": os.getenv("THROTTLE_PIN", "30/min"),
     },
 }
 
@@ -308,7 +310,7 @@ REST_FRAMEWORK = {
 import sys  # noqa: E402
 
 if "test" in sys.argv:
-    for _scope in ("anon", "login", "password_reset"):
+    for _scope in ("anon", "login", "password_reset", "pin"):
         REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"][_scope] = None
     # En pruebas usamos siempre el certificador simulado (sin red), aunque el
     # .env tenga credenciales reales de Infile. Los tests que prueban Infile

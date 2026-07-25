@@ -8,10 +8,13 @@ Modelo "estilo Netflix" para el mostrador compartido:
     equipo que ya inició sesión, así que no queda expuesto en internet.
 """
 
+import os
 from datetime import timedelta
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
+from django.utils import timezone as dj_timezone
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
 from django.core.exceptions import ValidationError
@@ -26,9 +29,48 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from .throttling import LoginRateThrottle, PasswordResetThrottle
+from .throttling import LoginRateThrottle, PasswordResetThrottle, PinRateThrottle
 
 User = get_user_model()
+
+# --- Anti fuerza bruta del PIN de perfil --------------------------------------
+# Tras N intentos fallidos sobre un MISMO perfil, ese perfil queda bloqueado unos
+# minutos. Así, adivinar un PIN de 4 dígitos (10 000 combinaciones) se vuelve
+# inviable: p. ej. 5 intentos cada 5 min = 60/hora ≈ una semana por perfil, y
+# cada bloqueo queda en la bitácora para que el supervisor lo note.
+PIN_MAX_ATTEMPTS = int(os.getenv("PIN_MAX_ATTEMPTS", "5"))
+PIN_LOCK_SECONDS = int(os.getenv("PIN_LOCK_SECONDS", "300"))  # 5 minutos
+
+
+def _pin_keys(login):
+    slug = (login or "").strip().lower()
+    return f"pinfail:{slug}", f"pinlock:{slug}"
+
+
+def _pin_lock_remaining(lock_key):
+    """Segundos que faltan para que se libere el bloqueo (0 si no está bloqueado)."""
+    until = cache.get(lock_key)
+    if not until:
+        return 0
+    return max(0, int(until - dj_timezone.now().timestamp()))
+
+
+def _log_pin_lockout(login, request):
+    """Registra en la bitácora que un perfil se bloqueó por intentos de PIN
+    fallidos (posible intento de adivinar el PIN de un supervisor)."""
+    try:
+        from audit.models import AuditLog
+        actor = request.user if getattr(request, "user", None) and request.user.is_authenticated else None
+        AuditLog.objects.create(
+            user=actor, event=AuditLog.UPDATED,
+            auditable_type="auth.PinLockout", auditable_id=(login or "")[:64],
+            new_values={"perfil": login, "intentos": PIN_MAX_ATTEMPTS},
+            ip=request.META.get("REMOTE_ADDR"),
+            user_agent=(request.META.get("HTTP_USER_AGENT") or "")[:255],
+            description=f"Perfil '{login}' bloqueado tras {PIN_MAX_ATTEMPTS} intentos de PIN fallidos.",
+        )
+    except Exception:  # noqa: BLE001 — la bitácora no debe frenar la respuesta
+        pass
 
 # La sesión del EQUIPO (caja) prácticamente no caduca: se inicia una vez en la
 # computadora del mostrador y queda lista "para siempre". Además se renueva sola
@@ -135,26 +177,62 @@ def device_refresh(request):
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
-@throttle_classes([LoginRateThrottle])
+@throttle_classes([PinRateThrottle])
 def switch_profile(request):
     """Cambia al perfil de un cajero validando su PIN.
 
     Requiere una sesión de equipo (caja) ya iniciada: por eso el PIN no sirve
     desde fuera. Devuelve tokens normales (sesión de turno) para ese usuario.
+
+    Anti fuerza bruta: tras varios intentos fallidos sobre un mismo perfil, ese
+    perfil queda bloqueado unos minutos (y el bloqueo queda en la bitácora), para
+    que un cajero no pueda adivinar el PIN de un supervisor probando números.
     """
     err = _require_device(request)
     if err:
         return err
     login = (request.data.get("username") or "").strip()
     pin = (request.data.get("pin") or "").strip()
+    fail_key, lock_key = _pin_keys(login)
+
+    # ¿El perfil está bloqueado por intentos fallidos recientes?
+    remaining = _pin_lock_remaining(lock_key)
+    if remaining > 0:
+        return Response(
+            {"detail": f"Demasiados intentos con PIN incorrecto. Espera {remaining // 60 + 1} min "
+                       "o pedí a un administrador que lo desbloquee."},
+            status=status.HTTP_429_TOO_MANY_REQUESTS,
+        )
+
     user = (User.objects.filter(username__iexact=login, is_device=False).first()
             or User.objects.filter(email__iexact=login, is_device=False).first())
     if not user or not user.is_active:
         return Response({"detail": "Perfil no disponible."}, status=status.HTTP_400_BAD_REQUEST)
+
     # Si el perfil tiene PIN, se valida. Si no tiene, entra directo (ya está
     # autorizado por la sesión de equipo del mostrador).
     if user.pin_hash and not user.check_pin(pin):
-        return Response({"detail": "PIN incorrecto."}, status=status.HTTP_400_BAD_REQUEST)
+        fails = (cache.get(fail_key) or 0) + 1
+        if fails >= PIN_MAX_ATTEMPTS:
+            # Bloquear el perfil y dejar constancia en la bitácora.
+            cache.set(lock_key, dj_timezone.now().timestamp() + PIN_LOCK_SECONDS, PIN_LOCK_SECONDS)
+            cache.delete(fail_key)
+            _log_pin_lockout(login, request)
+            return Response(
+                {"detail": f"Demasiados intentos con PIN incorrecto. El perfil quedó bloqueado "
+                           f"{PIN_LOCK_SECONDS // 60} minutos."},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+        cache.set(fail_key, fails, PIN_LOCK_SECONDS)
+        restantes = PIN_MAX_ATTEMPTS - fails
+        return Response(
+            {"detail": f"PIN incorrecto. Te queda{'n' if restantes != 1 else ''} {restantes} intento(s)."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Éxito: se limpian los contadores del perfil.
+    cache.delete(fail_key)
+    cache.delete(lock_key)
     refresh = RefreshToken.for_user(user)
     return Response({"access": str(refresh.access_token), "refresh": str(refresh)})
 
