@@ -30,8 +30,41 @@ def generate_folio():
     return next_folio(Sale, "V")
 
 
+def _check_special_authorization(lines, global_discount, special_authorized):
+    """Anti-fraude: exige autorización de supervisor para descuentos por encima
+    del máximo configurado o precios por debajo del costo. Si el llamador no está
+    autorizado (`special_authorized=False`) y la venta se pasa del límite, lanza
+    SaleError para que el cajero deba pedir a un supervisor que la registre."""
+    if special_authorized:
+        return
+    from core.models import CompanySetting
+    try:
+        max_pct = Decimal(str(CompanySetting.current().pos_max_discount_percent or 0))
+    except Exception:
+        max_pct = Decimal("25")
+
+    total_gross = sum((l["gross"] for l in lines), Decimal("0"))
+    total_disc = sum((l["line_discount"] for l in lines), Decimal("0")) + Decimal(str(global_discount or 0))
+    if total_gross > 0 and max_pct >= 0:
+        disc_pct = total_disc / total_gross * 100
+        if disc_pct > max_pct:
+            raise SaleError(
+                f"El descuento ({disc_pct:.0f}%) supera el máximo permitido ({max_pct:.0f}%). "
+                "Requiere autorización de un supervisor."
+            )
+    for l in lines:
+        line_net = l["gross"] - l["line_discount"]
+        line_cost = l["unit_cost"] * l["quantity"]
+        if line_cost > 0 and line_net < line_cost:
+            raise SaleError(
+                f"El precio de {l['product'].name} queda por debajo del costo. "
+                "Requiere autorización de un supervisor."
+            )
+
+
 @transaction.atomic
-def create_sale(data, items, *, user=None, branch=None, offline_uuid=None, force=False):
+def create_sale(data, items, *, user=None, branch=None, offline_uuid=None, force=False,
+                special_authorized=False):
     """Crea una venta completada, descuenta stock y la vincula a la caja.
 
     `force=True` (solo para resolver conflictos de ventas offline que YA
@@ -78,6 +111,11 @@ def create_sale(data, items, *, user=None, branch=None, offline_uuid=None, force
             "unit_cost": (Decimal(product.purchase_price) * units_factor),
         })
 
+    # Anti-fraude: descuentos por encima del máximo o precios bajo el costo
+    # requieren autorización de supervisor (salvo ventas offline ya ocurridas).
+    if not force:
+        _check_special_authorization(lines, data.get("discount"), special_authorized)
+
     subtotal, total_discount, tax, total = _compute_totals(lines, data.get("discount"))
 
     paid_amount = Decimal(str(data.get("paid_amount") or 0))
@@ -111,12 +149,18 @@ def create_sale(data, items, *, user=None, branch=None, offline_uuid=None, force
     # Fecha de la venta: por defecto ahora; si se indica una fecha distinta,
     # se conserva con la hora local actual.
     sale_date = timezone.now()
+    notes = data.get("notes")
     custom_date = data.get("date")
     if isinstance(custom_date, str):
         custom_date = parse_date(custom_date)
     if custom_date:
         naive = datetime.combine(custom_date, timezone.localtime().time())
         sale_date = timezone.make_aware(naive, timezone.get_current_timezone())
+        # Anti-fraude: si la fecha del documento NO es la de hoy, se deja
+        # constancia en las notas (queda registrado que se cambió la fecha).
+        if custom_date != timezone.localdate():
+            aviso = f"Fecha del documento cambiada a {custom_date.isoformat()} (registrada el {timezone.localdate().isoformat()})."
+            notes = f"{notes} · {aviso}" if notes else aviso
 
     sale = Sale.objects.create(
         folio=generate_folio(), branch=branch, customer_id=data.get("customer_id"),
@@ -124,7 +168,7 @@ def create_sale(data, items, *, user=None, branch=None, offline_uuid=None, force
         subtotal=subtotal, discount=total_discount, tax=tax, total=total,
         payment_method=payment_method, paid_amount=paid_amount, change_amount=change_amount,
         status=Sale.STATUS_COMPLETADA, payment_status=payment_status, due_date=due_date,
-        notes=data.get("notes"), offline_uuid=offline_uuid or None,
+        notes=notes, offline_uuid=offline_uuid or None,
     )
 
     for l in lines:
@@ -183,7 +227,10 @@ def sync_offline_sale(entry, *, user=None, branch=None):
         nota = "Venta offline forzada (sin stock) — ajustar inventario."
         data["notes"] = f"{data['notes']} · {nota}" if data.get("notes") else nota
     try:
-        sale = create_sale(data, items, user=user, branch=branch, offline_uuid=uuid, force=force)
+        # La venta offline YA ocurrió físicamente: no se puede bloquear a
+        # posteriori por descuento/precio; se registra y queda en la bitácora.
+        sale = create_sale(data, items, user=user, branch=branch, offline_uuid=uuid,
+                           force=force, special_authorized=True)
     except StockConflictError as e:
         # Conflicto: la venta ya ocurrió offline pero ya no hay stock. No se
         # puede registrar sola; requiere que el supervisor reponga o la descarte.

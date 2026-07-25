@@ -19,6 +19,12 @@ AUDITED = {
     "partners.Supplier", "partners.Customer",
     "purchasing.Purchase", "sales.Sale", "quotes.Quotation",
     "cashbox.CashSession", "transfers.BranchTransfer",
+    # Rastro total anti-fraude: TODO movimiento de dinero/mercadería deja huella
+    # en la bitácora central (quién y cuándo), no solo en su propia tabla.
+    "sales.SaleItem",              # precio/descuento por línea
+    "salereturns.SaleReturn",      # devoluciones (reembolsos de efectivo)
+    "cashbox.CashMovement",        # ingresos/egresos de caja
+    "inventory.InventoryMovement", # ajustes/salidas de inventario
 }
 
 # Campos internos/calculados que NO son ediciones del usuario: se excluyen de la

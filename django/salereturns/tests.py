@@ -89,3 +89,55 @@ class SaleReturnServiceTests(TestCase):
             [{"sale_item_id": self.sale_item.id, "quantity": "1"}], user=self.user,
         )
         self.assertEqual(compute_expected(self.session), esperado_antes)
+
+
+class RefundAuthorizationAPITests(TestCase):
+    """Anti-fraude: reembolsar EFECTIVO requiere permiso de supervisor."""
+
+    def setUp(self):
+        from django.contrib.auth.models import Group
+        from core.permissions import ROLE_MATRIX, sync_permissions
+        self.branch = Branch.objects.create(name="Matriz", code="M", is_main=True)
+        self.prod = Product.objects.create(sku="R-9", name="Barniz", purchase_price=80,
+                                            sale_price=120, stock=Decimal("50"), tax_type="iva")
+        perms = sync_permissions()
+        for role, codes in ROLE_MATRIX.items():
+            g, _ = Group.objects.get_or_create(name=role)
+            g.permissions.set([perms[c] for c in codes if c in perms])
+        # Al admin se le concede el permiso de reembolso (como en la migración).
+        admin_group = Group.objects.get(name="admin")
+        admin_group.permissions.add(perms["devoluciones.reembolsar"])
+        self.seller = User.objects.create_user(username="s", email="s@test.com", password="x123")
+        self.seller.groups.add(Group.objects.get(name="vendedor"))
+        self.boss = User.objects.create_user(username="a", email="a@test.com", password="x123", is_superuser=True)
+        open_session(self.seller, 1000, branch=self.branch)
+        self.sale = create_sale(
+            {"payment_method": "efectivo", "paid_amount": "480"},
+            [{"product_id": self.prod.id, "quantity": "4", "unit_price": "120", "tax_type": "iva"}],
+            user=self.seller, branch=self.branch,
+        )
+        self.item = self.sale.items.first()
+
+    def _client(self, email):
+        from rest_framework.test import APIClient
+        c = APIClient()
+        r = c.post("/api/auth/token/", {"email": email, "password": "x123"}, format="json")
+        c.credentials(HTTP_AUTHORIZATION=f"Bearer {r.json()['access']}", HTTP_X_BRANCH_ID=str(self.branch.id))
+        return c
+
+    def _body(self, method):
+        return {"sale_id": self.sale.id, "reason_type": "defectuoso", "refund_method": method,
+                "items": [{"sale_item_id": self.item.id, "quantity": "1"}]}
+
+    def test_cajero_no_puede_reembolsar_efectivo(self):
+        r = self._client("s@test.com").post("/api/returns/", self._body("efectivo"), format="json")
+        self.assertEqual(r.status_code, 403)
+        self.assertEqual(SaleReturn.objects.count(), 0)
+
+    def test_cajero_si_puede_devolver_a_tarjeta(self):
+        r = self._client("s@test.com").post("/api/returns/", self._body("tarjeta"), format="json")
+        self.assertEqual(r.status_code, 201)
+
+    def test_supervisor_si_puede_reembolsar_efectivo(self):
+        r = self._client("a@test.com").post("/api/returns/", self._body("efectivo"), format="json")
+        self.assertEqual(r.status_code, 201)

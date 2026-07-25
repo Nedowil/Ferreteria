@@ -39,14 +39,23 @@ PERMISSIONS = [
     ("ventas.ver", "Ver ventas", "Ventas"),
     ("ventas.crear", "Crear ventas (POS)", "Ventas"),
     ("ventas.cancelar", "Cancelar ventas", "Ventas"),
+    # Anti-fraude: autoriza pasarse del descuento máximo o vender por debajo del
+    # costo. El cajero NO lo tiene; lo hace el supervisor/admin.
+    ("ventas.autorizar_especial", "Autorizar descuento alto o precio bajo el mínimo", "Ventas"),
     ("cuentas_cobrar.ver", "Ver cuentas por cobrar", "Ventas"),
     ("devoluciones.ver", "Ver devoluciones", "Ventas"),
     ("devoluciones.crear", "Crear devoluciones", "Ventas"),
+    # Anti-fraude: pagar efectivo por una devolución (o devolución sin ticket)
+    # requiere este permiso, reservado al supervisor/admin.
+    ("devoluciones.reembolsar", "Reembolsar efectivo en devoluciones", "Ventas"),
     ("devoluciones.cancelar", "Cancelar/anular devoluciones", "Ventas"),
     ("caja.ver", "Ver caja", "Caja"),
     ("caja.abrir", "Abrir caja", "Caja"),
     ("caja.cerrar", "Cerrar caja", "Caja"),
     ("caja.movimientos", "Movimientos de caja", "Caja"),
+    # Anti-fraude (cuadre a ciegas): ver el efectivo esperado y la diferencia.
+    # El cajero cierra su caja SIN ver el esperado; solo el supervisor lo ve.
+    ("caja.ver_esperado", "Ver efectivo esperado y diferencia de caja", "Caja"),
     ("caja.ver_todas", "Ver todas las cajas", "Caja"),
     ("reportes.ver", "Ver reportes", "Reportes"),
     ("configuracion.gestionar", "Gestionar configuración", "Administración"),

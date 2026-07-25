@@ -38,7 +38,11 @@ export default function CashBox() {
       const doc = new jsPDF({ unit: "pt", format: "letter" });
       doc.setFontSize(14); doc.text("Movimientos de caja", 40, 40);
       doc.setFontSize(9); doc.setTextColor(120);
-      doc.text(`Efectivo esperado: Q${Number(session.current_expected ?? 0).toFixed(2)}   ·   Fondo inicial: Q${Number(session.opening_amount ?? 0).toFixed(2)}`, 40, 58);
+      doc.text(
+        session.current_expected == null
+          ? `Fondo inicial: Q${Number(session.opening_amount ?? 0).toFixed(2)}`
+          : `Efectivo esperado: Q${Number(session.current_expected).toFixed(2)}   ·   Fondo inicial: Q${Number(session.opening_amount ?? 0).toFixed(2)}`,
+        40, 58);
       const cols = movCols();
       autoTable(doc, {
         startY: 72,
@@ -87,6 +91,10 @@ export default function CashBox() {
 
   if (loading) return <div className="text-slate-400">Cargando…</div>;
 
+  // Cuadre a ciegas: si el backend NO envía el efectivo esperado, este usuario
+  // (cajero) no puede verlo; declara su conteo sin saber cuánto "debería" haber.
+  const blind = !!session && session.current_expected == null;
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
@@ -111,14 +119,27 @@ export default function CashBox() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div className="space-y-5">
             <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-5">
-              <div className="text-sm text-slate-500 dark:text-slate-400">Efectivo esperado</div>
-              <div className="text-3xl font-bold mt-1">Q{Number(session.current_expected).toFixed(2)}</div>
-              <div className="text-xs text-slate-400 mt-1">Fondo inicial: Q{session.opening_amount}</div>
-              <div className="mt-3 text-sm space-y-1">
-                <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">Ventas efectivo</span><span>Q{Number(session.totals_by_method?.efectivo || 0).toFixed(2)}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">Tarjeta</span><span>Q{Number(session.totals_by_method?.tarjeta || 0).toFixed(2)}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">Transferencia</span><span>Q{Number(session.totals_by_method?.transferencia || 0).toFixed(2)}</span></div>
-              </div>
+              {blind ? (
+                <>
+                  <div className="text-sm text-slate-500 dark:text-slate-400">Arqueo de caja</div>
+                  <div className="text-lg font-semibold mt-1">🔒 Cuadre a ciegas</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    Contá el efectivo y regístralo abajo. El supervisor revisa la diferencia.
+                  </div>
+                  <div className="text-xs text-slate-400 mt-2">Fondo inicial: Q{session.opening_amount}</div>
+                </>
+              ) : (
+                <>
+                  <div className="text-sm text-slate-500 dark:text-slate-400">Efectivo esperado</div>
+                  <div className="text-3xl font-bold mt-1">Q{Number(session.current_expected).toFixed(2)}</div>
+                  <div className="text-xs text-slate-400 mt-1">Fondo inicial: Q{session.opening_amount}</div>
+                  <div className="mt-3 text-sm space-y-1">
+                    <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">Ventas efectivo</span><span>Q{Number(session.totals_by_method?.efectivo || 0).toFixed(2)}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">Tarjeta</span><span>Q{Number(session.totals_by_method?.tarjeta || 0).toFixed(2)}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">Transferencia</span><span>Q{Number(session.totals_by_method?.transferencia || 0).toFixed(2)}</span></div>
+                  </div>
+                </>
+              )}
             </div>
 
             <form onSubmit={addMovement} className="bg-white dark:bg-slate-800 rounded-lg shadow p-5 space-y-3">
@@ -142,13 +163,16 @@ export default function CashBox() {
               <input type="number" step="any" required placeholder="Efectivo contado" value={counted}
                      onChange={(e) => setCounted(e.target.value)}
                      className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
-              {counted !== "" && (
+              {counted !== "" && !blind && (
                 <div className="text-sm flex justify-between">
                   <span className="text-slate-500 dark:text-slate-400">Diferencia</span>
                   <span className={Number(counted) - Number(session.current_expected) < 0 ? "text-red-600 font-medium" : "text-green-600 font-medium"}>
                     Q{(Number(counted) - Number(session.current_expected)).toFixed(2)}
                   </span>
                 </div>
+              )}
+              {blind && (
+                <div className="text-xs text-slate-400">La diferencia la revisa el supervisor al cerrar.</div>
               )}
               <button className="w-full bg-red-600 text-white rounded px-4 py-2 text-sm font-medium">Cerrar caja</button>
             </form>

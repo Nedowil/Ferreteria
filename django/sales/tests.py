@@ -156,15 +156,49 @@ class SaleServiceTests(TestCase):
         self.assertEqual(sale.change_amount, Decimal("0.00"))
 
     def test_descuenta_por_units_factor(self):
-        # Vender 2 cajas con factor 10 -> descuenta 20 del stock físico
+        # Vender 2 cajas con factor 10 -> descuenta 20 del stock físico. El precio
+        # por caja (700) va por encima del costo (60/u × 10 = 600), como debe ser.
         create_sale(
-            {"payment_method": "efectivo", "paid_amount": "1000"},
-            [{"product_id": self.prod.id, "quantity": "2", "unit_price": "400",
+            {"payment_method": "efectivo", "paid_amount": "1400"},
+            [{"product_id": self.prod.id, "quantity": "2", "unit_price": "700",
               "units_factor": "10", "unit_label": "caja"}],
             user=self.user, branch=self.branch,
         )
         self.prod.refresh_from_db()
         self.assertEqual(self.prod.stock, Decimal("80.00"))
+
+    def test_descuento_sobre_limite_requiere_autorizacion(self):
+        # 40% de descuento supera el máximo (25%): sin autorización se rechaza.
+        with self.assertRaises(SaleError):
+            create_sale(
+                {"payment_method": "efectivo", "paid_amount": "1000", "discount": "102"},
+                [{"product_id": self.prod.id, "quantity": "3", "unit_price": "85"}],
+                user=self.user, branch=self.branch,
+            )
+        # Con autorización de supervisor, la misma venta pasa.
+        sale = create_sale(
+            {"payment_method": "efectivo", "paid_amount": "1000", "discount": "102"},
+            [{"product_id": self.prod.id, "quantity": "3", "unit_price": "85"}],
+            user=self.user, branch=self.branch, special_authorized=True,
+        )
+        self.assertEqual(sale.discount, Decimal("102.00"))
+
+    def test_precio_bajo_costo_requiere_autorizacion(self):
+        # Vender por debajo del costo (60) sin autorización se rechaza.
+        with self.assertRaises(SaleError):
+            create_sale(
+                {"payment_method": "efectivo", "paid_amount": "1000"},
+                [{"product_id": self.prod.id, "quantity": "1", "unit_price": "50"}],
+                user=self.user, branch=self.branch,
+            )
+
+    def test_fecha_retroactiva_queda_en_notas(self):
+        sale = create_sale(
+            {"payment_method": "efectivo", "paid_amount": "300", "date": "2026-07-01"},
+            [{"product_id": self.prod.id, "quantity": "1", "unit_price": "85"}],
+            user=self.user, branch=self.branch,
+        )
+        self.assertIn("Fecha del documento cambiada", (sale.notes or ""))
 
     def test_stock_insuficiente(self):
         with self.assertRaises(SaleError):

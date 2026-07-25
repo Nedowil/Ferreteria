@@ -80,8 +80,13 @@ class SaleViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.ModelVie
                 {"detail": "No hay una caja abierta. Abrí la caja antes de registrar una venta de contado."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        # Anti-fraude: ¿este usuario puede autorizar descuentos altos / precios
+        # bajo el costo? Solo el supervisor/admin (o superusuario) lo puede.
+        from core.permissions import user_permission_codenames
+        special = "ventas.autorizar_especial" in user_permission_codenames(request.user)
         try:
-            sale = services.create_sale(data, data["items"], user=request.user, branch=self.branch)
+            sale = services.create_sale(data, data["items"], user=request.user,
+                                        branch=self.branch, special_authorized=special)
         except services.SaleError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(SaleDetailSerializer(sale).data, status=status.HTTP_201_CREATED)

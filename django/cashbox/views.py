@@ -46,7 +46,7 @@ class CashSessionViewSet(PermissionByActionMixin, viewsets.ReadOnlyModelViewSet)
         session = services.active_session(
             branch=get_request_branch(request), user=request.user
         )
-        data = CashSessionDetailSerializer(session).data if session else None
+        data = CashSessionDetailSerializer(session, context={"request": request}).data if session else None
         return Response({"session": data})
 
     @action(detail=False, methods=["post"])
@@ -61,7 +61,7 @@ class CashSessionViewSet(PermissionByActionMixin, viewsets.ReadOnlyModelViewSet)
             )
         except services.CashError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(CashSessionDetailSerializer(session).data, status=status.HTTP_201_CREATED)
+        return Response(CashSessionDetailSerializer(session, context={"request": request}).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["post"])
     def movement(self, request, pk=None):
@@ -75,7 +75,7 @@ class CashSessionViewSet(PermissionByActionMixin, viewsets.ReadOnlyModelViewSet)
             )
         except services.CashError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(CashSessionDetailSerializer(self.get_object()).data)
+        return Response(CashSessionDetailSerializer(self.get_object(), context={"request": request}).data)
 
     @action(detail=True, methods=["post"])
     def close(self, request, pk=None):
@@ -89,4 +89,4 @@ class CashSessionViewSet(PermissionByActionMixin, viewsets.ReadOnlyModelViewSet)
             )
         except services.CashError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(CashSessionDetailSerializer(session).data)
+        return Response(CashSessionDetailSerializer(session, context={"request": request}).data)

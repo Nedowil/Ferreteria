@@ -19,7 +19,27 @@ class CashMovementSerializer(serializers.ModelSerializer):
                   "description", "sale", "created_at", "user_name"]
 
 
-class CashSessionListSerializer(serializers.ModelSerializer):
+# Campos que revelan el efectivo ESPERADO/diferencia. En el cuadre a ciegas
+# solo los ve quien tiene 'caja.ver_esperado' (supervisor/admin); el cajero
+# declara su conteo sin saber cuánto "debería" haber.
+_BLIND_FIELDS = ("expected_cash", "difference", "current_expected")
+
+
+class BlindCashMixin:
+    """Oculta el efectivo esperado/diferencia a quien no puede verlos."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        from core.permissions import user_permission_codenames
+        can_see = bool(user and "caja.ver_esperado" in user_permission_codenames(user))
+        if not can_see:
+            for f in _BLIND_FIELDS:
+                self.fields.pop(f, None)
+
+
+class CashSessionListSerializer(BlindCashMixin, serializers.ModelSerializer):
     user_name = serializers.CharField(source="user.name", read_only=True, default=None)
     branch_name = serializers.CharField(source="branch.name", read_only=True, default=None)
     status_display = serializers.CharField(source="get_status_display", read_only=True)

@@ -114,6 +114,12 @@ class CompanySetting(models.Model):
     fel_cycle_month = models.PositiveSmallIntegerField(default=1)
     fel_cycle_day = models.PositiveSmallIntegerField(default=1)
 
+    # Anti-fraude: descuento máximo (%) que un cajero puede aplicar SIN
+    # autorización de supervisor. Pasarse (o vender por debajo del costo)
+    # requiere el permiso 'ventas.autorizar_especial'.
+    pos_max_discount_percent = models.DecimalField(
+        "descuento máx. sin autorización (%)", max_digits=5, decimal_places=2, default=25)
+
     # Impresora térmica
     printer_mode = models.CharField(max_length=20, default="system")  # system|bluetooth|network
     printer_ip = models.CharField(max_length=45, blank=True, null=True)

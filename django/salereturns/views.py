@@ -54,10 +54,29 @@ class SaleReturnViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Mo
                 qs = qs.filter(date__date__lte=d)
         return qs
 
+    def _cash_refund_blocked(self, request, data):
+        """Anti-fraude: pagar EFECTIVO por una devolución requiere el permiso
+        'devoluciones.reembolsar' (supervisor/admin). Devuelve una Response de
+        error si el usuario no está autorizado, o None si puede continuar."""
+        from core.permissions import user_permission_codenames
+        if (data.get("refund_method") or "efectivo") != "efectivo":
+            return None
+        if "devoluciones.reembolsar" in user_permission_codenames(request.user):
+            return None
+        return Response(
+            {"detail": "Reembolsar efectivo requiere autorización de un supervisor. "
+                       "Pedí a un supervisor que registre la devolución en efectivo, "
+                       "o elegí otro método de reembolso."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
     def create(self, request, *args, **kwargs):
         ser = ReturnWriteSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         data = ser.validated_data
+        blocked = self._cash_refund_blocked(request, data)
+        if blocked:
+            return blocked
         try:
             sret = services.create_return(data, data["items"], user=request.user)
         except services.ReturnError as e:
@@ -69,6 +88,9 @@ class SaleReturnViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Mo
         ser = WithoutSaleWriteSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         data = ser.validated_data
+        blocked = self._cash_refund_blocked(request, data)
+        if blocked:
+            return blocked
         try:
             sret = services.create_without_sale(
                 data, data["items"], user=request.user, branch=self.branch

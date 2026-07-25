@@ -160,6 +160,19 @@ export default function CompanySettings() {
           </Field>
         </Section>
 
+        <Section title="Seguridad del punto de venta">
+          <Field label="Descuento máximo sin autorización (%)">
+            <input type="number" min="0" max="100" step="0.5" className={input}
+                   value={c.pos_max_discount_percent}
+                   onChange={(e) => set("pos_max_discount_percent", e.target.value)} />
+          </Field>
+          <div className="sm:col-span-2 text-xs text-slate-500 dark:text-slate-400 -mt-1">
+            Si un cajero intenta un descuento mayor a este porcentaje —o vender por debajo del
+            costo— la venta pide autorización de un supervisor (permiso «Autorizar descuento alto
+            o precio bajo el mínimo»).
+          </div>
+        </Section>
+
         <Section title="Impresora térmica (tickets)">
           <Field label="Modo">
             <select className={input} value={c.printer_mode} onChange={(e) => set("printer_mode", e.target.value)}>
