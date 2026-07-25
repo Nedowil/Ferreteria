@@ -9,7 +9,7 @@ import QuickProductModal from "../../components/QuickProductModal";
 import CustomerPicker from "../../components/CustomerPicker";
 import { useServerOnline } from "../../offline/net";
 import { saveCatalog, getCatalog, setMeta, getMeta, addPending, countPending, removePending } from "../../offline/db";
-import { syncPending } from "../../offline/sync";
+import { syncPending, forceSyncOne } from "../../offline/sync";
 import { printOfflineReceipt } from "./offlineReceipt";
 import { dialog } from "../../components/Dialog";
 
@@ -573,6 +573,29 @@ export default function POS() {
     finally { setSyncing(false); }
   };
   doSyncRef.current = doSync;
+
+  // Registra una venta offline en conflicto AUNQUE no haya stock (el cajero ya
+  // cobró / dio comprobante). Deja el inventario en negativo con alerta de ajuste.
+  const forceConflict = async (uuid) => {
+    const ok = await dialog.confirm(
+      "¿Registrar esta venta aunque no haya stock? Se respalda el cobro y el comprobante. El inventario del producto quedará en NEGATIVO como alerta para que lo ajusten físicamente.",
+      { okText: "Sí, registrar" }
+    );
+    if (!ok) return;
+    const r = await forceSyncOne(uuid);
+    if (r.ok) {
+      await refreshPending();
+      setConflicts((cs) => {
+        const next = cs.filter((c) => c.uuid !== uuid);
+        if (next.length === 0) setShowConflicts(false);
+        return next;
+      });
+      reloadProducts().then((list) => { setProducts(list); saveCatalog(list).catch(() => {}); }).catch(() => {});
+      setOfflineNote("Venta registrada (forzada). Revisá el inventario de ese producto para ajustarlo.");
+    } else {
+      await dialog.alert(r.error || "No se pudo registrar la venta.");
+    }
+  };
 
   // Descarta una venta offline en conflicto (el supervisor acepta que no se
   // puede registrar porque ya no hay stock). La saca de la cola de pendientes.
@@ -1186,10 +1209,12 @@ export default function POS() {
               <div className="text-xs text-red-100">Estas ventas se hicieron sin internet, pero el producto ya no tiene existencia. No se pueden registrar solas.</div>
             </div>
             <div className="p-5 space-y-3 max-h-[60vh] overflow-auto">
-              <p className="text-sm text-slate-600 dark:text-slate-300">
-                Opciones para cada una: <b>reponé el stock</b> del producto (una compra/ajuste) y volvé a
-                <b> Sincronizar</b> — entonces se registra sola. O <b>descartala</b> si aceptás que no se registrará.
-              </p>
+              <div className="text-sm text-slate-600 dark:text-slate-300 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-lg p-3">
+                <b>¿El cajero ya cobró el dinero o entregó comprobante?</b> Entonces usá
+                <b> «Registrar de todas formas»</b>: se respalda el cobro y el comprobante, y el
+                inventario queda en negativo con alerta para ajustarlo. <br />
+                Usá <b>«Descartar»</b> solo si fue un error y <b>no se cobró nada</b>.
+              </div>
               {conflicts.map((c) => {
                 const s = c.sale || {};
                 const nItems = (s.items || []).length;
@@ -1200,10 +1225,14 @@ export default function POS() {
                     <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                       {nItems} producto(s){total > 0 ? ` · Q${total.toFixed(2)}` : ""}{s.date ? ` · ${s.date}` : ""}
                     </div>
-                    <div className="mt-2 flex justify-end">
+                    <div className="mt-2 flex flex-wrap justify-end gap-2">
+                      <button onClick={() => forceConflict(c.uuid)}
+                              className="text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg px-3 py-1.5">
+                        Registrar de todas formas
+                      </button>
                       <button onClick={() => discardConflict(c.uuid)}
-                              className="text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg px-3 py-1.5">
-                        Descartar venta
+                              className="text-xs font-semibold text-red-700 dark:text-red-300 border border-red-300 dark:border-red-500/40 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg px-3 py-1.5">
+                        Descartar
                       </button>
                     </div>
                   </div>

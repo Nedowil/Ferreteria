@@ -2,6 +2,32 @@
 import api from "../api/client";
 import { getPending, removePending } from "./db";
 
+/** Reintenta UNA venta offline FORZANDO su registro aunque no haya stock (el
+ *  supervisor acepta el faltante: la venta ya se cobró/entregó). El backend deja
+ *  el stock en negativo con alerta de ajuste. Devuelve {ok, id?, folio?, error?}. */
+export async function forceSyncOne(uuid) {
+  const pending = await getPending();
+  const p = pending.find((x) => x.offline_uuid === uuid);
+  if (!p) return { ok: false, error: "No se encontró la venta en la cola." };
+  const sale = {
+    offline_uuid: p.offline_uuid, date: p.date || null, customer_id: p.customer_id || null,
+    payment_method: p.payment_method, payment_status: p.payment_status, paid_amount: p.paid_amount,
+    discount: p.discount || 0, notes: p.notes || null, items: p.items, force: true,
+  };
+  try {
+    const { data } = await api.post("/sales/sync-offline/", { sales: [sale] });
+    const r = (data.results || [])[0] || {};
+    if (r.ok) {
+      await removePending(uuid);
+      if (p.want_fel && r.id) { try { await api.post(`/sales/${r.id}/emit-invoice/`); } catch { /* luego */ } }
+      return { ok: true, id: r.id, folio: r.folio };
+    }
+    return { ok: false, error: r.error || "No se pudo registrar." };
+  } catch (e) {
+    return { ok: false, error: e.response?.data?.detail || "No se pudo conectar con el servidor." };
+  }
+}
+
 /** Envía todas las ventas pendientes al backend (idempotente por offline_uuid).
  *  - Quita de la cola las que el servidor confirma (creadas o duplicadas).
  *  - Para las creadas que pedían factura (want_fel), intenta certificar FEL

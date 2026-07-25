@@ -65,6 +65,41 @@ class SaleServiceTests(TestCase):
         r = sync_offline_sale({"items": []}, user=self.user, branch=self.branch)
         self.assertFalse(r["ok"])
 
+    def test_sync_offline_conflicto_sin_stock(self):
+        # Venta offline de más unidades de las que hay: se devuelve conflicto,
+        # NO se registra ni se toca el stock (espera decisión del supervisor).
+        entry = {
+            "offline_uuid": "uuid-conf", "payment_method": "efectivo",
+            "payment_status": "pagada", "paid_amount": "8500",
+            "items": [{"product_id": self.prod.id, "quantity": "100", "unit_price": "85", "units_factor": "1"}],
+        }
+        # Dejar el stock en 5 para forzar el faltante.
+        self.prod.stock = Decimal("5")
+        self.prod.save(update_fields=["stock"])
+        r = sync_offline_sale(entry, user=self.user, branch=self.branch)
+        self.assertFalse(r["ok"])
+        self.assertTrue(r.get("conflict"))
+        self.assertEqual(Sale.objects.filter(offline_uuid="uuid-conf").count(), 0)
+        self.prod.refresh_from_db()
+        self.assertEqual(self.prod.stock, Decimal("5"))  # intacto
+
+    def test_sync_offline_forzada_permite_stock_negativo(self):
+        # El supervisor decide registrar la venta que ya se cobró: se crea con
+        # stock negativo (alerta de ajuste) y queda constancia en las notas.
+        self.prod.stock = Decimal("5")
+        self.prod.save(update_fields=["stock"])
+        entry = {
+            "offline_uuid": "uuid-forz", "payment_method": "efectivo",
+            "payment_status": "pagada", "paid_amount": "850", "force": True,
+            "items": [{"product_id": self.prod.id, "quantity": "10", "unit_price": "85", "units_factor": "1"}],
+        }
+        r = sync_offline_sale(entry, user=self.user, branch=self.branch)
+        self.assertTrue(r["ok"])
+        sale = Sale.objects.get(offline_uuid="uuid-forz")
+        self.assertIn("ajustar inventario", (sale.notes or ""))
+        self.prod.refresh_from_db()
+        self.assertEqual(self.prod.stock, Decimal("-5"))  # 5 - 10
+
     def test_venta_con_fecha_personalizada(self):
         # Regresión: una fecha explícita no debe romper la creación de la venta.
         sale = create_sale(

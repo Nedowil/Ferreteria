@@ -31,8 +31,13 @@ def generate_folio():
 
 
 @transaction.atomic
-def create_sale(data, items, *, user=None, branch=None, offline_uuid=None):
+def create_sale(data, items, *, user=None, branch=None, offline_uuid=None, force=False):
     """Crea una venta completada, descuenta stock y la vincula a la caja.
+
+    `force=True` (solo para resolver conflictos de ventas offline que YA
+    ocurrieron físicamente): NO valida disponibilidad y PERMITE que el stock
+    quede negativo, para respaldar el dinero cobrado y el comprobante. El stock
+    negativo queda como alerta visible para hacer el ajuste físico.
 
     `data`: customer_id, payment_method, paid_amount, discount, notes,
             payment_status, due_date.
@@ -60,7 +65,7 @@ def create_sale(data, items, *, user=None, branch=None, offline_uuid=None):
             raise SaleError(f"El descuento de {product.name} supera el importe de la línea.")
         physical_qty = quantity * units_factor
         available = product.stock_for(branch_id)
-        if physical_qty > available:
+        if physical_qty > available and not force:
             raise StockConflictError(
                 f"Stock insuficiente de {product.name}: disponible {available}, requerido {physical_qty}."
             )
@@ -132,9 +137,11 @@ def create_sale(data, items, *, user=None, branch=None, offline_uuid=None):
         reason = f"Venta {sale.folio}"
         if l["units_factor"] != 1:
             reason += f" ({l['quantity']} {l['unit_label'] or 'x'} = {l['physical_qty']})"
+        if force:
+            reason += " · forzada offline (ajustar inventario)"
         apply_movement(
             l["product"], InventoryMovement.SALIDA, l["physical_qty"],
-            reason=reason, user=user, branch=branch,
+            reason=reason, user=user, branch=branch, allow_negative=force,
         )
         # Cuenta de "más vendido" (para priorizar la copia offline del POS).
         # F() evita condiciones de carrera si dos ventas ocurren a la vez.
@@ -169,8 +176,14 @@ def sync_offline_sale(entry, *, user=None, branch=None):
         "paid_amount": entry.get("paid_amount") or 0,
         "notes": entry.get("notes"),
     }
+    # force=True: el supervisor decidió registrar la venta offline aunque no haya
+    # stock (ya se cobró y/o se dio comprobante). Se deja constancia en las notas.
+    force = bool(entry.get("force"))
+    if force:
+        nota = "Venta offline forzada (sin stock) — ajustar inventario."
+        data["notes"] = f"{data['notes']} · {nota}" if data.get("notes") else nota
     try:
-        sale = create_sale(data, items, user=user, branch=branch, offline_uuid=uuid)
+        sale = create_sale(data, items, user=user, branch=branch, offline_uuid=uuid, force=force)
     except StockConflictError as e:
         # Conflicto: la venta ya ocurrió offline pero ya no hay stock. No se
         # puede registrar sola; requiere que el supervisor reponga o la descarte.

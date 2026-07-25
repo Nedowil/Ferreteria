@@ -17,7 +17,7 @@ class InventoryError(Exception):
 
 
 @transaction.atomic
-def apply_movement(product, mtype, quantity, *, reason=None, user=None, branch=None):
+def apply_movement(product, mtype, quantity, *, reason=None, user=None, branch=None, allow_negative=False):
     """Aplica un movimiento de inventario y actualiza el stock.
 
     - entrada: suma quantity
@@ -64,7 +64,7 @@ def apply_movement(product, mtype, quantity, *, reason=None, user=None, branch=N
     else:
         raise InventoryError(f"Tipo de movimiento inválido: {mtype}")
 
-    if new_stock < 0:
+    if new_stock < 0 and not allow_negative:
         raise InventoryError(
             f"El stock no puede quedar negativo (actual {previous}, intento {mtype} {quantity})."
         )
