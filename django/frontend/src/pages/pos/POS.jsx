@@ -13,6 +13,10 @@ import { syncPending } from "../../offline/sync";
 import { printOfflineReceipt } from "./offlineReceipt";
 import { dialog } from "../../components/Dialog";
 
+// La venta al crédito no se usa por el momento: se oculta la opción. Para
+// volver a mostrarla, poné SHOW_CREDITO = true.
+const SHOW_CREDITO = false;
+
 // Elige el precio base según el nivel del cliente (público o mayorista).
 function basePriceFor(product, qty, customer) {
   const wholesale = Number(product.wholesale_price || 0);
@@ -1075,9 +1079,11 @@ export default function POS() {
             <div className="text-3xl font-bold text-right">Q{total.toFixed(2)}</div>
           </div>
 
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={credit} onChange={(e) => setCredit(e.target.checked)} /> Venta al crédito
-          </label>
+          {SHOW_CREDITO && (
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={credit} onChange={(e) => setCredit(e.target.checked)} /> Venta al crédito
+            </label>
+          )}
 
           {!credit && (
             <>
