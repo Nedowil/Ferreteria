@@ -294,7 +294,7 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
         branch = self.branch
         products = (
             Product.objects.filter(active=True, stock__lte=F("min_stock"))
-            .select_related("category", "brand").order_by("stock")
+            .select_related("category", "brand").prefetch_related("stocks").order_by("stock")
         )
         rows = []
         for p in products:
