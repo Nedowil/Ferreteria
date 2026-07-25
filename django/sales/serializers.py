@@ -90,6 +90,7 @@ class SaleDetailSerializer(SaleListSerializer):
             "customer", "customer_tax_id", "branch_name", "user_name",
             "subtotal", "discount", "tax", "change_amount", "due_date",
             "notes", "cancelled_at", "items", "payments",
+            "print_count", "last_printed_at",
         ]
 
 

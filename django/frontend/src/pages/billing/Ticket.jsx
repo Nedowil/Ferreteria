@@ -84,6 +84,7 @@ export default function Ticket() {
   const [err, setErr] = useState("");
   const [mode, setMode] = useState("ticket"); // ticket | carta
   const [qr, setQr] = useState("");
+  const [reprint, setReprint] = useState(null);   // info de copia para la marca de agua
   const printRef = useRef(null);   // contenedor del ticket (para capturarlo como imagen)
 
   useEffect(() => {
@@ -103,18 +104,34 @@ export default function Ticket() {
   const meses = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"];
   const phrases = Array.isArray(company.phrases) ? company.phrases : [];
 
+  // Control anti-fraude: cuenta la impresión en el servidor y, si es una COPIA,
+  // prepara la marca de agua ANTES de imprimir (deja renderizar dos frames para
+  // que el sello "REIMPRESIÓN / COPIA" salga también en el papel).
+  const stampCopy = async () => {
+    let info = null;
+    try { info = (await api.post(`/sales/${id}/register-print/`)).data; }
+    catch { /* si falla el conteo, se imprime igual sin marca */ }
+    setReprint(info && info.is_reprint ? info : null);
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    return info;
+  };
+
+  // Impresión por el navegador (modo Sistema/USB, "Guardar" y formato carta).
+  const printBrowser = async () => { await stampCopy(); window.print(); };
+
   const printThermal = async () => {
     // Modo "Sistema" (lo normal): la impresora térmica está instalada en la
     // computadora (por USB). Usamos la impresión del navegador, que abre el
     // cuadro de impresión y manda el ticket a la impresora seleccionada.
     if ((company.printer_mode || "system") !== "network") {
-      window.print();
+      await printBrowser();
       return;
     }
     // Modo "Red (IP)": el servidor envía el ticket directo a la impresora por su
     // IP. Solo funciona si el servidor puede alcanzar la impresora en la red.
     try {
       const { data } = await api.post(`/sales/${id}/print/`);
+      if (data.reprint) setReprint(data.reprint.is_reprint ? data.reprint : null);
       if (data.status === "sent") { await dialog.alert("Ticket enviado a la impresora de red."); return; }
       const bytes = Uint8Array.from(atob(data.escpos_base64), (c) => c.charCodeAt(0));
       const url = URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" }));
@@ -359,7 +376,17 @@ export default function Ticket() {
              automática), así la impresora corta justo al final y no desperdicia
              papel. En formato carta se usa una hoja tamaño carta normal. */
           @page { ${mode === "carta" ? "size: letter; margin: 12mm;" : "size: 80mm auto; margin: 0;"} }
-        }`}</style>
+        }
+        /* Marca de agua anti-fraude "REIMPRESIÓN / COPIA" */
+        #printable { position: relative; }
+        .reprint-banner { text-align: center; font-weight: 800; letter-spacing: 1px;
+          color: #b91c1c; border: 2px dashed #b91c1c; background: #fff5f5;
+          border-radius: 8px; padding: 5px 8px; margin-bottom: 8px; font-size: 12px; }
+        .watermark-copia { position: absolute; inset: 0; z-index: 5; display: flex;
+          align-items: center; justify-content: center; pointer-events: none; overflow: hidden; }
+        .watermark-copia span { transform: rotate(-32deg); white-space: nowrap;
+          font-size: 58px; font-weight: 900; letter-spacing: 6px; color: rgba(185,28,28,0.16);
+          border: 6px solid rgba(185,28,28,0.16); border-radius: 12px; padding: 6px 26px; }`}</style>
 
       <div className="flex flex-wrap gap-3 justify-between mb-3 print:hidden">
         <button onClick={() => navigate(-1)} className="inline-flex items-center gap-1 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg px-4 py-2 shadow-sm hover:bg-slate-50 hover:border-slate-400 transition">← Volver</button>
@@ -376,10 +403,10 @@ export default function Ticket() {
             <>
               <button onClick={printThermal} className="bg-emerald-600 text-white rounded-lg px-4 py-2 text-sm shadow hover:bg-emerald-700 transition">Imprimir ticket</button>
               {/* Guardar el ticket: abre el diálogo del navegador para "Guardar como PDF". */}
-              <button onClick={() => window.print()} className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm shadow hover:bg-slate-800 transition">💾 Guardar ticket</button>
+              <button onClick={printBrowser} className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm shadow hover:bg-slate-800 transition">💾 Guardar ticket</button>
             </>
           ) : (
-            <button onClick={() => window.print()} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm shadow hover:from-blue-700 hover:to-indigo-700 transition">
+            <button onClick={printBrowser} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm shadow hover:from-blue-700 hover:to-indigo-700 transition">
               Imprimir / PDF
             </button>
           )}
@@ -387,7 +414,24 @@ export default function Ticket() {
         </div>
       </div>
 
+      {t.reprint?.print_count > 0 && !reprint && (
+        <div className="print:hidden mb-3 rounded-lg border border-amber-300 bg-amber-50 text-amber-800 px-4 py-2 text-sm">
+          ⚠ Este comprobante ya se imprimió {t.reprint.print_count} {t.reprint.print_count === 1 ? "vez" : "veces"}.
+          La próxima impresión saldrá marcada como <b>REIMPRESIÓN / COPIA</b> (queda registrado quién y cuándo).
+        </div>
+      )}
+
       <div id="printable" ref={printRef}>
+        {reprint && (
+          <>
+            <div className="reprint-banner">
+              REIMPRESIÓN / COPIA No. {reprint.copy_number}
+              {reprint.printed_by ? ` · ${reprint.printed_by}` : ""}
+              {reprint.printed_at ? ` · ${new Date(reprint.printed_at).toLocaleString("es-GT")}` : ""}
+            </div>
+            <div className="watermark-copia" aria-hidden="true"><span>COPIA</span></div>
+          </>
+        )}
         {mode === "ticket"
           ? <TicketPaper {...{ company, sale, fel, qr, phrases }} />
           : <CartaPaper {...{ company, sale, fel, qr, phrases, d, meses }} />}

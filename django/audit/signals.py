@@ -27,6 +27,9 @@ EXCLUDED_FIELDS = {
     "password", "last_login", "updated_at", "created_at",
     "search_index",   # índice de búsqueda (se recalcula solo al guardar)
     "times_sold",     # contador de más vendidos (se actualiza en cada venta)
+    # Control de reimpresión: la copia deja su propio registro explícito en la
+    # bitácora (ver sales.services._log_reprint); no hace falta el diff crudo.
+    "print_count", "first_printed_at", "last_printed_at", "last_printed_by",
 }
 
 

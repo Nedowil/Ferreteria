@@ -64,6 +64,19 @@ class Sale(models.Model):
     # uuid, no se vuelve a crear (evita duplicados por reintentos de red).
     offline_uuid = models.CharField(max_length=64, unique=True, null=True, blank=True, editable=False)
 
+    # --- Control anti-fraude de reimpresiones -------------------------------
+    # La PRIMERA impresión del comprobante es el ORIGINAL; de la segunda en
+    # adelante el ticket sale con la marca de agua "REIMPRESIÓN / COPIA" y se
+    # deja rastro (contador, fecha y quién) para evitar que se entregue el mismo
+    # ticket a dos clientes o se justifiquen salidas de mercadería con copias.
+    print_count = models.PositiveIntegerField(default=0, editable=False)
+    first_printed_at = models.DateTimeField(null=True, blank=True, editable=False)
+    last_printed_at = models.DateTimeField(null=True, blank=True, editable=False)
+    last_printed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="reprinted_sales", editable=False,
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

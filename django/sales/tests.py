@@ -11,7 +11,9 @@ from core.models import Branch
 from inventory.models import Product
 from partners.models import Customer
 from .models import Sale
-from .services import SaleError, cancel_sale, create_sale, register_payment, sync_offline_sale
+from .services import (
+    SaleError, cancel_sale, create_sale, register_payment, register_print, sync_offline_sale,
+)
 
 User = get_user_model()
 
@@ -99,6 +101,39 @@ class SaleServiceTests(TestCase):
         self.assertIn("ajustar inventario", (sale.notes or ""))
         self.prod.refresh_from_db()
         self.assertEqual(self.prod.stock, Decimal("-5"))  # 5 - 10
+
+    def test_reimpresion_marca_copia_y_deja_rastro(self):
+        # La 1ª impresión es ORIGINAL; de la 2ª en adelante es COPIA y se cuenta.
+        from audit.models import AuditLog
+        sale = self._venta_simple()
+        r1 = register_print(sale, user=self.user)
+        self.assertEqual(r1["copy_number"], 1)
+        self.assertFalse(r1["is_reprint"])
+        r2 = register_print(sale, user=self.user)
+        self.assertEqual(r2["copy_number"], 2)
+        self.assertTrue(r2["is_reprint"])
+        sale.refresh_from_db()
+        self.assertEqual(sale.print_count, 2)
+        self.assertIsNotNone(sale.first_printed_at)
+        self.assertEqual(sale.last_printed_by_id, self.user.id)
+        # La copia deja un registro explícito en la bitácora de auditoría.
+        self.assertTrue(
+            AuditLog.objects.filter(auditable_type="sales.Sale", auditable_id=str(sale.pk),
+                                    description__icontains="Reimpresión").exists()
+        )
+
+    def test_ticket_escpos_estampa_marca_de_agua(self):
+        from billing.services import build_ticket
+        from billing import printing
+        sale = self._venta_simple()
+        ticket = build_ticket(sale)
+        reprint = {"copy_number": 2, "printed_at": None, "printed_by": "Juan"}
+        data = printing.build_ticket_escpos(ticket, width_mm=80, reprint=reprint)
+        self.assertIn(b"COPIA", data)
+        self.assertIn(b"REIMPRESION", data)
+        # Sin reprint no debe aparecer la marca.
+        limpio = printing.build_ticket_escpos(ticket, width_mm=80)
+        self.assertNotIn(b"REIMPRESION", limpio)
 
     def test_venta_con_fecha_personalizada(self):
         # Regresión: una fecha explícita no debe romper la creación de la venta.

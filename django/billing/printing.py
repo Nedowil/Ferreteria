@@ -148,12 +148,32 @@ def _width_chars(printer_width):
         return 48
 
 
-def build_ticket_escpos(ticket, *, width_mm=80, auto_cut=True):
-    """Convierte el dict de ``services.build_ticket`` en bytes ESC/POS."""
+def _reprint_band(e, reprint):
+    """Imprime la marca de agua de REIMPRESIÓN/COPIA en la impresora térmica.
+    Como la térmica no admite marca de agua diagonal, se usa una banda en
+    negrita y doble alto, bien visible, arriba y abajo del ticket."""
+    e.align(1).bold(True).double(True)
+    e.line("** COPIA - REIMPRESION **").double(False)
+    e.line(f"Copia No. {reprint.get('copy_number')}")
+    if reprint.get("printed_at"):
+        e.line("Reimpreso: " + _fmt_dt(reprint["printed_at"]))
+    if reprint.get("printed_by"):
+        e.line("Por: " + str(reprint["printed_by"]))
+    e.bold(False).sep()
+
+
+def build_ticket_escpos(ticket, *, width_mm=80, auto_cut=True, reprint=None):
+    """Convierte el dict de ``services.build_ticket`` en bytes ESC/POS.
+
+    ``reprint`` (opcional): dict {copy_number, printed_at, printed_by} cuando el
+    comprobante es una COPIA; imprime la marca de agua anti-fraude."""
     co = ticket["company"]
     sale = ticket["sale"]
     fel = ticket.get("fel")
     e = Escpos(_width_chars(width_mm))
+
+    if reprint:
+        _reprint_band(e, reprint)
 
     # Encabezado (mismo contenido y orden que el ticket en pantalla)
     e.align(1).bold(True).double(True).line(co["name"]).double(False)
@@ -251,6 +271,9 @@ def build_ticket_escpos(ticket, *, width_mm=80, auto_cut=True):
     e.line("«Pon en manos del Señor todas tus obras,")
     e.line("y tus proyectos se cumplirán.»")
     e.line("Proverbios 16:3")
+    if reprint:
+        e.feed(1)
+        e.align(1).bold(True).line(f"** COPIA - REIMPRESION No. {reprint.get('copy_number')} **").bold(False)
     e.feed(3)
     if auto_cut:
         e.cut()

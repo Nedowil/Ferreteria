@@ -189,18 +189,47 @@ def _deliver_escpos(company, data):
     })
 
 
+def _actor(request):
+    return request.user if getattr(request, "user", None) and request.user.is_authenticated else None
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def register_ticket_print(request, sale_id):
+    """Cuenta una impresión del comprobante (para el control de reimpresión).
+
+    Lo usa el modo "Sistema" (USB): el navegador imprime con window.print(), así
+    que primero pide aquí el número de copia para decidir si estampa la marca de
+    agua "REIMPRESIÓN / COPIA". Devuelve {copy_number, is_reprint, printed_at,
+    printed_by}."""
+    from sales.services import register_print
+    sale = Sale.objects.filter(pk=sale_id).first()
+    if not sale:
+        return Response({"detail": "Venta inexistente."}, status=status.HTTP_404_NOT_FOUND)
+    return Response(register_print(sale, user=_actor(request)))
+
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def print_ticket(request, sale_id):
-    """Imprime el ticket de una venta en la impresora térmica configurada."""
+    """Imprime el ticket de una venta en la impresora térmica configurada.
+
+    Cuenta la impresión: de la segunda en adelante estampa la marca de agua de
+    REIMPRESIÓN / COPIA en el ticket ESC/POS."""
+    from sales.services import register_print
     sale = Sale.objects.filter(pk=sale_id).select_related("customer").first()
     if not sale:
         return Response({"detail": "Venta inexistente."}, status=status.HTTP_404_NOT_FOUND)
     company = CompanySetting.current()
+    reprint = register_print(sale, user=_actor(request))
     ticket = services.build_ticket(sale)
     data = printing.build_ticket_escpos(
-        ticket, width_mm=company.printer_width, auto_cut=company.printer_auto_cut)
-    return _deliver_escpos(company, data)
+        ticket, width_mm=company.printer_width, auto_cut=company.printer_auto_cut,
+        reprint=reprint if reprint["is_reprint"] else None)
+    resp = _deliver_escpos(company, data)
+    if isinstance(resp.data, dict):
+        resp.data["reprint"] = reprint
+    return resp
 
 
 @api_view(["POST"])

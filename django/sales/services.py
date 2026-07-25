@@ -195,6 +195,67 @@ def sync_offline_sale(entry, *, user=None, branch=None):
     return {"uuid": uuid, "ok": True, "id": sale.id, "folio": sale.folio}
 
 
+def _seller_name(user):
+    if not user:
+        return None
+    return user.name if getattr(user, "name", None) else user.email
+
+
+def _log_reprint(sale, user):
+    """Deja constancia de una reimpresión en la bitácora de auditoría. Nunca
+    frena la impresión: si la bitácora falla, se ignora el error."""
+    try:
+        from audit.models import AuditLog
+        from audit.context import get_request
+        request = get_request()
+        ip = ua = None
+        if request is not None:
+            ip = request.META.get("REMOTE_ADDR")
+            ua = (request.META.get("HTTP_USER_AGENT") or "")[:255]
+        AuditLog.objects.create(
+            user=user, branch=sale.branch, event=AuditLog.UPDATED,
+            auditable_type="sales.Sale", auditable_id=str(sale.pk),
+            old_values={"print_count": sale.print_count - 1},
+            new_values={"print_count": sale.print_count},
+            ip=ip, user_agent=ua,
+            description=f"Reimpresión de comprobante {sale.folio} (copia {sale.print_count})",
+        )
+    except Exception:  # noqa: BLE001 — la bitácora no debe frenar la impresión
+        pass
+
+
+@transaction.atomic
+def register_print(sale, *, user=None):
+    """Registra una impresión del comprobante y devuelve la info de la copia.
+
+    La PRIMERA impresión es el ORIGINAL. De la segunda en adelante es una
+    REIMPRESIÓN / COPIA: el ticket sale con marca de agua y queda el rastro
+    (contador, fecha y usuario) para prevenir el fraude interno de entregar el
+    mismo ticket a dos clientes o justificar salidas indebidas de mercadería.
+
+    Devuelve: {copy_number, is_reprint, printed_at, printed_by}.
+    """
+    sale = Sale.objects.select_for_update().get(pk=sale.pk)
+    now = timezone.now()
+    sale.print_count = (sale.print_count or 0) + 1
+    if sale.print_count == 1:
+        sale.first_printed_at = now
+    sale.last_printed_at = now
+    sale.last_printed_by = user
+    sale.save(update_fields=[
+        "print_count", "first_printed_at", "last_printed_at", "last_printed_by", "updated_at",
+    ])
+    is_reprint = sale.print_count > 1
+    if is_reprint:
+        _log_reprint(sale, user)
+    return {
+        "copy_number": sale.print_count,
+        "is_reprint": is_reprint,
+        "printed_at": sale.last_printed_at.isoformat(),
+        "printed_by": _seller_name(user),
+    }
+
+
 @transaction.atomic
 def cancel_sale(sale, *, user=None):
     """Cancela una venta completada, revierte el stock y registra la devolución."""

@@ -225,6 +225,15 @@ def build_ticket(sale):
             "payment_status": sale.payment_status,
             "items": items,
         },
+        # Estado de reimpresión (control anti-fraude): cuántas veces se ha
+        # impreso el comprobante y quién lo reimprimió por última vez.
+        "reprint": {
+            "print_count": sale.print_count,
+            "first_printed_at": sale.first_printed_at.isoformat() if sale.first_printed_at else None,
+            "last_printed_at": sale.last_printed_at.isoformat() if sale.last_printed_at else None,
+            "last_printed_by": (sale.last_printed_by.name if sale.last_printed_by and sale.last_printed_by.name
+                                else (sale.last_printed_by.email if sale.last_printed_by else None)),
+        },
         "fel": ({
             "uuid": inv.uuid, "serie": inv.serie, "numero": inv.numero,
             "certificador": inv.certificador, "environment": inv.environment,
