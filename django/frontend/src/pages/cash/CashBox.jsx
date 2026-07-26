@@ -126,7 +126,6 @@ export default function CashBox() {
                   <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                     Contá el efectivo y regístralo abajo. El supervisor revisa la diferencia.
                   </div>
-                  <div className="text-xs text-slate-400 mt-2">Fondo inicial: Q{session.opening_amount}</div>
                 </>
               ) : (
                 <>
@@ -181,17 +180,25 @@ export default function CashBox() {
           <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
             <div className="px-5 py-3 border-b flex items-center justify-between gap-2">
               <span className="font-semibold">Movimientos</span>
-              <div className="flex gap-2">
-                <button onClick={exportMovPdf} disabled={!!exporting || !session.movements.length}
-                        className="border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg px-3 py-1 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition disabled:opacity-50">
-                  {exporting === "pdf" ? "Generando…" : "⬇️ PDF"}
-                </button>
-                <button onClick={exportMovExcel} disabled={!session.movements.length}
-                        className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-3 py-1 text-xs font-medium hover:bg-emerald-100 transition disabled:opacity-50">
-                  ⬇️ Excel
-                </button>
-              </div>
+              {!blind && (
+                <div className="flex gap-2">
+                  <button onClick={exportMovPdf} disabled={!!exporting || !session.movements?.length}
+                          className="border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg px-3 py-1 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition disabled:opacity-50">
+                    {exporting === "pdf" ? "Generando…" : "⬇️ PDF"}
+                  </button>
+                  <button onClick={exportMovExcel} disabled={!session.movements?.length}
+                          className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-3 py-1 text-xs font-medium hover:bg-emerald-100 transition disabled:opacity-50">
+                    ⬇️ Excel
+                  </button>
+                </div>
+              )}
             </div>
+            {blind ? (
+              <div className="px-5 py-12 text-center text-slate-400 text-sm">
+                🔒 El detalle de movimientos y montos solo lo ve el supervisor.<br />
+                Esto mantiene el cuadre a ciegas: contá el efectivo y registralo en «Arqueo y cierre».
+              </div>
+            ) : (
             <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-left">
@@ -216,6 +223,7 @@ export default function CashBox() {
               </tbody>
             </table>
             </div>
+            )}
           </div>
         </div>
       )}

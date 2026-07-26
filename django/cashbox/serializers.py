@@ -19,14 +19,18 @@ class CashMovementSerializer(serializers.ModelSerializer):
                   "description", "sale", "created_at", "user_name"]
 
 
-# Campos que revelan el efectivo ESPERADO/diferencia. En el cuadre a ciegas
-# solo los ve quien tiene 'caja.ver_esperado' (supervisor/admin); el cajero
-# declara su conteo sin saber cuánto "debería" haber.
-_BLIND_FIELDS = ("expected_cash", "difference", "current_expected")
+# Campos que revelan el efectivo esperado o los MONTOS de los movimientos. En el
+# cuadre a ciegas solo los ve quien tiene 'caja.ver_esperado' (supervisor/admin).
+# Se incluye la lista de movimientos y los totales por método porque, sumando los
+# montos de las ventas, el cajero podría deducir el efectivo esperado y burlar el
+# cuadre a ciegas. El cajero declara su conteo sin ver ninguna de estas cifras.
+_BLIND_FIELDS = ("expected_cash", "difference", "current_expected",
+                 "movements", "totals_by_method", "opening_amount")
 
 
 class BlindCashMixin:
-    """Oculta el efectivo esperado/diferencia a quien no puede verlos."""
+    """Oculta el efectivo esperado, los movimientos y los totales a quien no
+    tenga permiso de supervisor (para no romper el cuadre a ciegas)."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

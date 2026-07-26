@@ -76,3 +76,45 @@ class CashServiceTests(TestCase):
         self.assertEqual(s.expected_cash, Decimal("600.00"))
         self.assertEqual(s.difference, Decimal("-20.00"))
         self.assertIsNotNone(s.closed_at)
+
+
+class BlindCashApiTests(TestCase):
+    """Cuadre a ciegas: el cajero NO ve esperado, diferencia, movimientos,
+    totales ni fondo inicial; el supervisor SÍ."""
+
+    def setUp(self):
+        from django.contrib.auth.models import Group
+        from core.permissions import ROLE_MATRIX, sync_permissions
+        self.branch = Branch.objects.create(name="Matriz", code="M", is_main=True)
+        perms = sync_permissions()
+        for role, codes in ROLE_MATRIX.items():
+            g, _ = Group.objects.get_or_create(name=role)
+            g.permissions.set([perms[c] for c in codes if c in perms])
+        Group.objects.get(name="admin").permissions.add(perms["caja.ver_esperado"])
+        self.cajero = User.objects.create_user(username="c", email="c@test.com", password="x123")
+        self.cajero.groups.add(Group.objects.get(name="vendedor"))
+        self.jefe = User.objects.create_user(username="a", email="a@test.com", password="x123", is_superuser=True)
+        s = open_session(self.cajero, 5, branch=self.branch)
+        register_movement(s, CashMovement.INGRESO, 100, description="prueba", user=self.cajero)
+
+    def _client(self, email):
+        from rest_framework.test import APIClient
+        c = APIClient()
+        r = c.post("/api/auth/token/", {"email": email, "password": "x123"}, format="json")
+        c.credentials(HTTP_AUTHORIZATION=f"Bearer {r.json()['access']}", HTTP_X_BRANCH_ID=str(self.branch.id))
+        return c
+
+    def test_cajero_no_ve_montos_sensibles(self):
+        r = self._client("c@test.com").get("/api/cashbox/cash-sessions/current/")
+        sess = r.json()["session"]
+        for campo in ("expected_cash", "current_expected", "difference",
+                      "movements", "totals_by_method", "opening_amount"):
+            self.assertNotIn(campo, sess, f"El cajero NO debería ver {campo}")
+
+    def test_supervisor_si_ve_todo(self):
+        r = self._client("a@test.com").get("/api/cashbox/cash-sessions/current/")
+        sess = r.json()["session"]
+        for campo in ("expected_cash", "current_expected", "difference",
+                      "movements", "totals_by_method", "opening_amount"):
+            self.assertIn(campo, sess, f"El supervisor SÍ debería ver {campo}")
+        self.assertTrue(len(sess["movements"]) >= 1)

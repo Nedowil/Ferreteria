@@ -17,10 +17,10 @@ export default function CashSessions() {
         { header: "Cajero", value: (r) => r.user_name },
         { header: "Apertura", value: (r) => (r.opened_at ? new Date(r.opened_at).toLocaleString("es-GT") : "") },
         { header: "Cierre", value: (r) => (r.closed_at ? new Date(r.closed_at).toLocaleString("es-GT") : "") },
-        { header: "Fondo", value: (r) => Number(r.opening_amount) },
-        { header: "Esperado", value: (r) => Number(r.expected_cash) },
+        { header: "Fondo", value: (r) => (r.opening_amount != null ? Number(r.opening_amount) : "") },
+        { header: "Esperado", value: (r) => (r.expected_cash != null ? Number(r.expected_cash) : "") },
         { header: "Contado", value: (r) => (r.counted_cash != null ? Number(r.counted_cash) : "") },
-        { header: "Diferencia", value: (r) => (r.status === "cerrada" ? Number(r.difference) : "") },
+        { header: "Diferencia", value: (r) => (r.status === "cerrada" && r.difference != null ? Number(r.difference) : "") },
         { header: "Estado", value: (r) => r.status_display },
       ], rows);
     } finally {
@@ -51,11 +51,11 @@ export default function CashSessions() {
                 <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">{s.user_name}</td>
                 <td className="px-4 py-2 text-xs text-slate-500 dark:text-slate-400">{new Date(s.opened_at).toLocaleString()}</td>
                 <td className="px-4 py-2 text-xs text-slate-500 dark:text-slate-400">{s.closed_at ? new Date(s.closed_at).toLocaleString() : "—"}</td>
-                <td className="px-4 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">Q{s.opening_amount}</td>
-                <td className="px-4 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">Q{s.expected_cash}</td>
+                <td className="px-4 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">{s.opening_amount != null ? `Q${s.opening_amount}` : "🔒"}</td>
+                <td className="px-4 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">{s.expected_cash != null ? `Q${s.expected_cash}` : "🔒"}</td>
                 <td className="px-4 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">{s.counted_cash != null ? `Q${s.counted_cash}` : "—"}</td>
                 <td className={"px-4 py-2 text-right font-semibold " + (Number(s.difference) < 0 ? "text-red-600" : Number(s.difference) > 0 ? "text-green-600" : "text-slate-700 dark:text-slate-200")}>
-                  {s.status === "cerrada" ? `Q${s.difference}` : "—"}
+                  {s.status !== "cerrada" ? "—" : (s.difference != null ? `Q${s.difference}` : "🔒")}
                 </td>
                 <td className="px-4 py-2"><span className={"inline-block rounded-full px-2 py-0.5 text-xs font-medium " + (s.status === "abierta" ? "bg-green-100 text-green-700" : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300")}>{s.status_display}</span></td>
               </tr>
