@@ -118,3 +118,8 @@ class BlindCashApiTests(TestCase):
                       "movements", "totals_by_method", "opening_amount"):
             self.assertIn(campo, sess, f"El supervisor SÍ debería ver {campo}")
         self.assertTrue(len(sess["movements"]) >= 1)
+
+    def test_historial_solo_supervisor(self):
+        # El cajero NO puede ver el historial (listado de sesiones); el supervisor sí.
+        self.assertEqual(self._client("c@test.com").get("/api/cashbox/cash-sessions/").status_code, 403)
+        self.assertEqual(self._client("a@test.com").get("/api/cashbox/cash-sessions/").status_code, 200)

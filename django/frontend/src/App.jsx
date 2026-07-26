@@ -174,7 +174,7 @@ export default function App() {
       <Route path="/ventas/:id/ticket" element={<Protected perm="ventas.ver"><Ticket /></Protected>} />
       <Route path="/cuentas-por-cobrar" element={<Protected perm="cuentas_cobrar.ver"><Receivable /></Protected>} />
       <Route path="/caja" element={<Protected perm="caja.ver"><CashBox /></Protected>} />
-      <Route path="/caja/historial" element={<Protected perm="caja.ver"><CashSessions /></Protected>} />
+      <Route path="/caja/historial" element={<Protected perm="caja.ver_esperado"><CashSessions /></Protected>} />
       <Route path="/cotizaciones" element={<Protected perm="cotizaciones.ver"><QuotationList /></Protected>} />
       <Route path="/cotizaciones/nueva" element={<Protected perm="cotizaciones.crear"><QuotationForm /></Protected>} />
       <Route path="/cotizaciones/:id" element={<Protected perm="cotizaciones.ver"><QuotationDetail /></Protected>} />

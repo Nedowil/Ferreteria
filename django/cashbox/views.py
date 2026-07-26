@@ -21,7 +21,9 @@ class CashSessionViewSet(PermissionByActionMixin, viewsets.ReadOnlyModelViewSet)
     """Sesiones de caja. Un usuario no admin solo ve las suyas."""
 
     perms_map = {
-        "list": "caja.ver", "retrieve": "caja.ver", "current": "caja.ver",
+        # El HISTORIAL de cajas (listado/detalle de sesiones pasadas) es solo para
+        # supervisor/admin. El cajero solo ve SU caja abierta con 'current'.
+        "list": "caja.ver_esperado", "retrieve": "caja.ver_esperado", "current": "caja.ver",
         "open": "caja.abrir", "close": "caja.cerrar", "movement": "caja.movimientos",
     }
 
