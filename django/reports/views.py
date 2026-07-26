@@ -187,22 +187,39 @@ def dead_stock(request):
 @api_view(["GET"])
 @permission_classes([_PERM])
 def daily_cash(request):
-    """Corte diario: cajas cerradas en un día."""
+    """Corte diario: cajas cerradas en un día.
+
+    Cuadre a ciegas: el fondo inicial, el efectivo esperado y la diferencia solo
+    se muestran a quien tenga 'caja.ver_esperado' (supervisor/admin). Quien solo
+    tenga 'reportes.ver' ve lo contado, pero no el esperado ni la diferencia."""
+    from core.permissions import user_permission_codenames
+    can_see = "caja.ver_esperado" in user_permission_codenames(request.user)
+
     day = parse_date(request.query_params.get("day") or "") or timezone.localdate()
     sessions = CashSession.objects.filter(
         status=CashSession.STATUS_CERRADA, closed_at__date=day
     ).select_related("user").order_by("closed_at")
-    rows = [{
-        "id": s.id, "user": s.user.name if s.user else None,
-        "opening_amount": s.opening_amount, "expected_cash": s.expected_cash,
-        "counted_cash": s.counted_cash, "difference": s.difference,
-        "closed_at": s.closed_at,
-    } for s in sessions]
+    rows = []
+    for s in sessions:
+        row = {
+            "id": s.id, "user": s.user.name if s.user else None,
+            "counted_cash": s.counted_cash, "closed_at": s.closed_at,
+        }
+        if can_see:
+            row["opening_amount"] = s.opening_amount
+            row["expected_cash"] = s.expected_cash
+            row["difference"] = s.difference
+        rows.append(row)
+
     agg = sessions.aggregate(
         opening=Sum("opening_amount"), expected=Sum("expected_cash"),
         counted=Sum("counted_cash"), difference=Sum("difference"),
     )
-    return Response({"day": day, "sessions": rows, "totals": {k: (v or 0) for k, v in agg.items()}})
+    totals = {"counted": agg["counted"] or 0}
+    if can_see:
+        totals.update(opening=agg["opening"] or 0, expected=agg["expected"] or 0,
+                      difference=agg["difference"] or 0)
+    return Response({"day": day, "sessions": rows, "totals": totals})
 
 
 @api_view(["GET"])

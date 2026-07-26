@@ -8,13 +8,16 @@ export default function DailyCash() {
   const [data, setData] = useState(null);
   const load = () => { api.get("/reports/daily-cash/", { params: { day } }).then((r) => setData(r.data)); };
   useEffect(load, []);
+  // Cuadre a ciegas: si el backend no envía "esperado", este usuario no puede
+  // ver fondo/esperado/diferencia (solo lo contado).
+  const blind = !!data && data.totals?.expected === undefined;
   const exportXls = () => exportToExcel(`corte-caja-${day}`, [
     { header: "Cajero", value: (s) => s.user },
     { header: "Cierre", value: (s) => (s.closed_at ? new Date(s.closed_at).toLocaleString("es-GT") : "") },
-    { header: "Fondo", value: (s) => Number(s.opening_amount) },
-    { header: "Esperado", value: (s) => Number(s.expected_cash) },
+    ...(!blind ? [{ header: "Fondo", value: (s) => Number(s.opening_amount) }] : []),
+    ...(!blind ? [{ header: "Esperado", value: (s) => Number(s.expected_cash) }] : []),
     { header: "Contado", value: (s) => Number(s.counted_cash) },
-    { header: "Diferencia", value: (s) => Number(s.difference) },
+    ...(!blind ? [{ header: "Diferencia", value: (s) => Number(s.difference) }] : []),
   ], data?.sessions || []);
   return (
     <div>
@@ -32,30 +35,33 @@ export default function DailyCash() {
       {data && (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">
-            <KpiCard label="Fondo inicial" value={Q(data.totals.opening)} />
-            <KpiCard label="Esperado" value={Q(data.totals.expected)} />
+            {!blind && <KpiCard label="Fondo inicial" value={Q(data.totals.opening)} />}
+            {!blind && <KpiCard label="Esperado" value={Q(data.totals.expected)} />}
             <KpiCard label="Contado" value={Q(data.totals.counted)} />
-            <KpiCard label="Diferencia" value={Q(data.totals.difference)} accent={Number(data.totals.difference) < 0 ? "text-red-600" : "text-green-600"} />
+            {!blind && <KpiCard label="Diferencia" value={Q(data.totals.difference)} accent={Number(data.totals.difference) < 0 ? "text-red-600" : "text-green-600"} />}
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
             <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-left">
-                <tr><th className="px-4 py-2">Cajero</th><th className="px-4 py-2">Cierre</th><th className="px-4 py-2 text-right">Fondo</th>
-                    <th className="px-4 py-2 text-right">Esperado</th><th className="px-4 py-2 text-right">Contado</th><th className="px-4 py-2 text-right">Diferencia</th></tr>
+                <tr><th className="px-4 py-2">Cajero</th><th className="px-4 py-2">Cierre</th>
+                    {!blind && <th className="px-4 py-2 text-right">Fondo</th>}
+                    {!blind && <th className="px-4 py-2 text-right">Esperado</th>}
+                    <th className="px-4 py-2 text-right">Contado</th>
+                    {!blind && <th className="px-4 py-2 text-right">Diferencia</th>}</tr>
               </thead>
               <tbody>
                 {data.sessions.map((s) => (
                   <tr key={s.id} className="border-t">
                     <td className="px-4 py-2">{s.user}</td>
                     <td className="px-4 py-2 text-xs text-slate-500 dark:text-slate-400">{new Date(s.closed_at).toLocaleTimeString()}</td>
-                    <td className="px-4 py-2 text-right">{Q(s.opening_amount)}</td>
-                    <td className="px-4 py-2 text-right">{Q(s.expected_cash)}</td>
+                    {!blind && <td className="px-4 py-2 text-right">{Q(s.opening_amount)}</td>}
+                    {!blind && <td className="px-4 py-2 text-right">{Q(s.expected_cash)}</td>}
                     <td className="px-4 py-2 text-right">{Q(s.counted_cash)}</td>
-                    <td className={"px-4 py-2 text-right " + (Number(s.difference) < 0 ? "text-red-600" : Number(s.difference) > 0 ? "text-green-600" : "")}>{Q(s.difference)}</td>
+                    {!blind && <td className={"px-4 py-2 text-right " + (Number(s.difference) < 0 ? "text-red-600" : Number(s.difference) > 0 ? "text-green-600" : "")}>{Q(s.difference)}</td>}
                   </tr>
                 ))}
-                {data.sessions.length === 0 && <tr><td colSpan="6" className="px-5 py-8 text-center text-slate-400">No hay cajas cerradas ese día.</td></tr>}
+                {data.sessions.length === 0 && <tr><td colSpan={blind ? 3 : 6} className="px-5 py-8 text-center text-slate-400">No hay cajas cerradas ese día.</td></tr>}
               </tbody>
             </table>
             </div>

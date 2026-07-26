@@ -37,6 +37,46 @@ class ReportsTests(APITestCase):
             user=self.user, branch=self.branch,
         )
 
+    def test_daily_cash_cuadre_a_ciegas(self):
+        # Un usuario con solo 'reportes.ver' (sin 'caja.ver_esperado') NO debe ver
+        # fondo/esperado/diferencia en el corte diario; sí lo contado.
+        from cashbox.services import open_session, close_session
+        from django.utils import timezone
+        s = open_session(self.user, 100, branch=self.branch)
+        close_session(s, 600)
+        day = timezone.localdate().isoformat()
+        d = self.client.get("/api/reports/daily-cash/", {"day": day}).json()
+        self.assertNotIn("expected", d["totals"])
+        self.assertNotIn("difference", d["totals"])
+        self.assertIn("counted", d["totals"])
+        self.assertTrue(d["sessions"])
+        self.assertNotIn("expected_cash", d["sessions"][0])
+        self.assertNotIn("difference", d["sessions"][0])
+        self.assertNotIn("opening_amount", d["sessions"][0])
+        self.assertIn("counted_cash", d["sessions"][0])
+
+    def test_daily_cash_supervisor_ve_todo(self):
+        from cashbox.services import open_session, close_session
+        from core.permissions import sync_permissions
+        from django.contrib.auth import get_user_model
+        from django.contrib.auth.models import Group
+        from django.utils import timezone
+        User = get_user_model()
+        perms = sync_permissions()
+        grp = Group.objects.create(name="super")
+        grp.permissions.add(perms["reportes.ver"], perms["caja.ver_esperado"])
+        jefe = User.objects.create_user(username="j", email="j@test.com", password="x")
+        jefe.groups.add(grp)
+        s = open_session(self.user, 100, branch=self.branch)
+        close_session(s, 600)
+        c = self.client_class()
+        r = c.post("/api/auth/token/", {"email": "j@test.com", "password": "x"}, format="json")
+        c.credentials(HTTP_AUTHORIZATION=f"Bearer {r.json()['access']}", HTTP_X_BRANCH_ID=str(self.branch.id))
+        d = c.get("/api/reports/daily-cash/", {"day": timezone.localdate().isoformat()}).json()
+        self.assertIn("expected", d["totals"])
+        self.assertIn("difference", d["sessions"][0])
+        self.assertIn("opening_amount", d["sessions"][0])
+
     def test_sales_report(self):
         r = self.client.get("/api/reports/sales/")
         self.assertEqual(r.status_code, 200)
