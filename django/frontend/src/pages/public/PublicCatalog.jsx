@@ -34,9 +34,9 @@ export default function PublicCatalog() {
     } finally { setExporting(""); }
   };
 
-  const exportPdf = async () => {
-    setExporting("pdf");
-    try {
+  // Construye el PDF del catálogo y devuelve el documento jsPDF (reutilizable
+  // para descargar o compartir).
+  const buildCatalogDoc = async () => {
       const rows = await getAllForExport();
       const { jsPDF } = await import("jspdf");
       const autoTable = (await import("jspdf-autotable")).default;
@@ -72,7 +72,43 @@ export default function PublicCatalog() {
         head: [head], body, startY: 92, styles: { fontSize: 9, cellPadding: 4 },
         headStyles: { fillColor: [15, 118, 110] },
       });
-      doc.save(`catalogo-${bizName}.pdf`);
+      return doc;
+  };
+
+  const pdfFileName = `catalogo-${bizName}.pdf`;
+
+  const exportPdf = async () => {
+    setExporting("pdf");
+    try {
+      const doc = await buildCatalogDoc();
+      doc.save(pdfFileName);
+    } finally { setExporting(""); }
+  };
+
+  // Compartir el catálogo como PDF ADJUNTO. En el celular abre el menú nativo
+  // (WhatsApp, correo, etc.) donde se ELIGE el contacto y se manda el PDF. En la
+  // computadora (sin soporte para compartir archivos) descarga el PDF y abre
+  // WhatsApp para elegir contacto, enviando además el enlace del catálogo.
+  const shareCatalog = async () => {
+    setExporting("share");
+    try {
+      const doc = await buildCatalogDoc();
+      const blob = doc.output("blob");
+      const text = `Catálogo de ${bizName}${info?.title ? " — " + info.title : ""}`;
+      const file = new File([blob], pdfFileName, { type: "application/pdf" });
+      if (typeof navigator !== "undefined" && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: `Catálogo ${bizName}`, text });
+          return;   // el usuario ya eligió el contacto y se adjuntó el PDF
+        } catch { return; /* canceló el menú de compartir */ }
+      }
+      // Respaldo (computadora): descargar el PDF y abrir WhatsApp con el enlace.
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = pdfFileName; a.click();
+      URL.revokeObjectURL(url);
+      const link = typeof window !== "undefined" ? window.location.href : "";
+      window.open(`https://wa.me/?text=${encodeURIComponent(text + (link ? "\n" + link : ""))}`, "_blank");
     } finally { setExporting(""); }
   };
 
@@ -112,6 +148,10 @@ export default function PublicCatalog() {
               {info?.intro && <p className="mt-1 text-slate-300 text-sm whitespace-pre-line">{info.intro}</p>}
             </div>
             <div className="flex gap-2 shrink-0">
+              <button onClick={shareCatalog} disabled={!!exporting}
+                      className="bg-green-500/90 hover:bg-green-500 rounded-lg px-3 py-1.5 text-xs font-medium transition disabled:opacity-50">
+                {exporting === "share" ? "Generando…" : "📤 Compartir"}
+              </button>
               <button onClick={exportPdf} disabled={!!exporting}
                       className="bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg px-3 py-1.5 text-xs font-medium transition disabled:opacity-50">
                 {exporting === "pdf" ? "Generando…" : "⬇️ PDF"}
@@ -127,7 +167,7 @@ export default function PublicCatalog() {
             {info?.company?.address && <span>📍 {info.company.address}</span>}
             {info?.whatsapp_link && (
               <a href={info.whatsapp_link} target="_blank" rel="noreferrer" className="text-green-400 hover:underline">
-                💬 WhatsApp
+                💬 Contactar por WhatsApp
               </a>
             )}
           </div>
