@@ -27,7 +27,7 @@ export default function CashBox() {
 
   const exportMovExcel = () => {
     const cols = movCols();
-    exportToExcel(`movimientos-caja`, cols, session.movements);
+    exportToExcel(`movimientos-caja`, cols, session.movements || []);
   };
 
   const exportMovPdf = async () => {
@@ -47,7 +47,7 @@ export default function CashBox() {
       autoTable(doc, {
         startY: 72,
         head: [cols.map((c) => c.header)],
-        body: session.movements.map((m) => cols.map((c) => {
+        body: (session.movements || []).map((m) => cols.map((c) => {
           const v = c.value(m);
           return typeof v === "number" ? v.toFixed(2) : v;
         })),
@@ -207,7 +207,7 @@ export default function CashBox() {
                     <th className="px-4 py-2">Descripción</th><th className="px-4 py-2 text-right">Monto</th></tr>
               </thead>
               <tbody>
-                {session.movements.map((m) => (
+                {(session.movements || []).map((m) => (
                   <tr key={m.id} className="border-t">
                     <td className="px-4 py-2 text-xs text-slate-500 dark:text-slate-400">{new Date(m.created_at).toLocaleTimeString()}</td>
                     <td className="px-4 py-2">{m.type_display}</td>
@@ -219,7 +219,7 @@ export default function CashBox() {
                     </td>
                   </tr>
                 ))}
-                {session.movements.length === 0 && <tr><td colSpan="6" className="px-5 py-8 text-center text-slate-400">Sin movimientos.</td></tr>}
+                {(session.movements || []).length === 0 && <tr><td colSpan="6" className="px-5 py-8 text-center text-slate-400">Sin movimientos.</td></tr>}
               </tbody>
             </table>
             </div>
