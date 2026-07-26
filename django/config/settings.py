@@ -317,6 +317,30 @@ if "test" in sys.argv:
     # activan el driver con override_settings.
     FEL_DRIVER = "stub"
 
+
+# Caché — de ella dependen el rate limiting y el BLOQUEO de PIN por fuerza bruta.
+# Con varios workers de gunicorn, LocMemCache es POR PROCESO: cada worker tendría
+# su propio contador y el bloqueo no sería exacto. Por eso en producción se usa la
+# CACHÉ EN BASE DE DATOS (DatabaseCache): usa el mismo PostgreSQL y así TODOS los
+# workers/instancias comparten el estado → bloqueo y throttling 100% consistentes,
+# sin necesidad de Redis. Si algún día hay Redis, basta con definir REDIS_URL.
+if os.getenv("REDIS_URL"):
+    CACHES = {"default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": os.getenv("REDIS_URL"),
+    }}
+elif "test" in sys.argv or os.getenv("DB_ENGINE", "postgresql").lower() == "sqlite":
+    # En pruebas/SQLite basta la caché en memoria (rápida y aislada por caso).
+    CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
+else:
+    CACHES = {"default": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "cache_throttle",   # tabla creada por 'manage.py createcachetable'
+        # El throttling escribe muchas claves de vida corta; subimos el tope de
+        # entradas antes de purgar para no perder contadores en horas pico.
+        "OPTIONS": {"MAX_ENTRIES": 10000, "CULL_FREQUENCY": 4},
+    }}
+
 from datetime import timedelta  # noqa: E402
 
 SIMPLE_JWT = {

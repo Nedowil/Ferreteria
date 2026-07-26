@@ -5,6 +5,12 @@ set -e
 echo "==> Aplicando migraciones…"
 python manage.py migrate --noinput
 
+# Tabla de caché en BD (DatabaseCache): guarda los contadores de rate limiting y
+# el bloqueo de PIN compartidos entre TODOS los workers. Es idempotente: si la
+# tabla ya existe, no hace nada.
+echo "==> Preparando tabla de caché…"
+python manage.py createcachetable
+
 echo "==> Recolectando estáticos…"
 python manage.py collectstatic --noinput
 
