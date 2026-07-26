@@ -9,7 +9,19 @@ export default function LowStock() {
   const { can } = useAuth();
   const [rows, setRows] = useState([]);
   const [exporting, setExporting] = useState(false);
-  useEffect(() => { api.get("/inventory/products/low-stock/").then((r) => setRows(r.data)); }, []);
+  const [ubicaciones, setUbicaciones] = useState([]);
+  const [ubicacion, setUbicacion] = useState("");   // id de ubicación filtrada ("" = todas)
+
+  // Catálogo de ubicaciones para el filtro.
+  useEffect(() => {
+    api.get("/inventory/locations/?page_size=200").then((r) => setUbicaciones(r.data.results || r.data)).catch(() => {});
+  }, []);
+
+  // Carga (o recarga al cambiar el filtro de ubicación).
+  useEffect(() => {
+    const params = ubicacion ? { ubicacion } : {};
+    api.get("/inventory/products/low-stock/", { params }).then((r) => setRows(r.data));
+  }, [ubicacion]);
 
   // Arma una compra sugerida con todos los productos por reponer y sus
   // cantidades sugeridas, y abre el formulario de compra ya con las partidas.
@@ -24,10 +36,11 @@ export default function LowStock() {
   const exportExcel = async () => {
     setExporting(true);
     try {
-      const data = await fetchAll("/inventory/products/low-stock/", {});
+      const data = await fetchAll("/inventory/products/low-stock/", ubicacion ? { ubicacion } : {});
       exportToExcel("stock-bajo", [
         { header: "SKU", value: (r) => r.sku },
         { header: "Producto", value: (r) => r.name },
+        { header: "Ubicación", value: (r) => r.ubicacion_name || "" },
         { header: "Stock actual", value: (r) => r.stock },
         { header: "Mínimo", value: (r) => r.min_stock },
         { header: "Sugerido", value: (r) => r.suggested },
@@ -41,7 +54,13 @@ export default function LowStock() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">⚠️ Productos con stock bajo</h1>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <select value={ubicacion} onChange={(e) => setUbicacion(e.target.value)}
+                  className="border border-slate-300 dark:border-slate-600 dark:bg-slate-800 rounded-lg px-3 py-2 text-sm"
+                  title="Filtrar por ubicación">
+            <option value="">📍 Todas las ubicaciones</option>
+            {ubicaciones.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+          </select>
           <button onClick={exportExcel} disabled={exporting} className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-100 transition">{exporting ? "Exportando…" : "⬇️ Excel"}</button>
           {can("compras.crear") && rows.length > 0 && (
             <button onClick={generarCompra} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">🛒 Generar compra sugerida</button>
@@ -53,6 +72,7 @@ export default function LowStock() {
         <table className="w-full text-sm">
           <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
             <tr><th className="px-4 py-2.5">SKU</th><th className="px-4 py-2.5">Producto</th>
+                <th className="px-4 py-2.5">Ubicación</th>
                 <th className="px-4 py-2.5 text-right">Stock</th><th className="px-4 py-2.5 text-right">Mínimo</th>
                 <th className="px-4 py-2.5 text-right">Sugerido comprar</th><th className="px-4 py-2.5"></th></tr>
           </thead>
@@ -64,13 +84,18 @@ export default function LowStock() {
                   <div className="font-medium text-slate-800 dark:text-slate-100">{r.name}</div>
                   <div className="text-xs text-slate-400">{[r.category_name, r.brand_name].filter(Boolean).join(" · ")}</div>
                 </td>
+                <td className="px-4 py-2">
+                  {r.ubicacion_name
+                    ? <span className="inline-block rounded-md px-2 py-0.5 text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200">📍 {r.ubicacion_name}</span>
+                    : <span className="text-xs text-slate-400">— Sin ubicación —</span>}
+                </td>
                 <td className="px-4 py-2 text-right"><span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-red-100 text-red-700">{r.stock}</span></td>
                 <td className="px-4 py-2 text-right">{r.min_stock}</td>
                 <td className="px-4 py-2 text-right font-semibold text-blue-700">{r.suggested}</td>
                 <td className="px-4 py-2 text-right"><div className="inline-flex flex-wrap gap-1.5 justify-end"><Link to={`/productos/${r.id}/inventario`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">Inventario</Link></div></td>
               </tr>
             ))}
-            {rows.length === 0 && <tr><td colSpan="6" className="px-5 py-10 text-center text-slate-400">Ningún producto con stock bajo 🎉</td></tr>}
+            {rows.length === 0 && <tr><td colSpan="7" className="px-5 py-10 text-center text-slate-400">{ubicacion ? "Ningún producto con stock bajo en esta ubicación 🎉" : "Ningún producto con stock bajo 🎉"}</td></tr>}
           </tbody>
         </table>
         </div>

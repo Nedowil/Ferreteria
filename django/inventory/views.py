@@ -294,8 +294,13 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
         branch = self.branch
         products = (
             Product.objects.filter(active=True, stock__lte=F("min_stock"))
-            .select_related("category", "brand").prefetch_related("stocks").order_by("stock")
+            .select_related("category", "brand", "ubicacion")
+            .prefetch_related("stocks").order_by("stock")
         )
+        # Filtro opcional por ubicación (para ir a reponer por zona de la bodega).
+        ubicacion = request.query_params.get("ubicacion")
+        if ubicacion:
+            products = products.filter(ubicacion_id=ubicacion)
         rows = []
         for p in products:
             stock = p.stock_for(branch.pk if branch else None)
@@ -304,6 +309,8 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
                 "id": p.id, "sku": p.sku, "name": p.name,
                 "category_name": p.category.name if p.category else None,
                 "brand_name": p.brand.name if p.brand else None,
+                "ubicacion": p.ubicacion_id,
+                "ubicacion_name": p.ubicacion.name if p.ubicacion else None,
                 "stock": stock, "min_stock": p.min_stock, "suggested": suggested,
             })
         return Response(rows)
