@@ -197,7 +197,15 @@ export default function ProductForm() {
 
   useEffect(() => {
     api.get("/inventory/brands/?page_size=200").then((r) => setBrands(r.data.results || r.data));
-    api.get("/inventory/locations/?page_size=200").then((r) => setUbicaciones(r.data.results || r.data)).catch(() => {});
+    // Ubicaciones ordenadas de la MÁS RECIENTE a la más antigua (id desc): así
+    // la sección que se acaba de crear aparece de primero en la lista y no hay
+    // que bajar hasta el final cuando ya existen muchas secciones.
+    api.get("/inventory/locations/?page_size=200")
+      .then((r) => {
+        const list = r.data.results || r.data;
+        setUbicaciones([...list].sort((a, b) => (b.id || 0) - (a.id || 0)));
+      })
+      .catch(() => {});
     if (editing) {
       api.get(`/inventory/products/${id}/`).then((r) => {
         const d = r.data;
