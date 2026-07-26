@@ -183,6 +183,26 @@ class SaleServiceTests(TestCase):
         )
         self.assertEqual(sale.discount, Decimal("102.00"))
 
+    def test_descuento_global_hunde_linea_bajo_costo_requiere_autorizacion(self):
+        # Producto de margen delgado (costo 80, precio 85). Un descuento GLOBAL
+        # del 10% (bajo el 25%) hunde esa línea por debajo del costo aunque el
+        # descuento por línea sea 0: debe pedir autorización.
+        thin = Product.objects.create(
+            sku="S-THIN", name="Tornillo", purchase_price=Decimal("80"),
+            sale_price=Decimal("85"), stock=Decimal("100"), tax_type="iva",
+        )
+        items = [
+            {"product_id": thin.id, "quantity": "1", "unit_price": "85"},
+            {"product_id": self.prod.id, "quantity": "1", "unit_price": "85"},
+        ]
+        with self.assertRaises(SaleError):
+            create_sale({"payment_method": "efectivo", "paid_amount": "200", "discount": "17"},
+                        items, user=self.user, branch=self.branch)
+        # Con autorización de supervisor, procede.
+        sale = create_sale({"payment_method": "efectivo", "paid_amount": "200", "discount": "17"},
+                           items, user=self.user, branch=self.branch, special_authorized=True)
+        self.assertEqual(sale.discount, Decimal("17.00"))
+
     def test_precio_bajo_costo_requiere_autorizacion(self):
         # Vender por debajo del costo (60) sin autorización se rechaza.
         with self.assertRaises(SaleError):

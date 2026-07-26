@@ -44,7 +44,8 @@ def _check_special_authorization(lines, global_discount, special_authorized):
         max_pct = Decimal("25")
 
     total_gross = sum((l["gross"] for l in lines), Decimal("0"))
-    total_disc = sum((l["line_discount"] for l in lines), Decimal("0")) + Decimal(str(global_discount or 0))
+    global_disc = Decimal(str(global_discount or 0))
+    total_disc = sum((l["line_discount"] for l in lines), Decimal("0")) + global_disc
     if total_gross > 0 and max_pct >= 0:
         disc_pct = total_disc / total_gross * 100
         if disc_pct > max_pct:
@@ -53,7 +54,11 @@ def _check_special_authorization(lines, global_discount, special_authorized):
                 "Requiere autorización de un supervisor."
             )
     for l in lines:
-        line_net = l["gross"] - l["line_discount"]
+        # El descuento global se reparte proporcional al importe de cada línea,
+        # para que un descuento global que hunda UNA línea por debajo del costo
+        # también se detecte (no solo el descuento por línea).
+        global_share = (global_disc * l["gross"] / total_gross) if total_gross > 0 else Decimal("0")
+        line_net = l["gross"] - l["line_discount"] - global_share
         line_cost = l["unit_cost"] * l["quantity"]
         if line_cost > 0 and line_net < line_cost:
             raise SaleError(

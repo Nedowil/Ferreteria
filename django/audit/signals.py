@@ -4,13 +4,31 @@ Modelos auditados: los listados en AUDITED. Para cada uno se captura el diff
 de los campos que cambiaron (excluyendo campos ruidosos).
 """
 
+import logging
 from decimal import Decimal
 
+from django.db import transaction
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 
 from .context import get_request
 from .models import AuditLog
+
+logger = logging.getLogger("audit")
+
+
+def _safe_audit_create(**kwargs):
+    """Escribe una fila de bitácora sin poder romper la transacción de negocio.
+
+    La auditoría de ventas/caja/inventario ocurre DENTRO de la transacción atómica
+    de la venta o el movimiento. Si por cualquier motivo el insert de auditoría
+    fallara, un savepoint aísla el fallo para que NO se revierta la venta en sí;
+    se pierde (a lo sumo) esa fila de bitácora, no la operación del negocio."""
+    try:
+        with transaction.atomic():
+            AuditLog.objects.create(**kwargs)
+    except Exception:  # noqa: BLE001 — la bitácora nunca debe frenar la operación
+        logger.warning("No se pudo escribir la bitácora de auditoría", exc_info=True)
 
 # "app_label.ModelName" de los modelos a auditar
 AUDITED = {
@@ -119,7 +137,7 @@ def _on_save(sender, instance, created, **kwargs):
 
     if created:
         new = _field_values(instance)
-        AuditLog.objects.create(
+        _safe_audit_create(
             user=user, branch=branch, event=AuditLog.CREATED,
             auditable_type=label, auditable_id=str(instance.pk),
             old_values=None, new_values=new, ip=ip, user_agent=ua,
@@ -145,7 +163,7 @@ def _on_save(sender, instance, created, **kwargs):
     # registra como "Eliminado" para que en la auditoría se vea claro quién lo
     # borró (aunque técnicamente sea un UPDATE del deleted_at).
     soft_deleted = bool(changed_new.get("deleted_at")) and not changed_old.get("deleted_at")
-    AuditLog.objects.create(
+    _safe_audit_create(
         user=user, branch=branch,
         event=AuditLog.DELETED if soft_deleted else AuditLog.UPDATED,
         auditable_type=label, auditable_id=str(instance.pk),

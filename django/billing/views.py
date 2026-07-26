@@ -10,7 +10,7 @@ from rest_framework.response import Response
 import base64
 
 from core.models import CompanySetting
-from core.permissions import HasPermission
+from core.permissions import HasAnyPermission, HasPermission
 from sales.models import Sale
 from . import printing, services
 from .models import ElectronicInvoice
@@ -193,8 +193,13 @@ def _actor(request):
     return request.user if getattr(request, "user", None) and request.user.is_authenticated else None
 
 
+# Solo quien puede ver o crear ventas cuenta/estampa reimpresiones (evita que
+# otro rol infle el contador de copias de una venta ajena).
+_PRINT_PERM = HasAnyPermission.require_any("ventas.ver", "ventas.crear")
+
+
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([_PRINT_PERM])
 def register_ticket_print(request, sale_id):
     """Cuenta una impresión del comprobante (para el control de reimpresión).
 
@@ -210,26 +215,51 @@ def register_ticket_print(request, sale_id):
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([_PRINT_PERM])
 def print_ticket(request, sale_id):
     """Imprime el ticket de una venta en la impresora térmica configurada.
 
     Cuenta la impresión: de la segunda en adelante estampa la marca de agua de
-    REIMPRESIÓN / COPIA en el ticket ESC/POS."""
+    REIMPRESIÓN / COPIA en el ticket ESC/POS.
+
+    En modo RED, la impresión se cuenta dentro de una transacción y se REVIERTE
+    si el envío a la impresora falla, para no estampar "COPIA" en el primer
+    ticket real por culpa de un intento fallido."""
+    from django.db import transaction
     from sales.services import register_print
     sale = Sale.objects.filter(pk=sale_id).select_related("customer").first()
     if not sale:
         return Response({"detail": "Venta inexistente."}, status=status.HTTP_404_NOT_FOUND)
     company = CompanySetting.current()
+
+    def _build(reprint):
+        ticket = services.build_ticket(sale)
+        return printing.build_ticket_escpos(
+            ticket, width_mm=company.printer_width, auto_cut=company.printer_auto_cut,
+            reprint=reprint if reprint["is_reprint"] else None)
+
+    if company.printer_mode == "network":
+        if not company.printer_ip:
+            return Response({"detail": "Configura la IP de la impresora de red."},
+                            status=status.HTTP_400_BAD_REQUEST)
+        try:
+            with transaction.atomic():
+                reprint = register_print(sale, user=_actor(request))
+                printing.send_to_network_printer(
+                    company.printer_ip, company.printer_port, _build(reprint))
+        except OSError as e:
+            # El envío falló: la transacción revierte el conteo de la copia.
+            return Response({"detail": f"No se pudo conectar con la impresora: {e}"},
+                            status=status.HTTP_502_BAD_GATEWAY)
+        return Response({"status": "sent", "mode": "network", "reprint": reprint})
+
+    # system | bluetooth: se devuelven los bytes para que el cliente los imprima.
     reprint = register_print(sale, user=_actor(request))
-    ticket = services.build_ticket(sale)
-    data = printing.build_ticket_escpos(
-        ticket, width_mm=company.printer_width, auto_cut=company.printer_auto_cut,
-        reprint=reprint if reprint["is_reprint"] else None)
-    resp = _deliver_escpos(company, data)
-    if isinstance(resp.data, dict):
-        resp.data["reprint"] = reprint
-    return resp
+    return Response({
+        "status": "raw", "mode": company.printer_mode,
+        "escpos_base64": base64.b64encode(_build(reprint)).decode("ascii"),
+        "reprint": reprint,
+    })
 
 
 @api_view(["POST"])

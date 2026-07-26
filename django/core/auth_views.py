@@ -42,9 +42,11 @@ PIN_MAX_ATTEMPTS = int(os.getenv("PIN_MAX_ATTEMPTS", "5"))
 PIN_LOCK_SECONDS = int(os.getenv("PIN_LOCK_SECONDS", "300"))  # 5 minutos
 
 
-def _pin_keys(login):
-    slug = (login or "").strip().lower()
-    return f"pinfail:{slug}", f"pinlock:{slug}"
+def _pin_keys(user):
+    """Claves de caché por USUARIO (no por el texto tecleado): así username y
+    correo del mismo perfil comparten un solo contador y no se duplica el cupo
+    de intentos."""
+    return f"pinfail:{user.pk}", f"pinlock:{user.pk}"
 
 
 def _pin_lock_remaining(lock_key):
@@ -55,19 +57,20 @@ def _pin_lock_remaining(lock_key):
     return max(0, int(until - dj_timezone.now().timestamp()))
 
 
-def _log_pin_lockout(login, request):
+def _log_pin_lockout(user, request):
     """Registra en la bitácora que un perfil se bloqueó por intentos de PIN
     fallidos (posible intento de adivinar el PIN de un supervisor)."""
     try:
         from audit.models import AuditLog
         actor = request.user if getattr(request, "user", None) and request.user.is_authenticated else None
+        perfil = user.username or user.email
         AuditLog.objects.create(
             user=actor, event=AuditLog.UPDATED,
-            auditable_type="auth.PinLockout", auditable_id=(login or "")[:64],
-            new_values={"perfil": login, "intentos": PIN_MAX_ATTEMPTS},
+            auditable_type="auth.PinLockout", auditable_id=str(user.pk),
+            new_values={"perfil": perfil, "intentos": PIN_MAX_ATTEMPTS},
             ip=request.META.get("REMOTE_ADDR"),
             user_agent=(request.META.get("HTTP_USER_AGENT") or "")[:255],
-            description=f"Perfil '{login}' bloqueado tras {PIN_MAX_ATTEMPTS} intentos de PIN fallidos.",
+            description=f"Perfil '{perfil}' bloqueado tras {PIN_MAX_ATTEMPTS} intentos de PIN fallidos.",
         )
     except Exception:  # noqa: BLE001 — la bitácora no debe frenar la respuesta
         pass
@@ -193,7 +196,16 @@ def switch_profile(request):
         return err
     login = (request.data.get("username") or "").strip()
     pin = (request.data.get("pin") or "").strip()
-    fail_key, lock_key = _pin_keys(login)
+
+    # Se resuelve el usuario ANTES para llevar el contador POR USUARIO (no por el
+    # texto tecleado): así username y correo del mismo perfil comparten un solo
+    # cupo de intentos y no se puede duplicar el margen de adivinanza.
+    user = (User.objects.filter(username__iexact=login, is_device=False).first()
+            or User.objects.filter(email__iexact=login, is_device=False).first())
+    if not user or not user.is_active:
+        return Response({"detail": "Perfil no disponible."}, status=status.HTTP_400_BAD_REQUEST)
+
+    fail_key, lock_key = _pin_keys(user)
 
     # ¿El perfil está bloqueado por intentos fallidos recientes?
     remaining = _pin_lock_remaining(lock_key)
@@ -204,11 +216,6 @@ def switch_profile(request):
             status=status.HTTP_429_TOO_MANY_REQUESTS,
         )
 
-    user = (User.objects.filter(username__iexact=login, is_device=False).first()
-            or User.objects.filter(email__iexact=login, is_device=False).first())
-    if not user or not user.is_active:
-        return Response({"detail": "Perfil no disponible."}, status=status.HTTP_400_BAD_REQUEST)
-
     # Si el perfil tiene PIN, se valida. Si no tiene, entra directo (ya está
     # autorizado por la sesión de equipo del mostrador).
     if user.pin_hash and not user.check_pin(pin):
@@ -217,7 +224,7 @@ def switch_profile(request):
             # Bloquear el perfil y dejar constancia en la bitácora.
             cache.set(lock_key, dj_timezone.now().timestamp() + PIN_LOCK_SECONDS, PIN_LOCK_SECONDS)
             cache.delete(fail_key)
-            _log_pin_lockout(login, request)
+            _log_pin_lockout(user, request)
             return Response(
                 {"detail": f"Demasiados intentos con PIN incorrecto. El perfil quedó bloqueado "
                            f"{PIN_LOCK_SECONDS // 60} minutos."},

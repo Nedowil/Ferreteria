@@ -673,6 +673,20 @@ class PrintingTests(TestCase):
         r = self._client("a@test.com").post(f"/api/sales/{sale.id}/print/")
         self.assertEqual(r.status_code, 400)
 
+    def test_print_network_falla_no_cuenta_la_copia(self):
+        # Si el envío a la impresora de red falla, NO se debe contar la impresión
+        # (para no estampar "COPIA" en el primer ticket real por un intento fallido).
+        from unittest.mock import patch
+        self.company.printer_mode = "network"
+        self.company.printer_ip = "192.168.0.50"
+        self.company.save()
+        sale = _make_sale()
+        with patch("billing.printing.send_to_network_printer", side_effect=OSError("timeout")):
+            r = self._client("a@test.com").post(f"/api/sales/{sale.id}/print/")
+        self.assertEqual(r.status_code, 502)
+        sale.refresh_from_db()
+        self.assertEqual(sale.print_count, 0)   # el conteo se revirtió
+
     def test_print_network_falla_conexion_da_502(self):
         from unittest.mock import patch
         self.company.printer_mode = "network"

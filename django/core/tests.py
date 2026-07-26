@@ -509,11 +509,23 @@ class PinLockoutTests(APITestCase):
         self.assertEqual(self._try(c, "0000").status_code, 429)  # bloqueado
         # Aun con el PIN CORRECTO, sigue bloqueado.
         self.assertEqual(self._try(c, "4321").status_code, 429)
-        # Queda constancia del bloqueo en la bitácora.
+        # Queda constancia del bloqueo en la bitácora (identificado por el usuario).
         from audit.models import AuditLog
         self.assertTrue(
-            AuditLog.objects.filter(auditable_type="auth.PinLockout", auditable_id="jefe").exists()
+            AuditLog.objects.filter(auditable_type="auth.PinLockout",
+                                    auditable_id=str(self.super.pk)).exists()
         )
+
+    def test_username_y_correo_comparten_contador(self):
+        # Intentos por username Y por correo del MISMO perfil suman al mismo
+        # contador (no se duplica el margen de adivinanza).
+        c = self._device_client()
+        for _ in range(3):
+            c.post("/api/auth/switch-profile/", {"username": "jefe", "pin": "0000"}, format="json")
+        # Dos intentos más pero AHORA por correo -> el 5º total bloquea.
+        c.post("/api/auth/switch-profile/", {"username": "jefe@test.com", "pin": "0000"}, format="json")
+        r = c.post("/api/auth/switch-profile/", {"username": "jefe@test.com", "pin": "0000"}, format="json")
+        self.assertEqual(r.status_code, 429)
 
     def test_exito_reinicia_contador(self):
         c = self._device_client()
