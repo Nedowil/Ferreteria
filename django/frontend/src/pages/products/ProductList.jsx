@@ -511,13 +511,22 @@ export default function ProductList() {
       if (filters.ubicacion) params.ubicacion = filters.ubicacion;
       if (filters.low_stock) params.low_stock = 1;
       const rows = await fetchAll("/inventory/products/", params);
+      // Columnas completas y listas para volver a IMPORTAR en otro sistema
+      // (nombres en español que el importador reconoce). El stock va numérico
+      // para que se importe correctamente.
       exportToExcel("productos", [
         { header: "SKU", value: (r) => r.sku },
         { header: "Código", value: (r) => r.barcode },
         { header: "Producto", value: (r) => r.name },
-        { header: "Marca", value: (r) => r.brand_name },
+        { header: "Categoría", value: (r) => r.category_name || "" },
+        { header: "Marca", value: (r) => r.brand_name || "" },
+        { header: "Unidad", value: (r) => r.base_unit_label || "" },
+        ...(rows.some((r) => r.purchase_price != null)
+          ? [{ header: "Precio compra", value: (r) => (r.purchase_price != null ? Number(r.purchase_price) : "") }]
+          : []),
         { header: "Precio", value: (r) => Number(r.sale_price) },
-        { header: "Stock", value: (r) => r.stock_display ?? r.branch_stock ?? r.stock },
+        { header: "Stock", value: (r) => Number(r.branch_stock ?? r.stock ?? 0) },
+        { header: "Mínimo", value: (r) => Number(r.min_stock ?? 0) },
       ], rows);
     } finally {
       setExporting(false);

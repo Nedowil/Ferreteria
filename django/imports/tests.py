@@ -37,6 +37,26 @@ class ImportServiceTests(TestCase):
         self.assertEqual(p.sale_price, Decimal("650"))
         self.assertEqual(ProductStock.objects.get(product=p, branch=self.branch).stock, Decimal("8"))
 
+    def test_importa_con_encabezados_en_espanol_del_export(self):
+        # El archivo EXPORTADO (columnas en español) se importa tal cual, sin
+        # reacomodar: Producto, Marca, Precio, Stock, etc.
+        csv = (
+            "SKU,Código,Producto,Categoría,Marca,Unidad,Precio compra,Precio,Stock,Mínimo\n"
+            "MAR-0001,7501234567890,Martillo de uña,Herramientas,Truper,Unidad,45,75,20,5\n"
+        )
+        rows = services.parse_csv(csv.encode())
+        res = services.import_products(rows, branch=self.branch, user=None)
+        self.assertEqual(res["created"], 1)
+        self.assertEqual(res["errors"], [])
+        p = Product.objects.get(sku="MAR-0001")
+        self.assertEqual(p.name, "Martillo de uña")
+        self.assertEqual(p.barcode, "7501234567890")
+        self.assertEqual(p.sale_price, Decimal("75"))
+        self.assertEqual(p.purchase_price, Decimal("45"))
+        self.assertEqual(p.brand.name, "Truper")
+        self.assertEqual(p.category.name, "Herramientas")
+        self.assertEqual(ProductStock.objects.get(product=p, branch=self.branch).stock, Decimal("20"))
+
     def test_autogenera_sku_cuando_viene_vacio(self):
         rows = services.parse_csv(PRODUCTS_CSV.encode())
         services.import_products(rows, user=None)

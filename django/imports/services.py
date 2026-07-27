@@ -75,6 +75,39 @@ def _dec(value, default="0"):
         return Decimal(default)
 
 
+# Alias de encabezados: el importador entiende las columnas de la PLANTILLA
+# (name, sku, …) y TAMBIÉN las del EXPORT en español (Producto, Marca, Precio…),
+# para poder exportar de un sistema e importar en otro sin reacomodar el archivo.
+_PRODUCT_ALIASES = {
+    "name": ["producto", "nombre"],
+    "sku": ["código sku", "codigo sku"],
+    "barcode": ["código", "codigo", "código de barras", "codigo de barras",
+                "código de barra", "codigo de barra"],
+    "category": ["categoría", "categoria"],
+    "brand": ["marca"],
+    "unit": ["unidad"],
+    "purchase_price": ["precio compra", "precio de compra", "costo"],
+    "sale_price": ["precio", "precio venta", "precio de venta"],
+    "stock": ["existencia"],
+    "min_stock": ["mínimo", "minimo", "stock mínimo", "stock minimo"],
+    "description": ["descripción", "descripcion"],
+}
+
+
+def _with_product_aliases(row):
+    """Rellena las llaves canónicas (name, sku, …) desde sus alias en español si
+    no vienen ya con el nombre técnico. No pisa un valor técnico existente."""
+    out = dict(row)
+    for canon, names in _PRODUCT_ALIASES.items():
+        if out.get(canon):
+            continue
+        for n in names:
+            if row.get(n):
+                out[canon] = row[n]
+                break
+    return out
+
+
 def import_products(rows, *, branch=None, user=None):
     from django.db import transaction
     from inventory.models import Brand, Category, Product, ProductStock, Unit
@@ -85,6 +118,7 @@ def import_products(rows, *, branch=None, user=None):
 
     with transaction.atomic():
         for i, row in enumerate(rows, start=2):  # fila 1 = encabezados
+            row = _with_product_aliases(row)   # acepta encabezados en español
             name = row.get("name", "")
             if not name:
                 errors.append(f"Fila {i}: el nombre es obligatorio.")
