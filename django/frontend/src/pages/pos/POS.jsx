@@ -313,6 +313,10 @@ export default function POS() {
   // Vista del catálogo: "list" (por defecto) o "grid" (con imágenes). Se recuerda.
   const [catalogView, setCatalogView] = useState(() => localStorage.getItem("pos_catalog_view") || "list");
   const setView = (v) => { setCatalogView(v); localStorage.setItem("pos_catalog_view", v); };
+  // "Ver costo": muestra el precio de compra en el catálogo. Solo para quien
+  // tenga el permiso 'ventas.ver_costo' (el backend tampoco envía el costo a los demás).
+  const canSeeCost = can("ventas.ver_costo");
+  const [showCost, setShowCost] = useState(false);
   const searchRef = useRef(null);
 
   const reloadProducts = () =>
@@ -854,15 +858,27 @@ export default function POS() {
               <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
                 {filtered.length} producto{filtered.length === 1 ? "" : "s"}
               </span>
-              <div className="flex rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden text-sm">
-                <button type="button" onClick={() => setView("list")}
-                        className={"px-3 py-1 transition " + (catalogView === "list" ? "bg-slate-800 text-white" : "bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50")}>
-                  ☰ Lista
-                </button>
-                <button type="button" onClick={() => setView("grid")}
-                        className={"px-3 py-1 transition " + (catalogView === "grid" ? "bg-slate-800 text-white" : "bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50")}>
-                  🖼️ Imágenes
-                </button>
+              <div className="flex items-center gap-2">
+                {canSeeCost && (
+                  <button type="button" onClick={() => setShowCost((v) => !v)}
+                          title="Mostrar u ocultar el precio de compra (costo)"
+                          className={"px-3 py-1 rounded-lg border text-sm font-medium transition " +
+                            (showCost
+                              ? "bg-amber-500 text-white border-amber-600"
+                              : "bg-white dark:bg-slate-800 text-amber-700 border-amber-300 hover:bg-amber-50")}>
+                    {showCost ? "🙈 Ocultar costo" : "💰 Ver costo"}
+                  </button>
+                )}
+                <div className="flex rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden text-sm">
+                  <button type="button" onClick={() => setView("list")}
+                          className={"px-3 py-1 transition " + (catalogView === "list" ? "bg-slate-800 text-white" : "bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50")}>
+                    ☰ Lista
+                  </button>
+                  <button type="button" onClick={() => setView("grid")}
+                          className={"px-3 py-1 transition " + (catalogView === "grid" ? "bg-slate-800 text-white" : "bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50")}>
+                    🖼️ Imágenes
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -893,6 +909,9 @@ export default function POS() {
                         <div className="w-24 text-right shrink-0">
                           <div className="text-blue-600 font-bold text-sm">Q{p.sale_price}</div>
                           <div className="text-[10px] text-slate-400">por {unit}</div>
+                          {showCost && canSeeCost && p.purchase_price != null && (
+                            <div className="text-[10px] font-semibold text-amber-600">Costo Q{p.purchase_price}</div>
+                          )}
                         </div>
                       </button>
                     );
@@ -929,6 +948,9 @@ export default function POS() {
                             {trim(avail)} {unit}
                           </span>
                         </div>
+                        {showCost && canSeeCost && p.purchase_price != null && (
+                          <div className="text-[10px] font-semibold text-amber-600 mt-0.5">Costo Q{p.purchase_price}</div>
+                        )}
                       </div>
                     </button>
                   );

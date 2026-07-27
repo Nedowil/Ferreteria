@@ -42,6 +42,9 @@ PERMISSIONS = [
     # Anti-fraude: autoriza pasarse del descuento máximo o vender por debajo del
     # costo. El cajero NO lo tiene; lo hace el supervisor/admin.
     ("ventas.autorizar_especial", "Autorizar descuento alto o precio bajo el mínimo", "Ventas"),
+    # Ver el precio de COMPRA (costo) del producto en el POS. No lo tiene el
+    # cajero por defecto; se asigna al rol que el dueño decida.
+    ("ventas.ver_costo", "Ver precio de compra (costo) en el POS", "Ventas"),
     ("cuentas_cobrar.ver", "Ver cuentas por cobrar", "Ventas"),
     ("devoluciones.ver", "Ver devoluciones", "Ventas"),
     ("devoluciones.crear", "Crear devoluciones", "Ventas"),
@@ -84,9 +87,14 @@ PERMISSIONS = [
 
 ALL_CODENAMES = [p[0] for p in PERMISSIONS]
 
-# Matriz rol → permisos (admin recibe todos)
+# Permisos "opt-in": NO se conceden automáticamente a ningún rol (ni al admin);
+# el dueño los asigna al rol que quiera. El SUPERUSUARIO los tiene igual, por ser
+# superusuario. Se usan para datos muy sensibles como el costo de compra.
+OPT_IN_ONLY = {"ventas.ver_costo"}
+
+# Matriz rol → permisos (admin recibe todos, salvo los opt-in)
 ROLE_MATRIX = {
-    "admin": ALL_CODENAMES,
+    "admin": [c for c in ALL_CODENAMES if c not in OPT_IN_ONLY],
     "almacenista": [
         "catalogos.gestionar", "productos.ver", "productos.crear", "productos.editar",
         "productos.eliminar", "inventario.ajustar", "proveedores.ver", "proveedores.crear",

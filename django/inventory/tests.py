@@ -190,6 +190,23 @@ class ZebraLabelTests(TestCase):
         c.credentials(HTTP_AUTHORIZATION=f"Bearer {r.json()['access']}", HTTP_X_BRANCH_ID=str(self.branch.id))
         return c
 
+    def test_costo_oculto_para_cajero(self):
+        # El vendedor (sin 'ventas.ver_costo') NO recibe purchase_price en el POS.
+        items = self._client("s@test.com").get("/api/inventory/products/", {"page_size": 5}).json()["results"]
+        self.assertTrue(items)
+        self.assertNotIn("purchase_price", items[0])
+
+    def test_costo_visible_con_permiso(self):
+        from django.contrib.auth.models import Group
+        from core.permissions import sync_permissions
+        perms = sync_permissions()
+        g = Group.objects.create(name="con_costo")
+        g.permissions.add(perms["productos.ver"], perms["ventas.ver_costo"])
+        u = self.User.objects.create_user(username="cc", email="cc@test.com", password="x123")
+        u.groups.add(g)
+        items = self._client("cc@test.com").get("/api/inventory/products/", {"page_size": 5}).json()["results"]
+        self.assertIn("purchase_price", items[0])
+
     def test_build_label_zpl(self):
         from inventory.labels import build_label_zpl
         zpl = build_label_zpl(self.product, self.company, copies=3).decode()

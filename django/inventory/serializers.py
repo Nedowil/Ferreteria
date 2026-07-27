@@ -84,6 +84,17 @@ class ProductListSerializer(serializers.ModelSerializer):
             "stock_display", "is_low_stock", "active", "image", "presentations", "price_code",
         ]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # El precio de COMPRA (costo) solo se envía a quien tenga 'ventas.ver_costo'.
+        # Así el POS no expone el costo a los cajeros; el que tenga el permiso lo
+        # ve con el botón "Ver costo".
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        from core.permissions import user_permission_codenames
+        if not (user and "ventas.ver_costo" in user_permission_codenames(user)):
+            self.fields.pop("purchase_price", None)
+
     def get_price_code(self, obj):
         from .labels import price_code
         return price_code(obj.purchase_price, obj.sale_price)
