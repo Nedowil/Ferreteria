@@ -39,28 +39,47 @@ TEMPLATES = {
 
 
 def template_csv(kind: str) -> str:
-    """Devuelve el contenido CSV de la plantilla del tipo indicado."""
+    """Devuelve el contenido CSV de la plantilla del tipo indicado.
+
+    Antepone la línea ``sep=,`` para que Excel en español (que por defecto usa el
+    punto y coma como separador) ABRA el archivo en columnas y no meta todo en
+    una sola celda. El importador ignora esa línea al leer."""
     tpl = TEMPLATES[kind]
     buf = io.StringIO()
     writer = csv.writer(buf)
     writer.writerow(tpl["headers"])
     for row in tpl["examples"]:
         writer.writerow(row)
-    return buf.getvalue()
+    return "sep=,\r\n" + buf.getvalue()
 
 
 def parse_csv(file_bytes: bytes) -> list[dict]:
     """Lee un CSV (encabezados en la primera fila) → lista de dicts.
 
-    Acepta UTF-8 (con o sin BOM) y, si el archivo no es UTF-8 válido (típico
-    cuando Excel en Windows guarda como "CSV" normal en vez de "CSV UTF-8"),
-    cae a Windows-1252 para no perder los acentos.
+    Robusto para archivos de Excel en español:
+      - Acepta UTF-8 (con o sin BOM) y cae a Windows-1252 si no es UTF-8 válido.
+      - Ignora la línea inicial ``sep=,`` / ``sep=;`` (pista de Excel).
+      - Detecta el separador automáticamente: coma, punto y coma o tabulador.
     """
     try:
         text = file_bytes.decode("utf-8-sig")
     except UnicodeDecodeError:
         text = file_bytes.decode("cp1252", errors="replace")
-    reader = csv.DictReader(io.StringIO(text))
+
+    # Ignora la pista de separador de Excel ("sep=,") si viene en la 1ª línea.
+    nl = text.find("\n")
+    first_line = (text[:nl] if nl != -1 else text).strip().lower()
+    if first_line.startswith("sep="):
+        text = text[nl + 1:] if nl != -1 else ""
+
+    # Detecta el separador (coma / punto y coma / tabulador) por la primera línea.
+    header_line = text.split("\n", 1)[0]
+    delimiter = ","
+    for cand in (";", "\t"):
+        if header_line.count(cand) > header_line.count(delimiter):
+            delimiter = cand
+
+    reader = csv.DictReader(io.StringIO(text), delimiter=delimiter)
     rows = []
     for raw in reader:
         # Normaliza llaves (minúsculas, sin espacios) y valores (strip).

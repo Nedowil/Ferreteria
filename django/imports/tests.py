@@ -57,6 +57,21 @@ class ImportServiceTests(TestCase):
         self.assertEqual(p.category.name, "Herramientas")
         self.assertEqual(ProductStock.objects.get(product=p, branch=self.branch).stock, Decimal("20"))
 
+    def test_parse_ignora_sep_y_detecta_punto_y_coma(self):
+        # Archivo estilo Excel en español: línea "sep=;" + separador punto y coma.
+        csv = "sep=;\r\nname;sku;sale_price;stock\r\nDestornillador;DES-1;15;30\r\n"
+        rows = services.parse_csv(csv.encode("utf-8-sig"))
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["name"], "Destornillador")
+        self.assertEqual(rows[0]["sku"], "DES-1")
+        res = services.import_products(rows, branch=self.branch, user=None)
+        self.assertEqual(res["created"], 1)
+        self.assertEqual(Product.objects.get(sku="DES-1").sale_price, Decimal("15"))
+
+    def test_plantilla_trae_pista_sep_para_excel(self):
+        # La plantilla incluye "sep=," para que Excel la abra en columnas.
+        self.assertTrue(services.template_csv("productos").startswith("sep=,"))
+
     def test_autogenera_sku_cuando_viene_vacio(self):
         rows = services.parse_csv(PRODUCTS_CSV.encode())
         services.import_products(rows, user=None)
