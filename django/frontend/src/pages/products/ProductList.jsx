@@ -29,10 +29,13 @@ function barcodeSvg(code, height = 45) {
     const canvas = document.createElement("canvas");
     let ok = true;
     try {
-      // width/height ALTOS = PNG de alta resolución para que, al reducirlo al
-      // tamaño de la etiqueta, salga tan NÍTIDO como el SVG de antes.
+      // Alta resolución = TODO por el mismo factor 3x (respecto a los valores
+      // originales width:2, height, fontSize:14, margin:4) para conservar EXACTA
+      // la misma forma/proporción de antes, solo con más nitidez. Escalar solo
+      // el alto deformaba el barras (quedaba más alto y empujaba el nombre).
+      const S = 3;
       JsBarcode(canvas, value, {
-        format, width: 3, height: height * 3, fontSize: 14 * 3, margin: 6,
+        format, width: 2 * S, height: height * S, fontSize: 14 * S, margin: 4 * S,
         displayValue: true, valid: (v) => { ok = v; },
       });
     } catch {
