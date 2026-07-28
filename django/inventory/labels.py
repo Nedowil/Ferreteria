@@ -25,9 +25,20 @@ def _zpl_escape(text):
     return str(text or "").replace("^", " ").replace("~", " ")
 
 
+def _ean13_check_digit(first12):
+    """Dígito verificador EAN-13 a partir de los primeros 12 dígitos."""
+    s = sum((3 if i % 2 else 1) * int(c) for i, c in enumerate(first12))
+    return (10 - (s % 10)) % 10
+
+
 def _is_ean13(code):
+    """True solo si es un EAN-13 VÁLIDO (13 dígitos y verificador correcto). Si
+    el verificador no cuadra, se imprime como CODE128 para no generar una barra
+    que escanee un número distinto al guardado (o que salga en blanco)."""
     code = str(code or "")
-    return len(code) == 13 and code.isdigit()
+    if len(code) != 13 or not code.isdigit():
+        return False
+    return _ean13_check_digit(code[:12]) == int(code[12])
 
 
 def _money(value):

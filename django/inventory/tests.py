@@ -243,10 +243,21 @@ class ZebraLabelTests(TestCase):
         zpl = build_label_zpl(self.product, self.company).decode()
         self.assertIn("Ferretería Central", zpl)
 
-    def test_ean13_usa_codigo_BE(self):
+    def test_ean13_valido_usa_codigo_BE(self):
+        # Un EAN-13 con verificador CORRECTO se imprime como EAN-13 (^BEN).
         from inventory.labels import build_label_zpl
-        zpl = build_label_zpl(self.product, self.company).decode()
+        p = Product.objects.create(sku="EAN-1", name="Producto EAN", barcode="4006381333931", sale_price=Decimal("2"))
+        zpl = build_label_zpl(p, self.company).decode()
         self.assertIn("^BEN", zpl)  # EAN-13
+
+    def test_ean13_invalido_cae_a_code128(self):
+        # 13 dígitos pero verificador INCORRECTO → CODE128 (imprime el código
+        # exacto guardado, escaneable), en vez de salir en blanco.
+        from inventory.labels import build_label_zpl
+        p = Product.objects.create(sku="EANX", name="EAN malo", barcode="2001234567894", sale_price=Decimal("2"))
+        zpl = build_label_zpl(p, self.company).decode()
+        self.assertIn("^BCN", zpl)   # Code128
+        self.assertIn("2001234567894", zpl)
 
     def test_no_ean_usa_code128(self):
         from inventory.labels import build_label_zpl

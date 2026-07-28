@@ -19,16 +19,31 @@ function barcodeSvg(code, height = 45) {
   const value = String(code || "").trim();
   if (!value) return "";
   const isEan13 = /^\d{13}$/.test(value);
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  try {
-    JsBarcode(svg, value, {
-      format: isEan13 ? "EAN13" : "CODE128",
-      width: 2, height, fontSize: 14, margin: 4, displayValue: true,
-    });
-  } catch {
-    return `<div style="font-family:monospace;font-size:12px">${value}</div>`;
-  }
-  return svg.outerHTML;
+
+  // Dibuja con un formato y devuelve el SVG SOLO si el código resultó válido.
+  // Importante: ante un EAN-13 con dígito verificador incorrecto, JsBarcode NO
+  // lanza error — simplemente no dibuja nada y la etiqueta saldría EN BLANCO. El
+  // callback `valid` nos deja detectarlo para caer a otro formato.
+  const render = (format) => {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    let ok = true;
+    try {
+      JsBarcode(svg, value, {
+        format, width: 2, height, fontSize: 14, margin: 4, displayValue: true,
+        valid: (v) => { ok = v; },
+      });
+    } catch {
+      ok = false;
+    }
+    return ok ? svg.outerHTML : null;
+  };
+
+  // Si son 13 dígitos se intenta EAN-13; si el verificador es inválido, se cae a
+  // CODE128 (acepta los mismos dígitos y SÍ es escaneable), así nunca sale en
+  // blanco. Como último recurso, se muestra el número en texto.
+  return (isEan13 && render("EAN13"))
+      || render("CODE128")
+      || `<div style="font-family:monospace;font-size:12px">${value}</div>`;
 }
 
 // Precio a mostrar en la etiqueta: el del EMPAQUE si el producto lo tiene
