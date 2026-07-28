@@ -20,30 +20,31 @@ function barcodeSvg(code, height = 45) {
   if (!value) return "";
   const isEan13 = /^\d{13}$/.test(value);
 
-  // Dibuja con un formato y devuelve el SVG SOLO si el código resultó válido.
-  // Importante: ante un EAN-13 con dígito verificador incorrecto, JsBarcode NO
-  // lanza error — simplemente no dibuja nada y la etiqueta saldría EN BLANCO. El
-  // callback `valid` nos deja detectarlo para caer a otro formato.
+  // Se rasteriza a PNG (canvas) y se devuelve un <img>. Dos motivos:
+  //  1) Al imprimir MUCHAS etiquetas iguales, el navegador a veces NO dibujaba
+  //     algunos SVG inline y salían EN BLANCO; una imagen PNG se imprime siempre.
+  //  2) El callback `valid` detecta un EAN-13 con verificador incorrecto (que no
+  //     lanza error, solo no dibuja) para caer a CODE128.
   const render = (format) => {
-    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    const canvas = document.createElement("canvas");
     let ok = true;
     try {
-      JsBarcode(svg, value, {
+      JsBarcode(canvas, value, {
         format, width: 2, height, fontSize: 14, margin: 4, displayValue: true,
         valid: (v) => { ok = v; },
       });
     } catch {
       ok = false;
     }
-    return ok ? svg.outerHTML : null;
+    return ok ? canvas.toDataURL("image/png") : null;
   };
 
-  // Si son 13 dígitos se intenta EAN-13; si el verificador es inválido, se cae a
-  // CODE128 (acepta los mismos dígitos y SÍ es escaneable), así nunca sale en
-  // blanco. Como último recurso, se muestra el número en texto.
-  return (isEan13 && render("EAN13"))
-      || render("CODE128")
-      || `<div style="font-family:monospace;font-size:12px">${value}</div>`;
+  // EAN-13 si es válido; si no, CODE128 (mismos dígitos, escaneable). Nunca en
+  // blanco: como último recurso, el número en texto.
+  const png = (isEan13 && render("EAN13")) || render("CODE128");
+  return png
+    ? `<img src="${png}" alt="${value}" />`
+    : `<div style="font-family:monospace;font-size:12px">${value}</div>`;
 }
 
 // Precio a mostrar en la etiqueta: el del EMPAQUE si el producto lo tiene
@@ -122,7 +123,7 @@ async function printLabelsPdf(product, copies, companyName, labelW = 51, labelH 
               word-break: break-word; }
       .price { font-size: 10pt; font-weight: 800; line-height: 1; }
       .bc { width: 100%; line-height: 0; margin-top: 0.2mm; }
-      .bc svg { max-width: 100%; height: auto; }
+      .bc img { display: block; max-width: 100%; height: auto; margin: 0 auto; }
     </style></head>
     <body>${labels}</body></html>`;
   printHtml(html);
