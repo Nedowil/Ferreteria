@@ -29,9 +29,11 @@ function barcodeSvg(code, height = 45) {
     const canvas = document.createElement("canvas");
     let ok = true;
     try {
+      // width/height ALTOS = PNG de alta resolución para que, al reducirlo al
+      // tamaño de la etiqueta, salga tan NÍTIDO como el SVG de antes.
       JsBarcode(canvas, value, {
-        format, width: 2, height, fontSize: 14, margin: 4, displayValue: true,
-        valid: (v) => { ok = v; },
+        format, width: 3, height: height * 3, fontSize: 14 * 3, margin: 6,
+        displayValue: true, valid: (v) => { ok = v; },
       });
     } catch {
       ok = false;
