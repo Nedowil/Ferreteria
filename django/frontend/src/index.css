@@ -65,6 +65,64 @@ input[type="number"] {
   }
 }
 
+/* ============================================================
+   Animación "premium" de botones (estilo relleno deslizante).
+   Al pasar el mouse: un brillo ENTRA deslizándose de izquierda a
+   derecha dentro del botón, el botón se levanta un poco y proyecta
+   una sombra suave — manteniendo su color.
+   Notas de diseño:
+   - El relleno (::before) va inset:0 y crece con scaleX, así queda
+     SIEMPRE dentro del botón: no se necesita overflow:hidden y los
+     badges/contadores que sobresalen NO se recortan.
+   - position:relative va a baja especificidad (selector `button`) para
+     no pisar botones con .absolute/.fixed (cerrar ×, ojo de contraseña).
+   - Solo con mouse real (hover:hover): en pantallas táctiles el :hover
+     se "pega", así que ahí no se anima (los botones funcionan igual).
+   - Para excluir un botón puntual, agregarle la clase `no-anim`.
+   ============================================================ */
+button { position: relative; }
+
+@media (hover: hover) {
+  button:not(:disabled):not(.no-anim) {
+    transition: transform .18s ease, box-shadow .25s ease, filter .2s ease;
+  }
+  button:not(:disabled):not(.no-anim)::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(115deg, rgba(255, 255, 255, .30), rgba(255, 255, 255, .06) 55%, transparent);
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform .34s cubic-bezier(.4, 0, .2, 1);
+    pointer-events: none;
+  }
+  button:not(:disabled):not(.no-anim):hover::before { transform: scaleX(1); }
+  button:not(:disabled):not(.no-anim):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(2, 6, 23, .18);
+    filter: saturate(1.06);
+  }
+  button:not(:disabled):not(.no-anim):active { transform: translateY(0); }
+
+  /* En modo oscuro una sombra oscura no se nota: se usa una sombra más marcada
+     y el brillo del relleno un poco más tenue para no encandilar. */
+  html.dark button:not(:disabled):not(.no-anim):hover {
+    box-shadow: 0 10px 24px rgba(0, 0, 0, .55);
+    filter: brightness(1.08);
+  }
+  html.dark button:not(:disabled):not(.no-anim)::before {
+    background: linear-gradient(115deg, rgba(255, 255, 255, .18), rgba(255, 255, 255, .04) 55%, transparent);
+  }
+}
+
+@media (hover: hover) and (prefers-reduced-motion: reduce) {
+  button:not(:disabled):not(.no-anim),
+  button:not(:disabled):not(.no-anim)::before { transition: none; }
+  button:not(:disabled):not(.no-anim):hover { transform: none; box-shadow: none; }
+  button:not(:disabled):not(.no-anim):hover::before { transform: scaleX(0); }
+}
+
 /* Animación de entrada de los avisos (toast) desde arriba. */
 @keyframes toastIn {
   from { opacity: 0; transform: translateY(-12px); }
