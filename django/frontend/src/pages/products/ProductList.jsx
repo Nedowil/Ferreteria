@@ -79,12 +79,26 @@ function printHtml(html) {
   w.document.open();
   w.document.write(html);
   w.document.close();
-  // Da un instante a que dibuje (código de barras, etc.) y abre el diálogo de
-  // impresión. La pestaña se cierra sola al terminar (onafterprint).
-  const go = () => { try { w.focus(); w.print(); } catch { /* el usuario cerró */ } };
   w.onafterprint = () => { try { w.close(); } catch { /* ya cerrada */ } };
-  if (w.document.readyState === "complete") setTimeout(go, 350);
-  else w.onload = () => setTimeout(go, 350);
+
+  // Espera a que TODAS las imágenes de código de barras estén cargadas/decodificadas
+  // ANTES de imprimir. Si no, el navegador puede mandar a imprimir antes de que
+  // algunas terminen y esas etiquetas salían EN BLANCO.
+  const waitImages = () => {
+    const imgs = Array.from(w.document.images || []);
+    return Promise.all(imgs.map((img) => {
+      if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+      if (img.decode) return img.decode().catch(() => {});
+      return new Promise((res) => { img.onload = img.onerror = res; });
+    }));
+  };
+  const go = () => {
+    waitImages().then(() => setTimeout(() => {
+      try { w.focus(); w.print(); } catch { /* el usuario cerró */ }
+    }, 150));
+  };
+  if (w.document.readyState === "complete") go();
+  else w.onload = go;
 }
 
 // Abre una ventana imprimible con las etiquetas (para "Guardar como PDF").
