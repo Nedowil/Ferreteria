@@ -320,11 +320,11 @@ function LabelPrintModal({ product, companyName, onClose }) {
       onClose();
     } catch (e) {
       if (e.code === "NO_BP") {
-        setErr("No detecté Zebra Browser Print. Instalalo desde zebra.com y ábrelo (queda un ícono en la barra de tareas), luego intentá de nuevo.");
+        setErr("No se pudo conectar con la impresora. Probá con el botón «Imprimir por USB» de abajo. Si sigue, avisá al encargado (falta abrir el programa Zebra Browser Print en esta computadora).");
       } else if (e.code === "NO_PRINTER") {
-        setErr("Browser Print está abierto pero no ve la Zebra. Verificá que esté encendida y conectada por USB.");
+        setErr("La Zebra no responde. Revisá que esté encendida y conectada por USB, y volvé a intentar.");
       } else {
-        setErr(e.response?.data?.detail || "No se pudo enviar a la Zebra por Browser Print.");
+        setErr(e.response?.data?.detail || "No se pudo imprimir. Probá con «Imprimir por USB» de abajo.");
       }
     } finally { setBusy(false); }
   };
@@ -361,8 +361,8 @@ function LabelPrintModal({ product, companyName, onClose }) {
                      impresora dibuja cada etiqueta → nunca salen en blanco. --- */}
               <button onClick={sendBrowserPrint} disabled={busy}
                       className="w-full text-left rounded-xl border-2 border-emerald-500 bg-emerald-50/60 dark:bg-emerald-500/15 hover:shadow-md p-3 transition disabled:opacity-50">
-                <div className="font-semibold text-slate-800 dark:text-slate-100">🏷️ Zebra directo (Browser Print) <span className="text-[10px] bg-emerald-600 text-white rounded px-1.5 py-0.5 align-middle">Nunca en blanco</span></div>
-                <div className="text-xs text-slate-500 dark:text-slate-400">Manda el código nativo a tu <b>Zebra USB</b> con <b>Zebra Browser Print</b> (instalación única). La impresora dibuja cada etiqueta: nunca salen en blanco ni borrosas. Requiere tener abierto Browser Print.</div>
+                <div className="font-semibold text-slate-800 dark:text-slate-100">🏷️ Zebra directo <span className="text-[10px] bg-emerald-600 text-white rounded px-1.5 py-0.5 align-middle">Recomendado</span></div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">La forma más confiable: las etiquetas salen completas y nítidas, <b>nunca en blanco</b>. Solo tocás este botón. (Se instala una vez en la computadora y después funciona solo, sin que el cajero abra nada.)</div>
               </button>
 
               {/* --- USB (imagen del navegador): abre el cuadro de impresión. Es el
