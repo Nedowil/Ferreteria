@@ -750,9 +750,9 @@ export default function POS() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">🛒 Punto de venta</h1>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           {!serverOnline
             ? <span className="text-sm text-white bg-red-500 rounded-full px-3 py-1 font-medium">● OFFLINE</span>
             : <span className="text-sm text-green-700 bg-green-100 rounded-full px-3 py-1 font-medium">● En línea</span>}

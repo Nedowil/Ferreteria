@@ -568,14 +568,14 @@ function CartaPaper({ company, sale, fel, qr, phrases, d, meses }) {
               </>
             )}
           </div>
-          <table className="w-full text-center border-collapse mt-2">
+          <div className="overflow-x-auto"><table className="w-full text-center border-collapse mt-2">
             <thead><tr className="text-white font-bold" style={{ background: GREEN }}>
               <th className={cell}>DÍA</th><th className={cell}>MES</th><th className={cell}>AÑO</th>
             </tr></thead>
             <tbody><tr>
               <td className={cell}>{d.getDate()}</td><td className={cell}>{meses[d.getMonth()]}</td><td className={cell}>{d.getFullYear()}</td>
             </tr></tbody>
-          </table>
+          </table></div>
         </div>
       </div>
 
@@ -606,6 +606,7 @@ function CartaPaper({ company, sale, fel, qr, phrases, d, meses }) {
       </div>
 
       {/* Partidas */}
+      <div className="overflow-x-auto">
       <table className="w-full border-collapse mt-3 text-[9.5px]">
         <thead><tr className="text-white font-bold" style={{ background: GREEN }}>
           <th className={cell}>CANTIDAD</th><th className={cell}>UNIDAD</th>
@@ -630,6 +631,7 @@ function CartaPaper({ company, sale, fel, qr, phrases, d, meses }) {
           })}
         </tbody>
       </table>
+      </div>
 
       {/* Total en letras + total */}
       <div className="grid grid-cols-3 gap-0 mt-3 items-stretch">
