@@ -102,6 +102,141 @@ function printHtml(html) {
   else w.onload = go;
 }
 
+// Reparte `text` en hasta `maxLines` líneas que quepan en `maxW` px (según la
+// fuente ya seteada en ctx). Si sobra texto, recorta la última con "…".
+function wrapLines(ctx, text, maxW, maxLines) {
+  const words = String(text || "").split(/\s+/).filter(Boolean);
+  const lines = [];
+  let cur = "";
+  for (const w of words) {
+    const test = cur ? cur + " " + w : w;
+    if (ctx.measureText(test).width <= maxW || !cur) {
+      cur = test;
+    } else {
+      lines.push(cur); cur = w;
+      if (lines.length === maxLines) { cur = ""; break; }
+    }
+  }
+  if (cur && lines.length < maxLines) lines.push(cur);
+  // ¿Quedó texto fuera? Marcar la última línea con "…".
+  const usados = lines.join(" ").replace(/\s+/g, "").length;
+  const total = String(text || "").replace(/\s+/g, "").length;
+  if (lines.length === maxLines && usados < total) {
+    let last = lines[maxLines - 1];
+    while (last && ctx.measureText(last + "…").width > maxW) last = last.slice(0, -1);
+    lines[maxLines - 1] = last + "…";
+  }
+  return lines;
+}
+
+// Convierte un canvas a un gráfico ZPL (^GFA) monocromo. Cada píxel oscuro se
+// vuelve un bit negro. Así la etiqueta viaja como IMAGEN a la Zebra: la dibuja
+// el navegador (acentos y TODOS los caracteres), no las fuentes de la impresora.
+function canvasToGfaZpl(canvas, copies) {
+  const W = canvas.width, H = canvas.height;
+  const { data } = canvas.getContext("2d").getImageData(0, 0, W, H);
+  const rowBytes = Math.ceil(W / 8);
+  const total = rowBytes * H;
+  const bytes = new Uint8Array(total);
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const i = (y * W + x) * 4;
+      const a = data[i + 3];
+      const lum = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+      if (a > 40 && lum < 128) bytes[y * rowBytes + (x >> 3)] |= 0x80 >> (x & 7);
+    }
+  }
+  const HEX = "0123456789ABCDEF";
+  let hex = "";
+  for (let k = 0; k < total; k++) hex += HEX[bytes[k] >> 4] + HEX[bytes[k] & 15];
+  const n = Math.max(1, Number(copies) || 1);
+  return `^XA^LH0,0^FO0,0^GFA,${total},${total},${rowBytes},${hex}^FS^PQ${n}^XZ`;
+}
+
+// Dibuja la etiqueta completa en un canvas del tamaño EXACTO en puntos de la
+// impresora y devuelve el ZPL (como imagen ^GFA) listo para Zebra directo.
+// Ventaja: acepta acentos y cualquier carácter, y se ve idéntica a la de USB.
+function buildLabelImageZpl(product, companyName, copies, dims) {
+  const dpi = Number(dims?.dpi) || 203;
+  const mm = (v) => Math.round((Number(v) || 0) * dpi / 25.4);
+  const W = mm(dims?.widthMm || 50);
+  const H = mm(dims?.heightMm || 25);
+  const canvas = document.createElement("canvas");
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext("2d");
+  ctx.imageSmoothingEnabled = false;
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "#000";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+
+  const margin = mm(2);
+  const cx = Math.round(W / 2);
+  const maxW = W - 2 * margin;
+  let y = margin;
+
+  const biz = (companyName || "").trim();
+  const nameRaw = (product.name || "").toUpperCase().trim();
+  const big = product.price_code || labelPrice(product);
+  const sku = (product.sku || "").trim();
+
+  // Nombre del negocio.
+  if (biz) {
+    const f = Math.round(H * 0.09);
+    ctx.font = `600 ${f}px Arial, sans-serif`;
+    ctx.fillText(biz, cx, y);
+    y += f + Math.round(H * 0.015);
+  }
+  // Nombre del producto: letra según largo, hasta 2 líneas.
+  const nlen = nameRaw.length;
+  const nf = Math.round(H * (nlen <= 22 ? 0.13 : nlen <= 40 ? 0.108 : 0.094));
+  ctx.font = `800 ${nf}px Arial, sans-serif`;
+  for (const ln of wrapLines(ctx, nameRaw, maxW, 2)) {
+    ctx.fillText(ln, cx, y);
+    y += nf + 2;
+  }
+  y += 2;
+  // Precio (código oculto compra+venta), grande.
+  if (big) {
+    const f = Math.round(H * 0.155);
+    ctx.font = `800 ${f}px Arial, sans-serif`;
+    ctx.fillText(big, cx, y);
+    y += f + Math.round(H * 0.02);
+  }
+  // SKU.
+  if (sku) {
+    const f = Math.round(H * 0.075);
+    ctx.font = `600 ${f}px Arial, sans-serif`;
+    ctx.fillText(sku, cx, y);
+    y += f + 2;
+  }
+  // Código de barras: usa el espacio restante, centrado.
+  const code = String(product.barcode || product.sku || "").trim();
+  if (code) {
+    const availH = H - y - margin;
+    const digitF = Math.max(10, Math.round(H * 0.075));
+    const barsH = Math.max(Math.round(H * 0.16), availH - digitF - 2);
+    const bc = document.createElement("canvas");
+    const isEan13 = /^\d{13}$/.test(code);
+    const draw = (format) => {
+      let ok = true;
+      try {
+        JsBarcode(bc, code, {
+          format, width: 2, height: barsH, fontSize: digitF, margin: 0,
+          textMargin: 1, displayValue: true, valid: (v) => { ok = v; },
+        });
+      } catch { ok = false; }
+      return ok;
+    };
+    if ((isEan13 && draw("EAN13")) || draw("CODE128")) {
+      let dw = bc.width, dh = bc.height;
+      if (dw > maxW) { const s = maxW / dw; dw = Math.round(dw * s); dh = Math.round(dh * s); }
+      ctx.drawImage(bc, Math.round(cx - dw / 2), Math.round(y), dw, dh);
+    }
+  }
+  return canvasToGfaZpl(canvas, copies);
+}
+
 // Abre una ventana imprimible con las etiquetas (para "Guardar como PDF").
 // Imprime las etiquetas mediante el navegador. Cada etiqueta ocupa UNA página
 // del tamaño físico exacto de la etiqueta (por defecto 2"x1" = 51x25 mm), así
@@ -306,15 +441,23 @@ function LabelPrintModal({ product, companyName, onClose }) {
     } finally { setBusy(false); }
   };
 
-  // Zebra Browser Print: pide el ZPL al backend y lo manda DIRECTO a la Zebra
-  // USB por el servicio local de Zebra. La impresora dibuja cada etiqueta ella
-  // misma → nunca salen en blanco ni borrosas.
+  // Zebra Browser Print: arma la etiqueta como IMAGEN (dibujada por el navegador,
+  // con acentos y todos los caracteres) y la manda DIRECTO a la Zebra USB por el
+  // servicio local. Se envía como gráfico ZPL (^GFA) una sola vez y se repiten
+  // copias con ^PQ → idéntica en cada etiqueta y nunca sale en blanco.
   const sendBrowserPrint = async () => {
     setBusy(true); setErr("");
     try {
-      const { data } = await api.post(`/inventory/products/${product.id}/label/`,
-                                      { copies: Number(copies), mode: "system" });
-      const zpl = new TextDecoder().decode(Uint8Array.from(atob(data.zpl_base64 || ""), (c) => c.charCodeAt(0)));
+      let dims = { widthMm: 50, heightMm: 25, dpi: 203 };
+      try {
+        const { data: cs } = await api.get("/company-settings/");
+        dims = {
+          widthMm: Number(cs.zebra_label_width) || 50,
+          heightMm: Number(cs.zebra_label_height) || 25,
+          dpi: Number(cs.zebra_dpi) || 203,
+        };
+      } catch { /* usa los valores por defecto */ }
+      const zpl = buildLabelImageZpl(product, companyName, Number(copies), dims);
       await printZpl(zpl);
       await dialog.alert(`Se enviaron ${copies} etiqueta(s) a la Zebra.`);
       onClose();
@@ -362,7 +505,7 @@ function LabelPrintModal({ product, companyName, onClose }) {
               <button onClick={sendBrowserPrint} disabled={busy}
                       className="w-full text-left rounded-xl border-2 border-emerald-500 bg-emerald-50/60 dark:bg-emerald-500/15 hover:shadow-md p-3 transition disabled:opacity-50">
                 <div className="font-semibold text-slate-800 dark:text-slate-100">🏷️ Zebra directo <span className="text-[10px] bg-emerald-600 text-white rounded px-1.5 py-0.5 align-middle">Recomendado</span></div>
-                <div className="text-xs text-slate-500 dark:text-slate-400">Imprime directo en la Zebra.</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">Imprime directo en la Zebra, con acentos y nítida.</div>
               </button>
 
               {/* --- USB (imagen del navegador): abre el cuadro de impresión. Es el
