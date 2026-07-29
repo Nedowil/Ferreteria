@@ -134,24 +134,26 @@ def build_label_zpl(product, company, *, show_price=True, copies=1):
 
     block = width - 2 * margin            # ancho útil para centrar (^FB ... C)
 
-    # Tamaños de fuente compactos: deben caber nombre + código + SKU + barras.
-    f_biz = max(11, height // 14)
-    f_small = max(12, height // 13)
-    code_f = max(20, height // 7)
+    # Tamaños de fuente: legibles pero deben caber nombre + código + SKU + barras.
+    f_biz = max(16, height // 11)
+    f_small = max(13, height // 14)
+    code_f = max(24, height // 7)
 
     # Letra del NOMBRE según su largo, para que quepa COMPLETO (nunca se corta):
-    # nombres cortos → letra grande; largos → letra más chica y hasta 2 líneas.
+    # nombres cortos → letra grande; largos → letra un poco menor pero LEGIBLE,
+    # repartida en 2 líneas (en vez de una sola línea diminuta).
     nlen = len(name_full)
-    if nlen <= 20:
-        f_name = max(18, height // 8)
-    elif nlen <= 34:
-        f_name = max(15, height // 11)
+    if nlen <= 22:
+        f_name = max(24, height // 8)
+    elif nlen <= 40:
+        f_name = max(20, height // 10)
     else:
-        f_name = max(12, height // 13)
+        f_name = max(18, height // 11)
     name = name_full[:60]
     # Nº de líneas que ocupará (aprox), para reservarle el alto justo y que las
-    # barras siempre quepan. ~0.58 = ancho medio de carácter respecto a la altura.
-    cpl = max(1, int(block / (f_name * 0.58)))
+    # barras siempre quepan. ~0.62 = ancho medio de carácter (sobreestima líneas
+    # para no arriesgar que el precio se encime con la 2ª línea del nombre).
+    cpl = max(1, int(block / (f_name * 0.62)))
     name_lines = 1 if nlen <= cpl else 2
 
     parts = ["^XA", "^CI28", f"^PW{width}", f"^LL{height}"]
@@ -177,20 +179,25 @@ def build_label_zpl(product, company, *, show_price=True, copies=1):
     parts.append(f"^FO{margin},{y}^A0N,{f_small},{f_small}^FB{block},1,0,C^FD{sku}^FS")
     y += f_small + 3
 
-    # Código de barras: su alto se ajusta al espacio que queda (menos la línea
-    # de dígitos y el margen), para que SIEMPRE quepa y se pueda escanear.
-    bc_height = max(40, height - y - f_small - margin)
-    # Zona muda (quiet zone) a la izquierda: ~3 mm. Sin ella el lector no
-    # engancha el inicio del código y pita sin leer.
+    # Código de barras: su alto usa el espacio que queda (menos la línea de
+    # dígitos y el margen), para que SIEMPRE quepa y se vea grande.
+    bc_height = max(48, height - y - f_small - margin)
+    # Zona muda (quiet zone) mínima a la izquierda: ~3 mm.
     qz = max(margin, _dots(3, dpi))
     if _is_ean13(code):
-        # Módulo más ancho (^BY3): barras más gruesas y nítidas. El EAN-13 tiene
-        # ancho fijo (95 módulos) y cabe holgado en la etiqueta.
-        parts.append(f"^FO{qz},{y}^BY3^BEN,{bc_height},Y,N^FD{code[:12]}^FS")
+        # ^BY3: barras más gruesas y nítidas. El EAN-13 es de ancho fijo (95
+        # módulos), así que lo CENTRAMOS horizontalmente en la etiqueta.
+        by = 3
+        bcw = 95 * by
+        bc_x = max(qz, (width - bcw) // 2)
+        parts.append(f"^FO{bc_x},{y}^BY{by}^BEN,{bc_height},Y,N^FD{code[:12]}^FS")
     elif code:
-        # CODE128 es de largo variable: dejamos el módulo en 2 para que códigos
-        # largos no se salgan de la etiqueta.
-        parts.append(f"^FO{qz},{y}^BY2^BCN,{bc_height},Y,N,N^FD{_zpl_escape(code)}^FS")
+        # CODE128 es de largo variable: módulo 2 para que códigos largos no se
+        # salgan; se centra según su ancho aproximado.
+        by = 2
+        bcw = (11 * (len(code) + 3) + 13) * by
+        bc_x = max(qz, (width - bcw) // 2)
+        parts.append(f"^FO{bc_x},{y}^BY{by}^BCN,{bc_height},Y,N,N^FD{_zpl_escape(code)}^FS")
 
     parts.append(f"^PQ{copies}")
     parts.append("^XZ")
