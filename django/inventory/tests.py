@@ -224,6 +224,9 @@ class ZebraLabelTests(TestCase):
         self.assertEqual(price_code("211", "400"), "114002")
         self.assertEqual(price_code("583.50", "1000"), "501000583")
         self.assertEqual(price_code("25", "50"), "5502")   # costo barato (2 dígitos)
+        # Compra de UN dígito: dos ceros adelante → 00·venta·dígito.
+        self.assertEqual(price_code("5", "10"), "00105")   # tachuela
+        self.assertEqual(price_code("7", "15"), "00157")
 
     def test_label_precio_por_empaque(self):
         from decimal import Decimal

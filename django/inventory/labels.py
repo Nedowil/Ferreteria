@@ -98,8 +98,13 @@ def price_code(purchase, sale):
     #        compra 25    / venta 50 → 5·50·2   = 5502
     if len(pc) > 2:
         tail, front = pc[-2:], pc[:-2]
-    else:
+    elif len(pc) == 2:
         tail, front = pc[-1:], pc[:-1]
+    else:
+        # Compra de UN SOLO dígito: se rellena con dos ceros adelante, de modo
+        # que el código queda 00·VENTA·dígito (así lo escriben ellos a mano).
+        #   Ej.: compra 5 / venta 10 → 00·10·5 = 00105
+        tail, front = "00", pc
     return f"{tail}{sc}{front}"
 
 
