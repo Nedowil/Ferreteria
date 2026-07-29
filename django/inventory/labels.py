@@ -125,12 +125,14 @@ def build_label_zpl(product, company, *, show_price=True, copies=1):
 
     parts = ["^XA", "^CI28", f"^PW{width}", f"^LL{height}"]
 
+    block = width - 2 * margin            # ancho útil para centrar (^FB ... C)
+
     y = margin
     if biz:
-        parts.append(f"^FO{margin},{y}^A0N,{f_biz},{f_biz}^FD{biz}^FS")
+        parts.append(f"^FO{margin},{y}^A0N,{f_biz},{f_biz}^FB{block},1,0,C^FD{biz}^FS")
         y += f_biz + 3
     # Nombre en 1 línea (altura predecible para que las barras siempre quepan).
-    parts.append(f"^FO{margin},{y}^A0N,{f_name},{f_name}^FB{width - 2 * margin},1,0,L^FD{name}^FS")
+    parts.append(f"^FO{margin},{y}^A0N,{f_name},{f_name}^FB{block},1,0,C^FD{name}^FS")
     y += f_name + 4
 
     # El "precio" (código oculto compra+venta) va ARRIBA, grande, como el precio.
@@ -139,11 +141,11 @@ def build_label_zpl(product, company, *, show_price=True, copies=1):
         big = pcode or _zpl_escape(_label_price_text(product))
         parts.append(
             f"^FO{margin},{y}^A0N,{code_f},{code_f}"
-            f"^FB{width - 2 * margin},1,0,L^FD{big}^FS"
+            f"^FB{block},1,0,C^FD{big}^FS"
         )
         y += code_f + 5
 
-    parts.append(f"^FO{margin},{y}^A0N,{f_small},{f_small}^FD{sku}^FS")
+    parts.append(f"^FO{margin},{y}^A0N,{f_small},{f_small}^FB{block},1,0,C^FD{sku}^FS")
     y += f_small + 3
 
     # Código de barras: su alto se ajusta al espacio que queda (menos la línea
