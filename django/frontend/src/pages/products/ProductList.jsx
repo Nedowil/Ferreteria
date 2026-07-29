@@ -5,6 +5,7 @@ import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 import { dialog } from "../../components/Dialog";
+import { printZpl } from "../../utils/zebraBrowserPrint";
 
 // Enlace a la auditoría del producto (quién lo creó, editó o eliminó).
 const historyLink = (id) => `/admin/auditoria?type=inventory.Product&q=${id}`;
@@ -305,6 +306,29 @@ function LabelPrintModal({ product, companyName, onClose }) {
     } finally { setBusy(false); }
   };
 
+  // Zebra Browser Print: pide el ZPL al backend y lo manda DIRECTO a la Zebra
+  // USB por el servicio local de Zebra. La impresora dibuja cada etiqueta ella
+  // misma → nunca salen en blanco ni borrosas.
+  const sendBrowserPrint = async () => {
+    setBusy(true); setErr("");
+    try {
+      const { data } = await api.post(`/inventory/products/${product.id}/label/`,
+                                      { copies: Number(copies), mode: "system" });
+      const zpl = new TextDecoder().decode(Uint8Array.from(atob(data.zpl_base64 || ""), (c) => c.charCodeAt(0)));
+      await printZpl(zpl);
+      await dialog.alert(`Se enviaron ${copies} etiqueta(s) a la Zebra.`);
+      onClose();
+    } catch (e) {
+      if (e.code === "NO_BP") {
+        setErr("No detecté Zebra Browser Print. Instalalo desde zebra.com y ábrelo (queda un ícono en la barra de tareas), luego intentá de nuevo.");
+      } else if (e.code === "NO_PRINTER") {
+        setErr("Browser Print está abierto pero no ve la Zebra. Verificá que esté encendida y conectada por USB.");
+      } else {
+        setErr(e.response?.data?.detail || "No se pudo enviar a la Zebra por Browser Print.");
+      }
+    } finally { setBusy(false); }
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden" onClick={(e) => e.stopPropagation()}>
@@ -333,11 +357,19 @@ function LabelPrintModal({ product, companyName, onClose }) {
             <>
               <div className="text-sm text-slate-600 dark:text-slate-300">Elegí cómo imprimir <b>{copies}</b> etiqueta(s):</div>
 
+              {/* --- ZEBRA BROWSER PRINT: manda ZPL directo a la Zebra USB. La
+                     impresora dibuja cada etiqueta → nunca salen en blanco. --- */}
+              <button onClick={sendBrowserPrint} disabled={busy}
+                      className="w-full text-left rounded-xl border-2 border-emerald-500 bg-emerald-50/60 dark:bg-emerald-500/15 hover:shadow-md p-3 transition disabled:opacity-50">
+                <div className="font-semibold text-slate-800 dark:text-slate-100">🏷️ Zebra directo (Browser Print) <span className="text-[10px] bg-emerald-600 text-white rounded px-1.5 py-0.5 align-middle">Nunca en blanco</span></div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">Manda el código nativo a tu <b>Zebra USB</b> con <b>Zebra Browser Print</b> (instalación única). La impresora dibuja cada etiqueta: nunca salen en blanco ni borrosas. Requiere tener abierto Browser Print.</div>
+              </button>
+
               {/* --- USB (imagen del navegador): abre el cuadro de impresión. Es el
                      método que el usuario usaba y le escaneaba. NO descarga archivo. --- */}
               <button onClick={() => { printLabelsPdf(product, copies, companyName); onClose(); }} disabled={busy}
-                      className="w-full text-left rounded-xl border-2 border-blue-500 bg-blue-50/60 dark:bg-blue-500/15 hover:shadow-md p-3 transition disabled:opacity-50">
-                <div className="font-semibold text-slate-800 dark:text-slate-100">🖨️ Imprimir por USB (Zebra o impresora normal) <span className="text-[10px] bg-blue-600 text-white rounded px-1.5 py-0.5 align-middle">Recomendado</span></div>
+                      className="w-full text-left rounded-xl border border-slate-200 dark:border-slate-700 hover:border-blue-400 hover:shadow-md p-3 transition disabled:opacity-50">
+                <div className="font-semibold text-slate-800 dark:text-slate-100">🖨️ Imprimir por USB (cuadro de impresión)</div>
                 <div className="text-xs text-slate-500 dark:text-slate-400">Abre el cuadro de impresión (no descarga nada) → elegí tu <b>Zebra ZD421T</b> y dale Imprimir. También sirve para una impresora común o "Guardar como PDF".</div>
               </button>
 
