@@ -25,6 +25,21 @@ def _zpl_escape(text):
     return str(text or "").replace("^", " ").replace("~", " ")
 
 
+# La fuente escalable de la Zebra (^A0) no dibuja algunos acentos ni la ñ y salían
+# EN BLANCO (ej.: "Ferretería" → "Ferreter a"). Los cambiamos por su letra simple
+# para que el texto siempre se lea completo.
+_ACCENTS = {
+    "á": "a", "é": "e", "í": "i", "ó": "o", "ú": "u", "ü": "u", "ñ": "n",
+    "Á": "A", "É": "E", "Í": "I", "Ó": "O", "Ú": "U", "Ü": "U", "Ñ": "N",
+    "à": "a", "è": "e", "ì": "i", "ò": "o", "ù": "u", "º": " ", "ª": "a", "°": " ",
+}
+
+
+def _ascii(text):
+    """Reemplaza acentos y ñ por letras simples (ver `_ACCENTS`)."""
+    return "".join(_ACCENTS.get(c, c) for c in str(text or ""))
+
+
 def _ean13_check_digit(first12):
     """Dígito verificador EAN-13 a partir de los primeros 12 dígitos."""
     s = sum((3 if i % 2 else 1) * int(c) for i, c in enumerate(first12))
@@ -112,28 +127,42 @@ def build_label_zpl(product, company, *, show_price=True, copies=1):
     copies = max(1, int(copies or 1))
 
     margin = max(8, _dots(2, dpi))                 # ~2 mm de margen
-    biz = _zpl_escape((company.commercial_name or "")[:32])
-    name = _zpl_escape(product.name)[:32]
-    sku = _zpl_escape(product.sku)
+    biz = _ascii(_zpl_escape((company.commercial_name or "")[:40]))
+    name_full = _ascii(_zpl_escape(product.name)).strip()
+    sku = _ascii(_zpl_escape(product.sku))
     code = (product.barcode or product.sku or "").strip()
+
+    block = width - 2 * margin            # ancho útil para centrar (^FB ... C)
 
     # Tamaños de fuente compactos: deben caber nombre + código + SKU + barras.
     f_biz = max(11, height // 14)
-    f_name = max(16, height // 8)
     f_small = max(12, height // 13)
     code_f = max(20, height // 7)
 
-    parts = ["^XA", "^CI28", f"^PW{width}", f"^LL{height}"]
+    # Letra del NOMBRE según su largo, para que quepa COMPLETO (nunca se corta):
+    # nombres cortos → letra grande; largos → letra más chica y hasta 2 líneas.
+    nlen = len(name_full)
+    if nlen <= 20:
+        f_name = max(18, height // 8)
+    elif nlen <= 34:
+        f_name = max(15, height // 11)
+    else:
+        f_name = max(12, height // 13)
+    name = name_full[:60]
+    # Nº de líneas que ocupará (aprox), para reservarle el alto justo y que las
+    # barras siempre quepan. ~0.58 = ancho medio de carácter respecto a la altura.
+    cpl = max(1, int(block / (f_name * 0.58)))
+    name_lines = 1 if nlen <= cpl else 2
 
-    block = width - 2 * margin            # ancho útil para centrar (^FB ... C)
+    parts = ["^XA", "^CI28", f"^PW{width}", f"^LL{height}"]
 
     y = margin
     if biz:
         parts.append(f"^FO{margin},{y}^A0N,{f_biz},{f_biz}^FB{block},1,0,C^FD{biz}^FS")
         y += f_biz + 3
-    # Nombre en 1 línea (altura predecible para que las barras siempre quepan).
-    parts.append(f"^FO{margin},{y}^A0N,{f_name},{f_name}^FB{block},1,0,C^FD{name}^FS")
-    y += f_name + 4
+    # Nombre centrado, hasta 2 líneas (^FB ...,2,...). Se reparte solo sin cortar.
+    parts.append(f"^FO{margin},{y}^A0N,{f_name},{f_name}^FB{block},2,0,C^FD{name}^FS")
+    y += f_name * name_lines + 4
 
     # El "precio" (código oculto compra+venta) va ARRIBA, grande, como el precio.
     if show_price:
@@ -155,8 +184,12 @@ def build_label_zpl(product, company, *, show_price=True, copies=1):
     # engancha el inicio del código y pita sin leer.
     qz = max(margin, _dots(3, dpi))
     if _is_ean13(code):
-        parts.append(f"^FO{qz},{y}^BY2^BEN,{bc_height},Y,N^FD{code[:12]}^FS")
+        # Módulo más ancho (^BY3): barras más gruesas y nítidas. El EAN-13 tiene
+        # ancho fijo (95 módulos) y cabe holgado en la etiqueta.
+        parts.append(f"^FO{qz},{y}^BY3^BEN,{bc_height},Y,N^FD{code[:12]}^FS")
     elif code:
+        # CODE128 es de largo variable: dejamos el módulo en 2 para que códigos
+        # largos no se salgan de la etiqueta.
         parts.append(f"^FO{qz},{y}^BY2^BCN,{bc_height},Y,N,N^FD{_zpl_escape(code)}^FS")
 
     parts.append(f"^PQ{copies}")

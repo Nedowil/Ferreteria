@@ -241,7 +241,9 @@ class ZebraLabelTests(TestCase):
         self.company.commercial_name = "Ferretería Central"
         self.company.save()
         zpl = build_label_zpl(self.product, self.company).decode()
-        self.assertIn("Ferretería Central", zpl)
+        # Los acentos se convierten a letra simple porque la fuente Zebra los
+        # deja en blanco ("Ferretería" salía "Ferreter a").
+        self.assertIn("Ferreteria Central", zpl)
 
     def test_ean13_valido_usa_codigo_BE(self):
         # Un EAN-13 con verificador CORRECTO se imprime como EAN-13 (^BEN).
