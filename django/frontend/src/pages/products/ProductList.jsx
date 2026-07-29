@@ -362,7 +362,7 @@ function LabelPrintModal({ product, companyName, onClose }) {
               <button onClick={sendBrowserPrint} disabled={busy}
                       className="w-full text-left rounded-xl border-2 border-emerald-500 bg-emerald-50/60 dark:bg-emerald-500/15 hover:shadow-md p-3 transition disabled:opacity-50">
                 <div className="font-semibold text-slate-800 dark:text-slate-100">🏷️ Zebra directo <span className="text-[10px] bg-emerald-600 text-white rounded px-1.5 py-0.5 align-middle">Recomendado</span></div>
-                <div className="text-xs text-slate-500 dark:text-slate-400">La forma más confiable: las etiquetas salen completas y nítidas, <b>nunca en blanco</b>. Solo tocás este botón. (Se instala una vez en la computadora y después funciona solo, sin que el cajero abra nada.)</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">Imprime directo en la Zebra. Nunca en blanco.</div>
               </button>
 
               {/* --- USB (imagen del navegador): abre el cuadro de impresión. Es el
