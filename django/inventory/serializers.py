@@ -8,6 +8,7 @@ from core.serializer_fields import RoundingDecimalField
 from .models import (
     Brand,
     Category,
+    DamageReport,
     InventoryMovement,
     Product,
     ProductPresentation,
@@ -212,3 +213,31 @@ class StockCountSerializer(serializers.Serializer):
     # "add" = sumar lo encontrado a la existencia actual (entrada).
     mode = serializers.ChoiceField(choices=["set", "add"], required=False, default="set")
     counts = StockCountItemSerializer(many=True)
+
+
+class DamageReportSerializer(serializers.ModelSerializer):
+    """Reporte de producto dañado (merma) con aprobación del admin."""
+
+    product_name = serializers.CharField(source="product.name", read_only=True)
+    product_sku = serializers.CharField(source="product.sku", read_only=True)
+    reported_by_name = serializers.CharField(source="reported_by.name", read_only=True, default=None)
+    reviewed_by_name = serializers.CharField(source="reviewed_by.name", read_only=True, default=None)
+    status_display = serializers.CharField(source="get_status_display", read_only=True)
+
+    class Meta:
+        model = DamageReport
+        fields = [
+            "id", "product", "product_name", "product_sku", "quantity", "reason",
+            "status", "status_display", "reported_by_name", "reviewed_by_name",
+            "reviewed_at", "review_note", "created_at",
+        ]
+        read_only_fields = ["status", "reported_by_name", "reviewed_by_name",
+                            "reviewed_at", "review_note", "created_at"]
+
+
+class DamageReportWriteSerializer(serializers.Serializer):
+    """Alta de un reporte de daño por el vendedor."""
+
+    product = serializers.IntegerField()
+    quantity = RoundingDecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0.01"))
+    reason = serializers.CharField(max_length=2000)

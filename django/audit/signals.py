@@ -43,6 +43,7 @@ AUDITED = {
     "salereturns.SaleReturn",      # devoluciones (reembolsos de efectivo)
     "cashbox.CashMovement",        # ingresos/egresos de caja
     "inventory.InventoryMovement", # ajustes/salidas de inventario
+    "inventory.DamageReport",      # reportes de daño (quién reportó/aprobó)
 }
 
 # Campos internos/calculados que NO son ediciones del usuario: se excluyen de la

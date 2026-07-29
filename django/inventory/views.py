@@ -17,10 +17,15 @@ from core.models import CompanySetting
 from core.permissions import HasPermission, PermissionByActionMixin
 from core.textsearch import TolerantSearchFilter
 from . import labels
-from .models import Brand, Category, InventoryMovement, Product, ProductPresentation, Ubicacion, Unit
+from .models import (
+    Brand, Category, DamageReport, InventoryMovement, Product,
+    ProductPresentation, Ubicacion, Unit,
+)
 from .serializers import (
     BrandSerializer,
     CategorySerializer,
+    DamageReportSerializer,
+    DamageReportWriteSerializer,
     MovementCreateSerializer,
     MovementSerializer,
     ProductListSerializer,
@@ -29,7 +34,10 @@ from .serializers import (
     UbicacionSerializer,
     UnitSerializer,
 )
-from .services import InventoryError, apply_movement
+from .services import (
+    InventoryError, apply_movement,
+    approve_damage_report, create_damage_report, reject_damage_report,
+)
 from .utils import generate_barcode, generate_sku
 
 
@@ -363,3 +371,76 @@ class StockCountView(APIView):
             except InventoryError as e:
                 errors.append(f"{product.sku}: {e}")
         return Response({"adjusted": adjusted, "errors": errors})
+
+
+class DamageReportViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.ModelViewSet):
+    """Reportes de producto dañado (merma). El vendedor los crea (quedan
+    PENDIENTES); el admin los aprueba (descuenta stock) o rechaza."""
+
+    queryset = DamageReport.objects.select_related(
+        "product", "reported_by", "reviewed_by", "branch"
+    ).all()
+    serializer_class = DamageReportSerializer
+    http_method_names = ["get", "post", "head", "options"]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ["status", "product"]
+    ordering_fields = ["created_at", "status"]
+    perms_map = {
+        "list": ("mermas.reportar", "mermas.gestionar"),
+        "retrieve": ("mermas.reportar", "mermas.gestionar"),
+        "create": "mermas.reportar",
+        "approve": "mermas.gestionar",
+        "reject": "mermas.gestionar",
+        "pending_count": "mermas.gestionar",
+    }
+
+    def _can_manage(self):
+        from core.permissions import user_permission_codenames
+        return "mermas.gestionar" in user_permission_codenames(self.request.user)
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        # Quien no puede gestionar (el vendedor) solo ve SUS propios reportes.
+        if not self._can_manage():
+            qs = qs.filter(reported_by=self.request.user)
+        return qs
+
+    def create(self, request, *args, **kwargs):
+        ser = DamageReportWriteSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        data = ser.validated_data
+        product = Product.objects.filter(pk=data["product"], deleted_at__isnull=True).first()
+        if not product:
+            return Response({"detail": "Producto inexistente."}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            report = create_damage_report(
+                product=product, quantity=data["quantity"], reason=data["reason"],
+                user=request.user, branch=self.branch,
+            )
+        except InventoryError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(DamageReportSerializer(report).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["post"])
+    def approve(self, request, pk=None):
+        report = self.get_object()
+        try:
+            report = approve_damage_report(report, user=request.user, note=request.data.get("note"))
+        except InventoryError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(DamageReportSerializer(report).data)
+
+    @action(detail=True, methods=["post"])
+    def reject(self, request, pk=None):
+        report = self.get_object()
+        try:
+            report = reject_damage_report(report, user=request.user, note=request.data.get("note"))
+        except InventoryError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(DamageReportSerializer(report).data)
+
+    @action(detail=False, methods=["get"], url_path="pending-count")
+    def pending_count(self, request):
+        """Cantidad de reportes pendientes (para la notificación del admin)."""
+        n = DamageReport.objects.filter(status=DamageReport.PENDIENTE).count()
+        return Response({"count": n})

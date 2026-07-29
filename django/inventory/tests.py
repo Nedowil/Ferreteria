@@ -417,3 +417,93 @@ class StockCountEndpointTests(TestCase):
         self.assertEqual(r.status_code, 200)
         self.p.refresh_from_db()
         self.assertEqual(self.p.stock, Decimal("480"))
+
+
+class DamageReportTests(TestCase):
+    """Flujo de reporte de daño con aprobación del admin."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from inventory.services import create_damage_report
+        User = get_user_model()
+        self.branch = Branch.objects.create(name="Matriz", code="M", is_main=True)
+        self.vendedor = User.objects.create_user(username="v", email="v@d.com", password="x")
+        self.admin = User.objects.create_user(username="a", email="a@d.com", password="x")
+        self.prod = Product.objects.create(sku="D-1", name="Pintura", sale_price=Decimal("50"),
+                                            stock=Decimal("12"))
+        self.report = create_damage_report(
+            product=self.prod, quantity=1, reason="Se quebró al ordenar",
+            user=self.vendedor, branch=self.branch,
+        )
+
+    def test_reporte_no_descuenta_stock(self):
+        self.prod.refresh_from_db()
+        self.assertEqual(self.prod.stock, Decimal("12.00"))  # intacto
+        self.assertEqual(self.report.status, "pendiente")
+
+    def test_aprobar_descuenta_stock(self):
+        from inventory.services import approve_damage_report
+        approve_damage_report(self.report, user=self.admin)
+        self.prod.refresh_from_db()
+        self.report.refresh_from_db()
+        self.assertEqual(self.prod.stock, Decimal("11.00"))   # 12 - 1
+        self.assertEqual(self.report.status, "aprobada")
+        self.assertEqual(self.report.reviewed_by_id, self.admin.id)
+        self.assertIsNotNone(self.report.movement)
+
+    def test_rechazar_no_toca_stock(self):
+        from inventory.services import reject_damage_report
+        reject_damage_report(self.report, user=self.admin, note="No era daño real")
+        self.prod.refresh_from_db()
+        self.report.refresh_from_db()
+        self.assertEqual(self.prod.stock, Decimal("12.00"))   # intacto
+        self.assertEqual(self.report.status, "rechazada")
+
+    def test_no_se_puede_aprobar_dos_veces(self):
+        from inventory.services import approve_damage_report, InventoryError
+        approve_damage_report(self.report, user=self.admin)
+        with self.assertRaises(InventoryError):
+            approve_damage_report(self.report, user=self.admin)
+        self.prod.refresh_from_db()
+        self.assertEqual(self.prod.stock, Decimal("11.00"))   # no se descontó dos veces
+
+
+class DamageReportApiTests(TestCase):
+    """Permisos del flujo por API: el vendedor reporta pero NO aprueba."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from django.contrib.auth.models import Group
+        from core.permissions import ROLE_MATRIX, sync_permissions
+        self.User = get_user_model()
+        self.branch = Branch.objects.create(name="Matriz", code="M", is_main=True)
+        self.prod = Product.objects.create(sku="DA-1", name="Foco", sale_price=Decimal("20"), stock=Decimal("10"))
+        perms = sync_permissions()
+        for role, codes in ROLE_MATRIX.items():
+            g, _ = Group.objects.get_or_create(name=role)
+            g.permissions.set([perms[c] for c in codes if c in perms])
+        self.vendedor = self.User.objects.create_user(username="v", email="v@t.com", password="x123")
+        self.vendedor.groups.add(Group.objects.get(name="vendedor"))
+        self.admin = self.User.objects.create_user(username="a", email="a@t.com", password="x123", is_superuser=True)
+
+    def _client(self, email):
+        from rest_framework.test import APIClient
+        c = APIClient()
+        r = c.post("/api/auth/token/", {"email": email, "password": "x123"}, format="json")
+        c.credentials(HTTP_AUTHORIZATION=f"Bearer {r.json()['access']}", HTTP_X_BRANCH_ID=str(self.branch.id))
+        return c
+
+    def test_vendedor_reporta_pero_no_aprueba(self):
+        cv = self._client("v@t.com")
+        r = cv.post("/api/inventory/damage-reports/",
+                    {"product": self.prod.id, "quantity": 1, "reason": "Se quebró"}, format="json")
+        self.assertEqual(r.status_code, 201, r.content)
+        rid = r.json()["id"]
+        self.prod.refresh_from_db()
+        self.assertEqual(self.prod.stock, Decimal("10.00"))  # no descuenta aún
+        # El vendedor NO puede aprobar.
+        self.assertEqual(cv.post(f"/api/inventory/damage-reports/{rid}/approve/").status_code, 403)
+        # El admin sí, y ahí se descuenta.
+        self.assertEqual(self._client("a@t.com").post(f"/api/inventory/damage-reports/{rid}/approve/").status_code, 200)
+        self.prod.refresh_from_db()
+        self.assertEqual(self.prod.stock, Decimal("9.00"))

@@ -11,6 +11,7 @@ router.register("categories", views.CategoryViewSet, basename="category")
 router.register("brands", views.BrandViewSet, basename="brand")
 router.register("locations", views.UbicacionViewSet, basename="ubicacion")
 router.register("units", views.UnitViewSet, basename="unit")
+router.register("damage-reports", views.DamageReportViewSet, basename="damage-report")
 
 urlpatterns = [
     path("stock-count/", views.StockCountView.as_view(), name="stock-count"),

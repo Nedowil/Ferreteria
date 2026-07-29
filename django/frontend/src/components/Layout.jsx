@@ -4,7 +4,7 @@ import { useAuth } from "../auth/AuthContext";
 import ScannerRedirect from "./ScannerRedirect";
 import logo from "../assets/mascota.png";
 
-function NavItem({ to, icon, label, end }) {
+function NavItem({ to, icon, label, end, badge }) {
   return (
     <NavLink to={to} end={end} className={({ isActive }) =>
       "mx-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition " +
@@ -13,7 +13,10 @@ function NavItem({ to, icon, label, end }) {
         : "text-slate-300 hover:bg-white/5 hover:text-white")
     }>
       <span className="w-5 text-center text-base leading-none">{icon}</span>
-      <span>{label}</span>
+      <span className="flex-1">{label}</span>
+      {badge > 0 && (
+        <span className="ml-auto min-w-[18px] text-center text-[11px] font-bold bg-red-500 text-white rounded-full px-1.5 py-0.5 leading-none">{badge > 99 ? "99+" : badge}</span>
+      )}
     </NavLink>
   );
 }
@@ -54,7 +57,20 @@ export default function Layout({ children }) {
   const showVentas = can("ventas.crear") || can("ventas.ver") || can("caja.ver")
     || can("cotizaciones.ver") || can("facturas.ver") || can("devoluciones.ver")
     || can("cuentas_cobrar.ver");
-  const showInventario = can("productos.ver") || can("inventario.ajustar");
+  const showInventario = can("productos.ver") || can("inventario.ajustar") || can("mermas.reportar");
+
+  // Notificación de reportes de daño pendientes (para quien los gestiona).
+  const [pendingDamage, setPendingDamage] = useState(0);
+  useEffect(() => {
+    if (!can("mermas.gestionar")) return;
+    let alive = true;
+    const load = () => import("../api/client").then(({ default: api }) =>
+      api.get("/inventory/damage-reports/pending-count/")
+        .then((r) => { if (alive) setPendingDamage(r.data.count || 0); }).catch(() => {}));
+    load();
+    const t = setInterval(load, 30000);  // refresca cada 30s
+    return () => { alive = false; clearInterval(t); };
+  }, [can]);
   const showCompras = can("proveedores.ver") || can("compras.ver") || can("facturas_prov.ver")
     || can("cuentas_pagar.ver");
   const showAdmin = can("usuarios.ver") || can("sucursales.gestionar") || can("transferencias.gestionar")
@@ -107,6 +123,8 @@ export default function Layout({ children }) {
               {can("productos.ver") && <NavItem to="/ubicaciones" icon="📍" label="Ubicaciones" />}
               {can("productos.ver") && <NavItem to="/bajo-stock" icon="⚠️" label="Stock bajo" />}
               {can("inventario.ajustar") && <NavItem to="/conteo" icon="🔢" label="Conteo físico" />}
+              {can("mermas.reportar") && !can("mermas.gestionar") && <NavItem to="/reportar-dano" icon="🛠️" label="Reportar daño" />}
+              {can("mermas.gestionar") && <NavItem to="/mermas" icon="🛠️" label="Reportes de daño" badge={pendingDamage} />}
             </>
           )}
 

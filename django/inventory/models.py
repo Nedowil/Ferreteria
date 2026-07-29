@@ -365,3 +365,57 @@ class InventoryMovement(models.Model):
 
     def __str__(self):
         return f"{self.get_type_display()} {self.quantity} — {self.product.sku}"
+
+
+class DamageReport(models.Model):
+    """Reporte de producto DAÑADO/con defecto hecho por un vendedor. NO descuenta
+    stock al crearse: queda PENDIENTE hasta que un admin lo apruebe (ahí se
+    descuenta) o lo rechace (no pasa nada). Así el vendedor puede avisar de una
+    merma sin tener permiso para tocar el inventario, y queda el rastro de quién
+    reportó y quién aprobó."""
+
+    PENDIENTE = "pendiente"
+    APROBADA = "aprobada"
+    RECHAZADA = "rechazada"
+    STATUS_CHOICES = [
+        (PENDIENTE, "Pendiente"),
+        (APROBADA, "Aprobada"),
+        (RECHAZADA, "Rechazada"),
+    ]
+
+    product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name="damage_reports")
+    branch = models.ForeignKey(
+        "core.Branch", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="damage_reports",
+    )
+    quantity = models.DecimalField("cantidad", max_digits=12, decimal_places=2, default=Decimal("1"))
+    reason = models.TextField("descripción del daño")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=PENDIENTE)
+
+    reported_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="damage_reports",
+    )
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="reviewed_damage_reports",
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_note = models.TextField("nota de revisión", blank=True, null=True)
+    # Movimiento de inventario generado al aprobar (para trazabilidad).
+    movement = models.ForeignKey(
+        InventoryMovement, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="damage_reports",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "reporte de daño"
+        verbose_name_plural = "reportes de daño"
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["status", "created_at"])]
+
+    def __str__(self):
+        return f"Daño {self.product.sku} x{self.quantity} ({self.status})"

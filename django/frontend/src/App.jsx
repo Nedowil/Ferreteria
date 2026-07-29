@@ -15,6 +15,8 @@ const ProductForm = lazy(() => import("./pages/products/ProductForm"));
 const InventoryShow = lazy(() => import("./pages/products/InventoryShow"));
 const LowStock = lazy(() => import("./pages/products/LowStock"));
 const StockCount = lazy(() => import("./pages/products/StockCount"));
+const ReportDamage = lazy(() => import("./pages/inventory/ReportDamage"));
+const DamageReports = lazy(() => import("./pages/inventory/DamageReports"));
 const CatalogList = lazy(() => import("./pages/catalogs/CatalogList"));
 const SupplierList = lazy(() => import("./pages/partners/SupplierList"));
 const CustomerList = lazy(() => import("./pages/partners/CustomerList"));
@@ -156,6 +158,8 @@ export default function App() {
       <Route path="/productos/:id/inventario" element={<Protected perm="productos.ver"><InventoryShow /></Protected>} />
       <Route path="/bajo-stock" element={<Protected perm="productos.ver"><LowStock /></Protected>} />
       <Route path="/conteo" element={<Protected perm="inventario.ajustar"><StockCount /></Protected>} />
+      <Route path="/reportar-dano" element={<Protected perm="mermas.reportar"><ReportDamage /></Protected>} />
+      <Route path="/mermas" element={<Protected perm="mermas.gestionar"><DamageReports /></Protected>} />
       <Route path="/categorias" element={<Protected perm="productos.ver"><CatalogList kind="categories" /></Protected>} />
       <Route path="/marcas" element={<Protected perm="productos.ver"><CatalogList kind="brands" /></Protected>} />
       <Route path="/ubicaciones" element={<Protected perm="productos.ver"><CatalogList kind="locations" /></Protected>} />

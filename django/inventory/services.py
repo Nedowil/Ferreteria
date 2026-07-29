@@ -9,7 +9,7 @@ from decimal import Decimal
 from django.db import transaction
 from django.db.models import Sum
 
-from .models import InventoryMovement, Product, ProductStock
+from .models import DamageReport, InventoryMovement, Product, ProductStock
 
 
 class InventoryError(Exception):
@@ -90,3 +90,59 @@ def apply_movement(product, mtype, quantity, *, reason=None, user=None, branch=N
         new_stock=new_stock,
         reason=reason,
     )
+
+
+# --- Reportes de daño / merma (con aprobación del admin) ----------------------
+
+@transaction.atomic
+def create_damage_report(*, product, quantity, reason, user=None, branch=None):
+    """El vendedor reporta un producto dañado. NO descuenta stock: queda
+    PENDIENTE hasta que un admin lo apruebe."""
+    from decimal import Decimal
+    qty = Decimal(str(quantity or 0))
+    if qty <= 0:
+        raise InventoryError("La cantidad dañada debe ser mayor que cero.")
+    if not (reason or "").strip():
+        raise InventoryError("Describí qué le pasó al producto.")
+    return DamageReport.objects.create(
+        product=product, quantity=qty, reason=reason.strip(),
+        reported_by=user, branch=branch, status=DamageReport.PENDIENTE,
+    )
+
+
+@transaction.atomic
+def approve_damage_report(report, *, user=None, note=None):
+    """El admin aprueba el reporte: se descuenta el stock (salida por merma) y
+    queda registrado el movimiento. Bloquea la fila para evitar doble aprobación."""
+    from django.utils import timezone
+    report = DamageReport.objects.select_for_update().get(pk=report.pk)
+    if report.status != DamageReport.PENDIENTE:
+        raise InventoryError("Este reporte ya fue revisado.")
+    motivo = f"Merma aprobada: {report.reason}"[:255]
+    movement = apply_movement(
+        report.product, InventoryMovement.SALIDA, report.quantity,
+        reason=motivo, user=user, branch=report.branch,
+    )
+    report.status = DamageReport.APROBADA
+    report.reviewed_by = user
+    report.reviewed_at = timezone.now()
+    report.review_note = note or None
+    report.movement = movement
+    report.save(update_fields=["status", "reviewed_by", "reviewed_at", "review_note",
+                               "movement", "updated_at"])
+    return report
+
+
+@transaction.atomic
+def reject_damage_report(report, *, user=None, note=None):
+    """El admin rechaza el reporte: NO se toca el stock."""
+    from django.utils import timezone
+    report = DamageReport.objects.select_for_update().get(pk=report.pk)
+    if report.status != DamageReport.PENDIENTE:
+        raise InventoryError("Este reporte ya fue revisado.")
+    report.status = DamageReport.RECHAZADA
+    report.reviewed_by = user
+    report.reviewed_at = timezone.now()
+    report.review_note = note or None
+    report.save(update_fields=["status", "reviewed_by", "reviewed_at", "review_note", "updated_at"])
+    return report
