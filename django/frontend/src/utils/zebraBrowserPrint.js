@@ -10,7 +10,15 @@
  * el endpoint HTTPS (9101); si la app fuera HTTP, sirve el 9100.
  */
 
-const BP_BASES = ["https://127.0.0.1:9101", "http://127.0.0.1:9100"];
+// El certificado que instala Browser Print es para "localhost", por eso se
+// prueba ese primero (es donde el usuario acepta el certificado en
+// https://localhost:9101/ssl_support). Se dejan variantes como respaldo.
+const BP_BASES = [
+  "https://localhost:9101",
+  "https://127.0.0.1:9101",
+  "http://localhost:9100",
+  "http://127.0.0.1:9100",
+];
 
 async function jget(base, path, ms = 3000) {
   const ctrl = new AbortController();
