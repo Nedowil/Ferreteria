@@ -153,10 +153,10 @@ function canvasToGfaZpl(canvas, copies) {
   return `^XA^LH0,0^FO0,0^GFA,${total},${total},${rowBytes},${hex}^FS^PQ${n}^XZ`;
 }
 
-// Dibuja la etiqueta completa en un canvas del tamaño EXACTO en puntos de la
-// impresora y devuelve el ZPL (como imagen ^GFA) listo para Zebra directo.
-// Ventaja: acepta acentos y cualquier carácter, y se ve idéntica a la de USB.
-function buildLabelImageZpl(product, companyName, copies, dims) {
+// Dibuja la etiqueta COMPLETA en un canvas del tamaño exacto en puntos de la
+// impresora y lo devuelve. Lo usan tanto Zebra directo (→ ZPL ^GFA) como la
+// impresión por PDF. Acepta acentos y cualquier carácter (lo dibuja el navegador).
+function renderLabelCanvas(product, companyName, dims) {
   const dpi = Number(dims?.dpi) || 203;
   const mm = (v) => Math.round((Number(v) || 0) * dpi / 25.4);
   const W = mm(dims?.widthMm || 50);
@@ -234,54 +234,50 @@ function buildLabelImageZpl(product, companyName, copies, dims) {
       ctx.drawImage(bc, Math.round(cx - dw / 2), Math.round(y), dw, dh);
     }
   }
-  return canvasToGfaZpl(canvas, copies);
+  return canvas;
 }
 
-// Abre una ventana imprimible con las etiquetas (para "Guardar como PDF").
-// Imprime las etiquetas mediante el navegador. Cada etiqueta ocupa UNA página
-// del tamaño físico exacto de la etiqueta (por defecto 2"x1" = 51x25 mm), así
-// se alinea con el rollo de la Zebra y funciona desde la nube (imprime desde la
-// computadora, no desde el servidor). labelW/labelH en mm.
-async function printLabelsPdf(product, copies, companyName, labelW = 51, labelH = 25) {
-  const esc = (s) => (s || "").replace(/</g, "&lt;");
-  // En lugar del precio a la vista se imprime el CÓDIGO oculto (compra+venta).
-  const big = product.price_code || labelPrice(product);
-  const nameRaw = (product.name || "").toUpperCase();
-  const name = esc(nameRaw);
-  // El nombre largo se achica solo para que quepa COMPLETO (hasta 3 líneas) sin
-  // cortarse. Cuantos más caracteres, más chica la letra.
-  const nameFs = nameRaw.length > 46 ? 6 : nameRaw.length > 36 ? 6.8
-               : nameRaw.length > 28 ? 7.6 : 8.5; // pt
-  const one = `
-    <div class="label">
-      ${companyName ? `<div class="biz">${esc(companyName)}</div>` : ""}
-      ${name ? `<div class="name" style="font-size:${nameFs}pt">${name}</div>` : ""}
-      ${big ? `<div class="price">${esc(big)}</div>` : ""}
-      <div class="bc">${barcodeSvg(product.barcode || product.sku, 34)}</div>
-    </div>`;
-  const labels = Array.from({ length: Math.max(1, Number(copies) || 1) }, () => one).join("");
-  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Etiquetas ${product.sku}</title>
-    <style>
-      @page { size: ${labelW}mm ${labelH}mm; margin: 0; }
-      html, body { margin: 0; padding: 0; }
-      body { font-family: Arial, sans-serif; }
-      .label { width: ${labelW}mm; height: ${labelH}mm; box-sizing: border-box;
-               padding: 0.8mm 1.5mm; text-align: center; overflow: hidden;
-               display: flex; flex-direction: column; justify-content: center;
-               align-items: center; page-break-after: always; }
-      .label:last-child { page-break-after: auto; }
-      .biz { font-size: 6.5pt; font-weight: 600; color: #000; line-height: 1; }
-      /* Muestra líneas COMPLETAS (hasta 3) sin cortar a media línea. El tamaño
-         de letra se pasa por estilo en línea según el largo del nombre. */
-      .name { font-weight: 800; line-height: 1.05; margin: 0.2mm 0; overflow: hidden;
-              display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
-              word-break: break-word; }
-      .price { font-size: 10pt; font-weight: 800; line-height: 1; }
-      .bc { width: 100%; line-height: 0; margin-top: 0.2mm; }
-      .bc img { display: block; max-width: 100%; height: auto; margin: 0 auto; }
-    </style></head>
-    <body>${labels}</body></html>`;
-  printHtml(html);
+// Zebra directo: la etiqueta como imagen ^GFA (una vez) + ^PQ copias.
+function buildLabelImageZpl(product, companyName, copies, dims) {
+  return canvasToGfaZpl(renderLabelCanvas(product, companyName, dims), copies);
+}
+
+// Imprime las etiquetas de código de barras generando un PDF REAL con jsPDF: la
+// etiqueta se dibuja UNA sola vez (canvas) y se pega como imagen en CADA página.
+// Antes se imprimían N páginas HTML por el navegador y, con muchas (25/50/90),
+// algunas imágenes NO se pintaban a tiempo y salían EN BLANCO. En el PDF la
+// imagen va incrustada en todas las páginas → CERO etiquetas en blanco.
+async function printLabelsPdf(product, copies, companyName) {
+  const n = Math.max(1, Number(copies) || 1);
+  // Tamaño físico de la etiqueta (config de la empresa; por defecto 50×25 mm).
+  let dims = { widthMm: 50, heightMm: 25, dpi: 203 };
+  try {
+    const { data: cs } = await api.get("/company-settings/");
+    dims = {
+      widthMm: Number(cs.zebra_label_width) || 50,
+      heightMm: Number(cs.zebra_label_height) || 25,
+      dpi: Number(cs.zebra_dpi) || 203,
+    };
+  } catch { /* usa los valores por defecto */ }
+
+  const { jsPDF } = await import("jspdf");
+  const landscape = dims.widthMm >= dims.heightMm;
+  const doc = new jsPDF({ orientation: landscape ? "landscape" : "portrait", unit: "mm", format: [dims.widthMm, dims.heightMm] });
+  // Se toma el tamaño REAL de página del PDF y se dibuja el canvas con ESE
+  // tamaño, para que la imagen llene la etiqueta exacta sin deformarse.
+  const pw = doc.internal.pageSize.getWidth();
+  const ph = doc.internal.pageSize.getHeight();
+  const png = renderLabelCanvas(product, companyName, { widthMm: pw, heightMm: ph, dpi: dims.dpi }).toDataURL("image/png");
+  for (let i = 0; i < n; i++) {
+    if (i > 0) doc.addPage([pw, ph], pw >= ph ? "landscape" : "portrait");
+    doc.addImage(png, "PNG", 0, 0, pw, ph, undefined, "FAST");
+  }
+  doc.autoPrint();
+  // Abre el PDF en una pestaña nueva (se lanza solo el diálogo de impresión).
+  // Si el navegador bloquea la pestaña, se descarga para imprimir a mano.
+  const url = doc.output("bloburl");
+  const w = window.open(url, "_blank");
+  if (!w) doc.save(`etiquetas-${product.sku}.pdf`);
 }
 
 // Precio y unidad a mostrar en una etiqueta de estante.
@@ -512,8 +508,8 @@ function LabelPrintModal({ product, companyName, onClose }) {
                      método que el usuario usaba y le escaneaba. NO descarga archivo. --- */}
               <button onClick={() => { printLabelsPdf(product, copies, companyName); onClose(); }} disabled={busy}
                       className="w-full text-left rounded-xl border border-slate-200 dark:border-slate-700 hover:border-blue-400 hover:shadow-md p-3 transition disabled:opacity-50">
-                <div className="font-semibold text-slate-800 dark:text-slate-100">🖨️ Imprimir por USB (cuadro de impresión)</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400">Abre el cuadro de impresión (no descarga nada) → elegí tu <b>Zebra ZD421T</b> y dale Imprimir. También sirve para una impresora común o "Guardar como PDF".</div>
+                <div className="font-semibold text-slate-800 dark:text-slate-100">🖨️ Imprimir por PDF (sin etiquetas en blanco)</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">Genera un PDF con la etiqueta ya dibujada en cada página → abrí el diálogo, elegí tu <b>Zebra ZD421T</b> y dale Imprimir. Ninguna sale en blanco, aunque imprimas 90. Sirve para cualquier impresora.</div>
               </button>
 
               {/* --- ZEBRA: código NATIVO (.zpl). Respaldo para máxima nitidez. --- */}
