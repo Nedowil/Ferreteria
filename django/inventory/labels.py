@@ -108,18 +108,23 @@ def price_code(purchase, sale):
     return f"{tail}{sc}{front}"
 
 
-def _label_price_text(product):
-    """Precio a mostrar en la etiqueta: el del EMPAQUE si el producto lo tiene
-    (ej. 'Q60.00 / CAJA'); si no, el de la unidad base."""
+def label_sale_price(product):
+    """Precio de venta que se usa en la etiqueta (para el código oculto y el
+    texto): el del EMPAQUE/CAJA si el producto se vende así; si no, el de la
+    unidad base. Así el código codifica el precio de CAJA cuando corresponde
+    (ej.: se vende por caja a Q50 → el código se arma con 50, no con la unidad)."""
     cf = product.container_factor or 0
     if product.container_label and cf:
-        price = product.container_price or (Decimal(str(product.sale_price)) * Decimal(str(cf)))
-        label = product.container_label
-    else:
-        price = product.sale_price
-        label = product.base_unit_label or "unidad"
+        return product.container_price or (Decimal(str(product.sale_price)) * Decimal(str(cf)))
+    return product.sale_price
+
+
+def _label_price_text(product):
+    """Texto de precio para la etiqueta (ej. 'Q60.00 / CAJA')."""
+    cf = product.container_factor or 0
+    label = product.container_label if (product.container_label and cf) else (product.base_unit_label or "unidad")
     try:
-        return f"Q{Decimal(str(price)):,.2f} / {str(label).upper()}"
+        return f"Q{Decimal(str(label_sale_price(product))):,.2f} / {str(label).upper()}"
     except Exception:
         return _money(product.sale_price)
 
@@ -173,7 +178,7 @@ def build_label_zpl(product, company, *, show_price=True, copies=1):
 
     # El "precio" (código oculto compra+venta) va ARRIBA, grande, como el precio.
     if show_price:
-        pcode = price_code(product.purchase_price, product.sale_price)
+        pcode = price_code(product.purchase_price, label_sale_price(product))
         big = pcode or _zpl_escape(_label_price_text(product))
         parts.append(
             f"^FO{margin},{y}^A0N,{code_f},{code_f}"

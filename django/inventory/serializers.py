@@ -97,8 +97,10 @@ class ProductListSerializer(serializers.ModelSerializer):
             self.fields.pop("purchase_price", None)
 
     def get_price_code(self, obj):
-        from .labels import price_code
-        return price_code(obj.purchase_price, obj.sale_price)
+        from .labels import label_sale_price, price_code
+        # Usa el precio de CAJA si el producto se vende por empaque; si no, el
+        # de la unidad. Así el código de la etiqueta coincide con lo que venden.
+        return price_code(obj.purchase_price, label_sale_price(obj))
 
     def get_branch_stock(self, obj):
         """Existencia en la sucursal activa (header X-Branch-Id). Si no hay
