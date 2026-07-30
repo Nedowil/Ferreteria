@@ -240,17 +240,18 @@ class ZebraLabelTests(TestCase):
         self.assertIn("Q60.00 / CAJA", zpl)  # precio del empaque
 
     def test_price_code_usa_precio_de_caja(self):
-        """El código oculto de un producto que se vende por caja usa el precio
-        de la CAJA (no el de la unidad). Ej.: compra 34 / caja 50 → 4503."""
+        """Producto vendido por caja: el código codifica compra y venta POR CAJA.
+        Ej. real (tornillo): compra 0.34/unidad × 100 = Q34, caja Q50 → 4503."""
         from decimal import Decimal
-        from inventory.labels import label_sale_price, price_code
+        from inventory.labels import label_purchase_price, label_sale_price, price_code
         p = Product.objects.create(
             sku="TOR-M", name="Tornillo tipo maquina",
-            purchase_price=Decimal("34"), sale_price=Decimal("10"),
-            container_label="caja", container_factor=Decimal("5"), container_price=Decimal("50"),
+            purchase_price=Decimal("0.34"), sale_price=Decimal("1.00"),
+            container_label="caja", container_factor=Decimal("100"), container_price=Decimal("50"),
         )
+        self.assertEqual(label_purchase_price(p), Decimal("34.00"))
         self.assertEqual(label_sale_price(p), Decimal("50"))
-        self.assertEqual(price_code(p.purchase_price, label_sale_price(p)), "4503")
+        self.assertEqual(price_code(label_purchase_price(p), label_sale_price(p)), "4503")
 
     def test_label_incluye_nombre_negocio(self):
         from inventory.labels import build_label_zpl
