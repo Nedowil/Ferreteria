@@ -246,7 +246,8 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(MovementSerializer(movement).data, status=status.HTTP_201_CREATED)
 
-    @action(detail=True, methods=["post"])
+    @action(detail=True, methods=["post"],
+            permission_classes=[HasPermission.require("productos.etiquetar")])
     def label(self, request, pk=None):
         """Imprime la etiqueta Zebra (ZPL) del producto."""
         product = self.get_object()
