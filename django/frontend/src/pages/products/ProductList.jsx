@@ -475,6 +475,25 @@ function LabelPrintModal({ product, companyName, onClose }) {
     } finally { setBusy(false); }
   };
 
+  // Calibra la impresora (comando ~JC): la Zebra mide unas etiquetas y aprende
+  // el tamaño y la separación (gap). Se usa cuando salen etiquetas en blanco o
+  // corridas. Va por el mismo Browser Print, así no hace falta ningún programa.
+  const calibrate = async () => {
+    setBusy(true); setErr("");
+    try {
+      await printZpl("~JC");
+      await dialog.alert("Calibración enviada ✅. La impresora va a avanzar unas etiquetas y detenerse sola. Cuando quede en verde fijo, imprimí 1 etiqueta de prueba.");
+    } catch (e) {
+      if (e.code === "NO_BP") {
+        setErr("No se pudo conectar con la impresora. Abrí el programa Zebra Browser Print en esta computadora e intentá de nuevo.");
+      } else if (e.code === "NO_PRINTER") {
+        setErr("La impresora no responde. Revisá que esté encendida, en verde fijo, y conectada por USB.");
+      } else {
+        setErr("No se pudo enviar la calibración. Revisá que la impresora esté encendida y en verde fijo.");
+      }
+    } finally { setBusy(false); }
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden" onClick={(e) => e.stopPropagation()}>
@@ -531,6 +550,14 @@ function LabelPrintModal({ product, companyName, onClose }) {
                 <div className="font-semibold text-slate-800 dark:text-slate-100">🌐 Zebra por red (IP)</div>
                 <div className="text-xs text-slate-500 dark:text-slate-400">Solo si el servidor está en la misma red que la impresora (no aplica en la nube).</div>
               </button>
+              {/* --- CALIBRAR: si salen blancas o corridas, la impresora aprende
+                     el tamaño de la etiqueta. Va por Browser Print (sin programas). --- */}
+              <button onClick={calibrate} disabled={busy}
+                      className="w-full text-left rounded-xl border border-amber-300 dark:border-amber-600/50 bg-amber-50/70 dark:bg-amber-500/10 hover:shadow-md p-3 transition disabled:opacity-50">
+                <div className="font-semibold text-slate-800 dark:text-slate-100">🎯 Calibrar impresora</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">¿Salen etiquetas <b>en blanco</b> o corridas? Tocá acá: la impresora avanza unas etiquetas y aprende el tamaño. Se hace una sola vez.</div>
+              </button>
+
               <div className="flex justify-between items-center pt-1">
                 <button onClick={() => setStep("qty")} className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700">← Atrás</button>
                 {busy && <span className="text-xs text-slate-400">Enviando…</span>}
