@@ -150,11 +150,14 @@ function canvasToGfaZpl(canvas, copies) {
   let hex = "";
   for (let k = 0; k < total; k++) hex += HEX[bytes[k] >> 4] + HEX[bytes[k] & 15];
   const n = Math.max(1, Number(copies) || 1);
-  // ^PW (ancho) y ^LL (alto) le dicen a la impresora el tamaño EXACTO de la
-  // etiqueta. Sin esto, al imprimir muchas seguidas la Zebra perdía el índice de
-  // cada etiqueta y el contenido se corría → algunas salían EN BLANCO. Con el
-  // tamaño fijo, cada una queda alineada. (Igual que el ZPL nativo del backend.)
-  return `^XA^PW${W}^LL${H}^LH0,0^FO0,0^GFA,${total},${total},${rowBytes},${hex}^FS^PQ${n}^XZ`;
+  // Control de medios para que NO salgan etiquetas en blanco al imprimir muchas:
+  //  ^MNY  → la impresora SENSA la separación (gap) entre etiquetas troqueladas,
+  //          así avanza exactamente UNA etiqueta por impresión (no de más).
+  //  ^PW   → ancho de impresión (en puntos).
+  //  ^LL   → alto/largo de la etiqueta (en puntos).
+  //  ^LS0  → sin desplazamiento a la izquierda.
+  // Sin esto, la Zebra perdía el índice y dejaba etiquetas en blanco entre medio.
+  return `^XA^MNY^PW${W}^LL${H}^LS0^LH0,0^FO0,0^GFA,${total},${total},${rowBytes},${hex}^FS^PQ${n}^XZ`;
 }
 
 // Dibuja la etiqueta COMPLETA en un canvas del tamaño exacto en puntos de la
