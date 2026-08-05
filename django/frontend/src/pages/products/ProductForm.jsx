@@ -12,7 +12,7 @@ const EMPTY = {
   wholesale_price: "", wholesale_min_quantity: "", container_wholesale_price: "",
   min_stock: "", sells_by_measure: false, measure_step: "",
   active: true, public_visible: true,
-  initial_stock: "", stock_input_mode: "container",
+  initial_stock: "", stock_input_mode: "",
   ubicacion: "",
 };
 
@@ -285,6 +285,15 @@ export default function ProductForm() {
     // mínimo. Si alguno quedó vacío se avisa y se pide confirmar; si de verdad
     // va en 0, el usuario puede continuar.
     if (!editing) {
+      // OBLIGATORIO: si hay empaque y cargaron stock inicial, tienen que elegir
+      // el modo (por unidad o por empaque). Antes venía "Empaque" por defecto y
+      // se olvidaban de cambiarlo → el stock quedaba multiplicado por el factor.
+      if (hasContainer && Number(form.initial_stock) > 0 && !form.stock_input_mode) {
+        await dialog.alert(
+          `Elegí en qué está el stock inicial: en ${baseUnit} (sueltas) o en ${containerLabel} (paquete de ${factor || "?"}).\n\nEs obligatorio para no cargar mal el inventario.`
+        );
+        return;
+      }
       const faltantes = [];
       if (form.initial_stock === "" || form.initial_stock == null) faltantes.push("el stock inicial");
       if (form.min_stock === "" || form.min_stock == null) faltantes.push("el stock mínimo");
@@ -310,6 +319,9 @@ export default function ProductForm() {
     ["min_stock", "initial_stock"].forEach((k) => {
       if (payload[k] === "" || payload[k] == null) payload[k] = "0";
     });
+    // Si no se eligió modo (producto sin empaque, o stock en 0), se interpreta
+    // en unidad base (no multiplica por el factor del empaque).
+    if (!payload.stock_input_mode) payload.stock_input_mode = "base";
     // Unidad base vacía → "unidad" (valor por defecto del placeholder).
     if (!payload.base_unit_label || !String(payload.base_unit_label).trim()) {
       payload.base_unit_label = "unidad";
@@ -463,8 +475,27 @@ export default function ProductForm() {
         {!editing ? (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
             <TextField label="Stock inicial" name="initial_stock" form={form} errors={errors} onChange={set} type="number" placeholder="0" />
-            <SelectField label="Modo" name="stock_input_mode" form={form} onChange={set}
-                         options={[{ id: "base", name: "Unidad base" }, { id: "container", name: "Empaque" }]} empty="" />
+            {/* El "Modo" solo aplica cuando hay empaque (caja). Se muestra sin
+                valor por defecto y es OBLIGATORIO elegirlo, para que no se cargue
+                mal el stock por olvidar cambiarlo. */}
+            {hasContainer && (
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  ¿El stock inicial está en…? <span className="text-red-500">*</span>
+                </label>
+                <select value={form.stock_input_mode} onChange={(e) => set("stock_input_mode", e.target.value)}
+                        className={"w-full bg-white dark:bg-slate-900 border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 " +
+                          (Number(form.initial_stock) > 0 && !form.stock_input_mode
+                            ? "border-red-400 ring-1 ring-red-300" : "border-slate-300 dark:border-slate-600")}>
+                  <option value="">— Elegí una opción —</option>
+                  <option value="base">Por {baseUnit} (sueltas)</option>
+                  <option value="container">Por {containerLabel} (paquete de {factor || "?"})</option>
+                </select>
+                {Number(form.initial_stock) > 0 && !form.stock_input_mode && (
+                  <p className="text-xs text-red-600 mt-1">Elegí si lo que pusiste está en <b>{baseUnit}</b> o en <b>{containerLabel}</b>.</p>
+                )}
+              </div>
+            )}
           </div>
         ) : (
           <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">El stock se ajusta desde <b>Inventario</b> del producto.</p>
