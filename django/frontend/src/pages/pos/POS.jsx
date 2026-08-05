@@ -134,7 +134,7 @@ function MeasureModal({ product, customer, available, onAdd, onClose }) {
             <div className="grid grid-cols-2 gap-2">
               {measures.map((m) => (
                 <button key={m.key} onClick={() => setSel(m)}
-                        className={"text-left rounded-xl border px-3 py-2 transition " +
+                        className={"no-anim text-left rounded-xl border px-3 py-2 transition " +
                           (sel.key === m.key
                             ? "border-blue-500 bg-blue-50 dark:bg-blue-500/20 dark:border-blue-400 ring-2 ring-blue-500/30"
                             : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-500")}>
