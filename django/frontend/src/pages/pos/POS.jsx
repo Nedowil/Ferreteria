@@ -909,7 +909,7 @@ export default function POS() {
                     const unit = p.base_unit_label || "unidad";
                     return (
                       <button key={p.id} onClick={() => setPicking(p)}
-                              className="w-full text-left flex items-center gap-3 px-3 py-2.5 hover:bg-blue-50 dark:hover:bg-slate-700 transition group">
+                              className="no-anim w-full text-left flex items-center gap-3 px-3 py-2.5 hover:bg-blue-50 dark:hover:bg-slate-700 transition group">
                         <div className="min-w-0 flex-1">
                           <div className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate group-hover:text-blue-700 dark:group-hover:text-blue-300">{p.name}</div>
                           <div className="text-[11px] font-mono text-slate-400">{p.sku}{p.ubicacion_name ? <span className="text-teal-700 dark:text-teal-400 font-sans"> · <span className="font-semibold">Ubicación:</span> {p.ubicacion_name}</span> : ""}</div>
@@ -946,7 +946,7 @@ export default function POS() {
                   const unit = p.base_unit_label || "unidad";
                   return (
                     <button key={p.id} onClick={() => setPicking(p)}
-                            className="text-left rounded-xl border border-slate-200 dark:border-slate-700 hover:border-blue-400 hover:shadow-md transition overflow-hidden bg-white dark:bg-slate-800 group">
+                            className="no-anim text-left rounded-xl border border-slate-200 dark:border-slate-700 hover:border-blue-400 hover:shadow-md transition overflow-hidden bg-white dark:bg-slate-800 group">
                       <div className="h-24 bg-slate-50 dark:bg-slate-900 flex items-center justify-center overflow-hidden">
                         {p.image
                           ? <img src={p.image} alt={p.name} className="h-full w-full object-contain" loading="lazy" />
