@@ -109,9 +109,17 @@ function MeasureModal({ product, customer, available, onAdd, onClose }) {
          onClick={onClose}>
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
            onClick={(e) => e.stopPropagation()}>
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-4">
+        <div className="relative bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-4">
+          {/* Costo (precio de compra) de la medida elegida, en la esquina sup.
+              derecha. Solo lo ve quien tenga el permiso ventas.ver_costo. */}
+          {canSeeCost && Number(sel?.cost) > 0 && (
+            <div className="absolute top-3 right-4 text-right leading-tight">
+              <div className="text-[10px] uppercase tracking-wide text-blue-100">Costo</div>
+              <div className="text-base font-bold">Q{Number(sel.cost).toFixed(2)}</div>
+            </div>
+          )}
           <div className="text-xs uppercase tracking-wide text-blue-100">Vender</div>
-          <div className="text-lg font-bold leading-tight">{product.name}</div>
+          <div className="text-lg font-bold leading-tight pr-16">{product.name}</div>
           <div className="text-xs text-blue-100 font-mono mt-0.5">{product.sku} · disponible {trim(available)} {product.base_unit_label || "u"}</div>
           {product.ubicacion_name && (
             <div className="mt-1.5 inline-flex items-center gap-1 bg-white/20 rounded-full px-2.5 py-1 text-sm font-semibold">
@@ -134,9 +142,6 @@ function MeasureModal({ product, customer, available, onAdd, onClose }) {
                   <div className="text-xs text-slate-500 dark:text-slate-400">Q{Number(m.price).toFixed(2)}
                     {Number(m.units_factor) !== 1 && <span> · {trim(m.units_factor)} {product.base_unit_label || "u"}</span>}
                   </div>
-                  {canSeeCost && Number(m.cost) > 0 && (
-                    <div className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">Costo Q{Number(m.cost).toFixed(2)}</div>
-                  )}
                 </button>
               ))}
             </div>
