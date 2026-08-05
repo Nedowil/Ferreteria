@@ -32,20 +32,22 @@ function basePriceFor(product, qty, customer) {
 // unidad base + empaque (si tiene) + presentaciones adicionales.
 function measuresFor(product, customer) {
   const out = [];
+  const pc = Number(product.purchase_price || 0);   // costo por unidad base (si el usuario puede verlo)
   const base = product.base_unit_label || "unidad";
   out.push({
     key: "base", label: base, units_factor: 1,
-    price: basePriceFor(product, 1, customer), is_base: true,
+    price: basePriceFor(product, 1, customer), cost: pc, is_base: true,
   });
   const cf = Number(product.container_factor || 0);
   if (product.container_label && cf > 0) {
     const cp = Number(product.container_price || 0) || Number(product.sale_price) * cf;
-    out.push({ key: "container", label: product.container_label, units_factor: cf, price: cp });
+    out.push({ key: "container", label: product.container_label, units_factor: cf, price: cp, cost: pc * cf });
   }
   (product.presentations || []).filter((p) => p.active !== false).forEach((p) => {
+    const f = Number(p.units_factor);
     out.push({
       key: `pres-${p.id}`, label: p.label,
-      units_factor: Number(p.units_factor), price: Number(p.price),
+      units_factor: f, price: Number(p.price), cost: pc * f,
     });
   });
   return out;
@@ -81,6 +83,10 @@ const norm = (s) => {
 
 // Ventana flotante para elegir en qué medida se vende el producto.
 function MeasureModal({ product, customer, available, onAdd, onClose }) {
+  const { can } = useAuth();
+  // El costo (precio de compra) solo lo ve quien tenga el permiso; el backend
+  // tampoco envía purchase_price a los demás.
+  const canSeeCost = can("ventas.ver_costo") && product.purchase_price != null;
   const measures = useMemo(() => measuresFor(product, customer), [product, customer]);
   const [sel, setSel] = useState(measures[0]);
   const [qty, setQty] = useState("1");
@@ -128,6 +134,9 @@ function MeasureModal({ product, customer, available, onAdd, onClose }) {
                   <div className="text-xs text-slate-500 dark:text-slate-400">Q{Number(m.price).toFixed(2)}
                     {Number(m.units_factor) !== 1 && <span> · {trim(m.units_factor)} {product.base_unit_label || "u"}</span>}
                   </div>
+                  {canSeeCost && Number(m.cost) > 0 && (
+                    <div className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">Costo Q{Number(m.cost).toFixed(2)}</div>
+                  )}
                 </button>
               ))}
             </div>
