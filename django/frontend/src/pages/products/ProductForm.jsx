@@ -281,6 +281,21 @@ export default function ProductForm() {
 
   const submit = async (e) => {
     e.preventDefault();
+    // NO permitir vender a PÉRDIDA: bloquea si el precio de COMPRA es mayor que
+    // el de VENTA (ambos van por unidad base, así que se comparan directo).
+    // Aplica al crear y al editar. Si la venta está en 0 (aún sin precio) no se
+    // bloquea, para no estorbar mientras se termina de cargar.
+    const compra = Number(form.purchase_price) || 0;
+    const venta = Number(form.sale_price) || 0;
+    if (compra > 0 && venta > 0 && compra > venta) {
+      await dialog.alert(
+        `⚠️ No se puede guardar: estarías vendiendo a PÉRDIDA.\n\n` +
+        `Precio de COMPRA: Q${compra.toFixed(2)} por ${baseUnit}\n` +
+        `Precio de VENTA:  Q${venta.toFixed(2)} por ${baseUnit}\n\n` +
+        `La venta no puede ser menor que la compra. Corregí el precio de venta.`
+      );
+      return;
+    }
     // Recordatorio (solo al crear): es común olvidar el stock inicial y el
     // mínimo. Si alguno quedó vacío se avisa y se pide confirmar; si de verdad
     // va en 0, el usuario puede continuar.
