@@ -281,12 +281,13 @@ export default function ProductForm() {
 
   const submit = async (e) => {
     e.preventDefault();
-    // NO permitir vender a PÉRDIDA: bloquea si el precio de COMPRA es mayor que
-    // el de VENTA (ambos van por unidad base, así que se comparan directo).
-    // Aplica al crear y al editar. Si la venta está en 0 (aún sin precio) no se
-    // bloquea, para no estorbar mientras se termina de cargar.
-    const compra = Number(form.purchase_price) || 0;
-    const venta = Number(form.sale_price) || 0;
+    // NO permitir vender a PÉRDIDA: bloquea si la COMPRA es mayor que la VENTA.
+    // Se RECALCULAN ambos precios por unidad base con el factor ACTUAL (a partir
+    // de lo que se escribió y su medida), por si se cambió el empaque/factor
+    // después de escribir el precio. Así se comparan en la misma medida y no con
+    // un valor desfasado. Si la venta está en 0 (aún sin precio) no se bloquea.
+    const compra = round2(perBaseOf(purchaseRaw, purchaseMode));
+    const venta = round2(perBaseOf(saleRaw, saleMode));
     if (compra > 0 && venta > 0 && compra > venta) {
       await dialog.alert(
         `⚠️ No se puede guardar: estarías vendiendo a PÉRDIDA.\n\n` +
@@ -319,6 +320,11 @@ export default function ProductForm() {
     }
     setBusy(true); setErrors({});
     const payload = { ...form };
+    // Precios por unidad base recalculados con el factor ACTUAL, no el valor que
+    // quedó guardado (que podía estar desfasado si se cambió el factor después
+    // de escribir el precio). Así siempre se envía el costo/venta correcto.
+    payload.purchase_price = String(round2(perBaseOf(purchaseRaw, purchaseMode)));
+    payload.sale_price = String(round2(perBaseOf(saleRaw, saleMode)));
     // La imagen no se edita en este formulario (envío JSON, no multipart). Al
     // editar llega como URL o "" desde la API; enviarla como texto rompe el
     // ImageField ("no era un archivo"). Se omite siempre.
