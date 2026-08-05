@@ -778,8 +778,8 @@ export default function POS() {
           )}
           {cart.length > 0 && (
             <button onClick={pauseSale} title="Guardar esta venta y atender a otro cliente"
-                    className="text-sm font-semibold text-white bg-amber-500 hover:bg-amber-600 border border-amber-600 rounded-lg px-4 py-1.5 shadow-sm hover:shadow transition">
-              ⏸️ Pausar
+                    className="text-base font-bold text-white bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 border border-amber-600 rounded-xl px-5 py-2.5 shadow-md hover:shadow-lg transition">
+              ⏸️ Pausar venta
             </button>
           )}
           {held.length > 0 && (
