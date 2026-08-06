@@ -15,4 +15,5 @@ urlpatterns = [
     path("by-seller/", views.by_seller, name="report-by-seller"),
     path("by-category/", views.by_category, name="report-by-category"),
     path("inventory-value/", views.inventory_value, name="report-inventory-value"),
+    path("products-to-review/", views.products_to_review, name="report-products-to-review"),
 ]

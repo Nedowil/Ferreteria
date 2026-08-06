@@ -267,6 +267,39 @@ def by_category(request):
 
 @api_view(["GET"])
 @permission_classes([_PERM])
+def products_to_review(request):
+    """Productos a revisar: el COSTO por unidad es mayor o igual al PRECIO DE
+    VENTA. Suelen estar mal cargados (por ejemplo, costo inflado por haber
+    escrito el precio 'por empaque' antes de fijar el factor). Ayuda a
+    encontrarlos y corregirlos."""
+    products = (Product.objects.filter(
+                    active=True, deleted_at__isnull=True,
+                    purchase_price__gt=0, sale_price__gt=0,
+                    purchase_price__gte=F("sale_price"))
+                .select_related("category"))
+    rows = []
+    for p in products:
+        cf = p.container_factor or Decimal("0")
+        rows.append({
+            "id": p.id, "sku": p.sku, "name": p.name,
+            "category": p.category.name if p.category else None,
+            "base_unit_label": p.base_unit_label,
+            "container_label": p.container_label,
+            "container_factor": cf,
+            "stock": p.stock,
+            "purchase_price": p.purchase_price,   # por unidad base
+            "sale_price": p.sale_price,           # por unidad base
+            # costo/venta por empaque (para ver el desfase de un vistazo)
+            "container_cost": (p.purchase_price * cf) if cf else None,
+            "container_price": p.container_price,
+        })
+    # Los más "raros" primero: mayor diferencia costo − venta.
+    rows.sort(key=lambda r: (r["purchase_price"] or 0) - (r["sale_price"] or 0), reverse=True)
+    return Response({"rows": rows, "count": len(rows)})
+
+
+@api_view(["GET"])
+@permission_classes([_PERM])
 def inventory_value(request):
     """Valor del inventario a costo y a precio de venta."""
     products = (Product.objects.filter(active=True, stock__gt=0, deleted_at__isnull=True)

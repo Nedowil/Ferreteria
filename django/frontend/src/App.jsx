@@ -42,6 +42,7 @@ const ReportsIndex = lazy(() => import("./pages/reports/ReportsIndex"));
 const SalesReport = lazy(() => import("./pages/reports/SalesReport"));
 const ProfitReport = lazy(() => import("./pages/reports/ProfitReport"));
 const InventoryValue = lazy(() => import("./pages/reports/InventoryValue"));
+const ProductsToReview = lazy(() => import("./pages/reports/ProductsToReview"));
 const DeadStock = lazy(() => import("./pages/reports/DeadStock"));
 const DailyCash = lazy(() => import("./pages/reports/DailyCash"));
 const TopProducts = lazy(() => import("./pages/reports/Rankings").then((m) => ({ default: m.TopProducts })));
@@ -196,6 +197,7 @@ export default function App() {
       <Route path="/reportes/stock-muerto" element={<Protected perm="reportes.ver"><DeadStock /></Protected>} />
       <Route path="/reportes/corte-diario" element={<Protected perm="reportes.ver"><DailyCash /></Protected>} />
       <Route path="/reportes/valor-inventario" element={<Protected perm="reportes.ver"><InventoryValue /></Protected>} />
+      <Route path="/reportes/productos-a-revisar" element={<Protected perm="reportes.ver"><ProductsToReview /></Protected>} />
       <Route path="/reportes/pagos-proveedor" element={<Protected perm="reportes.ver"><SupplierPayments /></Protected>} />
       <Route path="/admin/usuarios" element={<Protected perm="usuarios.ver"><Users /></Protected>} />
       <Route path="/admin/roles" element={<Protected perm="roles.gestionar"><Roles /></Protected>} />

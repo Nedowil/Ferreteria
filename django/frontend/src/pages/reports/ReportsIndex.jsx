@@ -11,6 +11,7 @@ const REPORTS = [
   ["stock-muerto", "Stock muerto", "Productos sin salidas en N días", "🪦"],
   ["corte-diario", "Corte diario de caja", "Cajas cerradas de un día", "🧾"],
   ["valor-inventario", "Valor de inventario", "Valor a costo y a precio de venta", "📦"],
+  ["productos-a-revisar", "Productos a revisar", "Costo mayor o igual que la venta — posibles mal cargados", "⚠️"],
   ["pagos-proveedor", "Pagos a proveedores", "Efectivo por día/mes/año e historial de fondos", "💵"],
 ];
 
