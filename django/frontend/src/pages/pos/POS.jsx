@@ -433,9 +433,11 @@ export default function POS() {
     if (e.key !== "Enter") return;
     const q = search.trim().toLowerCase();
     if (!q) return;
+    const matchExact = (p) => (p.barcode || "").toLowerCase() === q || (p.sku || "").toLowerCase() === q;
     const pool = filtered.length ? filtered : products;
-    const exact = pool.find((p) =>
-      (p.barcode || "").toLowerCase() === q || (p.sku || "").toLowerCase() === q);
+    // Coincidencia EXACTA de código/SKU: primero en lo filtrado y, si no,
+    // en TODO el catálogo local (por si el servidor devolvió otros resultados).
+    const exact = pool.find(matchExact) || products.find(matchExact);
     const target = exact || (filtered.length === 1 ? filtered[0] : null);
     if (target) { setPicking(target); setSearch(""); }
   };

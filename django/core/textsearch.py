@@ -13,6 +13,7 @@ para poder filtrar rápido en la base de datos aunque haya miles de registros.
 import re
 import unicodedata
 
+from django.db.models import Q
 from rest_framework.filters import BaseFilterBackend
 
 
@@ -49,6 +50,25 @@ class TolerantSearchFilter(BaseFilterBackend):
         term = (request.query_params.get(self.search_param) or "").strip()
         if not term:
             return queryset
-        for word in search_norm(term).split():
-            queryset = queryset.filter(search_index__contains=word)
-        return queryset
+        # Coincidencia EXACTA por código de barras / SKU (para el ESCANEO). El
+        # índice difuso es para NOMBRES: colapsa dígitos repetidos y confunde
+        # letras, así que un código de barras (con ceros repetidos, etc.) puede
+        # no encontrarse. Con la coincidencia exacta, un código escaneado SIEMPRE
+        # encuentra su producto. El view declara qué campos son exactos.
+        exact_fields = getattr(view, "exact_search_fields", [])
+        exact_qs = None
+        if exact_fields:
+            eq = Q()
+            for f in exact_fields:
+                eq |= Q(**{f"{f}__iexact": term})
+            exact_qs = queryset.filter(eq)
+        # Búsqueda difusa por palabras (nombre): cada palabra debe estar (AND).
+        words = search_norm(term).split()
+        fuzzy_qs = queryset
+        for word in words:
+            fuzzy_qs = fuzzy_qs.filter(search_index__contains=word)
+        if not words:
+            fuzzy_qs = queryset.none()
+        if exact_qs is not None:
+            return (exact_qs | fuzzy_qs).distinct()
+        return fuzzy_qs

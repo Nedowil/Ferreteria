@@ -157,6 +157,9 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
         .order_by("-created_at")
     )
     filter_backends = [DjangoFilterBackend, TolerantSearchFilter, filters.OrderingFilter]
+    # Campos de coincidencia EXACTA para el escaneo (código de barras / SKU): así
+    # un código con dígitos repetidos siempre encuentra su producto.
+    exact_search_fields = ["barcode", "sku"]
     filterset_fields = ["category", "brand", "active", "ubicacion"]
     ordering_fields = ["name", "sale_price", "stock", "created_at", "times_sold"]
 
