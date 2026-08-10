@@ -81,6 +81,22 @@ const norm = (s) => {
   return t;
 };
 
+// Busca un producto por lo escaneado. Primero coincidencia EXACTA por código de
+// barras o SKU. Como respaldo para etiquetas EAN-13 VIEJAS —donde la impresora
+// recalculaba el dígito verificador y el último dígito puede diferir del guardado—
+// compara los PRIMEROS 12 dígitos (que sí son los que identifican al producto).
+function findByScan(list, code) {
+  const q = String(code || "").trim().toLowerCase();
+  if (!q) return null;
+  let hit = (list || []).find((p) => (p.barcode || "").toLowerCase() === q || (p.sku || "").toLowerCase() === q);
+  if (hit) return hit;
+  if (/^\d{13}$/.test(q)) {
+    const first12 = q.slice(0, 12);
+    hit = (list || []).find((p) => /^\d{13}$/.test(p.barcode || "") && p.barcode.slice(0, 12) === first12);
+  }
+  return hit || null;
+}
+
 // Ventana flotante para elegir en qué medida se vende el producto.
 function MeasureModal({ product, customer, available, onAdd, onClose }) {
   const { can } = useAuth();
@@ -428,18 +444,30 @@ export default function POS() {
       norm(p.barcode).includes(q));
   }, [products, search, serverHits]);
 
-  // Al escanear/Enter: si hay coincidencia exacta de código o un único resultado, abre la medida.
+  // Abre el producto escaneado/buscado. Busca local (exacto + primeros 12 del
+  // EAN-13) y, si no lo encuentra, cae al SERVIDOR (igual que el resto de la app,
+  // que sí encuentra las etiquetas viejas). Así el POS ya no falla con ellas.
+  const openByScan = async (code) => {
+    const local = findByScan(products, code);
+    if (local) { setPicking(local); setSearch(""); return; }
+    try {
+      const { data } = await api.get("/inventory/products/", { params: { search: code, active: 1, page_size: 5 } });
+      const list = data.results || data || [];
+      const hit = findByScan(list, code) || (list.length === 1 ? list[0] : null);
+      if (hit) { setPicking(hit); setSearch(""); return; }
+    } catch { /* sin conexión: se deja la búsqueda local */ }
+    setSearch(String(code));  // no se encontró: muestra lo escaneado para elegir a mano
+  };
+
+  // Al escanear/Enter en la barra de búsqueda: si hay un único resultado del
+  // filtro, ábrelo; si no, resuelve por código con openByScan.
   const onSearchKey = (e) => {
     if (e.key !== "Enter") return;
-    const q = search.trim().toLowerCase();
+    const q = search.trim();
     if (!q) return;
-    const matchExact = (p) => (p.barcode || "").toLowerCase() === q || (p.sku || "").toLowerCase() === q;
-    const pool = filtered.length ? filtered : products;
-    // Coincidencia EXACTA de código/SKU: primero en lo filtrado y, si no,
-    // en TODO el catálogo local (por si el servidor devolvió otros resultados).
-    const exact = pool.find(matchExact) || products.find(matchExact);
-    const target = exact || (filtered.length === 1 ? filtered[0] : null);
-    if (target) { setPicking(target); setSearch(""); }
+    e.preventDefault();
+    if (filtered.length === 1) { setPicking(filtered[0]); setSearch(""); return; }
+    openByScan(q);
   };
 
   // Escaneo GLOBAL: el lector actúa como teclado rápido que termina en Enter.
@@ -461,10 +489,10 @@ export default function POS() {
       if (e.key === "Enter") {
         const code = buffer.trim(); buffer = "";
         if (code.length >= 3) {
-          const q = code.toLowerCase();
-          const exact = products.find((p) =>
-            (p.barcode || "").toLowerCase() === q || (p.sku || "").toLowerCase() === q);
-          if (exact) { e.preventDefault(); setPicking(exact); setSearch(""); }
+          // Local (exacto o primeros 12 del EAN-13); si no, respaldo al servidor.
+          const local = findByScan(products, code);
+          if (local) { e.preventDefault(); setPicking(local); setSearch(""); }
+          else { e.preventDefault(); openByScan(code); }
         }
         return;
       }
