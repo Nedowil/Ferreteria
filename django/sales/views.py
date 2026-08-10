@@ -137,6 +137,19 @@ class SaleViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.ModelVie
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(SalePaymentSerializer(payment).data, status=status.HTTP_201_CREATED)
 
+    @action(detail=False, methods=["get"])
+    def summary(self, request):
+        """Totales del filtro actual (para las tarjetas de la lista de ventas):
+        cantidad de ventas, ingresos (suma de completadas) y cuántas completadas."""
+        qs = self.filter_queryset(self.get_queryset())
+        completadas = qs.filter(status=Sale.STATUS_COMPLETADA)
+        income = completadas.aggregate(t=Sum("total"))["t"] or Decimal("0")
+        return Response({
+            "count": qs.count(),
+            "completed_count": completadas.count(),
+            "total_income": income,
+        })
+
     @action(detail=False, methods=["get"], url_path="receivable")
     def receivable(self, request):
         """Cuentas por cobrar: ventas completadas al crédito con saldo."""

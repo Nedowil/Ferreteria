@@ -13,6 +13,7 @@ export default function SalesList() {
   const { user } = useAuth();
   const isAdmin = !!user && (user.is_superuser || (user.roles || []).includes("admin"));
   const [data, setData] = useState({ results: [], count: 0 });
+  const [summary, setSummary] = useState({ count: 0, completed_count: 0, total_income: 0 });
   const [filters, setFilters] = useState({ search: "", status: "", from: "", to: "" });
   const [exporting, setExporting] = useState(false);
 
@@ -20,7 +21,10 @@ export default function SalesList() {
     const params = {};
     Object.entries(filters).forEach(([k, v]) => { if (v) params[k] = v; });
     api.get("/sales/", { params }).then((r) => setData(r.data));
+    // Totales del filtro actual (para las tarjetas de resumen).
+    api.get("/sales/summary/", { params }).then((r) => setSummary(r.data)).catch(() => {});
   };
+  const money = (n) => "Q" + Number(n || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   useEffect(load, []);
   // Al vaciar la búsqueda, se recargan todos los registros automáticamente.
   const _firstLoad = useRef(true);
@@ -59,6 +63,22 @@ export default function SalesList() {
           <Link to="/pos" className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">Ir al POS</Link>
         </div>
       </div>
+      {/* Tarjetas de resumen (respetan el filtro actual). */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+        <div className="rounded-2xl p-5 text-white shadow-md bg-gradient-to-br from-indigo-500 to-indigo-600">
+          <div className="flex items-center justify-between"><span className="text-sm font-medium text-indigo-100">Total ventas</span><span className="text-2xl">🧾</span></div>
+          <div className="text-3xl font-extrabold mt-2">{summary.count}</div>
+        </div>
+        <div className="rounded-2xl p-5 text-white shadow-md bg-gradient-to-br from-emerald-500 to-emerald-600">
+          <div className="flex items-center justify-between"><span className="text-sm font-medium text-emerald-100">Ingresos totales</span><span className="text-2xl">💰</span></div>
+          <div className="text-3xl font-extrabold mt-2">{money(summary.total_income)}</div>
+        </div>
+        <div className="rounded-2xl p-5 text-white shadow-md bg-gradient-to-br from-violet-500 to-purple-600">
+          <div className="flex items-center justify-between"><span className="text-sm font-medium text-violet-100">Completadas</span><span className="text-2xl">✅</span></div>
+          <div className="text-3xl font-extrabold mt-2">{summary.completed_count}</div>
+        </div>
+      </div>
+
       <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex flex-wrap gap-2 items-end">
         <input placeholder="Folio o cliente" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })}
                className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-52" />
