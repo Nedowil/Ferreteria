@@ -10,8 +10,11 @@ const STATUS_BADGE = {
 };
 
 export default function SalesList() {
-  const { user } = useAuth();
+  const { user, can } = useAuth();
   const isAdmin = !!user && (user.is_superuser || (user.roles || []).includes("admin"));
+  // Las tarjetas de resumen (ingresos totales) solo las ve quien pueda ver
+  // reportes (el admin). El vendedor no las ve ni pide el dato.
+  const canSeeSummary = can("reportes.ver");
   const [data, setData] = useState({ results: [], count: 0 });
   const [summary, setSummary] = useState({ count: 0, completed_count: 0, total_income: 0 });
   const [filters, setFilters] = useState({ search: "", status: "", from: "", to: "" });
@@ -21,8 +24,8 @@ export default function SalesList() {
     const params = {};
     Object.entries(filters).forEach(([k, v]) => { if (v) params[k] = v; });
     api.get("/sales/", { params }).then((r) => setData(r.data));
-    // Totales del filtro actual (para las tarjetas de resumen).
-    api.get("/sales/summary/", { params }).then((r) => setSummary(r.data)).catch(() => {});
+    // Totales del filtro actual (solo si puede ver el resumen).
+    if (canSeeSummary) api.get("/sales/summary/", { params }).then((r) => setSummary(r.data)).catch(() => {});
   };
   const money = (n) => "Q" + Number(n || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   useEffect(load, []);
@@ -63,7 +66,9 @@ export default function SalesList() {
           <Link to="/pos" className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">Ir al POS</Link>
         </div>
       </div>
-      {/* Tarjetas de resumen (respetan el filtro actual). */}
+      {/* Tarjetas de resumen (respetan el filtro actual). Solo para el admin
+          (permiso 'reportes.ver'); el vendedor no las ve. */}
+      {canSeeSummary && (
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
         <div className="rounded-2xl p-5 text-white shadow-md bg-gradient-to-br from-indigo-500 to-indigo-600">
           <div className="flex items-center justify-between"><span className="text-sm font-medium text-indigo-100">Total ventas</span><span className="text-2xl">🧾</span></div>
@@ -78,6 +83,7 @@ export default function SalesList() {
           <div className="text-3xl font-extrabold mt-2">{summary.completed_count}</div>
         </div>
       </div>
+      )}
 
       <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex flex-wrap gap-2 items-end">
         <input placeholder="Folio o cliente" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })}

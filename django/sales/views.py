@@ -26,6 +26,9 @@ from . import services
 class SaleViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.ModelViewSet):
     perms_map = {
         "list": "ventas.ver", "retrieve": "ventas.ver", "receivable": "cuentas_cobrar.ver",
+        # Las tarjetas de resumen (ingresos totales) son info sensible: solo quien
+        # pueda ver reportes. El vendedor no tiene 'reportes.ver'.
+        "summary": "reportes.ver",
         "create": "ventas.crear",
         "sync_offline": "ventas.crear",
         "cancel": "ventas.cancelar",
