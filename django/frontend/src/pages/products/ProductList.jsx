@@ -591,6 +591,14 @@ function BulkLocationModal({ filters, count, ids, onClose, onDone }) {
       : (hasFilter ? "los productos del filtro actual" : "TODOS los productos");
     const extra = !isSelection && onlyEmpty ? " que aún no tengan ubicación" : "";
     if (!(await dialog.confirm(`Se asignará esta ubicación a ${alcance}${extra}. ¿Continuar?`, { okText: "Sí, asignar" }))) return;
+    // Caso peligroso: aplicar a TODOS sobreescribiendo los que YA tienen
+    // ubicación (sin filtro, sin "solo los vacíos"). Se pide una confirmación
+    // fuerte y extra porque esto reemplaza la ubicación de todo el inventario.
+    if (!isSelection && !hasFilter && !onlyEmpty) {
+      if (!(await dialog.confirm(
+        `⚠️ Esto va a REEMPLAZAR la ubicación de los ${count} productos, incluso los que ya tenían una. Se perderá la ubicación anterior.\n\n¿Estás seguro? Si solo querés los que no tienen ubicación, cancelá y marcá esa casilla.`,
+        { okText: "Sí, reemplazar todo", danger: true }))) return;
+    }
     setBusy(true); setErr("");
     try {
       let data;
@@ -656,6 +664,86 @@ function BulkLocationModal({ filters, count, ids, onClose, onDone }) {
   );
 }
 
+// Recupera las ubicaciones de los productos a como estaban antes de un error
+// (ej. una asignación masiva equivocada), usando la auditoría. Muestra una
+// vista previa (cuántos y ejemplos) antes de aplicar.
+function RestoreLocationsModal({ onClose, onDone }) {
+  const [before, setBefore] = useState("");
+  const [preview, setPreview] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(null);
+  const [err, setErr] = useState("");
+
+  const doPreview = async () => {
+    if (!before) { setErr("Indicá la fecha y hora del error."); return; }
+    setBusy(true); setErr(""); setDone(null);
+    try {
+      const { data } = await api.post("/inventory/products/restore-locations/", { before, apply: false });
+      setPreview(data);
+    } catch (e) { setErr(e.response?.data?.detail || "No se pudo generar la vista previa."); }
+    finally { setBusy(false); }
+  };
+  const doApply = async () => {
+    if (!(await dialog.confirm(`Se van a restaurar ${preview.would_change} producto(s) a su ubicación de antes del error. ¿Continuar?`, { okText: "Restaurar" }))) return;
+    setBusy(true); setErr("");
+    try {
+      const { data } = await api.post("/inventory/products/restore-locations/", { before, apply: true });
+      setDone(data.restored);
+      onDone && onDone();
+    } catch (e) { setErr(e.response?.data?.detail || "No se pudo restaurar."); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-gradient-to-r from-amber-500 to-orange-600 text-white px-5 py-4">
+          <div className="text-lg font-bold">🔄 Recuperar ubicaciones</div>
+          <div className="text-xs text-amber-100">Restaura la ubicación de cada producto a como estaba antes de un error, usando la auditoría.</div>
+        </div>
+        <div className="p-5 space-y-4">
+          {err && <div className="bg-red-600 text-white text-sm rounded-lg px-3 py-2">{err}</div>}
+          {done != null ? (
+            <div className="text-center py-4">
+              <div className="text-4xl mb-2">✅</div>
+              <div className="text-lg font-semibold text-slate-800 dark:text-slate-100">Se restauraron {done} producto(s).</div>
+              <button onClick={onClose} className="mt-4 bg-slate-700 text-white rounded-lg px-4 py-2 text-sm">Cerrar</button>
+            </div>
+          ) : (
+            <>
+              <div>
+                <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-200">Recuperar la ubicación de <b>ANTES</b> de:</label>
+                <input type="datetime-local" value={before} onChange={(e) => { setBefore(e.target.value); setPreview(null); }}
+                       className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-900" />
+                <p className="text-xs text-slate-400 mt-1">La fecha/hora en que se hizo el cambio equivocado (ej. 11/08/2026 17:50).</p>
+              </div>
+              {preview && (
+                <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-lg p-3 text-sm">
+                  <div className="font-semibold text-amber-800 dark:text-amber-300">Se restaurarían {preview.would_change} producto(s).</div>
+                  {preview.sample?.length > 0 && (
+                    <ul className="mt-2 text-xs text-slate-600 dark:text-slate-300 space-y-0.5 max-h-40 overflow-y-auto">
+                      {preview.sample.map((s, i) => (
+                        <li key={i}><b>{s.sku}</b> {s.name}: <span className="text-red-600">{s.from || "sin ubicación"}</span> → <span className="text-emerald-600">{s.to || "sin ubicación"}</span></li>
+                      ))}
+                      {preview.would_change > preview.sample.length && <li className="text-slate-400">…y {preview.would_change - preview.sample.length} más</li>}
+                    </ul>
+                  )}
+                </div>
+              )}
+              <div className="flex gap-2">
+                <button onClick={onClose} className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2.5 text-sm">Cancelar</button>
+                {!preview
+                  ? <button onClick={doPreview} disabled={busy} className="flex-1 bg-slate-700 text-white rounded-lg py-2.5 text-sm font-semibold disabled:opacity-50">{busy ? "Calculando…" : "Ver vista previa"}</button>
+                  : <button onClick={doApply} disabled={busy || !preview.would_change} className="flex-1 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-lg py-2.5 text-sm font-semibold disabled:opacity-50">{busy ? "Restaurando…" : `Restaurar ${preview.would_change}`}</button>}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ProductList() {
   const [data, setData] = useState({ results: [], count: 0 });
   const [filters, setFilters] = useState({ search: "", brand: "", ubicacion: "", low_stock: false });
@@ -667,6 +755,7 @@ export default function ProductList() {
   const [labeling, setLabeling] = useState(null); // producto a etiquetar (modal)
   const [priceTag, setPriceTag] = useState(null); // {single?} para etiquetas de precio
   const [bulkLoc, setBulkLoc] = useState(null);   // {ids:[...]|null} con el modal abierto
+  const [restoreLoc, setRestoreLoc] = useState(false); // modal de recuperar ubicaciones
   const [selected, setSelected] = useState(new Set()); // ids marcados con casillas
   const [companyName, setCompanyName] = useState("Ferretería Central");
   const { can } = useAuth();
@@ -783,6 +872,7 @@ export default function ProductList() {
         </h1>
         <div className="flex gap-2">
           {can("productos.editar") && <button onClick={() => setBulkLoc({ ids: null })} className="border border-teal-300 text-teal-700 bg-teal-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-teal-100 transition">📍 Asignar ubicación</button>}
+          {can("productos.editar") && <button onClick={() => setRestoreLoc(true)} className="border border-amber-300 text-amber-700 bg-amber-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-amber-100 transition" title="Recuperar ubicaciones desde la auditoría (deshacer un cambio masivo)">🔄 Recuperar ubicaciones</button>}
           {can("productos.etiquetar") && <button onClick={() => setPriceTag({})} className="border border-amber-300 text-amber-700 bg-amber-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-amber-100 transition">🏷️ Etiquetas de precio</button>}
           <button onClick={exportExcel} disabled={exporting} className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-100 transition">{exporting ? "Exportando…" : "⬇️ Excel"}</button>
           {can("productos.crear") && <Link to="/productos/nuevo" className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nuevo producto</Link>}
@@ -938,6 +1028,7 @@ export default function ProductList() {
       {bulkLoc && <BulkLocationModal filters={filters} count={data.count} ids={bulkLoc.ids}
                     onClose={() => setBulkLoc(null)}
                     onDone={() => { setBulkLoc(null); setSelected(new Set()); load(); }} />}
+      {restoreLoc && <RestoreLocationsModal onClose={() => setRestoreLoc(false)} onDone={() => load()} />}
     </div>
   );
 }

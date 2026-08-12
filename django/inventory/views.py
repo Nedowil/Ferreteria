@@ -145,6 +145,7 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
         "low_stock": "productos.ver", "label": "productos.ver",
         "offline_catalog": ("productos.ver", "ventas.crear"),
         "bulk_location": "productos.editar",
+        "restore_locations": "productos.editar",
         "create": "productos.crear", "update": "productos.editar",
         "partial_update": "productos.editar", "destroy": "productos.eliminar",
         "movements": {"GET": "productos.ver", "POST": "inventario.ajustar"},
@@ -288,6 +289,68 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
                 qs = qs.filter(ubicacion__isnull=True)
         updated = qs.update(ubicacion_id=ubicacion_id)
         return Response({"updated": updated})
+
+    @action(detail=False, methods=["post"], url_path="restore-locations")
+    def restore_locations(self, request):
+        """Recupera la ubicación de cada producto a como estaba ANTES de un
+        momento dado, usando la AUDITORÍA. Sirve para deshacer una asignación
+        masiva errónea. Con apply=false devuelve una VISTA PREVIA (cuántos y
+        ejemplos); con apply=true aplica los cambios."""
+        from collections import defaultdict
+
+        from django.utils import timezone as djtz
+        from django.utils.dateparse import parse_datetime
+
+        from audit.models import AuditLog
+
+        raw = request.data.get("before")
+        dt = parse_datetime(raw) if raw else None
+        if not dt:
+            return Response({"detail": "Indicá la fecha y hora del error (antes de la cual recuperar)."},
+                            status=status.HTTP_400_BAD_REQUEST)
+        if djtz.is_naive(dt):
+            dt = djtz.make_aware(dt)  # se interpreta en la zona por defecto (Guatemala)
+        do_apply = bool(request.data.get("apply"))
+
+        # Última ubicación registrada por producto ANTES del corte. La auditoría
+        # guarda `ubicacion_id` en new_values al crear el producto o al cambiarla.
+        last_ubic = {}
+        entries = (AuditLog.objects
+                   .filter(auditable_type="inventory.Product", created_at__lt=dt)
+                   .order_by("created_at")
+                   .values_list("auditable_id", "new_values"))
+        for aid, nv in entries.iterator():
+            if isinstance(nv, dict) and "ubicacion_id" in nv:
+                last_ubic[str(aid)] = nv["ubicacion_id"]
+
+        valid_ubic = set(Ubicacion.objects.values_list("id", flat=True))
+        SENTINEL = object()
+        changes = []  # (product, target_ubicacion_id|None)
+        for p in Product.objects.filter(deleted_at__isnull=True).only("id", "sku", "name", "ubicacion_id"):
+            target = last_ubic.get(str(p.id), SENTINEL)
+            if target is SENTINEL:
+                continue  # sin registro previo: no se toca
+            if target is not None and target not in valid_ubic:
+                target = None  # la ubicación destino ya no existe → sin ubicación
+            if (p.ubicacion_id or None) != (target or None):
+                changes.append((p, target))
+
+        if do_apply:
+            by_target = defaultdict(list)
+            for p, target in changes:
+                by_target[target].append(p.id)
+            restored = 0
+            for target, pids in by_target.items():
+                restored += Product.objects.filter(id__in=pids).update(ubicacion_id=target)
+            return Response({"restored": restored})
+
+        ubic_names = dict(Ubicacion.objects.values_list("id", "name"))
+        sample = [{
+            "sku": p.sku, "name": p.name,
+            "from": ubic_names.get(p.ubicacion_id) if p.ubicacion_id else None,
+            "to": ubic_names.get(target) if target else None,
+        } for p, target in changes[:15]]
+        return Response({"would_change": len(changes), "sample": sample, "cutoff": dt.isoformat()})
 
     @action(detail=False, methods=["get"], url_path="offline-catalog")
     def offline_catalog(self, request):

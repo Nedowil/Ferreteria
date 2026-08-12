@@ -526,3 +526,65 @@ class DamageReportApiTests(TestCase):
         self.assertEqual(self._client("a@t.com").post(f"/api/inventory/damage-reports/{rid}/approve/").status_code, 200)
         self.prod.refresh_from_db()
         self.assertEqual(self.prod.stock, Decimal("9.00"))
+
+
+class RestoreLocationsTests(TestCase):
+    """Recuperar ubicaciones desde la auditoría (deshacer una asignación
+    masiva equivocada). Reconstruye la ubicación de cada producto a como
+    estaba justo ANTES del corte indicado."""
+
+    def setUp(self):
+        from datetime import datetime, timezone as _tz
+        from django.contrib.auth import get_user_model
+        from rest_framework.test import APIClient
+        from audit.models import AuditLog
+        from .models import Ubicacion
+        U = get_user_model()
+        self.admin = U.objects.create_superuser(
+            username="a", email="a@a.com", password="x", name="A")
+        self.c = APIClient()
+        self.c.force_authenticate(self.admin)
+        self.A = Ubicacion.objects.create(name="Sección A")
+        self.B = Ubicacion.objects.create(name="Sección B")
+        self.C = Ubicacion.objects.create(name="Sección C")  # la equivocada
+        # Producto que hoy quedó en C por el error, pero antes estaba en B.
+        self.p = Product.objects.create(sku="P1", name="Martillo", ubicacion=self.C)
+        # Producto que nunca se tocó (no debe cambiar).
+        self.q = Product.objects.create(sku="P2", name="Clavo", ubicacion=self.A)
+
+        def _log(pid, ubic_id, when_utc):
+            log = AuditLog.objects.create(
+                event="update", auditable_type="inventory.Product",
+                auditable_id=str(pid), new_values={"ubicacion_id": ubic_id})
+            # created_at es auto_now_add: se fija a mano para simular la línea de tiempo.
+            AuditLog.objects.filter(pk=log.pk).update(created_at=when_utc)
+
+        # El corte "2026-08-11T17:50" es hora de Guatemala (UTC-6) = 23:50 UTC.
+        # Historia de p en UTC: A (16:00), B (18:00) antes del corte, y C por
+        # el error a las 18:00 de Guatemala = 00:00 UTC del día siguiente (después).
+        _log(self.p.id, self.A.id, datetime(2026, 8, 11, 16, 0, tzinfo=_tz.utc))
+        _log(self.p.id, self.B.id, datetime(2026, 8, 11, 18, 0, tzinfo=_tz.utc))
+        _log(self.p.id, self.C.id, datetime(2026, 8, 12, 0, 0, tzinfo=_tz.utc))  # error, tras el corte
+
+    def test_preview_no_toca_nada(self):
+        r = self.c.post("/api/inventory/products/restore-locations/",
+                        {"before": "2026-08-11T17:50", "apply": False}, format="json")
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertEqual(r.json()["would_change"], 1)  # solo p
+        self.p.refresh_from_db()
+        self.assertEqual(self.p.ubicacion_id, self.C.id)  # sigue en C: es vista previa
+
+    def test_apply_restaura_a_ubicacion_previa(self):
+        r = self.c.post("/api/inventory/products/restore-locations/",
+                        {"before": "2026-08-11T17:50", "apply": True}, format="json")
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertEqual(r.json()["restored"], 1)
+        self.p.refresh_from_db()
+        self.q.refresh_from_db()
+        self.assertEqual(self.p.ubicacion_id, self.B.id)  # recuperó B (lo de antes del corte)
+        self.assertEqual(self.q.ubicacion_id, self.A.id)  # intacto
+
+    def test_sin_fecha_es_error(self):
+        r = self.c.post("/api/inventory/products/restore-locations/",
+                        {"apply": False}, format="json")
+        self.assertEqual(r.status_code, 400)
