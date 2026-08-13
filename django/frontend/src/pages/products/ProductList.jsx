@@ -872,7 +872,11 @@ export default function ProductList() {
         </h1>
         <div className="flex gap-2">
           {can("productos.editar") && <button onClick={() => setBulkLoc({ ids: null })} className="border border-teal-300 text-teal-700 bg-teal-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-teal-100 transition">📍 Asignar ubicación</button>}
-          {can("productos.editar") && <button onClick={() => setRestoreLoc(true)} className="border border-amber-300 text-amber-700 bg-amber-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-amber-100 transition" title="Recuperar ubicaciones desde la auditoría (deshacer un cambio masivo)">🔄 Recuperar ubicaciones</button>}
+          {/* Botón "Recuperar ubicaciones" oculto: fue una herramienta puntual
+              para deshacer una asignación masiva equivocada. El código y el
+              endpoint siguen disponibles; para volver a mostrarlo, descomentá
+              la línea de abajo. */}
+          {false && can("productos.editar") && <button onClick={() => setRestoreLoc(true)} className="border border-amber-300 text-amber-700 bg-amber-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-amber-100 transition" title="Recuperar ubicaciones desde la auditoría (deshacer un cambio masivo)">🔄 Recuperar ubicaciones</button>}
           {can("productos.etiquetar") && <button onClick={() => setPriceTag({})} className="border border-amber-300 text-amber-700 bg-amber-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-amber-100 transition">🏷️ Etiquetas de precio</button>}
           <button onClick={exportExcel} disabled={exporting} className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-100 transition">{exporting ? "Exportando…" : "⬇️ Excel"}</button>
           {can("productos.crear") && <Link to="/productos/nuevo" className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nuevo producto</Link>}
