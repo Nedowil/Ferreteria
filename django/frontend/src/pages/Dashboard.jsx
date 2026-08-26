@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import api from "../api/client";
 import { BarChart, HBars } from "../components/Charts";
 
 const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+// Fecha local (Guatemala) en formato YYYY-MM-DD, para armar los filtros de la
+// lista de ventas al hacer clic en las tarjetas/gráfica.
+const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
 const QUICK = [
   { to: "/pos", label: "Nueva venta", icon: "🛒", color: "bg-emerald-500" },
@@ -15,21 +18,32 @@ const QUICK = [
   { to: "/reportes", label: "Ver reportes", icon: "📊", color: "bg-cyan-500" },
 ];
 
-function Kpi({ label, value, sub, icon, gradient }) {
-  return (
-    <div className={`rounded-2xl p-5 text-white shadow-lg bg-gradient-to-br ${gradient} relative overflow-hidden`}>
+function Kpi({ label, value, sub, icon, gradient, to }) {
+  const inner = (
+    <>
       <div className="text-sm opacity-90">{label}</div>
       <div className="text-4xl font-extrabold mt-1 drop-shadow-sm">{value}</div>
       {sub && <div className="text-xs opacity-90 mt-1">{sub}</div>}
       <div className="absolute right-4 top-1/2 -translate-y-1/2 text-5xl opacity-30 select-none">{icon}</div>
-    </div>
+      {to && <div className="absolute right-3 bottom-2 text-xs font-semibold opacity-0 group-hover:opacity-90 transition">Ver →</div>}
+    </>
   );
+  const cls = `rounded-2xl p-5 text-white shadow-lg bg-gradient-to-br ${gradient} relative overflow-hidden`;
+  // Si tiene destino, la tarjeta es un enlace clickeable (con efecto al pasar el mouse).
+  if (to) return <Link to={to} className={`${cls} group block hover:shadow-xl hover:-translate-y-0.5 transition`}>{inner}</Link>;
+  return <div className={cls}>{inner}</div>;
 }
 
 export default function Dashboard() {
   const [data, setData] = useState(null);
+  const navigate = useNavigate();
   useEffect(() => { api.get("/dashboard/").then((r) => setData(r.data)); }, []);
   if (!data) return <div className="text-slate-400">Cargando…</div>;
+
+  // Rangos de fecha para los enlaces de las tarjetas de ventas.
+  const hoy = new Date();
+  const hoyStr = ymd(hoy);
+  const mesStr = ymd(new Date(hoy.getFullYear(), hoy.getMonth(), 1));
 
   const reponer = data.productos_reponer || [];
   const dias = (data.ventas_ultimos_dias || []).map((d) => ({
@@ -62,20 +76,22 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {data.ventas_hoy && (
           <Kpi label="Ventas hoy" value={data.ventas_hoy.count} sub={Q(data.ventas_hoy.total)}
-               icon="💵" gradient="from-emerald-500 to-green-600" />
+               icon="💵" gradient="from-emerald-500 to-green-600"
+               to={`/ventas?from=${hoyStr}&to=${hoyStr}`} />
         )}
         {data.ventas_mes && (
           <Kpi label="Ventas del mes" value={Q(data.ventas_mes.total)} sub={cap(data.ventas_mes.label)}
-               icon="📅" gradient="from-blue-500 to-indigo-600" />
+               icon="📅" gradient="from-blue-500 to-indigo-600"
+               to={`/ventas?from=${mesStr}&to=${hoyStr}`} />
         )}
         {data.productos_total !== undefined && (
           <Kpi label="Productos registrados" value={data.productos_total} sub="en catálogo"
-               icon="📦" gradient="from-amber-500 to-orange-600" />
+               icon="📦" gradient="from-amber-500 to-orange-600" to="/productos" />
         )}
         {data.stock_bajo !== undefined && (
           <Kpi label="Stock bajo" value={data.stock_bajo}
                sub={data.stock_bajo > 0 ? "Reponer pronto" : "Todo en orden"}
-               icon="⚠️" gradient="from-rose-500 to-red-600" />
+               icon="⚠️" gradient="from-rose-500 to-red-600" to="/bajo-stock" />
         )}
       </div>
 
@@ -85,8 +101,9 @@ export default function Dashboard() {
           <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-5">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-base font-bold text-slate-700 dark:text-slate-200">📈 Ventas de los últimos 14 días</h2>
+              <span className="text-[11px] text-slate-400">Tocá un día para ver sus ventas</span>
             </div>
-            <BarChart data={dias} />
+            <BarChart data={dias} onBarClick={(d) => navigate(`/ventas?from=${d.label}&to=${d.label}`)} />
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-5 space-y-4">
             <div>
@@ -112,7 +129,7 @@ export default function Dashboard() {
       {data.top_productos && data.top_productos.length > 0 && (
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-5">
           <h2 className="text-base font-bold text-slate-700 dark:text-slate-200 mb-3">🏆 Productos más vendidos del mes</h2>
-          <HBars data={tops} />
+          <HBars data={tops} onItemClick={(t) => navigate(`/productos?search=${encodeURIComponent(t.label)}`)} />
         </div>
       )}
 
@@ -140,7 +157,8 @@ export default function Dashboard() {
           </div>
           <div className="divide-y">
             {reponer.map((p) => (
-              <div key={p.id} className="px-5 py-3 flex items-center justify-between">
+              <Link key={p.id} to={`/productos?search=${encodeURIComponent(p.sku || p.name)}`}
+                    className="px-5 py-3 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-700/60 transition">
                 <div>
                   <div className="font-medium text-slate-800 dark:text-slate-100">{p.name}</div>
                   <div className="text-xs font-mono text-slate-400">{p.sku}</div>
@@ -149,7 +167,7 @@ export default function Dashboard() {
                   <span className="text-red-600 font-bold text-lg">{p.stock_display}</span>
                   <span className="text-slate-400"> / {p.min_stock} mín</span>
                 </div>
-              </div>
+              </Link>
             ))}
             {reponer.length === 0 && (
               <div className="px-5 py-8 text-center text-slate-400">Sin productos por reponer 🎉</div>

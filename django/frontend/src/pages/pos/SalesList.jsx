@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
@@ -16,9 +16,17 @@ export default function SalesList() {
   // Las tarjetas de resumen (ingresos totales) solo las ve quien pueda ver
   // reportes (el admin). El vendedor no las ve ni pide el dato.
   const canSeeSummary = can("reportes.ver");
+  const [searchParams] = useSearchParams();
   const [data, setData] = useState({ results: [], count: 0 });
   const [summary, setSummary] = useState({ count: 0, completed_count: 0, total_income: 0, total_profit: 0, total_cost: 0 });
-  const [filters, setFilters] = useState({ search: "", status: "", from: "", to: "" });
+  // Los filtros pueden venir por URL (ej. desde el Dashboard: ?from=…&to=…),
+  // así al hacer clic en una tarjeta se abre la lista ya filtrada.
+  const [filters, setFilters] = useState({
+    search: searchParams.get("search") || "",
+    status: searchParams.get("status") || "",
+    from: searchParams.get("from") || "",
+    to: searchParams.get("to") || "",
+  });
   const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState(false);
   const PAGE_SIZE = 15; // debe coincidir con DefaultPagination.page_size del backend

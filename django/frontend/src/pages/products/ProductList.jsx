@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import JsBarcode from "jsbarcode";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
@@ -745,8 +745,15 @@ function RestoreLocationsModal({ onClose, onDone }) {
 }
 
 export default function ProductList() {
+  const [searchParams] = useSearchParams();
   const [data, setData] = useState({ results: [], count: 0 });
-  const [filters, setFilters] = useState({ search: "", brand: "", ubicacion: "", low_stock: false });
+  // La búsqueda/stock bajo pueden venir por URL (ej. desde el Dashboard al tocar
+  // un producto top o la lista de "por reponer").
+  const [filters, setFilters] = useState({
+    search: searchParams.get("search") || "",
+    brand: "", ubicacion: "",
+    low_stock: searchParams.get("low_stock") === "1",
+  });
   const [brands, setBrands] = useState([]);
   const [ubicaciones, setUbicaciones] = useState([]);
   const [page, setPage] = useState(1);
