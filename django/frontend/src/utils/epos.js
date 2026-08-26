@@ -27,6 +27,41 @@ export async function sendEposPrint(url, xml) {
   return { ok: false, code: code || (res.ok ? "" : String(res.status)) };
 }
 
+// ── IP por COMPUTADORA ──────────────────────────────────────────────────────
+// Cada PC puede tener su propia impresora. La IP se guarda en el navegador de
+// esa computadora (localStorage) y, si está puesta, MANDA sobre la IP global de
+// la empresa. Si no hay nada guardado, se usa la global. Útil cuando cada caja
+// tiene su propia impresora en red.
+const LS_KEY = "epos_printer";
+
+export function getLocalEpos() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return null;
+    const o = JSON.parse(raw);
+    return o && o.ip ? { ip: o.ip, protocol: o.protocol || "https" } : null;
+  } catch { return null; }
+}
+
+export function setLocalEpos(ip, protocol) {
+  try {
+    const clean = (ip || "").trim();
+    if (clean) localStorage.setItem(LS_KEY, JSON.stringify({ ip: clean, protocol: protocol || "https" }));
+    else localStorage.removeItem(LS_KEY);
+  } catch { /* almacenamiento no disponible: se ignora */ }
+}
+
+export function eposUrlFor(ip, protocol) {
+  return `${protocol || "https"}://${ip}/cgi-bin/epos/service.cgi?devid=local_printer&timeout=10000`;
+}
+
+// Si ESTA computadora tiene impresora propia configurada, usa esa URL; si no,
+// usa la que armó el servidor (la global de la empresa).
+export function resolveEposUrl(serverUrl) {
+  const local = getLocalEpos();
+  return local ? eposUrlFor(local.ip, local.protocol) : serverUrl;
+}
+
 // Mensaje de ayuda cuando NO se pudo conectar con la impresora ePOS.
 export const EPOS_HELP =
   "No se pudo conectar con la impresora por la red local. Verificá: " +

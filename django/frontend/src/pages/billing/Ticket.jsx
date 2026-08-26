@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import QRCode from "qrcode";
 import api from "../../api/client";
 import { dialog } from "../../components/Dialog";
-import { sendEposPrint, eposCodeMessage, EPOS_HELP } from "../../utils/epos";
+import { sendEposPrint, resolveEposUrl, eposCodeMessage, EPOS_HELP } from "../../utils/epos";
 import logo from "../../assets/logo.jpg";
 
 const GREEN = "#159f73";
@@ -133,7 +133,8 @@ export default function Ticket() {
       return;
     }
     setReprint(info.reprint?.is_reprint ? info.reprint : null);
-    const r = await sendEposPrint(info.url, info.xml);
+    // Si ESTA computadora tiene su propia impresora, se usa esa; si no, la global.
+    const r = await sendEposPrint(resolveEposUrl(info.url), info.xml);
     if (!r.ok) {
       await dialog.alert(r.error ? EPOS_HELP : eposCodeMessage(r.code));
     }

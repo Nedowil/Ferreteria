@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
-import { sendEposPrint, eposCodeMessage, EPOS_HELP } from "../../utils/epos";
+import { sendEposPrint, resolveEposUrl, getLocalEpos, setLocalEpos, eposCodeMessage, EPOS_HELP } from "../../utils/epos";
 
 const Section = ({ title, children }) => (
   <section className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
@@ -26,10 +26,24 @@ export default function CompanySettings() {
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
   const [saving, setSaving] = useState(false);
+  // Impresora propia de ESTA computadora (se guarda en el navegador, no en el
+  // servidor). Si está puesta, esta PC imprime en su propia impresora en red.
+  const [localIp, setLocalIp] = useState("");
+  const [localProto, setLocalProto] = useState("https");
 
   useEffect(() => {
     api.get("/company-settings/").then((r) => setC(r.data));
+    const l = getLocalEpos();
+    if (l) { setLocalIp(l.ip); setLocalProto(l.protocol); }
   }, []);
+
+  const saveLocalEpos = () => {
+    setLocalEpos(localIp, localProto);
+    setErr("");
+    setMsg(localIp.trim()
+      ? "Impresora de esta computadora guardada."
+      : "Esta computadora vuelve a usar la impresora general.");
+  };
 
   const set = (k, v) => setC((p) => ({ ...p, [k]: v }));
 
@@ -57,7 +71,8 @@ export default function CompanySettings() {
       }
       if (data.status === "epos") {
         // La PC manda el XML directo a la impresora Epson por la red local.
-        const r = await sendEposPrint(data.url, data.xml);
+        // Si esta computadora tiene impresora propia, se prueba esa.
+        const r = await sendEposPrint(resolveEposUrl(data.url), data.xml);
         if (r.ok) setMsg("Prueba enviada a la impresora.");
         else setErr(r.error ? EPOS_HELP : eposCodeMessage(r.code));
         return;
@@ -222,6 +237,33 @@ export default function CompanySettings() {
                 directo a la impresora, sin depender de Windows. Pasos: conectá la impresora al
                 mismo router; poné su IP acá; en cada PC abrí una vez <b>https://{c.printer_ip || "IP-de-la-impresora"}</b>{" "}
                 en el navegador y aceptá el aviso de seguridad (certificado). Luego probá con “Imprimir prueba”.
+              </div>
+
+              {/* Impresora propia de ESTA computadora (opcional). Se guarda en
+                  este navegador; si se pone, esta PC imprime en su impresora. */}
+              <div className="sm:col-span-2 border border-slate-200 dark:border-slate-700 rounded-lg p-4">
+                <div className="font-semibold text-sm text-slate-700 dark:text-slate-200 mb-1">🖥️ Impresora de ESTA computadora (opcional)</div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-3 leading-relaxed">
+                  Si esta caja tiene su <b>propia</b> impresora, poné su IP acá. Solo aplica a
+                  <b> esta computadora</b> y manda sobre la IP general de arriba. Dejalo vacío para
+                  usar la impresora general. {getLocalEpos() ? "Actualmente esta PC usa su impresora propia." : "Actualmente esta PC usa la impresora general."}
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs mb-1 text-slate-600 dark:text-slate-300">IP para esta computadora</label>
+                    <input className={input} placeholder="192.168.1.51 (vacío = usar la general)" value={localIp} onChange={(e) => setLocalIp(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="block text-xs mb-1 text-slate-600 dark:text-slate-300">Conexión</label>
+                    <select className={input} value={localProto} onChange={(e) => setLocalProto(e.target.value)}>
+                      <option value="https">HTTPS (recomendado)</option>
+                      <option value="http">HTTP</option>
+                    </select>
+                  </div>
+                </div>
+                <button type="button" onClick={saveLocalEpos} className="mt-3 text-sm border border-slate-300 dark:border-slate-600 rounded px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-700">
+                  Guardar en esta computadora
+                </button>
               </div>
             </>
           )}
