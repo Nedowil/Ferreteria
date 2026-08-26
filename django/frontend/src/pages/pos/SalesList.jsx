@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
+import Pagination from "../../components/Pagination";
 
 const STATUS_BADGE = {
   completada: "bg-green-100 text-green-700",
@@ -32,7 +33,6 @@ export default function SalesList() {
   };
   const goPage = (p) => { setPage(p); load(p); };
   const money = (n) => "Q" + Number(n || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const totalPages = Math.max(1, Math.ceil((data.count || 0) / PAGE_SIZE));
   useEffect(() => { load(1); }, []);
   // Al vaciar la búsqueda, se recargan todos los registros desde la página 1.
   const _firstLoad = useRef(true);
@@ -159,21 +159,7 @@ export default function SalesList() {
         </div>
       </div>
 
-      {/* Paginación: la tabla muestra 15 por página. Sin esto solo se veía la
-          primera página aunque el total (arriba) fuera mayor. */}
-      {data.count > PAGE_SIZE && (
-        <div className="flex items-center justify-between gap-3 mt-3 text-sm">
-          <span className="text-slate-500 dark:text-slate-400">
-            Página <b>{page}</b> de <b>{totalPages}</b> · {data.count} ventas
-          </span>
-          <div className="flex gap-2">
-            <button onClick={() => goPage(page - 1)} disabled={page <= 1}
-                    className="border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2 font-medium disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700 transition">← Anterior</button>
-            <button onClick={() => goPage(page + 1)} disabled={page >= totalPages}
-                    className="border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2 font-medium disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700 transition">Siguiente →</button>
-          </div>
-        </div>
-      )}
+      <Pagination page={page} count={data.count} pageSize={PAGE_SIZE} onPage={goPage} label="ventas" />
     </div>
   );
 }
