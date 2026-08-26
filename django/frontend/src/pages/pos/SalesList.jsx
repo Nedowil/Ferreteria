@@ -18,22 +18,27 @@ export default function SalesList() {
   const [data, setData] = useState({ results: [], count: 0 });
   const [summary, setSummary] = useState({ count: 0, completed_count: 0, total_income: 0 });
   const [filters, setFilters] = useState({ search: "", status: "", from: "", to: "" });
+  const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState(false);
+  const PAGE_SIZE = 15; // debe coincidir con DefaultPagination.page_size del backend
 
-  const load = () => {
-    const params = {};
-    Object.entries(filters).forEach(([k, v]) => { if (v) params[k] = v; });
-    api.get("/sales/", { params }).then((r) => setData(r.data));
-    // Totales del filtro actual (solo si puede ver el resumen).
-    if (canSeeSummary) api.get("/sales/summary/", { params }).then((r) => setSummary(r.data)).catch(() => {});
+  // Carga la página `p`. La tabla se pagina (15 por página); el resumen cuenta
+  // TODO el filtro (por eso no lleva `page`).
+  const load = (p = page) => {
+    const f = {};
+    Object.entries(filters).forEach(([k, v]) => { if (v) f[k] = v; });
+    api.get("/sales/", { params: { ...f, page: p } }).then((r) => setData(r.data));
+    if (canSeeSummary) api.get("/sales/summary/", { params: f }).then((r) => setSummary(r.data)).catch(() => {});
   };
+  const goPage = (p) => { setPage(p); load(p); };
   const money = (n) => "Q" + Number(n || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  useEffect(load, []);
-  // Al vaciar la búsqueda, se recargan todos los registros automáticamente.
+  const totalPages = Math.max(1, Math.ceil((data.count || 0) / PAGE_SIZE));
+  useEffect(() => { load(1); }, []);
+  // Al vaciar la búsqueda, se recargan todos los registros desde la página 1.
   const _firstLoad = useRef(true);
   useEffect(() => {
     if (_firstLoad.current) { _firstLoad.current = false; return; }
-    if (filters.search === "") load();
+    if (filters.search === "") { setPage(1); load(1); }
   }, [filters.search]);
 
   const exportExcel = async () => {
@@ -85,7 +90,7 @@ export default function SalesList() {
       </div>
       )}
 
-      <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex flex-wrap gap-2 items-end">
+      <form onSubmit={(e) => { e.preventDefault(); setPage(1); load(1); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex flex-wrap gap-2 items-end">
         <input placeholder="Folio o cliente" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })}
                className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-52" />
         <select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}
@@ -147,6 +152,22 @@ export default function SalesList() {
         </table>
         </div>
       </div>
+
+      {/* Paginación: la tabla muestra 15 por página. Sin esto solo se veía la
+          primera página aunque el total (arriba) fuera mayor. */}
+      {data.count > PAGE_SIZE && (
+        <div className="flex items-center justify-between gap-3 mt-3 text-sm">
+          <span className="text-slate-500 dark:text-slate-400">
+            Página <b>{page}</b> de <b>{totalPages}</b> · {data.count} ventas
+          </span>
+          <div className="flex gap-2">
+            <button onClick={() => goPage(page - 1)} disabled={page <= 1}
+                    className="border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2 font-medium disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700 transition">← Anterior</button>
+            <button onClick={() => goPage(page + 1)} disabled={page >= totalPages}
+                    className="border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2 font-medium disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700 transition">Siguiente →</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
