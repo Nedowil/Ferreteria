@@ -3,11 +3,14 @@ import { Link, useNavigate } from "react-router-dom";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
+import Pagination from "../../components/Pagination";
 
 export default function LowStock() {
   const navigate = useNavigate();
   const { can } = useAuth();
   const [rows, setRows] = useState([]);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 15;
   const [exporting, setExporting] = useState(false);
   const [ubicaciones, setUbicaciones] = useState([]);
   const [ubicacion, setUbicacion] = useState("");   // id de ubicación filtrada ("" = todas)
@@ -17,11 +20,14 @@ export default function LowStock() {
     api.get("/inventory/locations/?page_size=200").then((r) => setUbicaciones(r.data.results || r.data)).catch(() => {});
   }, []);
 
-  // Carga (o recarga al cambiar el filtro de ubicación).
+  // Carga (o recarga al cambiar el filtro de ubicación). El endpoint devuelve
+  // TODA la lista; se pagina en el cliente (15 por página).
   useEffect(() => {
     const params = ubicacion ? { ubicacion } : {};
-    api.get("/inventory/products/low-stock/", { params }).then((r) => setRows(r.data));
+    api.get("/inventory/products/low-stock/", { params }).then((r) => { setRows(r.data); setPage(1); });
   }, [ubicacion]);
+
+  const pageRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   // Arma una compra sugerida con todos los productos por reponer y sus
   // cantidades sugeridas, y abre el formulario de compra ya con las partidas.
@@ -77,7 +83,7 @@ export default function LowStock() {
                 <th className="px-4 py-2.5 text-right">Sugerido comprar</th><th className="px-4 py-2.5"></th></tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
+            {pageRows.map((r) => (
               <tr key={r.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700/70 transition">
                 <td className="px-4 py-2 font-mono text-xs text-slate-500 dark:text-slate-400">{r.sku}</td>
                 <td className="px-4 py-2">
@@ -100,6 +106,8 @@ export default function LowStock() {
         </table>
         </div>
       </div>
+
+      <Pagination page={page} count={rows.length} pageSize={PAGE_SIZE} onPage={setPage} label="productos" />
     </div>
   );
 }

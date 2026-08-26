@@ -1,11 +1,15 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
 import { dialog } from "../../components/Dialog";
+import Pagination from "../../components/Pagination";
 
 const round2 = (n) => (Number.isFinite(n) ? Math.round(n * 100) / 100 : 0);
 
 export default function StockCount() {
   const [products, setProducts] = useState([]);
+  const [count, setCount] = useState(0);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 15;
   const [counts, setCounts] = useState({});   // { productId: valor ingresado }
   const [units, setUnits] = useState({});      // { productId: "base" | "container" }
   const [mode, setMode] = useState("set");     // "set" = fijar total, "add" = sumar encontrado
@@ -13,12 +17,18 @@ export default function StockCount() {
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const load = () => {
-    const params = { page_size: 200 };
+  // Los conteos ingresados se guardan por id de producto, así se conservan al
+  // cambiar de página (la paginación no pierde lo ya contado).
+  const load = (p = page) => {
+    const params = { page: p };
     if (search) params.search = search;
-    api.get("/inventory/products/", { params }).then((r) => setProducts(r.data.results || r.data));
+    api.get("/inventory/products/", { params }).then((r) => {
+      setProducts(r.data.results || r.data);
+      setCount(r.data.count ?? (r.data.results ? r.data.results.length : r.data.length));
+    });
   };
-  useEffect(load, []);
+  const goPage = (p) => { setPage(p); load(p); };
+  useEffect(() => { load(1); }, []);
 
   const changed = Object.entries(counts).filter(([, v]) => v !== "" && v !== undefined);
 
@@ -110,7 +120,7 @@ export default function StockCount() {
         </label>
       </div>
 
-      <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex flex-col sm:flex-row gap-2 sm:items-end">
+      <form onSubmit={(e) => { e.preventDefault(); setPage(1); load(1); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex flex-col sm:flex-row gap-2 sm:items-end">
         <input placeholder="Nombre, SKU o código" value={search} onChange={(e) => setSearch(e.target.value)}
                className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64" />
         <button className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition w-full sm:w-auto">Buscar</button>
@@ -206,6 +216,8 @@ export default function StockCount() {
           })}
           {products.length === 0 && <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 px-5 py-10 text-center text-slate-400">Sin productos.</div>}
         </div>
+
+        <Pagination page={page} count={count} pageSize={PAGE_SIZE} onPage={goPage} label="productos" />
       </form>
     </div>
   );

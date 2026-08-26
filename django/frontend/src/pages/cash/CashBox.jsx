@@ -4,8 +4,10 @@ import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { dialog } from "../../components/Dialog";
 import { exportToExcel } from "../../utils/exportExcel";
+import Pagination from "../../components/Pagination";
 
 const signedAmount = (m) => (["egreso", "devolucion"].includes(m.type) ? -Number(m.amount) : Number(m.amount));
+const MOV_PAGE_SIZE = 15;
 
 export default function CashBox() {
   const { can } = useAuth();
@@ -16,6 +18,7 @@ export default function CashBox() {
   const [mov, setMov] = useState({ type: "ingreso", amount: "", description: "" });
   const [counted, setCounted] = useState("");
   const [exporting, setExporting] = useState("");
+  const [movPage, setMovPage] = useState(1); // paginación de la tabla de movimientos
 
   // Columnas comunes para exportar los movimientos de la caja abierta.
   const movCols = () => [
@@ -211,7 +214,7 @@ export default function CashBox() {
                     <th className="px-4 py-2">Descripción</th><th className="px-4 py-2 text-right">Monto</th></tr>
               </thead>
               <tbody>
-                {(session.movements || []).map((m) => (
+                {(session.movements || []).slice((movPage - 1) * MOV_PAGE_SIZE, movPage * MOV_PAGE_SIZE).map((m) => (
                   <tr key={m.id} className="border-t">
                     <td className="px-4 py-2 text-xs text-slate-500 dark:text-slate-400">{new Date(m.created_at).toLocaleTimeString()}</td>
                     <td className="px-4 py-2">{m.type_display}</td>
@@ -227,6 +230,11 @@ export default function CashBox() {
               </tbody>
             </table>
             </div>
+            )}
+            {(session.movements || []).length > MOV_PAGE_SIZE && (
+              <div className="px-4 pb-3">
+                <Pagination page={movPage} count={(session.movements || []).length} pageSize={MOV_PAGE_SIZE} onPage={setMovPage} label="movimientos" />
+              </div>
             )}
           </div>
         </div>
