@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import QRCode from "qrcode";
 import api from "../../api/client";
 import { dialog } from "../../components/Dialog";
+import { sendEposPrint, eposCodeMessage, EPOS_HELP } from "../../utils/epos";
 import logo from "../../assets/logo.jpg";
 
 const GREEN = "#159f73";
@@ -119,11 +120,37 @@ export default function Ticket() {
   // Impresión por el navegador (modo Sistema/USB, "Guardar" y formato carta).
   const printBrowser = async () => { await stampCopy(); window.print(); };
 
+  // Modo Epson ePOS: el servidor arma el XML del ticket y la URL del servicio
+  // de la impresora; el navegador (en la PC de la tienda) lo POSTea DIRECTO a
+  // la impresora por la red local. La respuesta trae success="true" si imprimió.
+  const printEpos = async () => {
+    let info;
+    try {
+      const { data } = await api.post(`/sales/${id}/print-epos/`);
+      info = data;
+    } catch (e) {
+      await dialog.alert(e.response?.data?.detail || "No se pudo preparar el ticket.");
+      return;
+    }
+    setReprint(info.reprint?.is_reprint ? info.reprint : null);
+    const r = await sendEposPrint(info.url, info.xml);
+    if (!r.ok) {
+      await dialog.alert(r.error ? EPOS_HELP : eposCodeMessage(r.code));
+    }
+  };
+
   const printThermal = async () => {
+    const pmode = company.printer_mode || "system";
+    // Modo "Epson red (ePOS)": la PC manda el ticket DIRECTO a la impresora por
+    // la red local (sin pasar por la nube ni por la cola de Windows).
+    if (pmode === "epos") {
+      await printEpos();
+      return;
+    }
     // Modo "Sistema" (lo normal): la impresora térmica está instalada en la
     // computadora (por USB). Usamos la impresión del navegador, que abre el
     // cuadro de impresión y manda el ticket a la impresora seleccionada.
-    if ((company.printer_mode || "system") !== "network") {
+    if (pmode !== "network") {
       await printBrowser();
       return;
     }

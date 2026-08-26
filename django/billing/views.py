@@ -263,10 +263,50 @@ def print_ticket(request, sale_id):
 
 
 @api_view(["POST"])
+@permission_classes([_PRINT_PERM])
+def print_ticket_epos(request, sale_id):
+    """Modo Epson ePOS: arma el ticket en XML ePOS-Print y devuelve el XML + la
+    URL del servicio de la impresora. La PC de la tienda (el navegador) hace el
+    POST directo a la impresora por la red local; NO pasa por la nube.
+
+    Cuenta la impresión igual que el modo USB (para la marca de agua de COPIA)."""
+    from sales.services import register_print
+    sale = Sale.objects.filter(pk=sale_id).select_related("customer").first()
+    if not sale:
+        return Response({"detail": "Venta inexistente."}, status=status.HTTP_404_NOT_FOUND)
+    company = CompanySetting.current()
+    if not company.printer_ip:
+        return Response({"detail": "Configura la IP de la impresora."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    reprint = register_print(sale, user=_actor(request))
+    ticket = services.build_ticket(sale)
+    xml = printing.build_ticket_epos_xml(
+        ticket, width_mm=company.printer_width, auto_cut=company.printer_auto_cut,
+        reprint=reprint if reprint["is_reprint"] else None)
+    return Response({
+        "status": "epos",
+        "url": printing.epos_service_url(company),
+        "xml": xml,
+        "reprint": reprint,
+    })
+
+
+@api_view(["POST"])
 @permission_classes([HasPermission.require("configuracion.gestionar")])
 def printer_test(request):
     """Imprime un ticket de prueba para validar la configuración."""
     company = CompanySetting.current()
+    # Modo Epson ePOS: la PC manda el XML directo a la impresora por la red
+    # local. El servidor solo arma el XML y la URL del servicio de la impresora.
+    if company.printer_mode == "epos":
+        if not company.printer_ip:
+            return Response({"detail": "Configura la IP de la impresora."},
+                            status=status.HTTP_400_BAD_REQUEST)
+        return Response({
+            "status": "epos",
+            "url": printing.epos_service_url(company),
+            "xml": printing.build_test_epos_xml(company),
+        })
     data = printing.build_test_escpos(company)
     return _deliver_escpos(company, data)
 

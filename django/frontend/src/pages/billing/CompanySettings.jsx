@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
+import { sendEposPrint, eposCodeMessage, EPOS_HELP } from "../../utils/epos";
 
 const Section = ({ title, children }) => (
   <section className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
@@ -52,6 +53,13 @@ export default function CompanySettings() {
       const { data } = await api.post("/printer/test/");
       if (data.status === "sent") {
         setMsg("Prueba enviada a la impresora de red.");
+        return;
+      }
+      if (data.status === "epos") {
+        // La PC manda el XML directo a la impresora Epson por la red local.
+        const r = await sendEposPrint(data.url, data.xml);
+        if (r.ok) setMsg("Prueba enviada a la impresora.");
+        else setErr(r.error ? EPOS_HELP : eposCodeMessage(r.code));
         return;
       }
       const bytes = Uint8Array.from(atob(data.escpos_base64), (ch) => ch.charCodeAt(0));
@@ -176,8 +184,9 @@ export default function CompanySettings() {
         <Section title="Impresora térmica (tickets)">
           <Field label="Modo">
             <select className={input} value={c.printer_mode} onChange={(e) => set("printer_mode", e.target.value)}>
-              <option value="system">Sistema</option>
-              <option value="network">Red (IP)</option>
+              <option value="system">Sistema (USB)</option>
+              <option value="epos">Epson red (ePOS)</option>
+              <option value="network">Red (IP) — servidor</option>
               <option value="bluetooth">Bluetooth</option>
             </select>
           </Field>
@@ -195,6 +204,25 @@ export default function CompanySettings() {
               <Field label="Puerto">
                 <input type="number" className={input} value={c.printer_port} onChange={(e) => set("printer_port", e.target.value)} />
               </Field>
+            </>
+          )}
+          {c.printer_mode === "epos" && (
+            <>
+              <Field label="IP de la impresora">
+                <input className={input} placeholder="192.168.1.50" value={c.printer_ip || ""} onChange={(e) => set("printer_ip", e.target.value)} />
+              </Field>
+              <Field label="Conexión">
+                <select className={input} value={c.printer_protocol || "https"} onChange={(e) => set("printer_protocol", e.target.value)}>
+                  <option value="https">HTTPS (recomendado)</option>
+                  <option value="http">HTTP</option>
+                </select>
+              </Field>
+              <div className="sm:col-span-2 text-xs text-slate-500 dark:text-slate-400 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-lg p-3 leading-relaxed">
+                <b>Modo Epson en red (para TM‑m30III con cable de red):</b> la PC manda el ticket
+                directo a la impresora, sin depender de Windows. Pasos: conectá la impresora al
+                mismo router; poné su IP acá; en cada PC abrí una vez <b>https://{c.printer_ip || "IP-de-la-impresora"}</b>{" "}
+                en el navegador y aceptá el aviso de seguridad (certificado). Luego probá con “Imprimir prueba”.
+              </div>
             </>
           )}
           <div className="sm:col-span-2">

@@ -767,3 +767,78 @@ class NitLookupTests(TestCase):
     def test_requiere_autenticacion(self):
         r = APIClient().get("/api/fel/lookup-nit/", {"tax_id": "CF"})
         self.assertEqual(r.status_code, 401)
+
+
+class ThermalPrintingTests(TestCase):
+    """Impresión térmica: ESC/POS (USB) y ePOS-Print (Epson en red). El mismo
+    diseño debe salir en ambos formatos."""
+
+    def setUp(self):
+        self.company = CompanySetting.current()
+        self.company.commercial_name = "Ferretería Central"
+        self.company.save()
+        self.sale = _make_sale(folio="V-PRT-1")
+        self.ticket = services.build_ticket(self.sale)
+
+    def test_escpos_incluye_datos_clave(self):
+        from .printing import build_ticket_escpos
+        data = build_ticket_escpos(self.ticket, width_mm=80)
+        self.assertIsInstance(data, bytes)
+        txt = data.decode("cp850", errors="replace")
+        self.assertIn("Total Venta:", txt)
+        self.assertIn("Martillo", txt)
+        # "Impuesto Total" ya no va centrado: sale como columna izq/der.
+        self.assertIn("Impuesto Total:", txt)
+
+    def test_epos_xml_bien_formado(self):
+        from xml.dom.minidom import parseString
+        from .printing import build_ticket_epos_xml
+        xml = build_ticket_epos_xml(self.ticket, width_mm=80)
+        # Debe ser XML válido (si no, parseString lanza excepción y el test falla).
+        parseString(xml)
+        self.assertIn("epos-print", xml)
+        self.assertIn("Martillo", xml)
+        self.assertIn("Total Venta:", xml)
+        self.assertIn('<cut type="feed"/>', xml)
+
+    def test_epos_escapa_caracteres_xml(self):
+        # Un nombre con & y < no debe romper el XML.
+        from xml.dom.minidom import parseString
+        from .printing import build_ticket_epos_xml
+        self.company.commercial_name = "Tornillos & Clavos <SA>"
+        self.company.save()
+        ticket = services.build_ticket(self.sale)
+        xml = build_ticket_epos_xml(ticket, width_mm=80)
+        parseString(xml)  # no debe lanzar
+        self.assertIn("&amp;", xml)
+        self.assertNotIn("<SA>", xml)
+
+    def test_epos_endpoint_devuelve_xml_y_url(self):
+        perms = sync_permissions()
+        for role, codes in ROLE_MATRIX.items():
+            g, _ = Group.objects.get_or_create(name=role)
+            g.permissions.set([perms[c] for c in codes if c in perms])
+        admin = User.objects.create_user(username="pa", email="pa@t.com", password="x123", is_superuser=True)
+        self.company.printer_mode = "epos"
+        self.company.printer_ip = "192.168.1.50"
+        self.company.printer_protocol = "https"
+        self.company.save()
+        c = APIClient()
+        c.force_authenticate(admin)
+        r = c.post(f"/api/sales/{self.sale.id}/print-epos/")
+        self.assertEqual(r.status_code, 200, r.content)
+        body = r.json()
+        self.assertEqual(body["status"], "epos")
+        self.assertIn("192.168.1.50", body["url"])
+        self.assertTrue(body["url"].startswith("https://"))
+        self.assertIn("epos-print", body["xml"])
+
+    def test_epos_endpoint_sin_ip_error(self):
+        admin = User.objects.create_superuser(username="pb", email="pb@t.com", password="x", name="B")
+        self.company.printer_mode = "epos"
+        self.company.printer_ip = ""
+        self.company.save()
+        c = APIClient()
+        c.force_authenticate(admin)
+        r = c.post(f"/api/sales/{self.sale.id}/print-epos/")
+        self.assertEqual(r.status_code, 400)

@@ -121,9 +121,13 @@ class CompanySetting(models.Model):
         "descuento máx. sin autorización (%)", max_digits=5, decimal_places=2, default=25)
 
     # Impresora térmica
-    printer_mode = models.CharField(max_length=20, default="system")  # system|bluetooth|network
+    printer_mode = models.CharField(max_length=20, default="system")  # system|bluetooth|network|epos
     printer_ip = models.CharField(max_length=45, blank=True, null=True)
     printer_port = models.PositiveSmallIntegerField(default=9100)
+    # Protocolo para el modo Epson ePOS (la PC manda el ticket directo a la
+    # impresora por la red local). Con el sistema servido por HTTPS, la
+    # impresora debe usar HTTPS para que el navegador no bloquee la conexión.
+    printer_protocol = models.CharField(max_length=8, default="https")  # https|http
     printer_width = models.PositiveSmallIntegerField(default=80)  # mm 58|80
     printer_auto_cut = models.BooleanField(default=True)
 

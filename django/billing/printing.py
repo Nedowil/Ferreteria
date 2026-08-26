@@ -8,6 +8,7 @@ Genera los comandos ESC/POS de un ticket de venta y los envía:
 Sin dependencias externas: el generador ESC/POS es mínimo y autocontenido.
 """
 
+import html
 import socket
 from decimal import Decimal
 
@@ -70,7 +71,46 @@ def _fmt_dt(value):
         return str(value)[:16]
 
 
-class Escpos:
+def _cols_str(width, left, right):
+    """Dos columnas: ``left`` a la izquierda, ``right`` a la derecha."""
+    left, right = str(left), str(right)
+    space = width - len(left) - len(right)
+    if space < 1:
+        left = left[: max(0, width - len(right) - 1)]
+        space = 1
+    return left + " " * space + right
+
+
+def _cols3_str(width, a, b, c):
+    """Tres columnas: ``a`` izquierda, ``b`` centrada, ``c`` derecha."""
+    a, b, c = str(a), str(b), str(c)
+    c1 = width // 3
+    c3 = width // 3
+    c2 = width - c1 - c3
+    s1 = a[:c1].ljust(c1)
+    bb = b[:c2]
+    pad = c2 - len(bb)
+    left = pad // 2
+    s2 = (" " * left) + bb + (" " * (pad - left))
+    s3 = c[:c3].rjust(c3)
+    return s1 + s2 + s3
+
+
+class _LineBuilderMixin:
+    """Columnas y separadores compartidos por los constructores de ticket
+    (ESC/POS y ePOS-Print), para que el diseño salga IDÉNTICO en ambos."""
+
+    def sep(self, ch="-"):
+        return self.line(ch * self.width)
+
+    def cols(self, left, right):
+        return self.line(_cols_str(self.width, left, right))
+
+    def cols3(self, a, b, c):
+        return self.line(_cols3_str(self.width, a, b, c))
+
+
+class Escpos(_LineBuilderMixin):
     """Constructor incremental de un flujo ESC/POS."""
 
     def __init__(self, width_chars=48, encoding="cp850"):
@@ -101,34 +141,6 @@ class Escpos:
         self.buf += GS + b"!" + bytes([0x11 if on else 0x00])
         return self
 
-    def sep(self, ch="-"):
-        return self.line(ch * self.width)
-
-    def cols(self, left, right):
-        """Dos columnas: ``left`` a la izquierda, ``right`` a la derecha."""
-        left, right = str(left), str(right)
-        space = self.width - len(left) - len(right)
-        if space < 1:
-            left = left[: max(0, self.width - len(right) - 1)]
-            space = 1
-        return self.line(left + " " * space + right)
-
-    def cols3(self, a, b, c):
-        """Tres columnas (como el ticket en pantalla): ``a`` a la izquierda,
-        ``b`` centrada, ``c`` a la derecha."""
-        a, b, c = str(a), str(b), str(c)
-        w = self.width
-        c1 = w // 3
-        c3 = w // 3
-        c2 = w - c1 - c3
-        s1 = a[:c1].ljust(c1)
-        bb = b[:c2]
-        pad = c2 - len(bb)
-        left = pad // 2
-        s2 = (" " * left) + bb + (" " * (pad - left))
-        s3 = c[:c3].rjust(c3)
-        return self.line(s1 + s2 + s3)
-
     def feed(self, n=1):
         self.buf += b"\n" * n
         return self
@@ -148,6 +160,70 @@ def _width_chars(printer_width):
         return 48
 
 
+_EPOS_ALIGN = {0: "left", 1: "center", 2: "right"}
+
+
+class EposXmlBuilder(_LineBuilderMixin):
+    """Constructor de un ticket en XML ePOS-Print (Epson).
+
+    Misma interfaz que ``Escpos`` (align/bold/double/line/cols/…), de modo que
+    el MISMO código de diseño de ticket produce el ticket para USB (ESC/POS) y
+    para el modo Epson en red (ePOS-Print). Aquí el navegador de la PC de la
+    tienda hace el POST del XML directo a la impresora, sin pasar por la nube."""
+
+    def __init__(self, width_chars=48):
+        self.width = width_chars
+        self._align = 0
+        self._bold = False
+        self._dbl = False
+        self._parts = []
+
+    def align(self, mode):
+        self._align = mode
+        return self
+
+    def bold(self, on=True):
+        self._bold = bool(on)
+        return self
+
+    def double(self, on=True):
+        self._dbl = bool(on)
+        return self
+
+    def _emit(self, s, newline):
+        content = html.escape(str(s)) + ("&#10;" if newline else "")
+        self._parts.append(
+            f'<text align="{_EPOS_ALIGN.get(self._align, "left")}"'
+            f' em="{"true" if self._bold else "false"}"'
+            f' dw="{"true" if self._dbl else "false"}"'
+            f' dh="{"true" if self._dbl else "false"}">{content}</text>'
+        )
+        return self
+
+    def text(self, s):
+        return self._emit(s, newline=False)
+
+    def line(self, s=""):
+        return self._emit(s, newline=True)
+
+    def feed(self, n=1):
+        self._parts.append(f'<feed line="{int(n)}"/>')
+        return self
+
+    def cut(self):
+        self._parts.append('<cut type="feed"/>')
+        return self
+
+    def xml(self):
+        body = "".join(self._parts)
+        return (
+            '<?xml version="1.0" encoding="utf-8"?>'
+            '<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body>'
+            '<epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print">'
+            f"{body}</epos-print></s:Body></s:Envelope>"
+        )
+
+
 def _reprint_band(e, reprint):
     """Imprime la marca de agua de REIMPRESIÓN/COPIA en la impresora térmica.
     Como la térmica no admite marca de agua diagonal, se usa una banda en
@@ -162,15 +238,14 @@ def _reprint_band(e, reprint):
     e.bold(False).sep()
 
 
-def build_ticket_escpos(ticket, *, width_mm=80, auto_cut=True, reprint=None):
-    """Convierte el dict de ``services.build_ticket`` en bytes ESC/POS.
+def _render_ticket(e, ticket, *, reprint=None, auto_cut=True):
+    """Dibuja el ticket sobre un constructor ``e`` (Escpos o EposXmlBuilder).
 
-    ``reprint`` (opcional): dict {copy_number, printed_at, printed_by} cuando el
-    comprobante es una COPIA; imprime la marca de agua anti-fraude."""
+    Es el ÚNICO lugar donde vive el diseño del ticket, para que el modo USB
+    (ESC/POS) y el modo Epson en red (ePOS-Print) impriman EXACTAMENTE igual."""
     co = ticket["company"]
     sale = ticket["sale"]
     fel = ticket.get("fel")
-    e = Escpos(_width_chars(width_mm))
 
     if reprint:
         _reprint_band(e, reprint)
@@ -243,13 +318,13 @@ def build_ticket_escpos(ticket, *, width_mm=80, auto_cut=True, reprint=None):
         if paid > 0:
             e.cols("Abonado:", _money(paid))
         e.bold(True).cols("Saldo pendiente:", _money(pending)).bold(False)
-        e.align(1).bold(True).line(f"Impuesto Total: {_money(sale['tax'])}").bold(False)
-        e.align(0).sep()
+        e.align(0).bold(True).cols("Impuesto Total:", _money(sale['tax'])).bold(False)
+        e.sep()
     else:
         e.align(0).bold(True).line("Métodos de Pago:").bold(False)
         e.cols(f"{_METODO.get(sale.get('payment_method'), sale.get('payment_method') or 'Efectivo')}:", _money(sale["paid"]))
-        e.align(1).bold(True).line(f"Impuesto Total: {_money(sale['tax'])}").bold(False)
-        e.align(0).sep()
+        e.bold(True).cols("Impuesto Total:", _money(sale['tax'])).bold(False)
+        e.sep()
         e.bold(True).cols("Entregado:", _money(sale["paid"]))
         e.cols("Vuelto:", _money(sale.get("change") or 0)).bold(False)
 
@@ -277,20 +352,36 @@ def build_ticket_escpos(ticket, *, width_mm=80, auto_cut=True, reprint=None):
     e.feed(3)
     if auto_cut:
         e.cut()
+
+
+def build_ticket_escpos(ticket, *, width_mm=80, auto_cut=True, reprint=None):
+    """Convierte el dict de ``services.build_ticket`` en bytes ESC/POS (USB/red).
+
+    ``reprint`` (opcional): dict {copy_number, printed_at, printed_by} cuando el
+    comprobante es una COPIA; imprime la marca de agua anti-fraude."""
+    e = Escpos(_width_chars(width_mm))
+    _render_ticket(e, ticket, reprint=reprint, auto_cut=auto_cut)
     return e.bytes()
 
 
-def build_test_escpos(company):
-    """Ticket de prueba para validar la configuración de la impresora."""
-    e = Escpos(_width_chars(company.printer_width))
+def build_ticket_epos_xml(ticket, *, width_mm=80, auto_cut=True, reprint=None):
+    """Igual que ``build_ticket_escpos`` pero en XML ePOS-Print, para que la PC
+    de la tienda lo mande directo a la Epson por la red local (modo ``epos``)."""
+    e = EposXmlBuilder(_width_chars(width_mm))
+    _render_ticket(e, ticket, reprint=reprint, auto_cut=auto_cut)
+    return e.xml()
+
+
+def _render_test(e, company):
+    """Dibuja el ticket de prueba (compartido por ESC/POS y ePOS-Print)."""
     e.align(1).bold(True).double(True).line("PRUEBA DE IMPRESION").double(False).bold(False)
     e.line(company.commercial_name)
     e.sep()
     e.align(0)
     e.line(f"Modo: {company.printer_mode}")
     e.line(f"Ancho: {company.printer_width} mm")
-    if company.printer_mode == "network":
-        e.line(f"IP: {company.printer_ip}:{company.printer_port}")
+    if company.printer_mode in ("network", "epos"):
+        e.line(f"IP: {company.printer_ip}")
     e.line("abcdefghijklmnopqrstuvwxyz")
     e.line("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
     e.line("Acentos: aeiou ñ ÁÉÍÓÚ Ñ")
@@ -298,7 +389,26 @@ def build_test_escpos(company):
     e.feed(3)
     if company.printer_auto_cut:
         e.cut()
+
+
+def build_test_escpos(company):
+    """Ticket de prueba (ESC/POS) para validar la configuración de la impresora."""
+    e = Escpos(_width_chars(company.printer_width))
+    _render_test(e, company)
     return e.bytes()
+
+
+def build_test_epos_xml(company):
+    """Ticket de prueba en XML ePOS-Print (modo Epson en red)."""
+    e = EposXmlBuilder(_width_chars(company.printer_width))
+    _render_test(e, company)
+    return e.xml()
+
+
+def epos_service_url(company):
+    """URL del servicio ePOS-Print de la impresora en la red local."""
+    proto = company.printer_protocol or "https"
+    return f"{proto}://{company.printer_ip}/cgi-bin/epos/service.cgi?devid=local_printer&timeout=10000"
 
 
 def send_to_network_printer(ip, port, data, *, timeout=6):
