@@ -143,14 +143,31 @@ class SaleViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.ModelVie
     @action(detail=False, methods=["get"])
     def summary(self, request):
         """Totales del filtro actual (para las tarjetas de la lista de ventas):
-        cantidad de ventas, ingresos (suma de completadas) y cuántas completadas."""
+        cantidad de ventas, ingresos, ganancia (ingresos − costo) y cuántas
+        completadas. La ganancia usa el costo histórico guardado en cada línea
+        (``unit_cost``), no el costo actual del producto."""
+        from django.db.models import DecimalField, F
+        from django.db.models.functions import Coalesce
+        from .models import SaleItem
+
         qs = self.filter_queryset(self.get_queryset())
         completadas = qs.filter(status=Sale.STATUS_COMPLETADA)
         income = completadas.aggregate(t=Sum("total"))["t"] or Decimal("0")
+        # Costo de lo vendido: suma de (costo por unidad de venta × cantidad) de
+        # las líneas de las ventas completadas. Si una línea no tiene costo
+        # (dato viejo), cuenta como 0 para no romper el cálculo.
+        cost = (SaleItem.objects
+                .filter(sale__in=completadas.values("pk"))
+                .aggregate(c=Sum(
+                    Coalesce(F("unit_cost"), Decimal("0")) * F("quantity"),
+                    output_field=DecimalField(max_digits=18, decimal_places=2)))["c"]
+                or Decimal("0"))
         return Response({
             "count": qs.count(),
             "completed_count": completadas.count(),
             "total_income": income,
+            "total_cost": cost,
+            "total_profit": income - cost,
         })
 
     @action(detail=False, methods=["get"], url_path="receivable")

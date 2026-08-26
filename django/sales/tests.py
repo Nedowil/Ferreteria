@@ -295,3 +295,35 @@ class SaleServiceTests(TestCase):
         self.assertEqual(session.expected_cash, Decimal("755.00"))  # 500 + 255
         self.assertTrue(session.movements.filter(type=CashMovement.VENTA, sale=sale).exists())
         self.assertEqual(sale.cash_session_id, session.id)
+
+
+class SalesSummaryProfitTests(TestCase):
+    """Resumen de ventas: la ganancia = ingresos − costo (con el costo histórico
+    guardado en cada línea)."""
+
+    def setUp(self):
+        from rest_framework.test import APIClient
+        self.branch = Branch.objects.create(name="Matriz", code="M", is_main=True)
+        self.admin = User.objects.create_superuser(
+            username="a", email="a@a.com", password="x", name="A")
+        self.prod = Product.objects.create(
+            sku="G-1", name="Cemento", purchase_price=Decimal("60"), sale_price=Decimal("85"),
+            stock=Decimal("100"), tax_type="iva",
+        )
+        # Venta: 3 x 85 = 255 ingreso; costo 3 x 60 = 180; ganancia = 75.
+        create_sale(
+            {"payment_method": "efectivo", "paid_amount": "300"},
+            [{"product_id": self.prod.id, "quantity": "3", "unit_price": "85", "tax_type": "iva"}],
+            user=self.admin, branch=self.branch,
+        )
+        self.c = APIClient()
+        self.c.force_authenticate(self.admin)
+        self.c.credentials(HTTP_X_BRANCH_ID=str(self.branch.id))
+
+    def test_summary_calcula_ganancia(self):
+        r = self.c.get("/api/sales/summary/")
+        self.assertEqual(r.status_code, 200, r.content)
+        d = r.json()
+        self.assertEqual(Decimal(str(d["total_income"])), Decimal("255.00"))
+        self.assertEqual(Decimal(str(d["total_cost"])), Decimal("180.00"))
+        self.assertEqual(Decimal(str(d["total_profit"])), Decimal("75.00"))

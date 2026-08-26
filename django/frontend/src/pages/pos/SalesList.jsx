@@ -16,7 +16,7 @@ export default function SalesList() {
   // reportes (el admin). El vendedor no las ve ni pide el dato.
   const canSeeSummary = can("reportes.ver");
   const [data, setData] = useState({ results: [], count: 0 });
-  const [summary, setSummary] = useState({ count: 0, completed_count: 0, total_income: 0 });
+  const [summary, setSummary] = useState({ count: 0, completed_count: 0, total_income: 0, total_profit: 0, total_cost: 0 });
   const [filters, setFilters] = useState({ search: "", status: "", from: "", to: "" });
   const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState(false);
@@ -74,7 +74,7 @@ export default function SalesList() {
       {/* Tarjetas de resumen (respetan el filtro actual). Solo para el admin
           (permiso 'reportes.ver'); el vendedor no las ve. */}
       {canSeeSummary && (
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
         <div className="rounded-2xl p-5 text-white shadow-md bg-gradient-to-br from-indigo-500 to-indigo-600">
           <div className="flex items-center justify-between"><span className="text-sm font-medium text-indigo-100">Total ventas</span><span className="text-2xl">🧾</span></div>
           <div className="text-3xl font-extrabold mt-2">{summary.count}</div>
@@ -82,6 +82,12 @@ export default function SalesList() {
         <div className="rounded-2xl p-5 text-white shadow-md bg-gradient-to-br from-emerald-500 to-emerald-600">
           <div className="flex items-center justify-between"><span className="text-sm font-medium text-emerald-100">Ingresos totales</span><span className="text-2xl">💰</span></div>
           <div className="text-3xl font-extrabold mt-2">{money(summary.total_income)}</div>
+        </div>
+        {/* Ganancia = ingresos − costo de lo vendido. Info sensible: solo admin. */}
+        <div className="rounded-2xl p-5 text-white shadow-md bg-gradient-to-br from-teal-500 to-cyan-600">
+          <div className="flex items-center justify-between"><span className="text-sm font-medium text-teal-100">Ganancia</span><span className="text-2xl">📈</span></div>
+          <div className="text-3xl font-extrabold mt-2">{money(summary.total_profit)}</div>
+          <div className="text-[11px] text-teal-100 mt-1">Ingresos menos costo</div>
         </div>
         <div className="rounded-2xl p-5 text-white shadow-md bg-gradient-to-br from-violet-500 to-purple-600">
           <div className="flex items-center justify-between"><span className="text-sm font-medium text-violet-100">Completadas</span><span className="text-2xl">✅</span></div>
