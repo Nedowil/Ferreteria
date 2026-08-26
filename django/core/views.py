@@ -90,8 +90,10 @@ def dashboard(request):
         from django.db.models.functions import TruncDate
         from sales.models import SaleItem
 
-        # Ventas de los últimos 14 días (relleno con ceros).
-        desde = today - datetime.timedelta(days=13)
+        # Ventas de los últimos 30 días (relleno con ceros). El tablero muestra
+        # 7/14/30 según lo que elija el usuario, recortando de esta serie.
+        DIAS = 30
+        desde = today - datetime.timedelta(days=DIAS - 1)
         por_dia = (Sale.objects
                    .filter(status=Sale.STATUS_COMPLETADA, date__date__gte=desde, date__date__lte=today)
                    .annotate(d=TruncDate("date")).values("d")
@@ -100,7 +102,7 @@ def dashboard(request):
         data["ventas_ultimos_dias"] = [
             {"day": (desde + datetime.timedelta(days=i)).isoformat(),
              "total": mapa.get(desde + datetime.timedelta(days=i), 0.0)}
-            for i in range(14)
+            for i in range(DIAS)
         ]
 
         # Mes anterior (para el comparativo).

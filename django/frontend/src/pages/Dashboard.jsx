@@ -36,6 +36,7 @@ function Kpi({ label, value, sub, icon, gradient, to }) {
 
 export default function Dashboard() {
   const [data, setData] = useState(null);
+  const [rango, setRango] = useState(14); // 7 | 14 | 30 días del gráfico
   const navigate = useNavigate();
   useEffect(() => { api.get("/dashboard/").then((r) => setData(r.data)); }, []);
   if (!data) return <div className="text-slate-400">Cargando…</div>;
@@ -46,9 +47,11 @@ export default function Dashboard() {
   const mesStr = ymd(new Date(hoy.getFullYear(), hoy.getMonth(), 1));
 
   const reponer = data.productos_reponer || [];
-  const dias = (data.ventas_ultimos_dias || []).map((d) => ({
+  const diasTodos = (data.ventas_ultimos_dias || []).map((d) => ({
     value: d.total, label: d.day, short: d.day.slice(8),   // día del mes
   }));
+  // Se recortan los últimos N días según el rango elegido (7/14/30).
+  const dias = diasTodos.slice(-rango);
   const tops = (data.top_productos || []).map((t) => ({ label: t.name, value: t.total }));
 
   // Comparativo mes actual vs anterior
@@ -99,9 +102,20 @@ export default function Dashboard() {
       {data.ventas_ultimos_dias && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base font-bold text-slate-700 dark:text-slate-200">📈 Ventas de los últimos 14 días</h2>
-              <span className="text-[11px] text-slate-400">Tocá un día para ver sus ventas</span>
+            <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+              <h2 className="text-base font-bold text-slate-700 dark:text-slate-200">📈 Ventas de los últimos {rango} días</h2>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-slate-400 hidden sm:inline">Tocá un día para ver sus ventas</span>
+                <div className="flex rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden text-xs">
+                  {[7, 14, 30].map((n) => (
+                    <button key={n} onClick={() => setRango(n)}
+                            className={"px-2.5 py-1 font-medium transition " +
+                              (rango === n ? "bg-indigo-600 text-white" : "bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700")}>
+                      {n} días
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
             <BarChart data={dias} onBarClick={(d) => navigate(`/ventas?from=${d.label}&to=${d.label}`)} />
           </div>
