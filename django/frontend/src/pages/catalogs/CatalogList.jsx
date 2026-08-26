@@ -3,6 +3,7 @@ import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { dialog } from "../../components/Dialog";
 import { toast } from "../../components/Toast";
+import Pagination from "../../components/Pagination";
 
 const CONFIG = {
   categories: { title: "Categorías", endpoint: "/inventory/categories/", hasDescription: true },
@@ -15,15 +16,23 @@ export default function CatalogList({ kind }) {
   const { can } = useAuth();
   const cfg = CONFIG[kind];
   const [items, setItems] = useState([]);
+  const [count, setCount] = useState(0);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 15;
   const [editing, setEditing] = useState(null); // objeto o {} para nuevo
   const [search, setSearch] = useState("");
 
-  const load = () => {
-    const params = { page_size: 200 };
+  const load = (p = page) => {
+    const params = { page: p };
     if (search) params.search = search;
-    api.get(cfg.endpoint, { params }).then((r) => setItems(r.data.results || r.data));
+    api.get(cfg.endpoint, { params }).then((r) => {
+      setItems(r.data.results || r.data);
+      setCount(r.data.count ?? (r.data.results ? r.data.results.length : r.data.length));
+    });
   };
-  useEffect(load, [kind]);
+  const goPage = (p) => { setPage(p); load(p); };
+  // Al cambiar de catálogo (kind) se vuelve a la página 1.
+  useEffect(() => { setPage(1); load(1); }, [kind]);
 
   const save = async (e) => {
     e.preventDefault();
@@ -56,7 +65,7 @@ export default function CatalogList({ kind }) {
       </div>
 
       {!cfg.isUnit && (
-        <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex gap-2">
+        <form onSubmit={(e) => { e.preventDefault(); setPage(1); load(1); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex gap-2">
           <input placeholder="Buscar…" value={search} onChange={(e) => setSearch(e.target.value)}
                  className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
           <button className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition">Buscar</button>
@@ -95,6 +104,8 @@ export default function CatalogList({ kind }) {
         </table>
         </div>
       </div>
+
+      <Pagination page={page} count={count} pageSize={PAGE_SIZE} onPage={goPage} label="registros" />
 
       {editing && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4" onClick={() => setEditing(null)}>

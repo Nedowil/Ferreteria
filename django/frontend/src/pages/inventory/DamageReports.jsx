@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
 import { dialog } from "../../components/Dialog";
+import Pagination from "../../components/Pagination";
 
 const STATUS = {
   pendiente: { t: "Pendiente", c: "bg-amber-100 text-amber-700" },
@@ -13,14 +14,22 @@ const STATUS = {
 export default function DamageReports() {
   const [filter, setFilter] = useState("pendiente");
   const [rows, setRows] = useState([]);
+  const [count, setCount] = useState(0);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 15;
   const [busy, setBusy] = useState(null);
 
-  const load = () => {
-    const params = { ordering: "-created_at" };
+  const load = (p = page) => {
+    const params = { ordering: "-created_at", page: p };
     if (filter) params.status = filter;
-    api.get("/inventory/damage-reports/", { params }).then((r) => setRows(r.data.results || r.data)).catch(() => {});
+    api.get("/inventory/damage-reports/", { params }).then((r) => {
+      setRows(r.data.results || r.data);
+      setCount(r.data.count ?? (r.data.results ? r.data.results.length : r.data.length));
+    }).catch(() => {});
   };
-  useEffect(load, [filter]);
+  const goPage = (p) => { setPage(p); load(p); };
+  // Al cambiar de pestaña (estado) se vuelve a la página 1.
+  useEffect(() => { setPage(1); load(1); }, [filter]);
 
   const approve = async (r) => {
     const ok = await dialog.confirm(`¿Aprobar la merma de ${Number(r.quantity)} × "${r.product_name}"? Se descontará del stock.`);
@@ -94,6 +103,8 @@ export default function DamageReports() {
         </table>
         </div>
       </div>
+
+      <Pagination page={page} count={count} pageSize={PAGE_SIZE} onPage={goPage} label="reportes" />
     </div>
   );
 }

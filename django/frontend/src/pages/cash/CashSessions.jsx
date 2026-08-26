@@ -1,11 +1,15 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
+import Pagination from "../../components/Pagination";
 
 export default function CashSessions() {
   const [data, setData] = useState({ results: [] });
+  const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState(false);
-  useEffect(() => { api.get("/cashbox/cash-sessions/").then((r) => setData(r.data)); }, []);
+  const load = (p = page) => api.get("/cashbox/cash-sessions/", { params: { page: p } }).then((r) => setData(r.data));
+  const goPage = (p) => { setPage(p); load(p); };
+  useEffect(() => { load(1); }, []);
 
   const exportExcel = async () => {
     setExporting(true);
@@ -65,6 +69,7 @@ export default function CashSessions() {
         </table>
         </div>
       </div>
+      <Pagination page={page} count={data.count} onPage={goPage} label="cajas" />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { Fragment, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import api from "../../api/client";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
+import Pagination from "../../components/Pagination";
 
 const EVENT_BADGE = {
   created: "bg-green-100 text-green-700",
@@ -47,6 +48,7 @@ export default function AuditLog() {
   });
   const [expanded, setExpanded] = useState(null);
   const [exporting, setExporting] = useState("");
+  const [page, setPage] = useState(1);
 
   const activeParams = () => {
     const params = {};
@@ -54,11 +56,12 @@ export default function AuditLog() {
     return params;
   };
 
-  const load = () => {
-    api.get("/audit-logs/", { params: activeParams() }).then((r) => setData(r.data));
+  const load = (p = page) => {
+    api.get("/audit-logs/", { params: { ...activeParams(), page: p } }).then((r) => setData(r.data));
   };
+  const goPage = (p) => { setPage(p); load(p); };
   useEffect(() => {
-    load();
+    load(1);
     api.get("/audit-logs/summary/").then((r) => setSummary(r.data));
   }, []);
 
@@ -128,7 +131,7 @@ export default function AuditLog() {
           ))}
         </div>
       )}
-      <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex flex-wrap gap-2 items-end">
+      <form onSubmit={(e) => { e.preventDefault(); setPage(1); load(1); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex flex-wrap gap-2 items-end">
         <select value={filters.event} onChange={(e) => setFilters({ ...filters, event: e.target.value })} className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
           <option value="">Todos los eventos</option><option value="created">Creado</option><option value="updated">Actualizado</option><option value="deleted">Eliminado</option>
         </select>
@@ -174,6 +177,7 @@ export default function AuditLog() {
         </table>
         </div>
       </div>
+      <Pagination page={page} count={data.count} onPage={goPage} label="registros" />
     </div>
   );
 }

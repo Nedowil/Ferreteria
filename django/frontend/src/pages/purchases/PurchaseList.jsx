@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
+import Pagination from "../../components/Pagination";
 
 const STATUS_BADGE = {
   pendiente: "bg-amber-100 text-amber-700",
@@ -17,6 +18,7 @@ export default function PurchaseList() {
   const [search, setSearch] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState(false);
 
   const buildParams = () => {
@@ -42,15 +44,16 @@ export default function PurchaseList() {
     } finally { setExporting(false); }
   };
 
-  const load = () => {
-    api.get("/purchases/", { params: buildParams() }).then((r) => setData(r.data));
+  const load = (p = page) => {
+    api.get("/purchases/", { params: { ...buildParams(), page: p } }).then((r) => setData(r.data));
   };
-  useEffect(load, []);
+  const goPage = (p) => { setPage(p); load(p); };
+  useEffect(() => { load(1); }, []);
   // Al vaciar la búsqueda, se recargan todos los registros automáticamente.
   const _firstLoad = useRef(true);
   useEffect(() => {
     if (_firstLoad.current) { _firstLoad.current = false; return; }
-    if (search === "") load();
+    if (search === "") { setPage(1); load(1); }
   }, [search]);
 
   return (
@@ -62,7 +65,7 @@ export default function PurchaseList() {
           {can("compras.crear") && <Link to="/compras/nueva" className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nueva compra</Link>}
         </div>
       </div>
-      <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex flex-wrap gap-2 items-end">
+      <form onSubmit={(e) => { e.preventDefault(); setPage(1); load(1); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex flex-wrap gap-2 items-end">
         <input placeholder="Folio, factura, proveedor…" value={search} onChange={(e) => setSearch(e.target.value)}
                className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-64" />
         <select value={status} onChange={(e) => setStatus(e.target.value)} className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
@@ -101,6 +104,8 @@ export default function PurchaseList() {
         </table>
         </div>
       </div>
+
+      <Pagination page={page} count={data.count} onPage={goPage} label="compras" />
     </div>
   );
 }

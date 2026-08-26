@@ -4,12 +4,16 @@ import { useAuth } from "../../auth/AuthContext";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 import { dialog } from "../../components/Dialog";
 import { toast } from "../../components/Toast";
+import Pagination from "../../components/Pagination";
 
 const BLANK = { name: "", tax_id: "", contact_name: "", email: "", phone: "", address: "", notes: "", active: true };
 
 export default function SupplierList() {
   const { can } = useAuth();
   const [items, setItems] = useState([]);
+  const [count, setCount] = useState(0);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 15;
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState(null);
   const [satBusy, setSatBusy] = useState(false);
@@ -33,17 +37,21 @@ export default function SupplierList() {
     } finally { setExporting(false); }
   };
 
-  const load = () => {
-    const params = { page_size: 200 };
+  const load = (p = page) => {
+    const params = { page: p };
     if (search) params.search = search;
-    api.get("/suppliers/", { params }).then((r) => setItems(r.data.results || r.data));
+    api.get("/suppliers/", { params }).then((r) => {
+      setItems(r.data.results || r.data);
+      setCount(r.data.count ?? (r.data.results ? r.data.results.length : r.data.length));
+    });
   };
-  useEffect(load, []);
-  // Al vaciar la búsqueda, se recargan todos los registros automáticamente.
+  const goPage = (p) => { setPage(p); load(p); };
+  useEffect(() => { load(1); }, []);
+  // Al vaciar la búsqueda, se recargan todos los registros desde la página 1.
   const _firstLoad = useRef(true);
   useEffect(() => {
     if (_firstLoad.current) { _firstLoad.current = false; return; }
-    if (search === "") load();
+    if (search === "") { setPage(1); load(1); }
   }, [search]);
 
   const lookupSat = async () => {
@@ -82,7 +90,7 @@ export default function SupplierList() {
           {can("proveedores.crear") && <button onClick={() => { setSatMsg(""); setEditing(BLANK); }} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nuevo proveedor</button>}
         </div>
       </div>
-      <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex gap-2">
+      <form onSubmit={(e) => { e.preventDefault(); setPage(1); load(1); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex gap-2">
         <input placeholder="Buscar por nombre, NIT, teléfono…" value={search} onChange={(e) => setSearch(e.target.value)}
                className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-72" />
         <button className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition">Buscar</button>
@@ -115,6 +123,8 @@ export default function SupplierList() {
         </table>
         </div>
       </div>
+
+      <Pagination page={page} count={count} pageSize={PAGE_SIZE} onPage={goPage} label="proveedores" />
 
       {editing && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4" onClick={() => setEditing(null)}>

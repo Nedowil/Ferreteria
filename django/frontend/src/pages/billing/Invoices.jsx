@@ -4,6 +4,7 @@ import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { exportToExcel } from "../../utils/exportExcel";
 import { dialog } from "../../components/Dialog";
+import Pagination from "../../components/Pagination";
 
 const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -19,6 +20,9 @@ export default function Invoices() {
   const navigate = useNavigate();
   const [tab, setTab] = useState("emitidas");
   const [invoices, setInvoices] = useState([]);
+  const [invCount, setInvCount] = useState(0);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 15;
   const [pending, setPending] = useState([]);
   const [quota, setQuota] = useState(null);
   const [cfg, setCfg] = useState(null);
@@ -32,19 +36,23 @@ export default function Invoices() {
     return p;
   };
 
-  const loadInvoices = () => api.get("/invoices/", { params: invParams() }).then((r) => setInvoices(r.data.results || r.data));
+  const loadInvoices = (p = page) => api.get("/invoices/", { params: { ...invParams(), page: p } }).then((r) => {
+    setInvoices(r.data.results || r.data);
+    setInvCount(r.data.count ?? (r.data.results ? r.data.results.length : r.data.length));
+  });
+  const goPage = (p) => { setPage(p); loadInvoices(p); };
   const load = () => {
-    loadInvoices();
+    loadInvoices(1);
     api.get("/invoices/pending/").then((r) => setPending(r.data));
     api.get("/invoices/quota/").then((r) => setQuota(r.data));
     api.get("/fel/config/").then((r) => setCfg(r.data));
   };
   useEffect(load, []);
-  // Al vaciar la búsqueda, se recargan todas las facturas automáticamente.
+  // Al vaciar la búsqueda, se recargan todas las facturas desde la página 1.
   const _firstLoad = useRef(true);
   useEffect(() => {
     if (_firstLoad.current) { _firstLoad.current = false; return; }
-    if (filters.search === "") loadInvoices();
+    if (filters.search === "") { setPage(1); loadInvoices(1); }
   }, [filters.search]);
 
   // Exporta con las mismas columnas del listado de DTE que descarga el
@@ -163,7 +171,7 @@ export default function Invoices() {
       </div>
 
       {tab === "emitidas" && (
-        <form onSubmit={(e) => { e.preventDefault(); loadInvoices(); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-3 mb-4 flex flex-wrap gap-2 items-end">
+        <form onSubmit={(e) => { e.preventDefault(); setPage(1); loadInvoices(1); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-3 mb-4 flex flex-wrap gap-2 items-end">
           <input placeholder="Folio, NIT/UUID o cliente" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })}
                  className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-56" />
           <div><label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">Estado</label>
@@ -253,6 +261,7 @@ export default function Invoices() {
             </tbody>
           </table>
           </div>
+          <div className="p-3"><Pagination page={page} count={invCount} pageSize={PAGE_SIZE} onPage={goPage} label="facturas" /></div>
         </div>
       )}
 

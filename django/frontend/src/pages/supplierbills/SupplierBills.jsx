@@ -3,6 +3,7 @@ import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 import { dialog } from "../../components/Dialog";
+import Pagination from "../../components/Pagination";
 
 const METHODS = [
   ["efectivo", "Efectivo"], ["cheque", "Cheque"], ["transferencia", "Transferencia"],
@@ -17,6 +18,9 @@ export default function SupplierBills() {
   const canEdit = can("facturas_prov.gestionar");
   const canFund = can("facturas_prov.fondo"); // abrir/cerrar/agregar al fondo
   const [rows, setRows] = useState([]);
+  const [listCount, setListCount] = useState(0);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 15;
   const [totals, setTotals] = useState({ total: 0, count: 0 });
   const [filters, setFilters] = useState({ search: "", from: "", to: "", method: "" });
   const [form, setForm] = useState(BLANK);
@@ -32,17 +36,21 @@ export default function SupplierBills() {
   };
 
   const loadFund = () => api.get("/supplier-fund/").then((r) => setFund(r.data)).catch(() => setFund(null));
-  const load = () => {
-    api.get("/supplier-bills/", { params: params() }).then((r) => setRows(r.data.results || r.data));
+  const load = (p = page) => {
+    api.get("/supplier-bills/", { params: { ...params(), page: p } }).then((r) => {
+      setRows(r.data.results || r.data);
+      setListCount(r.data.count ?? (r.data.results ? r.data.results.length : r.data.length));
+    });
     api.get("/supplier-bills/total/", { params: params() }).then((r) => setTotals(r.data)).catch(() => {});
     loadFund();
   };
-  useEffect(load, []);
-  // Al vaciar la búsqueda, se recargan todos los registros automáticamente.
+  const goPage = (p) => { setPage(p); load(p); };
+  useEffect(() => { load(1); }, []);
+  // Al vaciar la búsqueda, se recargan todos los registros desde la página 1.
   const _firstLoad = useRef(true);
   useEffect(() => {
     if (_firstLoad.current) { _firstLoad.current = false; return; }
-    if (filters.search === "") load();
+    if (filters.search === "") { setPage(1); load(1); }
   }, [filters.search]);
 
   // --- Fondo de proveedores -------------------------------------------------
@@ -210,7 +218,7 @@ export default function SupplierBills() {
       )}
 
       {/* Filtros */}
-      <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex flex-wrap gap-2 items-end">
+      <form onSubmit={(e) => { e.preventDefault(); setPage(1); load(1); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex flex-wrap gap-2 items-end">
         <input placeholder="Buscar proveedor" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })}
                className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-52" />
         <select value={filters.method} onChange={(e) => setFilters({ ...filters, method: e.target.value })}
@@ -263,6 +271,8 @@ export default function SupplierBills() {
         </table>
         </div>
       </div>
+
+      <Pagination page={page} count={listCount} pageSize={PAGE_SIZE} onPage={goPage} label="facturas" />
     </div>
   );
 }

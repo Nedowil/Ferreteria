@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
+import Pagination from "../../components/Pagination";
 
 const BADGE = {
   vigente: "bg-blue-100 text-blue-700",
@@ -16,6 +17,7 @@ export default function QuotationList() {
   const { can } = useAuth();
   const [data, setData] = useState({ results: [] });
   const [filters, setFilters] = useState({ search: "", status: "", from: "", to: "" });
+  const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState(false);
 
   const buildParams = () => {
@@ -24,15 +26,16 @@ export default function QuotationList() {
     return params;
   };
 
-  const load = () => {
-    api.get("/quotations/", { params: buildParams() }).then((r) => setData(r.data));
+  const load = (p = page) => {
+    api.get("/quotations/", { params: { ...buildParams(), page: p } }).then((r) => setData(r.data));
   };
-  useEffect(load, []);
+  const goPage = (p) => { setPage(p); load(p); };
+  useEffect(() => { load(1); }, []);
   // Al vaciar la búsqueda, se recargan todos los registros automáticamente.
   const _firstLoad = useRef(true);
   useEffect(() => {
     if (_firstLoad.current) { _firstLoad.current = false; return; }
-    if (filters.search === "") load();
+    if (filters.search === "") { setPage(1); load(1); }
   }, [filters.search]);
 
   const exportExcel = async () => {
@@ -62,7 +65,7 @@ export default function QuotationList() {
           {can("cotizaciones.crear") && <Link to="/cotizaciones/nueva" className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nueva cotización</Link>}
         </div>
       </div>
-      <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex flex-wrap gap-2 items-end">
+      <form onSubmit={(e) => { e.preventDefault(); setPage(1); load(1); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex flex-wrap gap-2 items-end">
         <input placeholder="Folio o cliente" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })}
                className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-56" />
         <select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}
@@ -124,6 +127,8 @@ export default function QuotationList() {
         </table>
         </div>
       </div>
+
+      <Pagination page={page} count={data.count} onPage={goPage} label="cotizaciones" />
     </div>
   );
 }

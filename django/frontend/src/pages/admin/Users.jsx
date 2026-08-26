@@ -4,31 +4,39 @@ import { useAuth } from "../../auth/AuthContext";
 import PasswordInput from "../../components/PasswordInput";
 import { dialog } from "../../components/Dialog";
 import { toast } from "../../components/Toast";
+import Pagination from "../../components/Pagination";
 
 export default function Users() {
   const { can } = useAuth();
   const [users, setUsers] = useState([]);
+  const [count, setCount] = useState(0);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 15;
   const [roles, setRoles] = useState([]);
   const [branches, setBranches] = useState([]);
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState(null);
   const [error, setError] = useState("");
 
-  const load = () => {
-    const params = {};
+  const load = (p = page) => {
+    const params = { page: p };
     if (search) params.search = search;
-    api.get("/users/", { params }).then((r) => setUsers(r.data.results || r.data));
+    api.get("/users/", { params }).then((r) => {
+      setUsers(r.data.results || r.data);
+      setCount(r.data.count ?? (r.data.results ? r.data.results.length : r.data.length));
+    });
   };
+  const goPage = (p) => { setPage(p); load(p); };
   useEffect(() => {
-    load();
+    load(1);
     api.get("/roles/").then((r) => setRoles(r.data.results || r.data));
     api.get("/branches/").then((r) => setBranches(r.data.results || r.data));
   }, []);
-  // Al vaciar la búsqueda, se recargan todos los usuarios automáticamente.
+  // Al vaciar la búsqueda, se recargan todos los usuarios desde la página 1.
   const _firstLoad = useRef(true);
   useEffect(() => {
     if (_firstLoad.current) { _firstLoad.current = false; return; }
-    if (search === "") load();
+    if (search === "") { setPage(1); load(1); }
   }, [search]);
 
   const blank = { name: "", username: "", email: "", password: "", pin: "", role: "vendedor", is_active: true, is_device: false, branch_ids: [], default_branch: null };
@@ -76,7 +84,7 @@ export default function Users() {
         <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">👤 Usuarios</h1>
         {can("usuarios.crear") && <button onClick={() => setEditing(blank)} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nuevo usuario</button>}
       </div>
-      <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex gap-2">
+      <form onSubmit={(e) => { e.preventDefault(); setPage(1); load(1); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex gap-2">
         <input placeholder="Buscar por nombre o correo" value={search} onChange={(e) => setSearch(e.target.value)}
                className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-64" />
         <button className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition">Buscar</button>
@@ -136,6 +144,8 @@ export default function Users() {
         </table>
         </div>
       </div>
+
+      <Pagination page={page} count={count} pageSize={PAGE_SIZE} onPage={goPage} label="usuarios" />
 
       {editing && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4" onClick={() => setEditing(null)}>

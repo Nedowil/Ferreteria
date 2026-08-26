@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../../api/client";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
+import Pagination from "../../components/Pagination";
 
 export default function Payable() {
   const [data, setData] = useState({ results: [], total_balance: 0 });
   const [filters, setFilters] = useState({ from: "", to: "" });
+  const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState(false);
 
   const buildParams = () => {
@@ -13,8 +15,9 @@ export default function Payable() {
     Object.entries(filters).forEach(([k, v]) => { if (v) params[k] = v; });
     return params;
   };
-  const load = () => api.get("/purchases/payable/", { params: buildParams() }).then((r) => setData(r.data));
-  useEffect(() => { load(); }, []);
+  const load = (p = page) => api.get("/purchases/payable/", { params: { ...buildParams(), page: p } }).then((r) => setData(r.data));
+  const goPage = (p) => { setPage(p); load(p); };
+  useEffect(() => { load(1); }, []);
 
   // El total viene calculado en el backend sobre TODAS las cuentas (no solo la página)
   const totalDebt = Number(data.total_balance || 0);
@@ -44,13 +47,13 @@ export default function Payable() {
           <button onClick={exportExcel} disabled={exporting} className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-100 transition">{exporting ? "Exportando…" : "⬇️ Excel"}</button>
         </div>
       </div>
-      <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex flex-wrap gap-2 items-end">
+      <form onSubmit={(e) => { e.preventDefault(); setPage(1); load(1); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex flex-wrap gap-2 items-end">
         <div><label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">Desde</label>
           <input type="date" value={filters.from} onChange={(e) => setFilters({ ...filters, from: e.target.value })} className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" /></div>
         <div><label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">Hasta</label>
           <input type="date" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" /></div>
         <button className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition">Buscar</button>
-        {(filters.from || filters.to) && <button type="button" onClick={() => { setFilters({ from: "", to: "" }); api.get("/purchases/payable/").then((r) => setData(r.data)); }} className="text-sm text-slate-500 dark:text-slate-400 px-2 py-2 hover:underline">Limpiar</button>}
+        {(filters.from || filters.to) && <button type="button" onClick={() => { setFilters({ from: "", to: "" }); setPage(1); api.get("/purchases/payable/", { params: { page: 1 } }).then((r) => setData(r.data)); }} className="text-sm text-slate-500 dark:text-slate-400 px-2 py-2 hover:underline">Limpiar</button>}
       </form>
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-5 mb-4 inline-block">
         <div className="text-sm text-slate-500 dark:text-slate-400">Saldo total pendiente</div>
@@ -80,6 +83,7 @@ export default function Payable() {
         </table>
         </div>
       </div>
+      <Pagination page={page} count={data.count} onPage={goPage} label="cuentas" />
     </div>
   );
 }

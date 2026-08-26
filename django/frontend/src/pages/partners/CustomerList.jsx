@@ -5,6 +5,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 import { dialog } from "../../components/Dialog";
 import { toast } from "../../components/Toast";
+import Pagination from "../../components/Pagination";
 
 const BLANK = { name: "", tax_id: "", email: "", phone: "", address: "", notes: "",
   active: true, customer_type: "retail", wholesale_discount_percent: "", credit_limit: "", credit_enabled: false };
@@ -16,6 +17,9 @@ const TYPES = [["retail", "Público"], ["wholesale", "Mayorista"]];
 export default function CustomerList() {
   const { can } = useAuth();
   const [items, setItems] = useState([]);
+  const [count, setCount] = useState(0);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 15;
   const [search, setSearch] = useState("");
   const [type, setType] = useState("");
   const [editing, setEditing] = useState(null);
@@ -54,18 +58,22 @@ export default function CustomerList() {
     } finally { setSatBusy(false); }
   };
 
-  const load = () => {
-    const params = { page_size: 200 };
+  const load = (p = page) => {
+    const params = { page: p };
     if (search) params.search = search;
     if (type) params.customer_type = type;
-    api.get("/customers/", { params }).then((r) => setItems(r.data.results || r.data));
+    api.get("/customers/", { params }).then((r) => {
+      setItems(r.data.results || r.data);
+      setCount(r.data.count ?? (r.data.results ? r.data.results.length : r.data.length));
+    });
   };
-  useEffect(load, []);
-  // Al vaciar la búsqueda, se recargan todos los registros automáticamente.
+  const goPage = (p) => { setPage(p); load(p); };
+  useEffect(() => { load(1); }, []);
+  // Al vaciar la búsqueda, se recargan todos los registros desde la página 1.
   const _firstLoad = useRef(true);
   useEffect(() => {
     if (_firstLoad.current) { _firstLoad.current = false; return; }
-    if (search === "") load();
+    if (search === "") { setPage(1); load(1); }
   }, [search]);
 
   const save = async (e) => {
@@ -94,10 +102,10 @@ export default function CustomerList() {
           {can("clientes.crear") && <button onClick={() => { setSatMsg(""); setEditing(BLANK); }} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nuevo cliente</button>}
         </div>
       </div>
-      <form onSubmit={(e) => { e.preventDefault(); load(); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex gap-2 items-end">
+      <form onSubmit={(e) => { e.preventDefault(); setPage(1); load(1); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex gap-2 items-end">
         <input placeholder="Buscar por nombre, NIT…" value={search} onChange={(e) => setSearch(e.target.value)}
                className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-64" />
-        <select value={type} onChange={(e) => setType(e.target.value)} className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+        <select value={type} onChange={(e) => { setType(e.target.value); setPage(1); }} className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
           <option value="">Todos los tipos</option>
           {TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </select>
@@ -157,6 +165,8 @@ export default function CustomerList() {
         </table>
         </div>
       </div>
+
+      <Pagination page={page} count={count} pageSize={PAGE_SIZE} onPage={goPage} label="clientes" />
 
       {editing && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4" onClick={() => setEditing(null)}>
