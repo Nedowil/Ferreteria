@@ -59,8 +59,14 @@ export default function ReturnCreate() {
   const [items, setItems] = useState([]);
 
   const loadSale = async (id) => {
-    const { data } = await api.get(`/sales/${id}/`);
-    setSale(data); setQtys({}); setRemoved([]); setError("");
+    // Se carga por el endpoint de DEVOLUCIONES (no /sales/), así el vendedor no
+    // necesita el permiso 'ventas.ver' para poder devolver.
+    try {
+      const { data } = await api.get("/returns/sale/", { params: { id } });
+      setSale(data); setQtys({}); setRemoved([]); setError("");
+    } catch (e) {
+      setError(e.response?.data?.detail || "No se pudo cargar la venta.");
+    }
   };
 
   const removeSaleItem = (itemId) => {
@@ -84,10 +90,12 @@ export default function ReturnCreate() {
 
   const findByFolio = async (e) => {
     e.preventDefault(); setError(""); setSale(null);
-    const { data } = await api.get("/sales/", { params: { search: folio } });
-    const found = (data.results || [])[0];
-    if (!found) { setError("No se encontró una venta con ese folio."); return; }
-    loadSale(found.id);
+    try {
+      const { data } = await api.get("/returns/sale/", { params: { folio } });
+      setSale(data); setQtys({}); setRemoved([]);
+    } catch (err) {
+      setError(err.response?.data?.detail || "No se encontró una venta con ese folio.");
+    }
   };
 
   const searchProduct = async (q) => {

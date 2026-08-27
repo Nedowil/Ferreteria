@@ -172,3 +172,19 @@ class RefundAuthorizationAPITests(TestCase):
     def test_supervisor_si_puede_devolucion_sin_ticket(self):
         r = self._client("a@test.com").post("/api/returns/without-sale/", self._without_body(), format="json")
         self.assertEqual(r.status_code, 201, r.content)
+
+    def test_cargar_venta_para_devolucion_sin_permiso_ventas_ver(self):
+        # Un vendedor cuyo rol NO tiene 'ventas.ver' igual debe poder cargar la
+        # venta para devolverla (por el endpoint de devoluciones), aunque
+        # /sales/{id}/ le dé 403.
+        from django.contrib.auth.models import Group
+        vg = Group.objects.get(name="vendedor")
+        vg.permissions.remove(next(p for p in vg.permissions.all() if p.codename == "ventas.ver"))
+        c = self._client("s@test.com")
+        self.assertEqual(c.get(f"/api/sales/{self.sale.id}/").status_code, 403)
+        r = c.get("/api/returns/sale/", {"id": self.sale.id})
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertEqual(r.json()["folio"], self.sale.folio)
+        # También por folio (modo "Por ticket").
+        r2 = c.get("/api/returns/sale/", {"folio": self.sale.folio})
+        self.assertEqual(r2.status_code, 200, r2.content)

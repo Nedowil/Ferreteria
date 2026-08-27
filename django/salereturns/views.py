@@ -23,6 +23,7 @@ class SaleReturnViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Mo
     perms_map = {
         "list": "devoluciones.ver", "retrieve": "devoluciones.ver",
         "search_by_product": ("devoluciones.ver", "devoluciones.crear"),
+        "sale_for_return": ("devoluciones.ver", "devoluciones.crear"),
         # "Sin ticket" (sin venta que la respalde) queda solo para admin/supervisor.
         "create": "devoluciones.crear", "without_sale": "devoluciones.sin_ticket",
         "cancel": "devoluciones.cancelar", "destroy": "devoluciones.cancelar",
@@ -108,6 +109,26 @@ class SaleReturnViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Mo
         except services.ReturnError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(SaleReturnDetailSerializer(self.get_object()).data)
+
+    @action(detail=False, methods=["get"], url_path="sale")
+    def sale_for_return(self, request):
+        """Devuelve una venta (por folio o id) para armar la devolución. Está
+        protegida con los permisos de DEVOLUCIONES, así el que puede devolver no
+        necesita además 'ventas.ver' para cargar la venta."""
+        from sales.models import Sale
+        from sales.serializers import SaleDetailSerializer
+        folio = (request.query_params.get("folio") or "").strip()
+        sid = request.query_params.get("id")
+        qs = Sale.objects.select_related("customer").prefetch_related("items__product")
+        sale = None
+        if sid:
+            sale = qs.filter(pk=sid).first()
+        elif folio:
+            sale = (qs.filter(folio__iexact=folio).first()
+                    or qs.filter(folio__icontains=folio).order_by("-created_at", "-id").first())
+        if not sale:
+            return Response({"detail": "No se encontró la venta."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(SaleDetailSerializer(sale).data)
 
     @action(detail=False, methods=["get"], url_path="search-by-product")
     def search_by_product(self, request):
