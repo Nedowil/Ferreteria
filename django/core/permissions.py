@@ -51,6 +51,10 @@ PERMISSIONS = [
     ("cuentas_cobrar.ver", "Ver cuentas por cobrar", "Ventas"),
     ("devoluciones.ver", "Ver devoluciones", "Ventas"),
     ("devoluciones.crear", "Crear devoluciones", "Ventas"),
+    # Anti-fraude: la devolución SIN TICKET (sin venta que la respalde) queda
+    # reservada al supervisor/admin. El vendedor solo devuelve por ticket o por
+    # producto (ligadas a una venta real).
+    ("devoluciones.sin_ticket", "Devolución sin ticket (sin venta)", "Ventas"),
     # Anti-fraude: pagar efectivo por una devolución (o devolución sin ticket)
     # requiere este permiso, reservado al supervisor/admin.
     ("devoluciones.reembolsar", "Reembolsar efectivo en devoluciones", "Ventas"),

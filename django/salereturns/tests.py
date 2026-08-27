@@ -141,3 +141,16 @@ class RefundAuthorizationAPITests(TestCase):
     def test_supervisor_si_puede_reembolsar_efectivo(self):
         r = self._client("a@test.com").post("/api/returns/", self._body("efectivo"), format="json")
         self.assertEqual(r.status_code, 201)
+
+    def _without_body(self, method="tarjeta"):
+        return {"refund_method": method, "reason": "prueba",
+                "items": [{"product_id": self.prod.id, "quantity": "1", "unit_price": "120"}]}
+
+    def test_cajero_no_puede_devolucion_sin_ticket(self):
+        # El vendedor NO tiene 'devoluciones.sin_ticket'.
+        r = self._client("s@test.com").post("/api/returns/without-sale/", self._without_body(), format="json")
+        self.assertEqual(r.status_code, 403)
+
+    def test_supervisor_si_puede_devolucion_sin_ticket(self):
+        r = self._client("a@test.com").post("/api/returns/without-sale/", self._without_body(), format="json")
+        self.assertEqual(r.status_code, 201, r.content)

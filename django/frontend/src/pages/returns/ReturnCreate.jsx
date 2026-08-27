@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/client";
+import { useAuth } from "../../auth/AuthContext";
 
 const MODES = [
   ["ticket", "Por ticket (folio)"],
@@ -10,6 +11,10 @@ const MODES = [
 
 export default function ReturnCreate() {
   const navigate = useNavigate();
+  const { can } = useAuth();
+  // "Sin ticket" solo para quien tenga el permiso (admin/supervisor). El
+  // vendedor solo ve "Por ticket" y "Por producto".
+  const modes = MODES.filter(([v]) => v !== "sin_ticket" || can("devoluciones.sin_ticket"));
   const [mode, setMode] = useState("ticket");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -153,7 +158,7 @@ export default function ReturnCreate() {
       {error && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm mb-4">{error}</div>}
 
       <div className="flex gap-2 mb-4">
-        {MODES.map(([v, l]) => (
+        {modes.map(([v, l]) => (
           <button key={v} onClick={() => { setMode(v); setSale(null); setError(""); }}
                   className={"px-4 py-2 rounded text-sm font-medium " + (mode === v ? "bg-slate-800 text-white" : "bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600")}>{l}</button>
         ))}

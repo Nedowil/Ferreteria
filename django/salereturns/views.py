@@ -23,7 +23,8 @@ class SaleReturnViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Mo
     perms_map = {
         "list": "devoluciones.ver", "retrieve": "devoluciones.ver",
         "search_by_product": ("devoluciones.ver", "devoluciones.crear"),
-        "create": "devoluciones.crear", "without_sale": "devoluciones.crear",
+        # "Sin ticket" (sin venta que la respalde) queda solo para admin/supervisor.
+        "create": "devoluciones.crear", "without_sale": "devoluciones.sin_ticket",
         "cancel": "devoluciones.cancelar", "destroy": "devoluciones.cancelar",
         "update": "devoluciones.cancelar", "partial_update": "devoluciones.cancelar",
     }
