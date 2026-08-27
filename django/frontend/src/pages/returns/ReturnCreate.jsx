@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 
+const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
 const MODES = [
   ["ticket", "Por ticket (folio)"],
   ["producto", "Por producto"],
@@ -93,6 +95,13 @@ export default function ReturnCreate() {
   const updItem = (idx, f, v) => setItems(items.map((it, i) => i === idx ? { ...it, [f]: v } : it));
   const removeItem = (idx) => setItems(items.filter((_, i) => i !== idx));
 
+  // Total a devolver: suma de (cantidad a devolver × precio) de cada producto.
+  const priceOf = (it) => Number(it.effective_unit_price ?? it.unit_price) || 0;
+  const total = mode === "sin_ticket"
+    ? items.reduce((a, i) => a + Number(i.quantity || 0) * Number(i.unit_price || 0), 0)
+    : (sale ? sale.items.filter((it) => !removed.includes(it.id))
+        .reduce((a, it) => a + Number(qtys[it.id] || 0) * priceOf(it), 0) : 0);
+
   const submit = async () => {
     setError(""); setBusy(true);
     try {
@@ -147,6 +156,13 @@ export default function ReturnCreate() {
             <tr><td colSpan="5" className="px-4 py-4 text-center text-slate-400">Quitaste todos los productos.</td></tr>
           )}
         </tbody>
+        <tfoot>
+          <tr className="border-t bg-slate-50 dark:bg-slate-900/40">
+            <td colSpan="3" className="px-4 py-2.5 text-right font-semibold text-slate-600 dark:text-slate-300">Total a devolver</td>
+            <td className="px-4 py-2.5 text-right font-bold text-lg text-slate-800 dark:text-slate-100">{Q(total)}</td>
+            <td></td>
+          </tr>
+        </tfoot>
       </table>
       </div>
     </div>
@@ -221,6 +237,15 @@ export default function ReturnCreate() {
               ))}
               {items.length === 0 && <tr><td colSpan="4" className="py-4 text-center text-slate-400">Agrega productos a reintegrar.</td></tr>}
             </tbody>
+            {items.length > 0 && (
+              <tfoot>
+                <tr className="border-t">
+                  <td className="py-2 text-right font-semibold text-slate-600 dark:text-slate-300">Total a devolver</td>
+                  <td colSpan="2" className="py-2 text-right font-bold text-lg text-slate-800 dark:text-slate-100">{Q(total)}</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            )}
           </table>
           </div>
         </div>
@@ -251,12 +276,18 @@ export default function ReturnCreate() {
         </div>
       </section>
 
-      <div className="flex gap-2 mt-4">
+      <div className="flex flex-wrap items-center gap-3 mt-4">
         <button disabled={busy || (mode !== "sin_ticket" && !sale)} onClick={submit}
                 className="bg-green-600 text-white rounded px-6 py-2 font-medium disabled:opacity-50">
           {busy ? "Procesando…" : "Procesar devolución"}
         </button>
         <button onClick={() => navigate("/devoluciones")} className="px-6 py-2 text-slate-500 dark:text-slate-400">Cancelar</button>
+        {(mode === "sin_ticket" ? items.length > 0 : !!sale) && (
+          <div className="ml-auto text-right">
+            <div className="text-xs text-slate-500 dark:text-slate-400">Total a devolver</div>
+            <div className="text-2xl font-extrabold text-green-700 dark:text-green-400">{Q(total)}</div>
+          </div>
+        )}
       </div>
     </div>
   );
