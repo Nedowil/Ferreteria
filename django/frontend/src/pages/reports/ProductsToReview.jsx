@@ -3,12 +3,16 @@ import { Link } from "react-router-dom";
 import api from "../../api/client";
 import { Q, ExcelButton } from "./common";
 import { exportToExcel } from "../../utils/exportExcel";
+import Pagination from "../../components/Pagination";
+
+const PAGE_SIZE = 15;
 
 // Productos cuyo COSTO por unidad es mayor o igual al precio de VENTA. Suelen
 // estar mal cargados (por ejemplo, con el costo inflado). Cada fila enlaza a
 // editar el producto para corregirlo.
 export default function ProductsToReview() {
   const [data, setData] = useState(null);
+  const [page, setPage] = useState(1);
   useEffect(() => { api.get("/reports/products-to-review/").then((r) => setData(r.data)); }, []);
 
   const exportXls = () => exportToExcel("productos-a-revisar", [
@@ -56,7 +60,7 @@ export default function ProductsToReview() {
               </tr>
             </thead>
             <tbody>
-              {data.rows.map((r) => (
+              {data.rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((r) => (
                 <tr key={r.id} className="border-t border-slate-100 dark:border-slate-700">
                   <td className="px-4 py-2 font-mono text-xs text-slate-500 dark:text-slate-400">{r.sku}</td>
                   <td className="px-4 py-2">
@@ -85,6 +89,7 @@ export default function ProductsToReview() {
             </tbody>
           </table>
         </div>
+        <div className="p-3"><Pagination page={page} count={data.rows.length} pageSize={PAGE_SIZE} onPage={setPage} label="productos" /></div>
       </div>
     </div>
   );

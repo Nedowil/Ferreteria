@@ -1,6 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Q, useDateReport, DateRangeBar, ExcelButton } from "./common";
 import { exportToExcel } from "../../utils/exportExcel";
+import Pagination from "../../components/Pagination";
+
+const PAGE_SIZE = 15;
 
 // Reportes de ranking simples (tabla con rango de fechas).
 // `filter` (opcional) = { key, label }: agrega un selector para ver una sola
@@ -9,10 +12,14 @@ function RankingTable({ title, path, columns, filter }) {
   const { from, setFrom, to, setTo, data, reload } = useDateReport(path);
   const [filterVal, setFilterVal] = useState("");
 
+  const [page, setPage] = useState(1);
   const allRows = data?.rows || [];
   const options = filter ? [...new Set(allRows.map((r) => r[filter.key]).filter(Boolean))] : [];
   const active = filter && filterVal && options.includes(filterVal);
   const rows = active ? allRows.filter((r) => r[filter.key] === filterVal) : allRows;
+  // Al cambiar el rango (nuevos datos) o el filtro, se vuelve a la página 1.
+  useEffect(() => { setPage(1); }, [data, filterVal]);
+  const pageRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const exportXls = () => exportToExcel(
     title.toLowerCase().replace(/\s+/g, "-"),
@@ -45,7 +52,7 @@ function RankingTable({ title, path, columns, filter }) {
               <tr>{columns.map((c) => <th key={c.key} className={"px-4 py-2 " + (c.right ? "text-right" : "")}>{c.label}</th>)}</tr>
             </thead>
             <tbody>
-              {rows.map((r, i) => (
+              {pageRows.map((r, i) => (
                 <tr key={i} className="border-t">
                   {columns.map((c) => <td key={c.key} className={"px-4 py-2 " + (c.right ? "text-right" : "")}>{c.render ? c.render(r) : r[c.key]}</td>)}
                 </tr>
@@ -54,6 +61,7 @@ function RankingTable({ title, path, columns, filter }) {
             </tbody>
           </table>
           </div>
+          <div className="p-3"><Pagination page={page} count={rows.length} pageSize={PAGE_SIZE} onPage={setPage} label="filas" /></div>
         </div>
       )}
     </div>

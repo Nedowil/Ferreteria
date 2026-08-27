@@ -1,9 +1,16 @@
+import { useEffect, useState } from "react";
 import { Q, useDateReport, DateRangeBar, KpiCard, ExcelButton } from "./common";
 import { exportToExcel } from "../../utils/exportExcel";
 import { BarChart } from "../../components/Charts";
+import Pagination from "../../components/Pagination";
+
+const PAGE_SIZE = 15;
 
 export default function ProfitReport() {
   const { from, setFrom, to, setTo, data, reload } = useDateReport("/reports/profit/");
+  const [page, setPage] = useState(1);
+  useEffect(() => { setPage(1); }, [data]); // vuelve a página 1 al cambiar el rango
+  const pageRows = (data?.rows || []).slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const exportXls = () => exportToExcel("utilidad-bruta", [
     { header: "SKU", value: (r) => r.product__sku },
     { header: "Producto", value: (r) => r.product__name },
@@ -43,7 +50,7 @@ export default function ProfitReport() {
                     <th className="px-4 py-2 text-right">Ingreso</th><th className="px-4 py-2 text-right">Costo</th><th className="px-4 py-2 text-right">Utilidad</th><th className="px-4 py-2 text-right">Margen</th></tr>
               </thead>
               <tbody>
-                {data.rows.map((r) => {
+                {pageRows.map((r) => {
                   const margin = r.total_revenue > 0 ? (r.gross_profit / r.total_revenue) * 100 : 0;
                   return (
                     <tr key={r.product__id} className="border-t">
@@ -61,6 +68,7 @@ export default function ProfitReport() {
               </tbody>
             </table>
             </div>
+            <div className="p-3"><Pagination page={page} count={data.rows.length} pageSize={PAGE_SIZE} onPage={setPage} label="productos" /></div>
           </div>
         </>
       )}

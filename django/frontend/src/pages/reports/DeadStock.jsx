@@ -2,11 +2,15 @@ import { useEffect, useState } from "react";
 import api from "../../api/client";
 import { Q, ExcelButton } from "./common";
 import { exportToExcel } from "../../utils/exportExcel";
+import Pagination from "../../components/Pagination";
+
+const PAGE_SIZE = 15;
 
 export default function DeadStock() {
   const [days, setDays] = useState(60);
   const [data, setData] = useState(null);
-  const load = () => { api.get("/reports/dead-stock/", { params: { days } }).then((r) => setData(r.data)); };
+  const [page, setPage] = useState(1);
+  const load = () => { api.get("/reports/dead-stock/", { params: { days } }).then((r) => { setData(r.data); setPage(1); }); };
   useEffect(load, []);
   const exportXls = () => exportToExcel("stock-muerto", [
     { header: "SKU", value: (r) => r.sku },
@@ -38,7 +42,7 @@ export default function DeadStock() {
                   <th className="px-4 py-2">Marca</th><th className="px-4 py-2 text-right">Stock</th><th className="px-4 py-2 text-right">Valor a costo</th></tr>
             </thead>
             <tbody>
-              {data.rows.map((r) => (
+              {data.rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((r) => (
                 <tr key={r.id} className="border-t">
                   <td className="px-4 py-2 font-mono text-xs">{r.sku}</td>
                   <td className="px-4 py-2">{r.name}</td>
@@ -52,6 +56,7 @@ export default function DeadStock() {
             </tbody>
           </table>
           </div>
+          <div className="p-3"><Pagination page={page} count={data.rows.length} pageSize={PAGE_SIZE} onPage={setPage} label="productos" /></div>
         </div>
       )}
     </div>

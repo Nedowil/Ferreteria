@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import api from "../../api/client";
 import { KpiCard, ExcelButton, DateRangeBar } from "./common";
 import { exportToExcel } from "../../utils/exportExcel";
+import Pagination from "../../components/Pagination";
+
+const PAGE_SIZE = 15;
 
 const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const dt = (v) => (v ? new Date(v).toLocaleString("es-GT") : "—");
@@ -12,12 +15,13 @@ export default function SupplierPayments() {
   const [d, setD] = useState(null);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const [page, setPage] = useState(1);
 
   const loadReport = () => {
     const params = {};
     if (from) params.from = from;
     if (to) params.to = to;
-    api.get("/supplier-report/", { params }).then((r) => setD(r.data)).catch(() => {});
+    api.get("/supplier-report/", { params }).then((r) => { setD(r.data); setPage(1); }).catch(() => {});
   };
   useEffect(() => { loadReport(); }, []); // eslint-disable-line
   if (!d) return <div className="text-slate-400">Cargando…</div>;
@@ -112,7 +116,7 @@ export default function SupplierPayments() {
             </tr>
           </thead>
           <tbody>
-            {(d.funds || []).map((f) => (
+            {(d.funds || []).slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((f) => (
               <tr key={f.id} className="border-t">
                 <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{dt(f.opened_at)}</td>
                 <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{f.closed_at ? dt(f.closed_at) : "—"}</td>
@@ -130,6 +134,7 @@ export default function SupplierPayments() {
           </tbody>
         </table>
         </div>
+        <div className="p-3"><Pagination page={page} count={(d.funds || []).length} pageSize={PAGE_SIZE} onPage={setPage} label="fondos" /></div>
       </div>
     </div>
   );

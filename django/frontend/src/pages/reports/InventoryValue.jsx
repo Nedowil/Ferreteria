@@ -2,9 +2,13 @@ import { useEffect, useState } from "react";
 import api from "../../api/client";
 import { Q, KpiCard, ExcelButton } from "./common";
 import { exportToExcel } from "../../utils/exportExcel";
+import Pagination from "../../components/Pagination";
+
+const PAGE_SIZE = 15;
 
 export default function InventoryValue() {
   const [data, setData] = useState(null);
+  const [page, setPage] = useState(1);
   useEffect(() => { api.get("/reports/inventory-value/").then((r) => setData(r.data)); }, []);
   const exportXls = () => exportToExcel("valor-inventario", [
     { header: "SKU", value: (r) => r.sku },
@@ -35,7 +39,7 @@ export default function InventoryValue() {
                 <th className="px-4 py-2 text-right">Stock</th><th className="px-4 py-2 text-right">Costo</th><th className="px-4 py-2 text-right">Valor costo</th><th className="px-4 py-2 text-right">Valor venta</th></tr>
           </thead>
           <tbody>
-            {data.rows.map((r) => (
+            {data.rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((r) => (
               <tr key={r.id} className="border-t">
                 <td className="px-4 py-2 font-mono text-xs">{r.sku}</td>
                 <td className="px-4 py-2">{r.name}</td>
@@ -50,6 +54,7 @@ export default function InventoryValue() {
           </tbody>
         </table>
         </div>
+        <div className="p-3"><Pagination page={page} count={data.rows.length} pageSize={PAGE_SIZE} onPage={setPage} label="productos" /></div>
       </div>
     </div>
   );
