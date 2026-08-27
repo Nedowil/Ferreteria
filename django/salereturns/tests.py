@@ -69,6 +69,24 @@ class SaleReturnServiceTests(TestCase):
         self.assertEqual(ret.reason_type, SaleReturn.REASON_SIN_TICKET)
         self.assertEqual(self.prod.stock, Decimal("49.00"))  # 46 + 3
 
+    def test_devolucion_sin_ticket_por_medida_reintegra_por_factor(self):
+        # Producto en cajas: 1 caja = 12 unidades. Devolver 2 cajas reintegra 24.
+        p = Product.objects.create(sku="CAJ-1", name="Clavos", purchase_price=1, sale_price=2,
+                                   stock=Decimal("0"), tax_type="iva",
+                                   base_unit_label="unidad", container_label="caja",
+                                   container_factor=Decimal("12"))
+        ret = create_without_sale(
+            {"refund_method": "tarjeta"},
+            [{"product_id": p.id, "quantity": "2", "unit_price": "24",
+              "units_factor": "12", "unit_label": "caja"}],
+            user=self.user, branch=self.branch,
+        )
+        p.refresh_from_db()
+        self.assertEqual(p.stock, Decimal("24.00"))       # 2 cajas × 12 = 24 unidades
+        item = ret.items.first()
+        self.assertEqual(item.units_factor, Decimal("12.0000"))
+        self.assertEqual(item.unit_label, "caja")
+
     def test_cancelar_devolucion_revierte_stock(self):
         ret = create_return(
             {"sale_id": self.sale.id, "refund_method": "efectivo"},

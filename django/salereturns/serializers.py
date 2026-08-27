@@ -90,6 +90,10 @@ class WithoutSaleItemWriteSerializer(serializers.Serializer):
     product_id = serializers.IntegerField()
     quantity = RoundingDecimalField(max_digits=12, decimal_places=4, min_value=Decimal("0.0001"))
     unit_price = RoundingDecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0"))
+    # Medida en que se devuelve (unidad, caja, par…): cuántas unidades base
+    # equivale cada una. 1 = unidad base. Sirve para reintegrar bien el stock.
+    units_factor = RoundingDecimalField(max_digits=12, decimal_places=4, required=False, default=Decimal("1"), min_value=Decimal("0.0001"))
+    unit_label = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=30)
     tax_type = serializers.ChoiceField(choices=["iva", "exento"], required=False)
 
     def validate_product_id(self, value):

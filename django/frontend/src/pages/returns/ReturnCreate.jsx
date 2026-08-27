@@ -5,6 +5,23 @@ import { useAuth } from "../../auth/AuthContext";
 
 const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+// Medidas en que está registrado un producto (unidad base, empaque/caja y
+// presentaciones). Cada una dice cuántas unidades base equivale (units_factor)
+// y su precio. Igual que en el POS, para que la devolución sin ticket restituya
+// bien el stock según la medida devuelta.
+function measuresFor(p) {
+  const out = [{ key: "base", label: p.base_unit_label || "unidad", units_factor: 1, price: Number(p.sale_price) || 0 }];
+  const cf = Number(p.container_factor || 0);
+  if (p.container_label && cf > 0) {
+    const cp = Number(p.container_price || 0) || Number(p.sale_price) * cf;
+    out.push({ key: "container", label: p.container_label, units_factor: cf, price: cp });
+  }
+  (p.presentations || []).filter((x) => x.active !== false).forEach((x) => {
+    out.push({ key: `pres-${x.id}`, label: x.label, units_factor: Number(x.units_factor), price: Number(x.price) });
+  });
+  return out;
+}
+
 const MODES = [
   ["ticket", "Por ticket (folio)"],
   ["producto", "Por producto"],
@@ -88,11 +105,24 @@ export default function ReturnCreate() {
     setResults(data.results || data);
   };
   const addItem = (p) => {
-    if (!items.find((i) => i.product_id === p.id))
-      setItems([...items, { product_id: p.id, name: p.name, sku: p.sku, quantity: "1", unit_price: p.sale_price }]);
+    if (!items.find((i) => i.product_id === p.id)) {
+      const ms = measuresFor(p);
+      const m0 = ms[0];
+      setItems([...items, {
+        product_id: p.id, name: p.name, sku: p.sku, measures: ms,
+        measureKey: m0.key, units_factor: m0.units_factor, unit_label: m0.label,
+        quantity: "1", unit_price: String(m0.price),
+      }]);
+    }
     setSearch(""); setResults([]);
   };
   const updItem = (idx, f, v) => setItems(items.map((it, i) => i === idx ? { ...it, [f]: v } : it));
+  // Al cambiar la medida, se ajusta el factor, la etiqueta y el precio de esa medida.
+  const setMeasure = (idx, key) => setItems(items.map((it, i) => {
+    if (i !== idx) return it;
+    const m = (it.measures || []).find((x) => x.key === key) || it.measures[0];
+    return { ...it, measureKey: key, units_factor: m.units_factor, unit_label: m.label, unit_price: String(m.price) };
+  }));
   const removeItem = (idx) => setItems(items.filter((_, i) => i !== idx));
 
   // Total a devolver: suma de (cantidad a devolver × precio) de cada producto.
@@ -109,7 +139,10 @@ export default function ReturnCreate() {
         if (items.length === 0) throw { response: { data: { detail: "Agrega productos." } } };
         const { data } = await api.post("/returns/without-sale/", {
           refund_method: refund, reason,
-          items: items.map((i) => ({ product_id: i.product_id, quantity: i.quantity, unit_price: i.unit_price })),
+          items: items.map((i) => ({
+            product_id: i.product_id, quantity: i.quantity, unit_price: i.unit_price,
+            units_factor: i.units_factor, unit_label: i.unit_label,
+          })),
         });
         navigate(`/devoluciones/${data.id}`);
       } else {
@@ -222,11 +255,21 @@ export default function ReturnCreate() {
           </div>
           <div className="overflow-x-auto">
           <table className="w-full text-sm mt-3">
-            <thead className="text-slate-500 dark:text-slate-400 text-left"><tr><th className="py-1">Producto</th><th className="py-1 w-24 text-right">Cant.</th><th className="py-1 w-28 text-right">Precio</th><th className="py-1 w-10"></th></tr></thead>
+            <thead className="text-slate-500 dark:text-slate-400 text-left"><tr><th className="py-1">Producto</th><th className="py-1">Medida</th><th className="py-1 w-24 text-right">Cant.</th><th className="py-1 w-28 text-right">Precio</th><th className="py-1 w-10"></th></tr></thead>
             <tbody>
               {items.map((it, idx) => (
                 <tr key={idx} className="border-t">
                   <td className="py-2"><div className="font-medium">{it.name}</div><div className="text-xs font-mono text-slate-400">{it.sku}</div></td>
+                  <td className="py-2">
+                    {(it.measures || []).length > 1 ? (
+                      <select value={it.measureKey} onChange={(e) => setMeasure(idx, e.target.value)}
+                              className="border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm">
+                        {it.measures.map((m) => <option key={m.key} value={m.key}>{m.label} · Q{Number(m.price).toFixed(2)}</option>)}
+                      </select>
+                    ) : (
+                      <span className="text-xs text-slate-500 dark:text-slate-400">{it.unit_label}</span>
+                    )}
+                  </td>
                   <td className="py-2"><input type="number" step="any" value={it.quantity} onChange={(e) => updItem(idx, "quantity", e.target.value)} className="border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm w-24 text-right" /></td>
                   <td className="py-2"><input type="number" step="any" value={it.unit_price} onChange={(e) => updItem(idx, "unit_price", e.target.value)} className="border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm w-28 text-right" /></td>
                   <td className="py-2 text-right">
@@ -235,12 +278,12 @@ export default function ReturnCreate() {
                   </td>
                 </tr>
               ))}
-              {items.length === 0 && <tr><td colSpan="4" className="py-4 text-center text-slate-400">Agrega productos a reintegrar.</td></tr>}
+              {items.length === 0 && <tr><td colSpan="5" className="py-4 text-center text-slate-400">Agrega productos a reintegrar.</td></tr>}
             </tbody>
             {items.length > 0 && (
               <tfoot>
                 <tr className="border-t">
-                  <td className="py-2 text-right font-semibold text-slate-600 dark:text-slate-300">Total a devolver</td>
+                  <td colSpan="2" className="py-2 text-right font-semibold text-slate-600 dark:text-slate-300">Total a devolver</td>
                   <td colSpan="2" className="py-2 text-right font-bold text-lg text-slate-800 dark:text-slate-100">{Q(total)}</td>
                   <td></td>
                 </tr>

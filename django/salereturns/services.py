@@ -111,13 +111,19 @@ def create_without_sale(data, items, *, user=None, branch=None):
         if qty <= 0:
             raise ReturnError("La cantidad debe ser mayor que cero.")
         price = Decimal(str(it["unit_price"]))
+        # Medida devuelta: units_factor = cuántas unidades base equivale (1 =
+        # unidad base, container_factor = caja, etc.). Restituye el stock correcto.
+        factor = Decimal(str(it.get("units_factor") or 1))
+        if factor <= 0:
+            factor = Decimal("1")
+        unit_label = it.get("unit_label") or None
         gross = qty * price
         tax_type = it.get("tax_type") or product.tax_type
         lines.append({"gross": gross, "line_discount": Decimal("0"), "tax_type": tax_type})
         prepared.append({
             "sale_item": None, "product": product, "quantity": qty, "unit_price": price,
-            "discount": Decimal("0"), "subtotal": money(gross), "unit_label": None,
-            "units_factor": Decimal("1"), "tax_type": tax_type,
+            "discount": Decimal("0"), "subtotal": money(gross), "unit_label": unit_label,
+            "units_factor": factor, "tax_type": tax_type,
         })
 
     subtotal, total_discount, tax, total = compute_totals(lines)
