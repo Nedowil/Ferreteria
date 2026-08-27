@@ -14,6 +14,14 @@ export default function QuickProductModal({ onClose, onCreated, submitLabel = "G
 
   const save = async () => {
     if (!form.name.trim()) { setErr("El nombre es obligatorio."); return; }
+    // Igual que el formulario completo: no se puede vender por debajo del costo.
+    const venta = Number(form.sale_price || 0);
+    const compra = Number(form.purchase_price || 0);
+    if (compra > 0 && venta > 0 && compra > venta) {
+      setErr(`El precio de compra (Q${compra.toFixed(2)}) es mayor que el de venta (Q${venta.toFixed(2)}). ` +
+             "Revisá los precios: quizá los escribiste al revés.");
+      return;
+    }
     setBusy(true); setErr("");
     try {
       const { data } = await api.post("/inventory/products/", {
