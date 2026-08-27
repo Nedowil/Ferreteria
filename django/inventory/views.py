@@ -148,7 +148,9 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
         "restore_locations": "productos.editar",
         "create": "productos.crear", "update": "productos.editar",
         "partial_update": "productos.editar", "destroy": "productos.eliminar",
-        "movements": {"GET": "productos.ver", "POST": "inventario.ajustar"},
+        # El kardex (ver e insertar movimientos) es para quien gestiona
+        # inventario, no para cualquiera que pueda ver productos.
+        "movements": {"GET": "inventario.ajustar", "POST": "inventario.ajustar"},
         "zebra_test": "configuracion.gestionar",
     }
     queryset = (

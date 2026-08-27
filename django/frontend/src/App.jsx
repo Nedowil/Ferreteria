@@ -156,7 +156,7 @@ export default function App() {
       <Route path="/productos" element={<Protected perm="productos.ver"><ProductList /></Protected>} />
       <Route path="/productos/nuevo" element={<Protected perm="productos.crear"><ProductForm /></Protected>} />
       <Route path="/productos/:id/editar" element={<Protected perm="productos.editar"><ProductForm /></Protected>} />
-      <Route path="/productos/:id/inventario" element={<Protected perm="productos.ver"><InventoryShow /></Protected>} />
+      <Route path="/productos/:id/inventario" element={<Protected perm="inventario.ajustar"><InventoryShow /></Protected>} />
       <Route path="/bajo-stock" element={<Protected perm="productos.ver"><LowStock /></Protected>} />
       <Route path="/conteo" element={<Protected perm="inventario.ajustar"><StockCount /></Protected>} />
       <Route path="/reportar-dano" element={<Protected perm="mermas.reportar"><ReportDamage /></Protected>} />
