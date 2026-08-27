@@ -66,8 +66,8 @@ export default function ReturnDetail() {
           <span className={"ml-3 text-xs px-2 py-0.5 rounded align-middle " + (r.status === "procesada" ? "bg-green-100 text-green-700" : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400")}>{r.status_display}</span>
         </h1>
         <div className="flex flex-wrap items-center gap-2">
-          <button onClick={printReturnTicket} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-emerald-600 hover:bg-emerald-700 text-white">🎟️ Ticket</button>
-          <button onClick={printReturn} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-slate-700 hover:bg-slate-800 text-white">🖨️ Comprobante (PDF)</button>
+          <button onClick={printReturnTicket} className="inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold shadow-sm hover:shadow transition bg-emerald-600 hover:bg-emerald-700 text-white">🎟️ Ticket</button>
+          <button onClick={printReturn} className="inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold shadow-sm hover:shadow transition bg-slate-700 hover:bg-slate-800 text-white">🖨️ Comprobante (PDF)</button>
           <button onClick={() => navigate("/devoluciones")} className="inline-flex items-center gap-1 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2 shadow-sm hover:bg-slate-50 hover:border-slate-400 transition">← Volver</button>
         </div>
       </div>
@@ -121,7 +121,7 @@ export default function ReturnDetail() {
 
       {r.status === "procesada" && (
         <div className="mt-4">
-          <button onClick={cancel} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-red-600 hover:bg-red-700 text-white">Cancelar devolución</button>
+          <button onClick={cancel} className="inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold shadow-sm hover:shadow transition bg-red-600 hover:bg-red-700 text-white">✖ Cancelar devolución</button>
         </div>
       )}
     </div>
