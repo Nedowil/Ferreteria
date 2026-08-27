@@ -71,15 +71,17 @@ export default function QuickProductModal({ onClose, onCreated, submitLabel = "G
               </select>
             </div>
           </div>
+          {/* Primero compra, luego venta: es el orden en que se piensan/escriben
+              (cuánto costó → a cuánto se vende), para evitar confusiones. */}
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Precio de venta</label>
-              <input type="number" step="any" value={form.sale_price} onChange={(e) => setForm({ ...form, sale_price: e.target.value })}
-                     placeholder="0.00" className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
-            </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Precio de compra</label>
               <input type="number" step="any" value={form.purchase_price} onChange={(e) => setForm({ ...form, purchase_price: e.target.value })}
+                     placeholder="0.00" className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Precio de venta</label>
+              <input type="number" step="any" value={form.sale_price} onChange={(e) => setForm({ ...form, sale_price: e.target.value })}
                      placeholder="0.00" className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
           </div>
