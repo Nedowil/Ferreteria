@@ -158,7 +158,7 @@ export default function SalesList() {
                 <td className="px-4 py-2 text-xs text-slate-500 dark:text-slate-400">{s.payment_status_display}{Number(s.balance) > 0 ? ` · saldo Q${s.balance}` : ""}</td>
                 <td className="px-4 py-2"><span className={"inline-block rounded-full px-2 py-0.5 text-xs font-medium " + STATUS_BADGE[s.status]}>{s.status_display}</span></td>
                 {isAdmin && <td className="px-4 py-2 text-slate-600 dark:text-slate-300">{s.user_name || "—"}</td>}
-                <td className="px-4 py-2 text-right"><Link to={`/ventas/${s.id}`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-slate-700 hover:bg-slate-800 text-white">Ver</Link></td>
+                <td className="px-4 py-2 text-right"><Link to={`/ventas/${s.id}`} className="inline-flex items-center justify-center gap-1 rounded-lg px-6 py-1.5 text-sm font-semibold shadow-sm hover:shadow transition bg-slate-700 hover:bg-slate-800 text-white">Ver</Link></td>
               </tr>
             ))}
             {data.results.length === 0 && <tr><td colSpan={isAdmin ? 8 : 7} className="px-5 py-10 text-center text-slate-400">No hay ventas.</td></tr>}
