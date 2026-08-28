@@ -59,9 +59,24 @@ export default function Dashboard() {
   const mesAnt = Number(data.ventas_mes_anterior?.total || 0);
   const variacion = mesAnt > 0 ? ((mesAct - mesAnt) / mesAnt) * 100 : null;
 
+  // Saludo según la hora + nombre + fecha de hoy (en español).
+  const h = hoy.getHours();
+  const saludo = h < 12 ? "Buenos días" : h < 19 ? "Buenas tardes" : "Buenas noches";
+  const primerNombre = (data.user?.name || "").trim().split(/\s+/)[0] || data.user?.name || "";
+  const fechaLarga = cap(hoy.toLocaleDateString("es-GT", { weekday: "long", day: "numeric", month: "long", year: "numeric" }));
+
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">Dashboard</h1>
+      {/* Saludo personalizado */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border-l-4 border-blue-500 shadow-sm px-5 py-4 flex items-center gap-3">
+        <span className="text-3xl select-none">🏠</span>
+        <div>
+          <h1 className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">
+            {saludo}{primerNombre ? `, ${primerNombre}` : ""}
+          </h1>
+          <div className="text-sm text-slate-500 dark:text-slate-400">{fechaLarga}</div>
+        </div>
+      </div>
 
       {/* Alerta de stock bajo */}
       {data.stock_bajo > 0 && (
