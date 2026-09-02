@@ -8,6 +8,8 @@ const pct = (v) => Number(v || 0).toFixed(1) + "%";
 const marginColor = (m) => (m >= 25 ? "text-emerald-600" : m >= 12 ? "text-amber-600" : "text-red-600");
 // % de descuento: entre más alto, más preocupa (se está regalando margen).
 const discColor = (d) => (d >= 10 ? "text-red-600 font-semibold" : d >= 5 ? "text-amber-600" : "text-slate-500 dark:text-slate-400");
+// % de devoluciones sobre el ingreso: alto = muchas ventas terminan devueltas.
+const retColor = (d) => (d >= 8 ? "text-red-600 font-semibold" : d >= 3 ? "text-amber-600" : "text-slate-500 dark:text-slate-400");
 
 const PAGE_SIZE = 15;
 
@@ -124,6 +126,9 @@ export function BySeller() {
     { header: "Ticket prom.", value: (r) => Number(r.avg_ticket || 0) },
     { header: "Descuentos", value: (r) => Number(r.total_discount || 0) },
     { header: "% Desc.", value: (r) => Number(r.discount_pct || 0) },
+    { header: "Devoluciones", value: (r) => Number(r.returns_count || 0) },
+    { header: "Monto devuelto", value: (r) => Number(r.returns_total || 0) },
+    { header: "% Devol.", value: (r) => Number(r.returns_pct || 0) },
   ], rows);
 
   return (
@@ -165,6 +170,9 @@ export function BySeller() {
                   <th className="px-4 py-2 text-right">Ticket prom.</th>
                   <th className="px-4 py-2 text-right">Descuentos</th>
                   <th className="px-4 py-2 text-right">% Desc.</th>
+                  <th className="px-4 py-2 text-right">Devol.</th>
+                  <th className="px-4 py-2 text-right">Monto dev.</th>
+                  <th className="px-4 py-2 text-right">% Dev.</th>
                 </tr>
               </thead>
               <tbody>
@@ -178,9 +186,12 @@ export function BySeller() {
                     <td className="px-4 py-2 text-right">{Q(r.avg_ticket)}</td>
                     <td className="px-4 py-2 text-right">{Q(r.total_discount)}</td>
                     <td className={"px-4 py-2 text-right " + discColor(r.discount_pct)}>{pct(r.discount_pct)}</td>
+                    <td className="px-4 py-2 text-right">{r.returns_count || 0}</td>
+                    <td className="px-4 py-2 text-right">{r.returns_count ? Q(r.returns_total) : "—"}</td>
+                    <td className={"px-4 py-2 text-right " + retColor(r.returns_pct)}>{r.returns_count ? pct(r.returns_pct) : "—"}</td>
                   </tr>
                 ))}
-                {rows.length === 0 && <tr><td colSpan="8" className="px-5 py-8 text-center text-slate-400">Sin datos en el rango.</td></tr>}
+                {rows.length === 0 && <tr><td colSpan="11" className="px-5 py-8 text-center text-slate-400">Sin datos en el rango.</td></tr>}
               </tbody>
             </table>
             </div>

@@ -245,6 +245,15 @@ def by_seller(request):
         for r in _completed_items(f, t).values("sale__user__id")
         .annotate(item_revenue=Sum("subtotal"), item_cost=Sum(COST_ITEM))
     }
+    # Devoluciones atribuidas al vendedor ORIGINAL de la venta (sale.user).
+    # Las "sin ticket" no tienen venta, así que no se le cargan a nadie.
+    returns = {
+        r["sale__user__id"]: r
+        for r in SaleReturn.objects.filter(
+            deleted_at__isnull=True, status=SaleReturn.STATUS_PROCESADA,
+            date__date__range=(f, t), sale__isnull=False,
+        ).values("sale__user__id").annotate(rcount=Count("id"), rtotal=Sum("total"))
+    }
     for r in rows:
         it = items.get(r["user__id"], {})
         rev = it.get("item_revenue") or Decimal("0")
@@ -254,15 +263,21 @@ def by_seller(request):
         r["margin"] = float(r["gross_profit"] / rev * 100) if rev else 0
         base = r["total_subtotal"] or 0
         r["discount_pct"] = float((r["total_discount"] or 0) / base * 100) if base else 0
+        rr = returns.get(r["user__id"], {})
+        r["returns_count"] = rr.get("rcount", 0)
+        r["returns_total"] = rr.get("rtotal") or Decimal("0")
+        r["returns_pct"] = float(r["returns_total"] / r["total_revenue"] * 100) if r["total_revenue"] else 0
 
     total_revenue = sum((r["total_revenue"] or 0 for r in rows), Decimal("0"))
     total_count = sum((r["sales_count"] or 0 for r in rows), 0)
     total_profit = sum((r["gross_profit"] or 0 for r in rows), Decimal("0"))
     total_discount = sum((r["total_discount"] or 0 for r in rows), Decimal("0"))
+    total_returns = sum((r["returns_total"] or 0 for r in rows), Decimal("0"))
     avg_ticket = (total_revenue / total_count) if total_count else Decimal("0")
     return Response({"from": f, "to": t, "rows": rows,
                      "total_revenue": total_revenue, "total_count": total_count,
                      "total_profit": total_profit, "total_discount": total_discount,
+                     "total_returns": total_returns,
                      "avg_ticket": avg_ticket,
                      "top_seller": rows[0]["name"] if rows else None})
 
