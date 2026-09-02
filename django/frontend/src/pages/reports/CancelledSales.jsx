@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Q, useDateReport, DateRangeBar, KpiCard, ExcelButton } from "./common";
 import { exportToExcel } from "../../utils/exportExcel";
 import Pagination from "../../components/Pagination";
@@ -66,7 +67,7 @@ export default function CancelledSales() {
             <table className="w-full text-sm">
               <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-left">
                 <tr><th className="px-4 py-2">Folio</th><th className="px-4 py-2">Cancelada</th><th className="px-4 py-2">Vendedor</th>
-                    <th className="px-4 py-2">Cliente</th><th className="px-4 py-2 text-right">Total</th><th className="px-4 py-2">Nota</th></tr>
+                    <th className="px-4 py-2">Cliente</th><th className="px-4 py-2 text-right">Total</th><th className="px-4 py-2">Nota</th><th className="px-4 py-2"></th></tr>
               </thead>
               <tbody>
                 {pageRows.map((r, i) => (
@@ -77,9 +78,12 @@ export default function CancelledSales() {
                     <td className="px-4 py-2">{r.customer}</td>
                     <td className="px-4 py-2 text-right font-semibold">{Q(r.total)}</td>
                     <td className="px-4 py-2 text-slate-500 dark:text-slate-400 max-w-xs truncate" title={r.notes}>{r.notes || "—"}</td>
+                    <td className="px-4 py-2 text-right">
+                      {r.id && <Link to={`/ventas/${r.id}`} className="inline-flex items-center rounded-lg px-4 py-1.5 text-xs font-semibold shadow-sm bg-slate-700 hover:bg-slate-800 text-white transition">Ver</Link>}
+                    </td>
                   </tr>
                 ))}
-                {rows.length === 0 && <tr><td colSpan="6" className="px-5 py-8 text-center text-slate-400">Sin ventas canceladas en el rango.</td></tr>}
+                {rows.length === 0 && <tr><td colSpan="7" className="px-5 py-8 text-center text-slate-400">Sin ventas canceladas en el rango.</td></tr>}
               </tbody>
             </table>
             </div>

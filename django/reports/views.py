@@ -437,7 +437,7 @@ def cancelled_sales(request):
     qs = (Sale.objects.filter(status=Sale.STATUS_CANCELADA, date__date__range=(f, t))
           .select_related("user", "customer").order_by("-cancelled_at", "-date"))
     rows = [{
-        "folio": s.folio, "date": s.date, "cancelled_at": s.cancelled_at,
+        "id": s.id, "folio": s.folio, "date": s.date, "cancelled_at": s.cancelled_at,
         "user": s.user.name if s.user else "—",
         "customer": s.customer.name if s.customer else "Consumidor final",
         "total": s.total, "notes": s.notes or "",
