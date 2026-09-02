@@ -1,0 +1,87 @@
+import { useEffect, useState } from "react";
+import api from "../../api/client";
+import { dialog } from "../../components/Dialog";
+
+const fmtDate = (epoch) => new Date(epoch * 1000).toLocaleString();
+
+export default function Backups() {
+  const [items, setItems] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [error, setError] = useState("");
+
+  const load = () => { api.get("/backups/").then((r) => setItems(r.data)); };
+  useEffect(load, []);
+
+  const run = async () => {
+    setBusy(true); setMsg(""); setError("");
+    try {
+      const { data } = await api.post("/backups/", {});
+      setMsg(`Respaldo generado: ${data.filename}`);
+      load();
+    } catch (e) {
+      setError(e.response?.data?.detail || "No se pudo generar el respaldo.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const download = async (filename) => {
+    const r = await api.get(`/backups/${filename}/download/`, { responseType: "blob" });
+    const url = URL.createObjectURL(r.data);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const remove = async (filename) => {
+    if (!(await dialog.confirm(`¿Estás seguro de que deseas eliminar el respaldo ${filename}?`, { danger: true, okText: "Eliminar" }))) return;
+    await api.delete(`/backups/${filename}/`);
+    load();
+  };
+
+  return (
+    <div className="max-w-3xl">
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-lg font-semibold">Respaldos</h1>
+        <button onClick={run} disabled={busy} className="bg-blue-600 text-white rounded px-5 py-2 text-sm font-medium disabled:opacity-50">
+          {busy ? "Generando…" : "Generar respaldo ahora"}
+        </button>
+      </div>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+        Cada respaldo es un ZIP con la base de datos y los archivos subidos (imágenes, logos).
+        Programa <code className="bg-slate-100 dark:bg-slate-700 px-1 rounded">manage.py backup_run</code> con cron para respaldos automáticos.
+      </p>
+      {msg && <div className="bg-green-100 text-green-800 rounded px-4 py-2 text-sm mb-4">{msg}</div>}
+      {error && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm mb-4">{error}</div>}
+
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
+        <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-left">
+            <tr><th className="px-4 py-2">Archivo</th><th className="px-4 py-2 text-right">Tamaño</th>
+                <th className="px-4 py-2">Fecha</th><th className="px-4 py-2"></th></tr>
+          </thead>
+          <tbody>
+            {items.map((b) => (
+              <tr key={b.filename} className="border-t">
+                <td className="px-4 py-2 font-mono text-xs">{b.filename}</td>
+                <td className="px-4 py-2 text-right">{b.size_mb} MB</td>
+                <td className="px-4 py-2">{fmtDate(b.created_at)}</td>
+                <td className="px-4 py-2 text-right">
+                  <div className="inline-flex flex-wrap gap-1.5 justify-end">
+                    <button onClick={() => download(b.filename)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50">Descargar</button>
+                    <button onClick={() => remove(b.filename)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-red-600 hover:bg-red-700 text-white">Eliminar</button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {items.length === 0 && <tr><td colSpan="4" className="px-4 py-6 text-center text-slate-400">No hay respaldos aún.</td></tr>}
+          </tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+  );
+}

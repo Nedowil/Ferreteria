@@ -1,0 +1,183 @@
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import api from "../../api/client";
+
+const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+// Devolución rápida por ticket (folio) desde el POS, sin ir al módulo.
+export default function ReturnModal({ onClose, initialFolio = "" }) {
+  const navigate = useNavigate();
+  const [folio, setFolio] = useState(initialFolio);
+  const [sale, setSale] = useState(null);
+  const [qtys, setQtys] = useState({});
+  const [reasonType, setReasonType] = useState("equivocacion");
+  const [refund, setRefund] = useState("efectivo");
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(null);
+  const folioRef = useRef(null);
+
+  useEffect(() => { folioRef.current?.focus(); }, []);
+
+  const find = async (e) => {
+    e?.preventDefault();
+    setError(""); setSale(null); setQtys({});
+    if (!folio.trim()) return;
+    try {
+      const { data } = await api.get("/sales/", { params: { search: folio.trim() } });
+      const found = (data.results || data || [])[0];
+      if (!found) { setError("No se encontró una venta con ese folio."); return; }
+      const full = await api.get(`/sales/${found.id}/`);
+      setSale(full.data);
+    } catch {
+      setError("No se pudo cargar la venta.");
+    }
+  };
+
+  // La cantidad a devolver nunca puede superar lo comprado. Se recorta al
+  // escribir para no mostrar un reembolso irreal (ej. 100 de un producto que
+  // solo se compró 2 veces). El backend valida además lo ya devuelto antes.
+  const setQty = (it, raw) => {
+    let v = raw;
+    if (v !== "") {
+      const n = Number(v);
+      const max = Number(it.quantity);
+      if (Number.isFinite(n)) {
+        if (n < 0) v = "0";
+        else if (n > max) v = String(max);
+      }
+    }
+    setQtys({ ...qtys, [it.id]: v });
+  };
+
+  // Precio realmente pagado por unidad (con descuento). Si el backend no lo
+  // envía (venta vieja), cae al precio de lista.
+  const netPrice = (it) => Number(it.effective_unit_price ?? it.unit_price);
+  const refundTotal = sale
+    ? sale.items.reduce((s, it) => s + Number(qtys[it.id] || 0) * netPrice(it), 0)
+    : 0;
+
+  const submit = async () => {
+    setError(""); setBusy(true);
+    try {
+      const lines = Object.entries(qtys).filter(([, v]) => Number(v) > 0)
+        .map(([sale_item_id, quantity]) => ({ sale_item_id: Number(sale_item_id), quantity }));
+      if (!lines.length) throw { response: { data: { detail: "Indica cantidades a devolver." } } };
+      const { data } = await api.post("/returns/", {
+        sale_id: sale.id, reason_type: reasonType, refund_method: refund, reason, items: lines,
+      });
+      setDone(data);
+    } catch (err) {
+      setError(err.response?.data?.detail || "Error al procesar la devolución");
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-5 py-4 flex items-center justify-between">
+          <div className="text-lg font-bold">↩️ Devolución</div>
+          <button onClick={onClose} className="text-white/80 hover:text-white text-xl leading-none">×</button>
+        </div>
+
+        {done ? (
+          <div className="p-6 text-center space-y-4">
+            <div className="text-5xl">✓</div>
+            <div className="text-lg font-bold text-slate-800 dark:text-slate-100">Devolución procesada</div>
+            <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-xl px-4 py-3">
+              <div className="text-xs text-amber-700 dark:text-amber-300 uppercase tracking-wide">Reembolso</div>
+              <div className="text-3xl font-extrabold text-amber-700 dark:text-amber-300">{Q(done.total ?? done.refund_total ?? refundTotal)}</div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => navigate(`/devoluciones/${done.id}`)} className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition">Ver devolución</button>
+              <button onClick={onClose} className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg py-2.5 text-sm font-semibold shadow hover:from-blue-700 hover:to-indigo-700 transition">Cerrar</button>
+            </div>
+          </div>
+        ) : (
+          <div className="p-5 space-y-4 overflow-auto">
+            {error && <div className="bg-red-600 border border-red-700 text-white font-semibold text-sm rounded-lg px-3 py-2">{error}</div>}
+
+            <form onSubmit={find} className="flex gap-2">
+              <input ref={folioRef} value={folio} onChange={(e) => setFolio(e.target.value)}
+                     placeholder="Folio de la venta (ej. V-000001)"
+                     className="flex-1 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-amber-500" />
+              <button type="submit" className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition">Buscar</button>
+            </form>
+
+            {sale && (
+              <>
+                <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+                  <div className="px-4 py-2 bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-700 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                    {sale.folio} — {sale.customer_name || "Consumidor final"}
+                  </div>
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
+                      <tr><th className="px-3 py-2">Producto</th><th className="px-3 py-2 text-right">Comprado</th>
+                          <th className="px-3 py-2 text-right">Precio</th><th className="px-3 py-2 text-right w-28">A devolver</th></tr>
+                    </thead>
+                    <tbody>
+                      {sale.items.map((it) => (
+                        <tr key={it.id} className="border-t border-slate-100 dark:border-slate-700">
+                          <td className="px-3 py-2"><div className="font-medium text-slate-800 dark:text-slate-100">{it.product_name}</div>
+                            <div className="text-xs font-mono text-slate-400">{it.product_sku}</div></td>
+                          <td className="px-3 py-2 text-right">{it.quantity}</td>
+                          <td className="px-3 py-2 text-right">{Q(netPrice(it))}</td>
+                          <td className="px-3 py-2 text-right">
+                            <input type="number" step="any" min="0" max={it.quantity} value={qtys[it.id] || ""}
+                                   onChange={(e) => setQty(it, e.target.value)}
+                                   placeholder="0"
+                                   className="border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1 text-sm w-24 text-right outline-none focus:ring-2 focus:ring-amber-500" />
+                            <div className="text-[10px] text-slate-400 mt-0.5">máx {Number(it.quantity)}</div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Motivo</label>
+                    <select value={reasonType} onChange={(e) => setReasonType(e.target.value)}
+                            className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-amber-500">
+                      <option value="equivocacion">Equivocación</option><option value="defectuoso">Defectuoso</option>
+                      <option value="no_satisfecho">No satisfecho</option><option value="otro">Otro</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Reembolso</label>
+                    <select value={refund} onChange={(e) => setRefund(e.target.value)}
+                            className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-amber-500">
+                      <option value="efectivo">Efectivo</option><option value="tarjeta">Tarjeta</option>
+                      <option value="transferencia">Transferencia</option><option value="credito_nota">Nota de crédito</option>
+                    </select>
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium mb-1">Detalle (opcional)</label>
+                    <input value={reason} onChange={(e) => setReason(e.target.value)}
+                           className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-amber-500" />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-slate-500 dark:text-slate-400">Reembolso: <span className="font-bold text-slate-800 dark:text-slate-100">{Q(refundTotal)}</span></div>
+                  <button disabled={busy || refundTotal <= 0} onClick={submit}
+                          className="bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg px-6 py-2.5 text-sm font-semibold shadow hover:from-amber-600 hover:to-orange-600 disabled:opacity-50 transition">
+                    {busy ? "Procesando…" : "Procesar devolución"}
+                  </button>
+                </div>
+              </>
+            )}
+
+            <div className="text-center pt-1">
+              <button onClick={() => navigate("/devoluciones/nueva")} className="text-xs text-slate-500 dark:text-slate-400 hover:text-amber-600">
+                Más opciones (por producto / sin ticket) →
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

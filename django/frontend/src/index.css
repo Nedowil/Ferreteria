@@ -1,0 +1,136 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Evita que los navegadores de celular "inflen" el texto (text boosting), lo
+   que desalineaba las letras al generar el PDF en el teléfono. */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+/* Modo oscuro: color base del fondo y del texto. */
+html.dark body { background-color: #0f172a; color: #e2e8f0; }
+
+/* Modo oscuro: le dice al navegador que los controles nativos (campos, selects,
+   barras de scroll) usen su estilo oscuro. Sin esto, los campos quedaban con
+   fondo blanco y texto claro heredado => las letras no se veían al escribir. */
+html.dark { color-scheme: dark; }
+
+/* Estilo consistente (paleta slate) para campos que no traen su propio fondo
+   oscuro. Las clases dark:bg-* de Tailwind, cuando existen, tienen prioridad. */
+html.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+html.dark select,
+html.dark textarea {
+  background-color: #1e293b;   /* slate-800 */
+  border-color: #475569;       /* slate-600 */
+  color: #f1f5f9;              /* slate-100 */
+}
+html.dark input::placeholder,
+html.dark textarea::placeholder { color: #94a3b8; }  /* slate-400 */
+
+/* Ocultar las flechitas (spinners) de los campos numéricos en toda la app. */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* Responsive: en pantallas chicas, las tablas anchas hacen scroll horizontal
+   dentro de su tarjeta (en vez de desbordar la página). Se aplica al div que
+   contiene directamente una <table> — típicamente la tarjeta del listado. */
+@media (max-width: 1023px) {
+  /* Cualquier contenedor (div, section, …) que envuelva directamente una tabla
+     permite scroll horizontal, para que la tabla no desborde la página. */
+  main :has(> table) {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  main table {
+    min-width: max-content;
+  }
+}
+
+/* Al imprimir un comprobante, solo se muestra el ticket (#ticket). */
+@media print {
+  body * { visibility: hidden; }
+  #ticket, #ticket * { visibility: visible; }
+  #ticket {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    box-shadow: none;
+  }
+}
+
+/* ============================================================
+   Animación "premium" de botones (estilo relleno deslizante).
+   Al pasar el mouse: un brillo ENTRA deslizándose de izquierda a
+   derecha dentro del botón, el botón se levanta un poco y proyecta
+   una sombra suave — manteniendo su color.
+   Notas de diseño:
+   - El relleno (::before) va inset:0 y crece con scaleX, así queda
+     SIEMPRE dentro del botón: no se necesita overflow:hidden y los
+     badges/contadores que sobresalen NO se recortan.
+   - position:relative va a baja especificidad (selector `button`) para
+     no pisar botones con .absolute/.fixed (cerrar ×, ojo de contraseña).
+   - Solo con mouse real (hover:hover): en pantallas táctiles el :hover
+     se "pega", así que ahí no se anima (los botones funcionan igual).
+   - Para excluir un botón puntual, agregarle la clase `no-anim`.
+   ============================================================ */
+button { position: relative; }
+
+@media (hover: hover) {
+  button:not(:disabled):not(.no-anim) {
+    transition: transform .18s ease, box-shadow .25s ease, filter .2s ease;
+  }
+  button:not(:disabled):not(.no-anim)::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(110deg, rgba(255, 255, 255, .48), rgba(255, 255, 255, .20) 50%, rgba(255, 255, 255, .06));
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform .40s cubic-bezier(.4, 0, .2, 1);
+    pointer-events: none;
+  }
+  button:not(:disabled):not(.no-anim):hover::before { transform: scaleX(1); }
+  button:not(:disabled):not(.no-anim):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(2, 6, 23, .18);
+    filter: brightness(1.07) saturate(1.08);
+  }
+  button:not(:disabled):not(.no-anim):active { transform: translateY(0); }
+
+  /* En modo oscuro una sombra oscura no se nota: se usa una sombra más marcada
+     y el brillo del relleno un poco más tenue para no encandilar. */
+  html.dark button:not(:disabled):not(.no-anim):hover {
+    box-shadow: 0 10px 24px rgba(0, 0, 0, .55);
+    filter: brightness(1.08);
+  }
+  html.dark button:not(:disabled):not(.no-anim)::before {
+    background: linear-gradient(110deg, rgba(255, 255, 255, .30), rgba(255, 255, 255, .12) 50%, rgba(255, 255, 255, .04));
+  }
+}
+
+@media (hover: hover) and (prefers-reduced-motion: reduce) {
+  button:not(:disabled):not(.no-anim),
+  button:not(:disabled):not(.no-anim)::before { transition: none; }
+  button:not(:disabled):not(.no-anim):hover { transform: none; box-shadow: none; }
+  button:not(:disabled):not(.no-anim):hover::before { transform: scaleX(0); }
+}
+
+/* Animación de entrada de los avisos (toast) desde arriba. */
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(-12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Entrada de los perfiles (pantalla estilo Netflix): suben con un pequeño fade. */
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(18px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}

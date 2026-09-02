@@ -1,0 +1,18 @@
+# Caddy: TLS automático (Let's Encrypt) y proxy reverso al backend.
+# Reemplaza el dominio o define la variable de entorno DOMAIN.
+# Uso con el overlay de compose:
+#   DOMAIN=tu-dominio.com docker compose \
+#     -f docker-compose.yml -f deploy/docker-compose.caddy.yml up -d
+
+{$DOMAIN:ferreteria.example.com} {
+	encode zstd gzip
+
+	# Límite de subida (importación CSV, imágenes de productos).
+	request_body {
+		max_size 10MB
+	}
+
+	# Caddy reenvía Host y X-Forwarded-Proto, que Django ya respeta
+	# (SECURE_PROXY_SSL_HEADER). El SPA y la API se sirven desde el mismo origen.
+	reverse_proxy web:8000
+}
