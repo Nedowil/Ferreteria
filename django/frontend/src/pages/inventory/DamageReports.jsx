@@ -32,7 +32,7 @@ export default function DamageReports() {
   useEffect(() => { setPage(1); load(1); }, [filter]);
 
   const approve = async (r) => {
-    const ok = await dialog.confirm(`¿Aprobar la merma de ${Number(r.quantity)} × "${r.product_name}"? Se descontará del stock.`);
+    const ok = await dialog.confirm(`¿Aprobar el daño de ${Number(r.quantity)} × "${r.product_name}"? Se descontará del stock.`);
     if (!ok) return;
     setBusy(r.id);
     try { await api.post(`/inventory/damage-reports/${r.id}/approve/`); load(); }

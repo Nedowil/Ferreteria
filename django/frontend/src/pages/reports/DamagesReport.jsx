@@ -21,7 +21,7 @@ export default function DamagesReport() {
   const status = params.status || "";
   const setStatus = (v) => setParams({ ...params, status: v || undefined });
 
-  const exportXls = () => exportToExcel("mermas", [
+  const exportXls = () => exportToExcel("danos", [
     { header: "Fecha", value: (r) => dt(r.date) },
     { header: "SKU", value: (r) => r.sku },
     { header: "Producto", value: (r) => r.product },
@@ -35,7 +35,7 @@ export default function DamagesReport() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-lg font-semibold">🗑️ Mermas / daños</h1>
+        <h1 className="text-lg font-semibold">🗑️ Daños</h1>
         <ExcelButton onClick={exportXls} disabled={!rows.length} />
       </div>
       <DateRangeBar from={from} setFrom={setFrom} to={to} setTo={setTo} onApply={reload}>
@@ -78,11 +78,11 @@ export default function DamagesReport() {
                     <td className="px-4 py-2 text-right font-medium">{Q(r.cost)}</td>
                   </tr>
                 ))}
-                {rows.length === 0 && <tr><td colSpan="7" className="px-5 py-8 text-center text-slate-400">Sin mermas en el rango.</td></tr>}
+                {rows.length === 0 && <tr><td colSpan="7" className="px-5 py-8 text-center text-slate-400">Sin daños en el rango.</td></tr>}
               </tbody>
             </table>
             </div>
-            <div className="p-3"><Pagination page={page} count={rows.length} pageSize={PAGE_SIZE} onPage={setPage} label="mermas" /></div>
+            <div className="p-3"><Pagination page={page} count={rows.length} pageSize={PAGE_SIZE} onPage={setPage} label="daños" /></div>
           </div>
         </>
       )}

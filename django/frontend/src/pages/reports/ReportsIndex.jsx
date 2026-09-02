@@ -15,7 +15,7 @@ const REPORTS = [
   ["pagos-proveedor", "Pagos a proveedores", "Efectivo por día/mes/año e historial de fondos", "💵"],
   ["diferencias-caja", "Diferencias de caja", "Faltantes y sobrantes por cajero y día", "🧮"],
   ["devoluciones", "Devoluciones", "Por periodo, motivo, producto y vendedor", "↩️"],
-  ["mermas", "Mermas / daños", "Productos dañados y su costo", "🗑️"],
+  ["mermas", "Daños", "Productos dañados y su costo", "🗑️"],
   ["ventas-canceladas", "Ventas canceladas", "Ventas anuladas por periodo y vendedor", "🚫"],
   ["rotacion-inventario", "Rotación de inventario", "Qué se vende rápido y qué está estancado", "🔄"],
 ];
