@@ -275,6 +275,7 @@ export default function POS() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [companyName, setCompanyName] = useState("Ferretería");
+  const [requireCash, setRequireCash] = useState(false); // obligar a ingresar el efectivo recibido
   const [picking, setPicking] = useState(null); // producto en la ventana flotante
   const [addingCustomer, setAddingCustomer] = useState(false);
   const [addingProduct, setAddingProduct] = useState(false);
@@ -378,11 +379,11 @@ export default function POS() {
         const c = await getMeta("customers").catch(() => null);
         if (alive) setCustomers(c || []);
       }
-      // Nombre de la empresa (para el comprobante).
+      // Nombre de la empresa (para el comprobante) + ajuste de efectivo obligatorio.
       try {
         const { data } = await api.get("/company-settings/");
         const cname = data.commercial_name || "Ferretería";
-        if (alive) { setCompanyName(cname); setMeta("company_name", cname).catch(() => {}); }
+        if (alive) { setCompanyName(cname); setRequireCash(!!data.pos_require_cash_received); setMeta("company_name", cname).catch(() => {}); }
       } catch {
         const cn = await getMeta("company_name").catch(() => null);
         if (alive) setCompanyName(cn || "Ferretería");
@@ -544,6 +545,10 @@ export default function POS() {
   const total = Math.max(0, subtotal - lineDiscTotal - discountNum);
   const change = paymentMethod === "efectivo" && !credit ? Math.max(0, Number(paid || 0) - total) : 0;
   const exactPaid = paid !== "" && Math.abs(Number(paid) - total) < 0.005 && total > 0;
+  // Si la empresa lo exige, en contado en efectivo hay que ingresar el efectivo
+  // recibido (no vale dejarlo vacío). Bloquea "Cobrar" hasta que sea válido.
+  const cashReceivedMissing = requireCash && !credit && paymentMethod === "efectivo"
+    && total > 0 && (paid === "" || Number(paid) < total);
 
   // Espeja el carrito a la pantalla de cliente (ventana/monitor secundario).
   useEffect(() => {
@@ -696,7 +701,9 @@ export default function POS() {
       discount: discountNum || 0,
       payment_method: credit ? "credito" : paymentMethod,
       payment_status: credit ? "al_credito" : "pagada",
-      paid_amount: credit ? (paid || 0) : (paymentMethod === "efectivo" ? (paid || total) : total),
+      // Con efectivo obligatorio no se asume pago exacto: se manda lo ingresado.
+      paid_amount: credit ? (paid || 0)
+        : (paymentMethod === "efectivo" ? (requireCash ? (paid || 0) : (paid || total)) : total),
       items: cart.map((i) => ({
         product_id: i.product_id, quantity: i.quantity, unit_price: i.unit_price,
         discount: lineDisc(i), units_factor: i.units_factor, unit_label: i.unit_label, tax_type: i.tax_type,
@@ -1239,7 +1246,12 @@ export default function POS() {
                     ))}
                   </div>
                   <input type="number" step="any" value={paid} onChange={(e) => setPaid(e.target.value)}
-                         placeholder={total.toFixed(2)} className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                         placeholder={total.toFixed(2)}
+                         className={"w-full border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 " +
+                           (cashReceivedMissing ? "border-amber-400 bg-amber-50 dark:bg-amber-500/10" : "border-slate-300 dark:border-slate-600")} />
+                  {cashReceivedMissing && (
+                    <div className="text-xs font-medium text-amber-600 mt-1">Ingresá cuánto te dio el cliente (o tocá “Pago exacto”).</div>
+                  )}
                   <div className="flex justify-between text-sm mt-2"><span className="text-slate-500 dark:text-slate-400">Vuelto</span><span className="font-semibold">Q{change.toFixed(2)}</span></div>
                 </div>
               )}
@@ -1254,9 +1266,9 @@ export default function POS() {
             </div>
           )}
 
-          <button disabled={busy || cart.length === 0 || felDateInvalid || (!credit && cashOpen === false)} onClick={checkout}
+          <button disabled={busy || cart.length === 0 || felDateInvalid || cashReceivedMissing || (!credit && cashOpen === false)} onClick={checkout}
                   className="w-full bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-lg py-3 font-semibold text-lg shadow-lg shadow-green-600/20 hover:from-emerald-600 hover:to-green-700 disabled:opacity-50 transition">
-            {busy ? "Procesando…" : (!credit && cashOpen === false) ? "Caja cerrada — abrí la caja" : "Cobrar"}
+            {busy ? "Procesando…" : (!credit && cashOpen === false) ? "Caja cerrada — abrí la caja" : cashReceivedMissing ? "Ingresá el efectivo recibido" : "Cobrar"}
           </button>
         </div>
       </div>

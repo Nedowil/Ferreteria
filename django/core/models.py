@@ -120,6 +120,11 @@ class CompanySetting(models.Model):
     pos_max_discount_percent = models.DecimalField(
         "descuento máx. sin autorización (%)", max_digits=5, decimal_places=2, default=25)
 
+    # Anti-descuadre: si está activo, en las ventas de CONTADO en efectivo el
+    # cajero está OBLIGADO a ingresar el efectivo recibido (no se asume pago
+    # exacto). Así el vuelto queda bien calculado y la caja cuadra.
+    pos_require_cash_received = models.BooleanField("obligar efectivo recibido", default=False)
+
     # Impresora térmica
     printer_mode = models.CharField(max_length=20, default="system")  # system|bluetooth|network|epos
     printer_ip = models.CharField(max_length=45, blank=True, null=True)

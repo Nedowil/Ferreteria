@@ -69,7 +69,7 @@ def _check_special_authorization(lines, global_discount, special_authorized):
 
 @transaction.atomic
 def create_sale(data, items, *, user=None, branch=None, offline_uuid=None, force=False,
-                special_authorized=False):
+                special_authorized=False, require_cash_received=False):
     """Crea una venta completada, descuenta stock y la vincula a la caja.
 
     `force=True` (solo para resolver conflictos de ventas offline que YA
@@ -141,6 +141,10 @@ def create_sale(data, items, *, user=None, branch=None, offline_uuid=None, force
         if payment_status != Sale.PAY_PAGADA and not due_date:
             due_date = timezone.localdate() + timedelta(days=30)
     else:
+        # Anti-descuadre: si la empresa lo exige, el cajero DEBE ingresar el
+        # efectivo recibido (no se asume pago exacto) en ventas de contado.
+        if require_cash_received and not data.get("paid_amount"):
+            raise SaleError("Ingresá el efectivo que te dio el cliente antes de cobrar.")
         if paid_amount < total:
             raise SaleError("El monto recibido es menor que el total de la venta.")
         payment_status = Sale.PAY_PAGADA

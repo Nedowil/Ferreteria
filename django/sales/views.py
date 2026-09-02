@@ -87,9 +87,13 @@ class SaleViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.ModelVie
         # bajo el costo? Solo el supervisor/admin (o superusuario) lo puede.
         from core.permissions import user_permission_codenames
         special = "ventas.autorizar_especial" in user_permission_codenames(request.user)
+        # ¿La empresa obliga a ingresar el efectivo recibido en ventas de contado?
+        from core.models import CompanySetting
+        require_cash = bool(CompanySetting.current().pos_require_cash_received)
         try:
             sale = services.create_sale(data, data["items"], user=request.user,
-                                        branch=self.branch, special_authorized=special)
+                                        branch=self.branch, special_authorized=special,
+                                        require_cash_received=require_cash)
         except services.SaleError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(SaleDetailSerializer(sale).data, status=status.HTTP_201_CREATED)

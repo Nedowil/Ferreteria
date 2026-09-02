@@ -34,6 +34,23 @@ class SaleServiceTests(TestCase):
             user=self.user, branch=self.branch,
         )
 
+    def test_efectivo_obligatorio_sin_recibido_falla(self):
+        # Con la opción activa, no se puede cobrar contado sin el efectivo recibido.
+        with self.assertRaises(SaleError):
+            create_sale(
+                {"payment_method": "efectivo"},  # sin paid_amount
+                [{"product_id": self.prod.id, "quantity": "1", "unit_price": "85", "tax_type": "iva"}],
+                user=self.user, branch=self.branch, require_cash_received=True,
+            )
+
+    def test_efectivo_obligatorio_con_recibido_ok(self):
+        sale = create_sale(
+            {"payment_method": "efectivo", "paid_amount": "100"},
+            [{"product_id": self.prod.id, "quantity": "1", "unit_price": "85", "tax_type": "iva"}],
+            user=self.user, branch=self.branch, require_cash_received=True,
+        )
+        self.assertEqual(sale.change_amount, Decimal("15.00"))  # 100 - 85
+
     def test_venta_totales_iva_incluido_y_vuelto(self):
         sale = self._venta_simple()
         self.assertEqual(sale.total, Decimal("255.00"))          # 3 * 85
