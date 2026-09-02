@@ -8,7 +8,7 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.db.models import (
-    Avg, Count, DecimalField, ExpressionWrapper, F, Sum, Value,
+    Avg, Count, DecimalField, ExpressionWrapper, F, Q, Sum, Value,
 )
 from django.db.models.functions import Coalesce, TruncDate
 from django.utils import timezone
@@ -449,3 +449,45 @@ def cancelled_sales(request):
         "from": f, "to": t, "rows": rows, "by_seller": by_seller,
         "count": qs.count(), "total": qs.aggregate(t=Sum("total"))["t"] or Decimal("0"),
     })
+
+
+@api_view(["GET"])
+@permission_classes([_PERM])
+def inventory_turnover(request):
+    """Rotación de inventario: qué tan rápido se vende cada producto.
+
+    - vendido: unidades base vendidas en el rango (cantidad × units_factor).
+    - rotación: vendido / stock actual (cuántas veces se movió el stock).
+    - días de cobertura: cuántos días dura el stock actual al ritmo de venta
+      (stock ÷ venta por día). Muchos días = producto lento/estancado."""
+    f, t = resolve_range(request, days=30)
+    days = max(1, (t - f).days + 1)
+    QTY_BASE = ExpressionWrapper(F("quantity") * F("units_factor"), output_field=DEC)
+    sold, rev = {}, {}
+    for a in (_completed_items(f, t).values("product__id")
+              .annotate(qty=Sum(QTY_BASE), revenue=Sum("subtotal"))):
+        sold[a["product__id"]] = Decimal(str(a["qty"] or 0))
+        rev[a["product__id"]] = a["revenue"] or Decimal("0")
+
+    prods = (Product.objects.filter(deleted_at__isnull=True, active=True)
+             .filter(Q(stock__gt=0) | Q(id__in=list(sold.keys())))
+             .select_related("category").order_by("name"))
+    rows, estancados = [], 0
+    for p in prods:
+        s = sold.get(p.id, Decimal("0"))
+        stock = Decimal(str(p.stock or 0))
+        rotation = float(s / stock) if stock > 0 else None
+        per_day = s / Decimal(days)
+        days_cover = float(stock / per_day) if per_day > 0 else None
+        if s == 0 and stock > 0:
+            estancados += 1
+        rows.append({
+            "id": p.id, "sku": p.sku, "name": p.name,
+            "category": p.category.name if p.category else None,
+            "base_unit": p.base_unit_label or "u",
+            "sold": s, "stock": stock, "revenue": rev.get(p.id, Decimal("0")),
+            "rotation": rotation, "days_cover": days_cover,
+        })
+    rows.sort(key=lambda r: r["sold"], reverse=True)
+    return Response({"from": f, "to": t, "days": days, "rows": rows,
+                     "count": len(rows), "estancados": estancados})

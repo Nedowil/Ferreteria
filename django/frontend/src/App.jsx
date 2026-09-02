@@ -55,6 +55,7 @@ const CashDiffs = lazy(() => import("./pages/reports/CashDiffs"));
 const ReturnsReport = lazy(() => import("./pages/reports/ReturnsReport"));
 const DamagesReport = lazy(() => import("./pages/reports/DamagesReport"));
 const CancelledSales = lazy(() => import("./pages/reports/CancelledSales"));
+const InventoryTurnover = lazy(() => import("./pages/reports/InventoryTurnover"));
 const Users = lazy(() => import("./pages/admin/Users"));
 const Roles = lazy(() => import("./pages/admin/Roles"));
 const Branches = lazy(() => import("./pages/admin/Branches"));
@@ -207,6 +208,7 @@ export default function App() {
       <Route path="/reportes/devoluciones" element={<Protected perm="reportes.ver"><ReturnsReport /></Protected>} />
       <Route path="/reportes/mermas" element={<Protected perm="reportes.ver"><DamagesReport /></Protected>} />
       <Route path="/reportes/ventas-canceladas" element={<Protected perm="reportes.ver"><CancelledSales /></Protected>} />
+      <Route path="/reportes/rotacion-inventario" element={<Protected perm="reportes.ver"><InventoryTurnover /></Protected>} />
       <Route path="/admin/usuarios" element={<Protected perm="usuarios.ver"><Users /></Protected>} />
       <Route path="/admin/roles" element={<Protected perm="roles.gestionar"><Roles /></Protected>} />
       <Route path="/admin/sucursales" element={<Protected perm="sucursales.gestionar"><Branches /></Protected>} />

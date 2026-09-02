@@ -17,6 +17,7 @@ const REPORTS = [
   ["devoluciones", "Devoluciones", "Por periodo, motivo, producto y vendedor", "↩️"],
   ["mermas", "Mermas / daños", "Productos dañados y su costo", "🗑️"],
   ["ventas-canceladas", "Ventas canceladas", "Ventas anuladas por periodo y vendedor", "🚫"],
+  ["rotacion-inventario", "Rotación de inventario", "Qué se vende rápido y qué está estancado", "🔄"],
 ];
 
 export default function ReportsIndex() {
