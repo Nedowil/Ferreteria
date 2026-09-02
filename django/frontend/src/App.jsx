@@ -51,6 +51,10 @@ const TopSuppliers = lazy(() => import("./pages/reports/Rankings").then((m) => (
 const BySeller = lazy(() => import("./pages/reports/Rankings").then((m) => ({ default: m.BySeller })));
 const ByCategory = lazy(() => import("./pages/reports/Rankings").then((m) => ({ default: m.ByCategory })));
 const SupplierPayments = lazy(() => import("./pages/reports/SupplierPayments"));
+const CashDiffs = lazy(() => import("./pages/reports/CashDiffs"));
+const ReturnsReport = lazy(() => import("./pages/reports/ReturnsReport"));
+const DamagesReport = lazy(() => import("./pages/reports/DamagesReport"));
+const CancelledSales = lazy(() => import("./pages/reports/CancelledSales"));
 const Users = lazy(() => import("./pages/admin/Users"));
 const Roles = lazy(() => import("./pages/admin/Roles"));
 const Branches = lazy(() => import("./pages/admin/Branches"));
@@ -199,6 +203,10 @@ export default function App() {
       <Route path="/reportes/valor-inventario" element={<Protected perm="reportes.ver"><InventoryValue /></Protected>} />
       <Route path="/reportes/productos-a-revisar" element={<Protected perm="reportes.ver"><ProductsToReview /></Protected>} />
       <Route path="/reportes/pagos-proveedor" element={<Protected perm="reportes.ver"><SupplierPayments /></Protected>} />
+      <Route path="/reportes/diferencias-caja" element={<Protected perm="reportes.ver"><CashDiffs /></Protected>} />
+      <Route path="/reportes/devoluciones" element={<Protected perm="reportes.ver"><ReturnsReport /></Protected>} />
+      <Route path="/reportes/mermas" element={<Protected perm="reportes.ver"><DamagesReport /></Protected>} />
+      <Route path="/reportes/ventas-canceladas" element={<Protected perm="reportes.ver"><CancelledSales /></Protected>} />
       <Route path="/admin/usuarios" element={<Protected perm="usuarios.ver"><Users /></Protected>} />
       <Route path="/admin/roles" element={<Protected perm="roles.gestionar"><Roles /></Protected>} />
       <Route path="/admin/sucursales" element={<Protected perm="sucursales.gestionar"><Branches /></Protected>} />

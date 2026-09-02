@@ -13,6 +13,10 @@ const REPORTS = [
   ["valor-inventario", "Valor de inventario", "Valor a costo y a precio de venta", "📦"],
   ["productos-a-revisar", "Productos a revisar", "Costo mayor o igual que la venta — posibles mal cargados", "⚠️"],
   ["pagos-proveedor", "Pagos a proveedores", "Efectivo por día/mes/año e historial de fondos", "💵"],
+  ["diferencias-caja", "Diferencias de caja", "Faltantes y sobrantes por cajero y día", "🧮"],
+  ["devoluciones", "Devoluciones", "Por periodo, motivo, producto y vendedor", "↩️"],
+  ["mermas", "Mermas / daños", "Productos dañados y su costo", "🗑️"],
+  ["ventas-canceladas", "Ventas canceladas", "Ventas anuladas por periodo y vendedor", "🚫"],
 ];
 
 export default function ReportsIndex() {

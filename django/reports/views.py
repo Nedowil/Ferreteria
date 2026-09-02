@@ -18,9 +18,10 @@ from rest_framework.response import Response
 
 from core.permissions import HasPermission
 from cashbox.models import CashSession
-from inventory.models import Product
+from inventory.models import DamageReport, Product
 from purchasing.models import Purchase
 from sales.models import Sale, SaleItem
+from salereturns.models import SaleReturn
 
 DEC = DecimalField(max_digits=20, decimal_places=4)
 
@@ -320,4 +321,131 @@ def inventory_value(request):
     return Response({
         "rows": rows, "total_cost_value": total_cost, "total_sale_value": total_sale,
         "potential_profit": total_sale - total_cost,
+    })
+
+
+# ---------------------------------------------------------------------------
+# Reportes de control (agregados a pedido del dueño)
+# ---------------------------------------------------------------------------
+
+@api_view(["GET"])
+@permission_classes([_PERM])
+def cash_diffs(request):
+    """Diferencias de caja: por cada cierre (sesión cerrada) muestra lo esperado,
+    lo contado y la diferencia (sobrante/faltante), por cajero y por día."""
+    f, t = resolve_range(request, days=30)
+    sessions = (CashSession.objects
+                .filter(status=CashSession.STATUS_CERRADA, closed_at__date__range=(f, t))
+                .select_related("user").order_by("-closed_at"))
+    rows = [{
+        "id": s.id,
+        "user": s.user.name if s.user else "—",
+        "closed_at": s.closed_at,
+        "opening_amount": s.opening_amount,
+        "expected_cash": s.expected_cash,
+        "counted_cash": s.counted_cash,
+        "difference": s.difference,
+    } for s in sessions]
+    agg = sessions.aggregate(expected=Sum("expected_cash"), counted=Sum("counted_cash"),
+                             difference=Sum("difference"))
+    faltante = sessions.filter(difference__lt=0).aggregate(t=Sum("difference"))["t"] or Decimal("0")
+    sobrante = sessions.filter(difference__gt=0).aggregate(t=Sum("difference"))["t"] or Decimal("0")
+    # Resumen por cajero (para ver quién descuadra seguido).
+    by_user = [{
+        "user": a["user__name"] or "—", "cierres": a["n"],
+        "difference": a["diff"] or Decimal("0"),
+    } for a in (sessions.values("user__name")
+                .annotate(n=Count("id"), diff=Sum("difference")).order_by("diff"))]
+    return Response({
+        "from": f, "to": t, "rows": rows, "by_user": by_user, "count": len(rows),
+        "total_expected": agg["expected"] or Decimal("0"),
+        "total_counted": agg["counted"] or Decimal("0"),
+        "total_difference": agg["difference"] or Decimal("0"),
+        "total_faltante": faltante, "total_sobrante": sobrante,
+    })
+
+
+_RETURN_REASONS = {
+    "equivocacion": "Equivocación", "defectuoso": "Defectuoso",
+    "no_satisfecho": "No satisfecho", "sin_ticket": "Sin ticket", "otro": "Otro",
+}
+
+
+@api_view(["GET"])
+@permission_classes([_PERM])
+def returns_report(request):
+    """Devoluciones por periodo: detalle, resumen por motivo y total reembolsado."""
+    f, t = resolve_range(request, days=30)
+    qs = (SaleReturn.objects
+          .filter(deleted_at__isnull=True, status=SaleReturn.STATUS_PROCESADA, date__date__range=(f, t))
+          .select_related("user", "customer", "sale").order_by("-date"))
+    rows = [{
+        "folio": r.folio, "date": r.date,
+        "sale_folio": r.sale.folio if r.sale else None,
+        "customer": r.customer.name if r.customer else "Consumidor final",
+        "user": r.user.name if r.user else "—",
+        "reason": _RETURN_REASONS.get(r.reason_type, r.reason_type),
+        "refund_method": r.refund_method, "total": r.total,
+    } for r in qs]
+    by_reason = [{
+        "reason": _RETURN_REASONS.get(a["reason_type"], a["reason_type"]),
+        "count": a["count"], "total": a["total"] or Decimal("0"),
+    } for a in (qs.values("reason_type").annotate(count=Count("id"), total=Sum("total")))]
+    by_reason.sort(key=lambda x: x["total"], reverse=True)
+    return Response({
+        "from": f, "to": t, "rows": rows, "by_reason": by_reason,
+        "count": qs.count(), "total": qs.aggregate(t=Sum("total"))["t"] or Decimal("0"),
+    })
+
+
+@api_view(["GET"])
+@permission_classes([_PERM])
+def damages_report(request):
+    """Mermas / daños por periodo. El costo se calcula como cantidad × precio de
+    compra del producto (no hay costo guardado en el reporte de daño)."""
+    f, t = resolve_range(request, days=30)
+    status_f = request.query_params.get("status") or ""
+    qs = (DamageReport.objects.filter(created_at__date__range=(f, t))
+          .select_related("product", "reported_by").order_by("-created_at"))
+    if status_f in ("pendiente", "aprobada", "rechazada"):
+        qs = qs.filter(status=status_f)
+    rows, total_cost_aprob = [], Decimal("0")
+    for d in qs:
+        cost = Decimal(str(d.quantity or 0)) * Decimal(str(d.product.purchase_price or 0))
+        rows.append({
+            "id": d.id, "date": d.created_at, "sku": d.product.sku, "product": d.product.name,
+            "quantity": d.quantity, "reason": d.reason or "", "status": d.status,
+            "reported_by": d.reported_by.name if d.reported_by else "—", "cost": cost,
+        })
+        if d.status == DamageReport.APROBADA:
+            total_cost_aprob += cost
+    counts = {c["status"]: c["n"] for c in qs.values("status").annotate(n=Count("id"))}
+    return Response({
+        "from": f, "to": t, "rows": rows, "count": len(rows),
+        "total_cost_approved": total_cost_aprob,
+        "count_pendiente": counts.get("pendiente", 0),
+        "count_aprobada": counts.get("aprobada", 0),
+        "count_rechazada": counts.get("rechazada", 0),
+    })
+
+
+@api_view(["GET"])
+@permission_classes([_PERM])
+def cancelled_sales(request):
+    """Ventas canceladas/anuladas por periodo, con resumen por vendedor."""
+    f, t = resolve_range(request, days=30)
+    qs = (Sale.objects.filter(status=Sale.STATUS_CANCELADA, date__date__range=(f, t))
+          .select_related("user", "customer").order_by("-cancelled_at", "-date"))
+    rows = [{
+        "folio": s.folio, "date": s.date, "cancelled_at": s.cancelled_at,
+        "user": s.user.name if s.user else "—",
+        "customer": s.customer.name if s.customer else "Consumidor final",
+        "total": s.total, "notes": s.notes or "",
+    } for s in qs]
+    by_seller = [{
+        "user": a["user__name"] or "—", "count": a["count"], "total": a["total"] or Decimal("0"),
+    } for a in (qs.values("user__name").annotate(count=Count("id"), total=Sum("total")).order_by("-count"))]
+    return Response({
+        "from": f, "to": t, "rows": rows, "by_seller": by_seller,
+        "count": qs.count(), "total": qs.aggregate(t=Sum("total"))["t"] or Decimal("0"),
     })
