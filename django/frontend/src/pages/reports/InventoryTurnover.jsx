@@ -14,9 +14,17 @@ export default function InventoryTurnover() {
   useEffect(() => { setPage(1); }, [data, order]);
 
   const base = data?.rows || [];
-  // "slow" = lentos primero: sin ventas arriba, luego menor rotación.
+  // "slow" = estancados primero: menor rotación arriba (los que tienen stock
+  // pero casi no se mueven). Los agotados (stock 0, rotación "—") NO son
+  // estancados, se agotaron, así que van al final. A igual rotación, primero
+  // el que tiene más stock parado.
   const rows = order === "slow"
-    ? [...base].sort((a, b) => (a.rotation ?? -1) - (b.rotation ?? -1))
+    ? [...base].sort((a, b) => {
+        const ra = a.rotation == null ? Infinity : a.rotation;
+        const rb = b.rotation == null ? Infinity : b.rotation;
+        if (ra !== rb) return ra - rb;
+        return Number(b.stock) - Number(a.stock);
+      })
     : base;
   const pageRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
