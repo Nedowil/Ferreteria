@@ -408,6 +408,11 @@ export default function Ticket() {
             -webkit-text-stroke: 0.22px #000; text-shadow: 0 0 0.2px #000; }
           .ticket-paper .font-bold { font-weight: 800 !important; -webkit-text-stroke: 0.3px #000 !important; }
           .ticket-paper .border-dashed { border-color: #000 !important; }
+          /* Barras de color: mantienen el texto BLANCO (no se fuerza a negro). En
+             la térmica salen como bloque oscuro con letras blancas (resaltado);
+             en PDF/color salen en verde. */
+          .ticket-paper .tkbar, .ticket-paper .tkbar * { color: #fff !important;
+            -webkit-text-stroke: 0 !important; text-shadow: none !important; }
           /* Ticket térmico: la hoja mide SOLO lo que ocupa el contenido (altura
              automática), así la impresora corta justo al final y no desperdicia
              papel. En formato carta se usa una hoja tamaño carta normal. */
@@ -482,14 +487,14 @@ function TicketPaper({ company, sale, fel, qr, phrases }) {
     <div className="ticket-paper bg-white shadow rounded-lg mx-auto px-5 py-5 text-[12px] font-mono leading-tight text-slate-900" style={{ width: 320 }}>
       <div className="text-center">
         <img src={logo} alt="" className="mx-auto mb-2 w-28 h-auto object-contain rounded" />
-        <div className="font-bold text-[14px]">{company.name}</div>
-        {company.legal_name && <div className="font-bold">{company.legal_name}</div>}
+        <div className="tkbar font-bold text-white text-[15px] py-1 rounded" style={{ background: GREEN }}>{company.name}</div>
+        {company.legal_name && <div className="font-bold mt-1">{company.legal_name}</div>}
         <div className="font-bold">NIT: {company.tax_id}</div>
         {company.address && <div>{company.address}</div>}
         <div>{[company.phone && `Tel: ${company.phone}`, company.email].filter(Boolean).join("  ")}</div>
       </div>
 
-      <div className="mt-2 font-bold">{fel ? "DOCUMENTO TRIBUTARIO ELECTRÓNICO" : "COMPROBANTE DE VENTA"}</div>
+      <div className="tkbar mt-2 font-bold text-white text-center py-0.5 rounded" style={{ background: GREEN }}>{fel ? "DOCUMENTO TRIBUTARIO ELECTRÓNICO" : "COMPROBANTE DE VENTA"}</div>
       <div className="font-bold">{fel ? `Factura # ${fel.numero}` : `Recibo No. ${sale.folio}`}</div>
       {fel?.uuid && <><div className="font-bold">Número de Autorización:</div><div className="break-all">{fel.uuid}</div></>}
       <div className="font-bold">Fecha: {new Date(sale.date).toLocaleString("es-GT")}</div>
@@ -501,8 +506,8 @@ function TicketPaper({ company, sale, fel, qr, phrases }) {
       {fel && <div className="font-bold">Serie: {fel.serie}  No: {fel.numero}</div>}
       {fel?.fecha_certificacion && <div className="font-bold">Certificación: {new Date(fel.fecha_certificacion).toLocaleDateString("es-GT")}</div>}
 
-      <div className="border-t border-dashed border-slate-400 my-2" />
-      <div className="grid grid-cols-3 font-bold"><span>Cant.</span><span className="text-center">Precio</span><span className="text-right">Sub Total</span></div>
+      <div className="my-2" style={{ borderTop: "1.5px solid " + GREEN }} />
+      <div className="tkbar grid grid-cols-3 font-bold text-white px-1.5 py-0.5 rounded" style={{ background: GREEN }}><span>Cant.</span><span className="text-center">Precio</span><span className="text-right">Sub Total</span></div>
       {sale.items.map((it, i) => (
         <div key={i} className="mt-1">
           <div>{it.name}{it.unit_label ? ` (${it.unit_label})` : ""}</div>
@@ -514,15 +519,15 @@ function TicketPaper({ company, sale, fel, qr, phrases }) {
         </div>
       ))}
 
-      <div className="border-t border-dashed border-slate-400 my-2" />
+      <div className="my-2" style={{ borderTop: "1.5px solid " + GREEN }} />
       {Number(sale.discount) > 0 && (
         <>
           <div className="flex justify-between"><span>Subtotal:</span><span>{Q(sale.subtotal)}</span></div>
           <div className="flex justify-between"><span>Descuento:</span><span>−{Q(sale.discount)}</span></div>
         </>
       )}
-      {/* Igual que el térmico: a la izquierda, en negrita y sin agrandar. */}
-      <div className="flex justify-between font-bold"><span>Total Venta:</span><span>{Q(sale.total)}</span></div>
+      {/* Total resaltado con barra de color. */}
+      <div className="tkbar flex justify-between font-bold text-white text-[14px] px-2 py-1 rounded my-1" style={{ background: GREEN }}><span>Total Venta:</span><span>{Q(sale.total)}</span></div>
       {(/cred/i.test(sale.payment_status || "") || sale.payment_method === "credito") ? (
         <>
           {/* Venta al crédito: no entra efectivo; se muestra el saldo pendiente. */}
@@ -535,7 +540,7 @@ function TicketPaper({ company, sale, fel, qr, phrases }) {
           <div className="font-bold mt-1">Métodos de Pago:</div>
           <div className="flex justify-between"><span>{metodoLabel(sale.payment_method)}:</span><span>{Q(sale.paid)}</span></div>
           <div className="flex justify-between font-bold my-1"><span>Impuesto Total:</span><span>{Q(sale.tax)}</span></div>
-          <div className="border-t border-dashed border-slate-400 my-2" />
+          <div className="my-2" style={{ borderTop: "1.5px solid " + GREEN }} />
           <div className="flex justify-between font-bold"><span>Entregado:</span><span>{Q(sale.paid)}</span></div>
           <div className="flex justify-between font-bold text-[15px]"><span>Vuelto:</span><span>{Q(sale.change)}</span></div>
         </>
@@ -554,7 +559,7 @@ function TicketPaper({ company, sale, fel, qr, phrases }) {
           {qr && <img src={qr} alt="QR" className="mx-auto mt-2" style={{ width: 120, height: 120 }} />}
         </div>
       )}
-      <div className="text-center mt-3 font-bold">¡Gracias por su compra!</div>
+      <div className="text-center mt-3 font-bold text-[13px]" style={{ color: GREEN }}>¡Gracias por su compra!</div>
       <div className="text-center mt-2 text-[11px]">
         <div className="italic">«Pon en manos del Señor todas tus obras, y tus proyectos se cumplirán.»</div>
         <div>Proverbios 16:3</div>
