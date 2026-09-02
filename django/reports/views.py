@@ -226,7 +226,7 @@ def daily_cash(request):
 @api_view(["GET"])
 @permission_classes([_PERM])
 def by_seller(request):
-    """Ventas por vendedor."""
+    """Ventas por vendedor, con ganancia (ingreso − costo), margen y % de descuento."""
     f, t = resolve_range(request, days=30)
     qs = Sale.objects.filter(status=Sale.STATUS_COMPLETADA, date__date__range=(f, t))
     rows = list(
@@ -234,13 +234,37 @@ def by_seller(request):
         .annotate(
             name=Coalesce(F("user__name"), Value("Sin asignar")),
             sales_count=Count("id"), total_revenue=Sum("total"),
+            total_subtotal=Sum("subtotal"),
             total_discount=Sum("discount"), avg_ticket=Avg("total"),
         ).order_by("-total_revenue")
     )
+    # Costo y venta (a nivel de línea) por vendedor, para calcular la ganancia
+    # igual que en "Utilidad bruta".
+    items = {
+        r["sale__user__id"]: r
+        for r in _completed_items(f, t).values("sale__user__id")
+        .annotate(item_revenue=Sum("subtotal"), item_cost=Sum(COST_ITEM))
+    }
+    for r in rows:
+        it = items.get(r["user__id"], {})
+        rev = it.get("item_revenue") or Decimal("0")
+        cost = it.get("item_cost") or Decimal("0")
+        r["total_cost"] = cost
+        r["gross_profit"] = rev - cost
+        r["margin"] = float(r["gross_profit"] / rev * 100) if rev else 0
+        base = r["total_subtotal"] or 0
+        r["discount_pct"] = float((r["total_discount"] or 0) / base * 100) if base else 0
+
     total_revenue = sum((r["total_revenue"] or 0 for r in rows), Decimal("0"))
     total_count = sum((r["sales_count"] or 0 for r in rows), 0)
+    total_profit = sum((r["gross_profit"] or 0 for r in rows), Decimal("0"))
+    total_discount = sum((r["total_discount"] or 0 for r in rows), Decimal("0"))
+    avg_ticket = (total_revenue / total_count) if total_count else Decimal("0")
     return Response({"from": f, "to": t, "rows": rows,
-                     "total_revenue": total_revenue, "total_count": total_count})
+                     "total_revenue": total_revenue, "total_count": total_count,
+                     "total_profit": total_profit, "total_discount": total_discount,
+                     "avg_ticket": avg_ticket,
+                     "top_seller": rows[0]["name"] if rows else None})
 
 
 @api_view(["GET"])
