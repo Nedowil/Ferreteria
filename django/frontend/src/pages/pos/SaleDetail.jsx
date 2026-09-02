@@ -26,6 +26,9 @@ export default function SaleDetail() {
   useEffect(load, [id]);
 
   const emitInvoice = async () => {
+    // Confirmación: emitir la FEL es un acto fiscal ante la SAT. Además evita
+    // que se emita por error al querer solo imprimir el comprobante.
+    if (!(await dialog.confirm(`¿Emitir la factura electrónica (FEL) de la venta ${s.folio} ante la SAT? Esta acción no se puede deshacer.`, { okText: "Sí, emitir factura" }))) return;
     setError("");
     try { await api.post(`/sales/${id}/emit-invoice/`); load(); }
     catch (err) { setError(err.response?.data?.detail || "No se pudo emitir la factura."); }
@@ -152,12 +155,19 @@ export default function SaleDetail() {
             ) : (
               <p className="text-sm text-slate-500 dark:text-slate-400">Esta venta aún no tiene factura electrónica.</p>
             )}
-            <div className="flex flex-col gap-2.5 mt-3">
-              {s.status === "completada" && can("facturas.emitir") && (!invoice || (invoice.status !== "certificada" && invoice.status !== "anulada")) && (
-                <button onClick={emitInvoice} className="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-base font-semibold shadow-md hover:shadow-lg transition bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white">🧾 Emitir factura (FEL)</button>
-              )}
-              <Link to={`/ventas/${id}/ticket`} className="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-base font-semibold shadow-md hover:shadow-lg transition bg-slate-700 hover:bg-slate-800 text-white">🖨️ Ver / imprimir comprobante</Link>
-            </div>
+            {(() => {
+              const showEmit = s.status === "completada" && can("facturas.emitir") && (!invoice || (invoice.status !== "certificada" && invoice.status !== "anulada"));
+              return (
+                <div className="mt-3">
+                  {showEmit && (
+                    <button onClick={emitInvoice} className="w-full inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-base font-semibold shadow-md hover:shadow-lg transition bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white">🧾 Emitir factura (FEL)</button>
+                  )}
+                  {/* Separador claro para que no confundan "Emitir" con "Imprimir". */}
+                  {showEmit && <div className="my-4 border-t border-slate-200 dark:border-slate-700" />}
+                  <Link to={`/ventas/${id}/ticket`} className="w-full inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-base font-semibold border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-slate-400 transition">🖨️ Ver / imprimir comprobante</Link>
+                </div>
+              );
+            })()}
           </section>
 
           {s.status === "completada" && can("ventas.cancelar") && (
