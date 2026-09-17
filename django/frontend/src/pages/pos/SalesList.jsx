@@ -4,6 +4,7 @@ import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 import Pagination from "../../components/Pagination";
+import SaleDetailView from "./SaleDetailView";
 
 const STATUS_BADGE = {
   completada: "bg-green-100 text-green-700",
@@ -29,6 +30,9 @@ export default function SalesList() {
   });
   const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState(false);
+  // Venta abierta en el modal flotante (null = cerrado). Al ver una venta ya no
+  // se cambia de página: se abre encima de la lista.
+  const [viewId, setViewId] = useState(null);
   const PAGE_SIZE = 15; // debe coincidir con DefaultPagination.page_size del backend
 
   // Carga la página `p`. La tabla se pagina (15 por página); el resumen cuenta
@@ -42,6 +46,13 @@ export default function SalesList() {
   const goPage = (p) => { setPage(p); load(p); };
   const money = (n) => "Q" + Number(n || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   useEffect(() => { load(1); }, []);
+  // Cerrar el modal con la tecla Esc.
+  useEffect(() => {
+    if (!viewId) return;
+    const onKey = (e) => { if (e.key === "Escape") setViewId(null); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [viewId]);
   // Al vaciar la búsqueda, se recargan todos los registros desde la página 1.
   const _firstLoad = useRef(true);
   useEffect(() => {
@@ -119,7 +130,7 @@ export default function SalesList() {
         {/* Móvil: tarjetas (la tabla no cabe en pantallas angostas) */}
         <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-700">
           {data.results.map((s) => (
-            <Link key={s.id} to={`/ventas/${s.id}`} className="block p-4 active:bg-slate-50 dark:active:bg-slate-700">
+            <button key={s.id} type="button" onClick={() => setViewId(s.id)} className="block w-full text-left p-4 active:bg-slate-50 dark:active:bg-slate-700">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div className="font-medium text-slate-800 dark:text-slate-100 break-words">{s.customer_name || "Consumidor final"}</div>
@@ -135,7 +146,7 @@ export default function SalesList() {
                 <span>· {s.payment_status_display}{Number(s.balance) > 0 ? ` · saldo Q${s.balance}` : ""}</span>
                 {isAdmin && s.user_name && <span>· {s.user_name}</span>}
               </div>
-            </Link>
+            </button>
           ))}
           {data.results.length === 0 && <div className="px-5 py-10 text-center text-slate-400">No hay ventas.</div>}
         </div>
@@ -158,7 +169,7 @@ export default function SalesList() {
                 <td className="px-4 py-2 text-xs text-slate-500 dark:text-slate-400">{s.payment_status_display}{Number(s.balance) > 0 ? ` · saldo Q${s.balance}` : ""}</td>
                 <td className="px-4 py-2"><span className={"inline-block rounded-full px-2 py-0.5 text-xs font-medium " + STATUS_BADGE[s.status]}>{s.status_display}</span></td>
                 {isAdmin && <td className="px-4 py-2 text-slate-600 dark:text-slate-300">{s.user_name || "—"}</td>}
-                <td className="px-4 py-2 text-right"><Link to={`/ventas/${s.id}`} className="inline-flex items-center justify-center gap-1 rounded-lg px-6 py-1.5 text-sm font-semibold shadow-sm hover:shadow transition bg-slate-700 hover:bg-slate-800 text-white">Ver</Link></td>
+                <td className="px-4 py-2 text-right"><button type="button" onClick={() => setViewId(s.id)} className="inline-flex items-center justify-center gap-1 rounded-lg px-6 py-1.5 text-sm font-semibold shadow-sm hover:shadow transition bg-slate-700 hover:bg-slate-800 text-white">Ver</button></td>
               </tr>
             ))}
             {data.results.length === 0 && <tr><td colSpan={isAdmin ? 8 : 7} className="px-5 py-10 text-center text-slate-400">No hay ventas.</td></tr>}
@@ -168,6 +179,18 @@ export default function SalesList() {
       </div>
 
       <Pagination page={page} count={data.count} pageSize={PAGE_SIZE} onPage={goPage} label="ventas" />
+
+      {/* Modal flotante con el detalle de la venta. Se cierra con el botón, con
+          clic afuera o con Esc. onChanged refresca la lista (p. ej. al cancelar). */}
+      {viewId && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 overflow-y-auto"
+             onClick={() => setViewId(null)}>
+          <div className="bg-slate-50 dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-4xl my-6 p-5"
+               onClick={(e) => e.stopPropagation()}>
+            <SaleDetailView id={viewId} onClose={() => setViewId(null)} onChanged={() => load()} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
