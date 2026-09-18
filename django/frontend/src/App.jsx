@@ -4,7 +4,7 @@ import { useAuth } from "./auth/AuthContext";
 import Layout from "./components/Layout";
 import { DialogHost } from "./components/Dialog";
 import { ToastHost } from "./components/Toast";
-import SelectNumericOnFocus from "./components/SelectNumericOnFocus";
+import NumericCaretOnFocus from "./components/NumericCaretOnFocus";
 import Login from "./pages/Login"; // eager: es la puerta de entrada
 import Profiles from "./pages/Profiles"; // eager: pantalla de perfiles (estilo Netflix)
 
@@ -149,7 +149,7 @@ function Protected({ children, perm }) {
 export default function App() {
   return (
     <Suspense fallback={<Loading />}>
-    <SelectNumericOnFocus />
+    <NumericCaretOnFocus />
     <DialogHost />
     <ToastHost />
     <Routes>
