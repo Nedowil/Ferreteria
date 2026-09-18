@@ -104,6 +104,31 @@ html.dark summary:focus-visible {
 }
 
 /* ============================================================
+   Contraste en modo oscuro (legibilidad).
+   Los grises secundarios "sueltos" (slate-500/600 sin una variante dark:
+   propia) se aclaran para que se lean bien sobre el fondo oscuro y cumplan
+   contraste AA. El :where() mantiene la especificidad baja: si un elemento ya
+   trae su propio dark:text-slate-*, ese sigue mandando y no se pisa.
+   ============================================================ */
+html.dark :where(.text-slate-500),
+html.dark :where(.text-slate-600) {
+  color: #94a3b8;   /* slate-400: cumple contraste AA sobre el fondo oscuro */
+}
+
+/* ============================================================
+   Tamaños tocables: en pantallas táctiles (tablet/celular), los campos de
+   captura tienen una altura mínima cómoda para el dedo. No aplica en escritorio
+   (pointer fino), donde no hace falta y podría estirar controles compactos.
+   ============================================================ */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]),
+  select,
+  textarea {
+    min-height: 40px;
+  }
+}
+
+/* ============================================================
    Animación "premium" de botones (estilo relleno deslizante).
    Al pasar el mouse: un brillo ENTRA deslizándose de izquierda a
    derecha dentro del botón, el botón se levanta un poco y proyecta
