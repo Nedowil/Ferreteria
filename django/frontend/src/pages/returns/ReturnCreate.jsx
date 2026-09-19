@@ -105,6 +105,24 @@ export default function ReturnCreate() {
     setProdSales(data.sales || []);
   };
 
+  // Escaneo en "Por producto": el lector teclea el código y manda Enter. Se hace
+  // una búsqueda fresca (evita la carrera del onChange) y se carga la venta más
+  // reciente de ese producto automáticamente. La lista queda visible por si el
+  // cliente devuelve de una venta distinta.
+  const onProdScan = async (e) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    const q = prodQuery.trim();
+    if (q.length < 2) return;
+    try {
+      const { data } = await api.get("/returns/search-by-product/", { params: { q } });
+      const sales = data.sales || [];
+      setProdSales(sales);
+      if (sales.length > 0) loadSale(sales[0].sale_id);
+      else setError("No se encontró una venta reciente con ese producto.");
+    } catch { /* la búsqueda por letra ya muestra el error si aplica */ }
+  };
+
   // Sin ticket: buscar productos
   const doSearch = async (q) => {
     setSearch(q);
@@ -123,6 +141,23 @@ export default function ReturnCreate() {
       }]);
     }
     setSearch(""); setResults([]);
+  };
+  // Escaneo en "Sin ticket": el lector teclea el código y manda Enter. Se busca
+  // el producto y se agrega el de coincidencia EXACTA por código/SKU (o el
+  // primero). Deja el campo listo para el siguiente escaneo.
+  const onSinTicketScan = async (e) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    const q = search.trim();
+    if (q.length < 2) return;
+    try {
+      const { data } = await api.get("/inventory/products/", { params: { search: q, page_size: 8 } });
+      const list = data.results || data;
+      const ql = q.toLowerCase();
+      const hit = list.find((p) => (p.barcode || "").toLowerCase() === ql || (p.sku || "").toLowerCase() === ql) || list[0];
+      if (hit) addItem(hit);
+      else setError("No se encontró un producto con ese código.");
+    } catch { /* ignora: el buscador por letra ya refleja el estado */ }
   };
   const updItem = (idx, f, v) => setItems(items.map((it, i) => i === idx ? { ...it, [f]: v } : it));
   // Al cambiar la medida, se ajusta el factor, la etiqueta y el precio de esa medida.
@@ -231,7 +266,8 @@ export default function ReturnCreate() {
 
       {mode === "producto" && (
         <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
-          <input placeholder="Buscar producto (nombre, SKU o código)…" value={prodQuery} onChange={(e) => searchProduct(e.target.value)}
+          <input placeholder="Buscar o escanear producto (nombre, SKU o código)…" value={prodQuery} onChange={(e) => searchProduct(e.target.value)}
+                 onKeyDown={onProdScan} autoFocus
                  className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
           {prodSales.length > 0 && (
             <div className="mt-2 divide-y text-sm">
@@ -249,7 +285,8 @@ export default function ReturnCreate() {
       {mode === "sin_ticket" && (
         <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
           <div className="relative">
-            <input placeholder="Buscar producto a reintegrar…" value={search} onChange={(e) => doSearch(e.target.value)}
+            <input placeholder="Buscar o escanear producto a reintegrar…" value={search} onChange={(e) => doSearch(e.target.value)}
+                   onKeyDown={onSinTicketScan} autoFocus
                    className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
             {results.length > 0 && (
               <div className="absolute z-10 bg-white dark:bg-slate-800 border rounded shadow w-full mt-1 max-h-60 overflow-auto">
