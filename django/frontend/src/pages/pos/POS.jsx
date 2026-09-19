@@ -1227,7 +1227,10 @@ export default function POS() {
                   <option value="transferencia">Transferencia</option>
                 </select>
               </div>
-              {paymentMethod === "efectivo" && (
+              {/* "Recibido/Vuelto" oculto por defecto (el sistema asume pago justo,
+                  vuelto 0). Solo aparece si el admin activa "obligar efectivo
+                  recibido" en Configuración de empresa. */}
+              {paymentMethod === "efectivo" && requireCash && (
                 <div>
                   <label className="block text-sm font-medium mb-1">Recibido</label>
                   <div className="flex flex-wrap gap-1.5 mb-2">
