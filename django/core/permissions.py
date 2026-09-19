@@ -40,6 +40,10 @@ PERMISSIONS = [
     ("clientes.editar", "Editar clientes", "Ventas"),
     ("clientes.eliminar", "Eliminar clientes", "Ventas"),
     ("ventas.ver", "Ver ventas", "Ventas"),
+    # Ver el monto TOTAL de cada venta en la LISTA de ventas. Quien no lo tenga,
+    # ve la lista sin los totales (pero al dar "Ver" sí ve el total en el detalle).
+    # El dueño decide qué rol lo tiene desde la pantalla de Roles.
+    ("ventas.ver_total_lista", "Ver el total en la lista de ventas", "Ventas"),
     ("ventas.crear", "Crear ventas (POS)", "Ventas"),
     ("ventas.cancelar", "Cancelar ventas", "Ventas"),
     # Anti-fraude: autoriza pasarse del descuento máximo o vender por debajo del

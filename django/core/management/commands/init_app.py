@@ -16,7 +16,9 @@ from django.contrib.auth.models import Group
 from django.core.management.base import BaseCommand
 
 from core.models import Branch, BranchUser
-from core.permissions import ROLE_MATRIX, sync_permissions
+from core.permissions import (
+    ALL_CODENAMES, ROLE_MATRIX, get_permission_content_type, sync_permissions,
+)
 
 User = get_user_model()
 ROLES = ["admin", "vendedor", "almacenista"]
@@ -26,13 +28,32 @@ class Command(BaseCommand):
     help = "Sincroniza permisos/roles, asegura una sucursal y crea el admin desde el entorno."
 
     def handle(self, *args, **options):
+        # Qué permisos ya existían ANTES de sincronizar: sirve para saber cuáles
+        # son "nuevos" en este deploy y solo conceder esos, sin pisar el resto.
+        from django.contrib.auth.models import Permission
+        ct = get_permission_content_type()
+        existing_codes = set(
+            Permission.objects.filter(content_type=ct).values_list("codename", flat=True)
+        )
         perms = sync_permissions()
-        self.stdout.write(f"  + {len(perms)} permisos sincronizados")
+        new_codes = set(ALL_CODENAMES) - existing_codes
+        self.stdout.write(f"  + {len(perms)} permisos sincronizados"
+                          + (f" ({len(new_codes)} nuevos)" if new_codes else ""))
         for role in ROLES:
             group, created = Group.objects.get_or_create(name=role)
-            group.permissions.set([perms[c] for c in ROLE_MATRIX.get(role, []) if c in perms])
             if created:
+                # Rol nuevo: se aplica la matriz por defecto completa.
+                group.permissions.set([perms[c] for c in ROLE_MATRIX.get(role, []) if c in perms])
                 self.stdout.write(f"  + rol '{role}'")
+            else:
+                # Rol existente: NO se pisan los ajustes que el dueño hizo en la
+                # pantalla de Roles. Solo se conceden los permisos NUEVOS de este
+                # deploy que por defecto le corresponden a este rol.
+                nuevos = [perms[c] for c in ROLE_MATRIX.get(role, [])
+                          if c in new_codes and c in perms]
+                if nuevos:
+                    group.permissions.add(*nuevos)
+                    self.stdout.write(f"  · rol '{role}': +{len(nuevos)} permiso(s) nuevo(s)")
 
         branch = Branch.objects.filter(is_main=True).first() or Branch.objects.first()
         if branch is None:

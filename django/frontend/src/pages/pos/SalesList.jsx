@@ -17,6 +17,10 @@ export default function SalesList() {
   // Las tarjetas de resumen (ingresos totales) solo las ve quien pueda ver
   // reportes (el admin). El vendedor no las ve ni pide el dato.
   const canSeeSummary = can("reportes.ver");
+  // Ver el total (monto Q) de cada venta en la LISTA. Quien no lo tenga ve la
+  // lista sin totales, pero al dar "Ver" sí ve el total en el detalle. El dueño
+  // asigna este permiso al rol que quiera desde la pantalla de Roles.
+  const canSeeTotal = can("ventas.ver_total_lista");
   const [searchParams] = useSearchParams();
   const [data, setData] = useState({ results: [], count: 0 });
   const [summary, setSummary] = useState({ count: 0, completed_count: 0, total_income: 0, total_profit: 0, total_cost: 0 });
@@ -70,9 +74,9 @@ export default function SalesList() {
         { header: "Folio", value: (s) => s.folio },
         { header: "Cliente", value: (s) => s.customer_name || "Consumidor final" },
         { header: "Fecha", value: (s) => new Date(s.date).toLocaleString("es-GT") },
-        { header: "Total", value: (s) => Number(s.total) },
+        ...(canSeeTotal ? [{ header: "Total", value: (s) => Number(s.total) }] : []),
         { header: "Pago", value: (s) => s.payment_status_display },
-        { header: "Saldo", value: (s) => Number(s.balance) },
+        ...(canSeeTotal ? [{ header: "Saldo", value: (s) => Number(s.balance) }] : []),
         { header: "Estado", value: (s) => s.status_display },
         ...(isAdmin ? [{ header: "Vendedor", value: (s) => s.user_name || "—" }] : []),
       ], rows);
@@ -137,13 +141,13 @@ export default function SalesList() {
                   <div className="text-xs text-slate-400 font-mono">{s.folio}</div>
                 </div>
                 <div className="text-right shrink-0">
-                  <div className="font-semibold text-slate-700 dark:text-slate-200">Q{s.total}</div>
+                  {canSeeTotal && <div className="font-semibold text-slate-700 dark:text-slate-200">Q{s.total}</div>}
                   <span className={"inline-block mt-0.5 rounded-full px-2 py-0.5 text-xs font-medium " + STATUS_BADGE[s.status]}>{s.status_display}</span>
                 </div>
               </div>
               <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-slate-500 dark:text-slate-400">
                 <span>{new Date(s.date).toLocaleString()}</span>
-                <span>· {s.payment_status_display}{Number(s.balance) > 0 ? ` · saldo Q${s.balance}` : ""}</span>
+                <span>· {s.payment_status_display}{canSeeTotal && Number(s.balance) > 0 ? ` · saldo Q${s.balance}` : ""}</span>
                 {isAdmin && s.user_name && <span>· {s.user_name}</span>}
               </div>
             </button>
@@ -156,7 +160,7 @@ export default function SalesList() {
         <table className="w-full text-sm">
           <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
             <tr><th className="px-4 py-2.5">Folio</th><th className="px-4 py-2.5">Cliente</th><th className="px-4 py-2.5">Fecha</th>
-                <th className="px-4 py-2.5 text-right">Total</th><th className="px-4 py-2.5">Pago</th><th className="px-4 py-2.5">Estado</th>
+                {canSeeTotal && <th className="px-4 py-2.5 text-right">Total</th>}<th className="px-4 py-2.5">Pago</th><th className="px-4 py-2.5">Estado</th>
                 {isAdmin && <th className="px-4 py-2.5">Vendedor</th>}<th></th></tr>
           </thead>
           <tbody>
@@ -165,14 +169,14 @@ export default function SalesList() {
                 <td className="px-4 py-2 font-mono text-xs">{s.folio}</td>
                 <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">{s.customer_name || "Consumidor final"}</td>
                 <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{new Date(s.date).toLocaleString()}</td>
-                <td className="px-4 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">Q{s.total}</td>
-                <td className="px-4 py-2 text-xs text-slate-500 dark:text-slate-400">{s.payment_status_display}{Number(s.balance) > 0 ? ` · saldo Q${s.balance}` : ""}</td>
+                {canSeeTotal && <td className="px-4 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">Q{s.total}</td>}
+                <td className="px-4 py-2 text-xs text-slate-500 dark:text-slate-400">{s.payment_status_display}{canSeeTotal && Number(s.balance) > 0 ? ` · saldo Q${s.balance}` : ""}</td>
                 <td className="px-4 py-2"><span className={"inline-block rounded-full px-2 py-0.5 text-xs font-medium " + STATUS_BADGE[s.status]}>{s.status_display}</span></td>
                 {isAdmin && <td className="px-4 py-2 text-slate-600 dark:text-slate-300">{s.user_name || "—"}</td>}
                 <td className="px-4 py-2 text-right"><button type="button" onClick={() => setViewId(s.id)} className="inline-flex items-center justify-center gap-1 rounded-lg px-6 py-1.5 text-sm font-semibold shadow-sm hover:shadow transition bg-slate-700 hover:bg-slate-800 text-white">Ver</button></td>
               </tr>
             ))}
-            {data.results.length === 0 && <tr><td colSpan={isAdmin ? 8 : 7} className="px-5 py-10 text-center text-slate-400">No hay ventas.</td></tr>}
+            {data.results.length === 0 && <tr><td colSpan={6 + (isAdmin ? 1 : 0) + (canSeeTotal ? 1 : 0)} className="px-5 py-10 text-center text-slate-400">No hay ventas.</td></tr>}
           </tbody>
         </table>
         </div>
