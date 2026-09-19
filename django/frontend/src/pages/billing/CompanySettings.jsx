@@ -1,0 +1,358 @@
+import { useEffect, useState } from "react";
+import api from "../../api/client";
+import { useAuth } from "../../auth/AuthContext";
+import { sendEposPrint, resolveEposUrl, getLocalEpos, setLocalEpos, eposCodeMessage, EPOS_HELP } from "../../utils/epos";
+
+const Section = ({ title, children }) => (
+  <section className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
+    <div className="px-5 py-3 border-b font-semibold">{title}</div>
+    <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">{children}</div>
+  </section>
+);
+
+const Field = ({ label, children, full }) => (
+  <div className={full ? "sm:col-span-2" : ""}>
+    <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">{label}</label>
+    {children}
+  </div>
+);
+
+const input = "w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm";
+
+export default function CompanySettings() {
+  const { can } = useAuth();
+  const editable = can("configuracion.gestionar");
+  const [c, setC] = useState(null);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+  const [saving, setSaving] = useState(false);
+  // Impresora propia de ESTA computadora (se guarda en el navegador, no en el
+  // servidor). Si está puesta, esta PC imprime en su propia impresora en red.
+  const [localIp, setLocalIp] = useState("");
+  const [localProto, setLocalProto] = useState("https");
+
+  useEffect(() => {
+    api.get("/company-settings/").then((r) => setC(r.data));
+    const l = getLocalEpos();
+    if (l) { setLocalIp(l.ip); setLocalProto(l.protocol); }
+  }, []);
+
+  const saveLocalEpos = () => {
+    setLocalEpos(localIp, localProto);
+    setErr("");
+    setMsg(localIp.trim()
+      ? "Impresora de esta computadora guardada."
+      : "Esta computadora vuelve a usar la impresora general.");
+  };
+
+  const set = (k, v) => setC((p) => ({ ...p, [k]: v }));
+
+  const save = async (e) => {
+    e.preventDefault();
+    setMsg(""); setErr(""); setSaving(true);
+    try {
+      const { data } = await api.put("/company-settings/", c);
+      setC(data);
+      setMsg("Configuración guardada.");
+    } catch (e2) {
+      setErr(e2.response?.data?.detail || "No se pudo guardar la configuración.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const testPrinter = async () => {
+    setMsg(""); setErr("");
+    try {
+      const { data } = await api.post("/printer/test/");
+      if (data.status === "sent") {
+        setMsg("Prueba enviada a la impresora de red.");
+        return;
+      }
+      if (data.status === "epos") {
+        // La PC manda el XML directo a la impresora Epson por la red local.
+        // Si esta computadora tiene impresora propia, se prueba esa.
+        const r = await sendEposPrint(resolveEposUrl(data.url), data.xml);
+        if (r.ok) setMsg("Prueba enviada a la impresora.");
+        else setErr(r.error ? EPOS_HELP : eposCodeMessage(r.code));
+        return;
+      }
+      const bytes = Uint8Array.from(atob(data.escpos_base64), (ch) => ch.charCodeAt(0));
+      const url = URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" }));
+      const a = document.createElement("a");
+      a.href = url; a.download = "prueba.escpos.bin";
+      a.click();
+      URL.revokeObjectURL(url);
+      setMsg("Modo no-red: se descargó el archivo ESC/POS de prueba.");
+    } catch (e2) {
+      setErr(e2.response?.data?.detail || "No se pudo imprimir la prueba.");
+    }
+  };
+
+  const testZebra = async () => {
+    setMsg(""); setErr("");
+    try {
+      const { data } = await api.post("/inventory/products/zebra-test/");
+      if (data.status === "sent") {
+        setMsg("Etiqueta de prueba enviada a la Zebra.");
+        return;
+      }
+      const bytes = Uint8Array.from(atob(data.zpl_base64), (ch) => ch.charCodeAt(0));
+      const url = URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" }));
+      const a = document.createElement("a");
+      a.href = url; a.download = "prueba.zpl";
+      a.click();
+      URL.revokeObjectURL(url);
+      setMsg("Modo no-red: se descargó la etiqueta ZPL de prueba.");
+    } catch (e2) {
+      setErr(e2.response?.data?.detail || "No se pudo imprimir la prueba Zebra.");
+    }
+  };
+
+  if (!c) return <div className="text-slate-400">Cargando…</div>;
+
+  return (
+    <form onSubmit={save} className="max-w-4xl space-y-5">
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-semibold">Configuración de la empresa</h1>
+        {editable && (
+          <button disabled={saving} className="bg-blue-600 text-white rounded px-5 py-2 text-sm font-medium disabled:opacity-50">
+            {saving ? "Guardando…" : "Guardar cambios"}
+          </button>
+        )}
+      </div>
+      {!editable && <div className="bg-amber-100 text-amber-800 rounded px-4 py-2 text-sm">Solo lectura — no tienes permiso para editar.</div>}
+      {msg && <div className="bg-green-100 text-green-800 rounded px-4 py-2 text-sm">{msg}</div>}
+      {err && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm">{err}</div>}
+
+      <fieldset disabled={!editable} className="space-y-5">
+        <Section title="Datos fiscales (emisor)">
+          <Field label="Nombre comercial">
+            <input className={input} value={c.commercial_name || ""} onChange={(e) => set("commercial_name", e.target.value)} />
+          </Field>
+          <Field label="Razón social">
+            <input className={input} value={c.legal_name || ""} onChange={(e) => set("legal_name", e.target.value)} />
+          </Field>
+          <Field label="NIT">
+            <input className={input} value={c.tax_id || ""} onChange={(e) => set("tax_id", e.target.value)} />
+          </Field>
+          <Field label="Régimen">
+            <select className={input} value={c.tax_regime} onChange={(e) => set("tax_regime", e.target.value)}>
+              <option value="PEQUENO_CONTRIBUYENTE">Pequeño contribuyente</option>
+              <option value="GENERAL">Régimen general (IVA)</option>
+            </select>
+          </Field>
+          <Field label="Dirección" full>
+            <input className={input} value={c.address || ""} onChange={(e) => set("address", e.target.value)} />
+          </Field>
+          <Field label="Departamento">
+            <input className={input} value={c.department || ""} onChange={(e) => set("department", e.target.value)} />
+          </Field>
+          <Field label="Municipio">
+            <input className={input} value={c.municipality || ""} onChange={(e) => set("municipality", e.target.value)} />
+          </Field>
+          <Field label="Teléfono">
+            <input className={input} value={c.phone || ""} onChange={(e) => set("phone", e.target.value)} />
+          </Field>
+          <Field label="Correo">
+            <input className={input} value={c.email || ""} onChange={(e) => set("email", e.target.value)} />
+          </Field>
+        </Section>
+
+        <Section title="IVA y facturación">
+          <Field label="IVA (%)">
+            <input type="number" step="0.01" className={input} value={c.default_tax_rate} onChange={(e) => set("default_tax_rate", e.target.value)} />
+          </Field>
+          <Field label="Los precios incluyen IVA">
+            <select className={input} value={c.prices_include_tax ? "1" : "0"} onChange={(e) => set("prices_include_tax", e.target.value === "1")}>
+              <option value="1">Sí — precio al público con IVA</option>
+              <option value="0">No — el IVA se suma aparte</option>
+            </select>
+          </Field>
+        </Section>
+
+        <Section title="Cupo FEL (bolsón de DTEs)">
+          <Field label="Cupo anual (0 = sin límite)">
+            <input type="number" min="0" className={input} value={c.fel_yearly_quota} onChange={(e) => set("fel_yearly_quota", e.target.value)} />
+          </Field>
+          <Field label="Mes de inicio del ciclo">
+            <input type="number" min="1" max="12" className={input} value={c.fel_cycle_month} onChange={(e) => set("fel_cycle_month", e.target.value)} />
+          </Field>
+          <Field label="Día de inicio del ciclo">
+            <input type="number" min="1" max="31" className={input} value={c.fel_cycle_day} onChange={(e) => set("fel_cycle_day", e.target.value)} />
+          </Field>
+        </Section>
+
+        <Section title="Seguridad del punto de venta">
+          <Field label="Descuento máximo sin autorización (%)">
+            <input type="number" min="0" max="100" step="0.5" className={input}
+                   value={c.pos_max_discount_percent}
+                   onChange={(e) => set("pos_max_discount_percent", e.target.value)} />
+          </Field>
+          <div className="sm:col-span-2 text-xs text-slate-500 dark:text-slate-400 -mt-1">
+            Si un cajero intenta un descuento mayor a este porcentaje —o vender por debajo del
+            costo— la venta pide autorización de un supervisor (permiso «Autorizar descuento alto
+            o precio bajo el mínimo»).
+          </div>
+          <label className="sm:col-span-2 flex items-start gap-2 text-sm text-slate-700 dark:text-slate-200 mt-1">
+            <input type="checkbox" className="mt-0.5" checked={!!c.pos_require_cash_received}
+                   onChange={(e) => set("pos_require_cash_received", e.target.checked)} />
+            <span>Obligar a ingresar el efectivo recibido en ventas de contado
+              <span className="block text-xs text-slate-400">
+                En las ventas en efectivo, el cajero deberá escribir cuánto le dio el cliente (o tocar
+                «Pago exacto») antes de cobrar. Evita que se olvide y que la caja no cuadre.
+              </span>
+            </span>
+          </label>
+        </Section>
+
+        <Section title="Impresora térmica (tickets)">
+          <Field label="Modo">
+            <select className={input} value={c.printer_mode} onChange={(e) => set("printer_mode", e.target.value)}>
+              <option value="system">Sistema (USB)</option>
+              <option value="epos">Epson red (ePOS)</option>
+              <option value="network">Red (IP) — servidor</option>
+              <option value="bluetooth">Bluetooth</option>
+            </select>
+          </Field>
+          <Field label="Ancho del papel (mm)">
+            <select className={input} value={c.printer_width} onChange={(e) => set("printer_width", e.target.value)}>
+              <option value="58">58 mm</option>
+              <option value="80">80 mm</option>
+            </select>
+          </Field>
+          {c.printer_mode === "network" && (
+            <>
+              <Field label="IP de la impresora">
+                <input className={input} value={c.printer_ip || ""} onChange={(e) => set("printer_ip", e.target.value)} />
+              </Field>
+              <Field label="Puerto">
+                <input type="number" className={input} value={c.printer_port} onChange={(e) => set("printer_port", e.target.value)} />
+              </Field>
+            </>
+          )}
+          {c.printer_mode === "epos" && (
+            <>
+              <Field label="IP de la impresora">
+                <input className={input} placeholder="192.168.1.50" value={c.printer_ip || ""} onChange={(e) => set("printer_ip", e.target.value)} />
+              </Field>
+              <Field label="Conexión">
+                <select className={input} value={c.printer_protocol || "https"} onChange={(e) => set("printer_protocol", e.target.value)}>
+                  <option value="https">HTTPS (recomendado)</option>
+                  <option value="http">HTTP</option>
+                </select>
+              </Field>
+              <div className="sm:col-span-2 text-xs text-slate-500 dark:text-slate-400 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-lg p-3 leading-relaxed">
+                <b>Modo Epson en red (para TM‑m30III con cable de red):</b> la PC manda el ticket
+                directo a la impresora, sin depender de Windows. Pasos: conectá la impresora al
+                mismo router; poné su IP acá; en cada PC abrí una vez <b>https://{c.printer_ip || "IP-de-la-impresora"}</b>{" "}
+                en el navegador y aceptá el aviso de seguridad (certificado). Luego probá con “Imprimir prueba”.
+              </div>
+
+              {/* Impresora propia de ESTA computadora (opcional). Se guarda en
+                  este navegador; si se pone, esta PC imprime en su impresora. */}
+              <div className="sm:col-span-2 border border-slate-200 dark:border-slate-700 rounded-lg p-4">
+                <div className="font-semibold text-sm text-slate-700 dark:text-slate-200 mb-1">🖥️ Impresora de ESTA computadora (opcional)</div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-3 leading-relaxed">
+                  Si esta caja tiene su <b>propia</b> impresora, poné su IP acá. Solo aplica a
+                  <b> esta computadora</b> y manda sobre la IP general de arriba. Dejalo vacío para
+                  usar la impresora general. {getLocalEpos() ? "Actualmente esta PC usa su impresora propia." : "Actualmente esta PC usa la impresora general."}
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs mb-1 text-slate-600 dark:text-slate-300">IP para esta computadora</label>
+                    <input className={input} placeholder="192.168.1.51 (vacío = usar la general)" value={localIp} onChange={(e) => setLocalIp(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="block text-xs mb-1 text-slate-600 dark:text-slate-300">Conexión</label>
+                    <select className={input} value={localProto} onChange={(e) => setLocalProto(e.target.value)}>
+                      <option value="https">HTTPS (recomendado)</option>
+                      <option value="http">HTTP</option>
+                    </select>
+                  </div>
+                </div>
+                <button type="button" onClick={saveLocalEpos} className="mt-3 text-sm border border-slate-300 dark:border-slate-600 rounded px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-700">
+                  Guardar en esta computadora
+                </button>
+              </div>
+            </>
+          )}
+          <div className="sm:col-span-2">
+            <button type="button" onClick={testPrinter} className="text-sm border border-slate-300 dark:border-slate-600 rounded px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-700">
+              Imprimir prueba
+            </button>
+            <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">Guarda los cambios antes de probar.</span>
+          </div>
+        </Section>
+
+        <Section title="Impresora Zebra (etiquetas)">
+          <Field label="Modo">
+            <select className={input} value={c.zebra_mode} onChange={(e) => set("zebra_mode", e.target.value)}>
+              <option value="system">Sistema</option>
+              <option value="network">Red (IP)</option>
+            </select>
+          </Field>
+          <Field label="DPI">
+            <select className={input} value={c.zebra_dpi} onChange={(e) => set("zebra_dpi", e.target.value)}>
+              <option value="203">203 dpi</option>
+              <option value="300">300 dpi</option>
+            </select>
+          </Field>
+          <Field label="Ancho de etiqueta (mm)">
+            <input type="number" className={input} value={c.zebra_label_width} onChange={(e) => set("zebra_label_width", e.target.value)} />
+          </Field>
+          <Field label="Alto de etiqueta (mm)">
+            <input type="number" className={input} value={c.zebra_label_height} onChange={(e) => set("zebra_label_height", e.target.value)} />
+          </Field>
+          {c.zebra_mode === "network" && (
+            <>
+              <Field label="IP de la Zebra">
+                <input className={input} value={c.zebra_ip || ""} onChange={(e) => set("zebra_ip", e.target.value)} />
+              </Field>
+              <Field label="Puerto">
+                <input type="number" className={input} value={c.zebra_port} onChange={(e) => set("zebra_port", e.target.value)} />
+              </Field>
+            </>
+          )}
+          <div className="sm:col-span-2">
+            <button type="button" onClick={testZebra} className="text-sm border border-slate-300 dark:border-slate-600 rounded px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-700">
+              Imprimir etiqueta de prueba
+            </button>
+            <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">Guarda los cambios antes de probar.</span>
+          </div>
+        </Section>
+
+        <Section title="Catálogo público (en línea)">
+          <Field label="Catálogo habilitado">
+            <select className={input} value={c.public_catalog_enabled ? "1" : "0"} onChange={(e) => set("public_catalog_enabled", e.target.value === "1")}>
+              <option value="0">Deshabilitado</option>
+              <option value="1">Habilitado</option>
+            </select>
+          </Field>
+          <Field label="Mostrar precios">
+            <select className={input} value={c.public_catalog_show_prices ? "1" : "0"} onChange={(e) => set("public_catalog_show_prices", e.target.value === "1")}>
+              <option value="1">Sí</option>
+              <option value="0">No — solo “Consultar”</option>
+            </select>
+          </Field>
+          <Field label="Título del catálogo">
+            <input className={input} value={c.public_catalog_title || ""} onChange={(e) => set("public_catalog_title", e.target.value)} />
+          </Field>
+          <Field label="WhatsApp (para consultas)">
+            <input className={input} value={c.public_catalog_whatsapp || ""} onChange={(e) => set("public_catalog_whatsapp", e.target.value)} placeholder="+502 5555-1234" />
+          </Field>
+          <Field label="Introducción" full>
+            <textarea className={input} rows={2} value={c.public_catalog_intro || ""} onChange={(e) => set("public_catalog_intro", e.target.value)} />
+          </Field>
+          {c.public_catalog_enabled && (
+            <div className="sm:col-span-2">
+              <a href="/catalogo" target="_blank" rel="noreferrer" className="text-sm text-blue-600 hover:underline">
+                Abrir catálogo público (/catalogo) ↗
+              </a>
+            </div>
+          )}
+        </Section>
+      </fieldset>
+    </form>
+  );
+}
