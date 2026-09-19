@@ -106,9 +106,9 @@ export default function ReturnCreate() {
   };
 
   // Escaneo en "Por producto": el lector teclea el código y manda Enter. Se hace
-  // una búsqueda fresca (evita la carrera del onChange) y se carga la venta más
-  // reciente de ese producto automáticamente. La lista queda visible por si el
-  // cliente devuelve de una venta distinta.
+  // una búsqueda fresca (evita la carrera del onChange) y SOLO se muestra la
+  // lista de ventas; el cajero elige la venta correcta (no se carga automática,
+  // para no ligar la devolución a una venta equivocada).
   const onProdScan = async (e) => {
     if (e.key !== "Enter") return;
     e.preventDefault();
@@ -118,8 +118,7 @@ export default function ReturnCreate() {
       const { data } = await api.get("/returns/search-by-product/", { params: { q } });
       const sales = data.sales || [];
       setProdSales(sales);
-      if (sales.length > 0) loadSale(sales[0].sale_id);
-      else setError("No se encontró una venta reciente con ese producto.");
+      if (sales.length === 0) setError("No se encontró una venta reciente con ese producto.");
     } catch { /* la búsqueda por letra ya muestra el error si aplica */ }
   };
 
