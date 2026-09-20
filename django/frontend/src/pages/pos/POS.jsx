@@ -361,14 +361,17 @@ export default function POS() {
       // vendedor no tiene permiso de clientes (o falla un endpoint), el
       // catálogo de PRODUCTOS igual carga. Al fallar, se usa la copia local.
 
-      // Productos (lo esencial para vender).
+      // Productos (lo esencial para vender). Primero se muestra la copia LOCAL
+      // (si hay) para que el POS abra al instante aunque el catálogo sea grande;
+      // luego, en segundo plano, se baja la versión fresca y se reemplaza.
+      const cached = await getCatalog().catch(() => []);
+      if (alive && cached && cached.length) setProducts(cached);
       try {
         const { data } = await api.get("/inventory/products/offline-catalog/");
         const list = data.results || data;
         if (alive) { setProducts(list); saveCatalog(list).catch(() => {}); }
       } catch {
-        const cat = await getCatalog().catch(() => []);
-        if (alive) setProducts(cat || []);
+        if (alive && !(cached && cached.length)) setProducts([]);
       }
       // Clientes (opcional: si no tiene permiso, se queda sin lista, no rompe).
       try {

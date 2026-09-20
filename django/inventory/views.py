@@ -2,6 +2,7 @@
 
 from decimal import Decimal
 
+from django.conf import settings
 from django.db.models import F
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, status, viewsets
@@ -356,11 +357,12 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
 
     @action(detail=False, methods=["get"], url_path="offline-catalog")
     def offline_catalog(self, request):
-        """Catálogo reducido para trabajar SIN internet: los productos MÁS
-        vendidos (activos). El límite lo fija el servidor (no el cliente), así se
-        pueden traer más que el tope normal de página (200) sin abrir la puerta a
-        pedidos gigantes de abuso."""
-        limit = 1500
+        """Catálogo para trabajar SIN internet: los productos activos, ordenados
+        por MÁS vendidos primero (por si el tope se alcanza, quedan los que más
+        se usan). El límite lo fija el servidor vía POS_OFFLINE_CATALOG_LIMIT (no
+        el cliente), para cubrir todo el catálogo sin abrir la puerta a pedidos
+        gigantes de abuso."""
+        limit = settings.POS_OFFLINE_CATALOG_LIMIT
         qs = (self.get_queryset().filter(active=True)
               .order_by("-times_sold", "-created_at")[:limit])
         ser = ProductListSerializer(qs, many=True, context=self.get_serializer_context())

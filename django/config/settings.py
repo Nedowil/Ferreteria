@@ -353,6 +353,11 @@ SIMPLE_JWT = {
     "USER_ID_CLAIM": "user_id",
 }
 
+# Cuántos productos guarda el POS para trabajar SIN internet (los más vendidos
+# primero). Se descarga al abrir el POS y se guarda en el dispositivo. Subilo si
+# tu catálogo crece y querés que TODOS estén disponibles offline.
+POS_OFFLINE_CATALOG_LIMIT = int(os.getenv("POS_OFFLINE_CATALOG_LIMIT", "8000"))
+
 # CORS: el SPA de desarrollo corre en Vite (5173)
 CORS_ALLOWED_ORIGINS = [
     o.strip() for o in os.getenv(
