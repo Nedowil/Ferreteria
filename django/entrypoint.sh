@@ -18,12 +18,12 @@ echo "==> Bootstrap (permisos, roles, sucursal, admin)…"
 python manage.py init_app
 
 # Retención de la bitácora (auditoría): conserva los últimos N meses y borra lo
-# anterior, para que la tabla no crezca sin límite con los años. Por defecto 48
-# meses (4 años); se ajusta con AUDIT_RETENTION_MONTHS. Durante los primeros años
+# anterior, para que la tabla no crezca sin límite con los años. Por defecto 36
+# meses (3 años); se ajusta con AUDIT_RETENTION_MONTHS. Durante los primeros años
 # no borra nada (todo es más nuevo que el corte). El borrado es por lotes y el
 # "|| true" evita que un fallo bloquee el arranque de la app.
-echo "==> Limpieza de bitácora (retención ${AUDIT_RETENTION_MONTHS:-48} meses)…"
-python manage.py purgar_auditoria --meses "${AUDIT_RETENTION_MONTHS:-48}" --yes || true
+echo "==> Limpieza de bitácora (retención ${AUDIT_RETENTION_MONTHS:-36} meses)…"
+python manage.py purgar_auditoria --meses "${AUDIT_RETENTION_MONTHS:-36}" --yes || true
 
 # Datos de demostración solo si se pide explícitamente.
 if [ "${SEED_DEMO:-false}" = "true" ]; then
