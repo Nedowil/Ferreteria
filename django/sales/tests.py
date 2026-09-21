@@ -212,11 +212,11 @@ class SaleServiceTests(TestCase):
     def test_descuento_grande_pero_rentable_no_requiere_autorizacion(self):
         # Manda la ganancia mínima, no un tope de %. Estufa: costo 1200, precio
         # 1800. Bajarla a 1330 es 26% de descuento (un tope de 25% lo habría
-        # frenado), pero deja Q130 de ganancia (>10% sobre el costo): pasa sin
-        # autorización.
+        # frenado), pero deja Q130 de ganancia: pasa sin autorización.
         from core.models import CompanySetting
         cfg = CompanySetting.current()
         cfg.pos_min_profit_percent = Decimal("10")
+        cfg.pos_min_profit_amount = Decimal("100")
         cfg.save()
         estufa = Product.objects.create(
             sku="S-ESTUFA", name="Estufa", purchase_price=Decimal("1200"),
@@ -228,11 +228,38 @@ class SaleServiceTests(TestCase):
             user=self.user, branch=self.branch,
         )
         self.assertEqual(sale.total, Decimal("1330.00"))
-        # Por debajo del piso (10% ⇒ mínimo 1320) sí pide autorización.
+        # Mínimo aceptable = min(10% ⇒ 1320, +Q100 ⇒ 1300) = 1300. A 1250 (deja
+        # solo Q50) sí pide autorización.
         with self.assertRaises(SaleError):
             create_sale(
-                {"payment_method": "efectivo", "paid_amount": "1400", "discount": "500"},
+                {"payment_method": "efectivo", "paid_amount": "1400", "discount": "550"},
                 [{"product_id": estufa.id, "quantity": "1", "unit_price": "1800"}],
+                user=self.user, branch=self.branch,
+            )
+
+    def test_ganancia_minima_por_monto_en_quetzales(self):
+        # Caso máquina: costo 2500, precio 2900. Venderla a 2625 deja Q125 = 5%
+        # (por debajo del 10%), pero como supera la ganancia mínima en quetzales
+        # (Q100), pasa sin autorización. A 2550 (deja Q50) sí pide supervisor.
+        from core.models import CompanySetting
+        cfg = CompanySetting.current()
+        cfg.pos_min_profit_percent = Decimal("10")
+        cfg.pos_min_profit_amount = Decimal("100")
+        cfg.save()
+        maquina = Product.objects.create(
+            sku="S-MAQ", name="Máquina", purchase_price=Decimal("2500"),
+            sale_price=Decimal("2900"), stock=Decimal("20"), tax_type="iva",
+        )
+        sale = create_sale(
+            {"payment_method": "efectivo", "paid_amount": "3000", "discount": "275"},
+            [{"product_id": maquina.id, "quantity": "1", "unit_price": "2900"}],
+            user=self.user, branch=self.branch,
+        )
+        self.assertEqual(sale.total, Decimal("2625.00"))  # deja Q125 ≥ Q100 ⇒ pasa
+        with self.assertRaises(SaleError):
+            create_sale(
+                {"payment_method": "efectivo", "paid_amount": "3000", "discount": "350"},
+                [{"product_id": maquina.id, "quantity": "1", "unit_price": "2900"}],
                 user=self.user, branch=self.branch,
             )
 

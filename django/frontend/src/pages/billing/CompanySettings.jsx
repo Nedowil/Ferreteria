@@ -189,15 +189,21 @@ export default function CompanySettings() {
                    value={c.pos_min_profit_percent}
                    onChange={(e) => set("pos_min_profit_percent", e.target.value)} />
           </Field>
+          <Field label="…o ganancia mínima (Q)">
+            <input type="number" min="0" step="1" className={input}
+                   value={c.pos_min_profit_amount}
+                   onChange={(e) => set("pos_min_profit_amount", e.target.value)} />
+          </Field>
           <div className="sm:col-span-2 text-xs text-slate-500 dark:text-slate-400 -mt-1">
-            Ganancia mínima que debe dejar <b>cada producto</b>, calculada como porcentaje sobre su
-            costo. Si un descuento deja el precio por debajo de ese margen (o por debajo del costo),
-            la venta pide autorización de un supervisor (permiso «Autorizar descuento alto o precio
-            bajo el mínimo»). Como se mide contra el costo real de cada producto, una venta rentable
-            pasa aunque el descuento sea grande, y una que hunde el margen se frena aunque el
-            descuento parezca chico. Ejemplo: un producto de costo Q10 con 10% no puede venderse a
-            menos de Q11; una estufa de costo Q1,200 puede bajar hasta Q1,320. Poné 0 para exigir
-            solo que no se venda por debajo del costo.
+            Ganancia mínima que debe dejar <b>cada producto</b>. La venta pasa si deja al menos el
+            <b> porcentaje</b> sobre su costo <b>o</b> al menos ese <b>monto en quetzales</b> de
+            ganancia (lo que se cumpla primero); si no, pide autorización de un supervisor (permiso
+            «Autorizar descuento alto o precio bajo el mínimo»). El porcentaje cuida los productos
+            baratos y el monto en quetzales deja pasar ventas de poco margen pero buena ganancia en
+            artículos caros. Ejemplo con 10% y Q100: un producto de costo Q10 no baja de Q11; una
+            máquina de costo Q2,500 puede venderse hasta Q2,600 (deja Q100) aunque sea solo 4%.
+            Poné 0 en el monto para exigir solo el porcentaje, o 0 en ambos para solo bloquear ventas
+            por debajo del costo.
           </div>
           <label className="sm:col-span-2 flex items-start gap-2 text-sm text-slate-700 dark:text-slate-200 mt-1">
             <input type="checkbox" className="mt-0.5" checked={!!c.pos_require_cash_received}

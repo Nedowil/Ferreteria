@@ -43,9 +43,12 @@ def _check_special_authorization(lines, global_discount, special_authorized):
         return
     from core.models import CompanySetting
     try:
-        min_profit_pct = Decimal(str(CompanySetting.current().pos_min_profit_percent or 0))
+        cfg = CompanySetting.current()
+        min_profit_pct = Decimal(str(cfg.pos_min_profit_percent or 0))
+        min_profit_amount = Decimal(str(cfg.pos_min_profit_amount or 0))
     except Exception:
         min_profit_pct = Decimal("0")
+        min_profit_amount = Decimal("0")
 
     total_gross = sum((l["gross"] for l in lines), Decimal("0"))
     global_disc = Decimal(str(global_discount or 0))
@@ -58,8 +61,14 @@ def _check_special_authorization(lines, global_discount, special_authorized):
         line_cost = l["unit_cost"] * l["quantity"]
         if line_cost <= 0:
             continue
-        # Neto mínimo aceptable = costo + ganancia mínima exigida.
-        min_net = line_cost * (Decimal("1") + min_profit_pct / 100)
+        # La venta pasa si deja al menos el % O al menos el monto en quetzales de
+        # ganancia (lo que exija MENOS). El neto mínimo aceptable es el menor de
+        # los dos umbrales: costo×(1+%) y costo+monto. Así el 10% cuida lo barato
+        # y el monto (ej. Q100) deja pasar ventas de poco % pero buena plata en
+        # artículos caros (una máquina con Q125 de ganancia).
+        min_net_pct = line_cost * (Decimal("1") + min_profit_pct / 100)
+        min_net_amt = line_cost + min_profit_amount
+        min_net = min(min_net_pct, min_net_amt)
         if line_net < min_net:
             qty = l["quantity"] or Decimal("1")
             net_unit = (line_net / qty).quantize(Decimal("0.01"))
@@ -72,8 +81,8 @@ def _check_special_authorization(lines, global_discount, special_authorized):
             min_unit = (min_net / qty).quantize(Decimal("0.01"))
             raise SaleError(
                 f"El precio de {l['product'].name} (Q{net_unit}) no deja la ganancia "
-                f"mínima del {min_profit_pct:.0f}% sobre el costo (Q{cost_unit}): debe "
-                f"venderse al menos a Q{min_unit}. Requiere autorización de un supervisor."
+                f"mínima ({min_profit_pct:.0f}% sobre el costo Q{cost_unit}, o Q{min_profit_amount:.2f} "
+                f"de ganancia): debe venderse al menos a Q{min_unit}. Requiere autorización de un supervisor."
             )
 
 

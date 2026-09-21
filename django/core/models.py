@@ -125,6 +125,15 @@ class CompanySetting(models.Model):
     pos_min_profit_percent = models.DecimalField(
         "ganancia mín. sin autorización (%)", max_digits=5, decimal_places=2, default=10)
 
+    # Anti-fraude: ganancia mínima en QUETZALES, como alternativa al porcentaje.
+    # Una venta pasa si deja al menos el % O al menos este monto de ganancia (lo
+    # que se cumpla primero). Resuelve que en artículos caros el 10% sea mucho
+    # dinero: una máquina de costo Q2,500 vendida con Q125 de ganancia (5%) pasa
+    # por el monto, mientras un "regalo" de centavos en un producto barato se
+    # sigue frenando. Con 0, solo aplica el porcentaje.
+    pos_min_profit_amount = models.DecimalField(
+        "ganancia mín. sin autorización (Q)", max_digits=12, decimal_places=2, default=100)
+
     # OBSOLETOS: el tope de descuento por % y su "colchón" en quetzales se
     # retiraron a favor de la ganancia mínima (un % fijo sobre el precio frenaba
     # ventas rentables en productos de buen margen). Se conservan las columnas por
