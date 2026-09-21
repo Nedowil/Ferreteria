@@ -308,18 +308,27 @@ def by_category(request):
 @api_view(["GET"])
 @permission_classes([_PERM])
 def products_to_review(request):
-    """Productos a revisar: el COSTO por unidad es mayor o igual al PRECIO DE
-    VENTA. Suelen estar mal cargados (por ejemplo, costo inflado por haber
-    escrito el precio 'por empaque' antes de fijar el factor). Ayuda a
-    encontrarlos y corregirlos."""
-    products = (Product.objects.filter(
-                    active=True, deleted_at__isnull=True,
-                    purchase_price__gt=0, sale_price__gt=0,
-                    purchase_price__gte=F("sale_price"))
+    """Productos a revisar. Dos motivos:
+      - «Costo en cero»: el producto no tiene costo de compra cargado. El control
+        de ganancia mínima NO puede protegerlo (lo dejaría vender a cualquier
+        precio) y su ganancia en los reportes sale inflada.
+      - «Costo ≥ precio de venta»: el costo por unidad es mayor o igual al precio
+        de venta. Suelen estar mal cargados (por ejemplo, costo inflado por haber
+        escrito el precio 'por empaque' antes de fijar el factor).
+    Ayuda a encontrarlos y corregirlos."""
+    from django.db.models import Q as _Q
+    products = (Product.objects.filter(active=True, deleted_at__isnull=True)
+                .filter(_Q(purchase_price__lte=0)
+                        | _Q(purchase_price__gt=0, sale_price__gt=0,
+                             purchase_price__gte=F("sale_price")))
                 .select_related("category"))
     rows = []
     for p in products:
         cf = p.container_factor or Decimal("0")
+        if (p.purchase_price or 0) <= 0:
+            reason, reason_label = "costo_cero", "Costo en cero"
+        else:
+            reason, reason_label = "costo_mayor_venta", "Costo ≥ precio de venta"
         rows.append({
             "id": p.id, "sku": p.sku, "name": p.name,
             "category": p.category.name if p.category else None,
@@ -332,10 +341,20 @@ def products_to_review(request):
             # costo/venta por empaque (para ver el desfase de un vistazo)
             "container_cost": (p.purchase_price * cf) if cf else None,
             "container_price": p.container_price,
+            "reason": reason,
+            "reason_label": reason_label,
         })
-    # Los más "raros" primero: mayor diferencia costo − venta.
-    rows.sort(key=lambda r: (r["purchase_price"] or 0) - (r["sale_price"] or 0), reverse=True)
-    return Response({"rows": rows, "count": len(rows)})
+    # Primero los de costo en cero (rompen el control de ganancia); dentro de cada
+    # motivo, los de mayor precio de venta / mayor desfase primero.
+    order = {"costo_cero": 0, "costo_mayor_venta": 1}
+    rows.sort(key=lambda r: (order.get(r["reason"], 9),
+                             -((r["purchase_price"] or 0) - (r["sale_price"] or 0))))
+    count_cero = sum(1 for r in rows if r["reason"] == "costo_cero")
+    return Response({
+        "rows": rows, "count": len(rows),
+        "count_costo_cero": count_cero,
+        "count_costo_mayor_venta": len(rows) - count_cero,
+    })
 
 
 @api_view(["GET"])

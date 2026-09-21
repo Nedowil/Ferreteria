@@ -116,6 +116,24 @@ class ReportsTests(APITestCase):
         rs = self.client.get("/api/reports/by-seller/").json()
         self.assertEqual(rs["rows"][0]["name"], "Vendedor")
 
+    def test_products_to_review_costo_cero_y_costo_mayor_venta(self):
+        # Producto sin costo (costo en cero) y producto con costo ≥ venta.
+        Product.objects.create(sku="P-CERO", name="Sin costo", purchase_price=Decimal("0"),
+                               sale_price=Decimal("50"), stock=Decimal("10"), tax_type="exento")
+        Product.objects.create(sku="P-INV", name="Costo alto", purchase_price=Decimal("80"),
+                               sale_price=Decimal("50"), stock=Decimal("3"), tax_type="exento")
+        d = self.client.get("/api/reports/products-to-review/").json()
+        self.assertEqual(d["count"], 2)
+        self.assertEqual(d["count_costo_cero"], 1)
+        self.assertEqual(d["count_costo_mayor_venta"], 1)
+        skus = {r["sku"]: r["reason"] for r in d["rows"]}
+        self.assertEqual(skus["P-CERO"], "costo_cero")
+        self.assertEqual(skus["P-INV"], "costo_mayor_venta")
+        # El de costo en cero va primero (rompe el control de ganancia).
+        self.assertEqual(d["rows"][0]["sku"], "P-CERO")
+        # El producto bien cargado (compra 60, venta 100) no aparece.
+        self.assertNotIn("P-1", skus)
+
     def test_excluye_canceladas(self):
         # Cancelar la venta deja los reportes en cero
         from sales.models import Sale
