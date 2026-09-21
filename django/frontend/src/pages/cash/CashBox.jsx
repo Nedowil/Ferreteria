@@ -8,6 +8,8 @@ import Pagination from "../../components/Pagination";
 
 const signedAmount = (m) => (["egreso", "devolucion"].includes(m.type) ? -Number(m.amount) : Number(m.amount));
 const MOV_PAGE_SIZE = 15;
+// Formatea montos con separador de miles (Q57,161.00) para leerlos fácil.
+const money = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default function CashBox() {
   const { can } = useAuth();
@@ -45,8 +47,8 @@ export default function CashBox() {
       doc.setFontSize(9); doc.setTextColor(120);
       doc.text(
         session.current_expected == null
-          ? `Fondo inicial: Q${Number(session.opening_amount ?? 0).toFixed(2)}`
-          : `Efectivo esperado: Q${Number(session.current_expected).toFixed(2)}   ·   Fondo inicial: Q${Number(session.opening_amount ?? 0).toFixed(2)}`,
+          ? `Fondo inicial: ${money(session.opening_amount ?? 0)}`
+          : `Efectivo esperado: ${money(session.current_expected)}   ·   Fondo inicial: ${money(session.opening_amount ?? 0)}`,
         40, 58);
       const cols = movCols();
       autoTable(doc, {
@@ -54,7 +56,7 @@ export default function CashBox() {
         head: [cols.map((c) => c.header)],
         body: (session.movements || []).map((m) => cols.map((c) => {
           const v = c.value(m);
-          return typeof v === "number" ? v.toFixed(2) : v;
+          return typeof v === "number" ? v.toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : v;
         })),
         styles: { fontSize: 8.5, cellPadding: 4 },
         headStyles: { fillColor: [51, 65, 85] },
@@ -137,12 +139,12 @@ export default function CashBox() {
               ) : (
                 <>
                   <div className="text-sm text-slate-500 dark:text-slate-400">Efectivo esperado</div>
-                  <div className="text-3xl font-bold mt-1">Q{Number(session.current_expected).toFixed(2)}</div>
-                  <div className="text-xs text-slate-400 mt-1">Fondo inicial: Q{session.opening_amount}</div>
+                  <div className="text-3xl font-bold mt-1">{money(session.current_expected)}</div>
+                  <div className="text-xs text-slate-400 mt-1">Fondo inicial: {money(session.opening_amount)}</div>
                   <div className="mt-3 text-sm space-y-1">
-                    <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">Ventas efectivo</span><span>Q{Number(session.totals_by_method?.efectivo || 0).toFixed(2)}</span></div>
-                    <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">Tarjeta</span><span>Q{Number(session.totals_by_method?.tarjeta || 0).toFixed(2)}</span></div>
-                    <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">Transferencia</span><span>Q{Number(session.totals_by_method?.transferencia || 0).toFixed(2)}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">Ventas efectivo</span><span>{money(session.totals_by_method?.efectivo)}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">Tarjeta</span><span>{money(session.totals_by_method?.tarjeta)}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">Transferencia</span><span>{money(session.totals_by_method?.transferencia)}</span></div>
                   </div>
                 </>
               )}
@@ -173,7 +175,7 @@ export default function CashBox() {
                 <div className="text-sm flex justify-between">
                   <span className="text-slate-500 dark:text-slate-400">Diferencia</span>
                   <span className={Number(counted) - Number(session.current_expected) < 0 ? "text-red-600 font-medium" : "text-green-600 font-medium"}>
-                    Q{(Number(counted) - Number(session.current_expected)).toFixed(2)}
+                    {money(Number(counted) - Number(session.current_expected))}
                   </span>
                 </div>
               )}
@@ -222,7 +224,7 @@ export default function CashBox() {
                     <td className="px-4 py-2 text-slate-600 dark:text-slate-300">{m.user_name || "—"}</td>
                     <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{m.description || "—"}</td>
                     <td className={"px-4 py-2 text-right " + (["egreso", "devolucion"].includes(m.type) ? "text-red-600" : "text-green-700")}>
-                      {["egreso", "devolucion"].includes(m.type) ? "−" : "+"}Q{m.amount}
+                      {["egreso", "devolucion"].includes(m.type) ? "−" : "+"}{money(m.amount)}
                     </td>
                   </tr>
                 ))}
