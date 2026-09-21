@@ -124,6 +124,10 @@ class CompanySetting(models.Model):
     # cajero está OBLIGADO a ingresar el efectivo recibido (no se asume pago
     # exacto). Así el vuelto queda bien calculado y la caja cuadra.
     pos_require_cash_received = models.BooleanField("obligar efectivo recibido", default=False)
+    # Si está apagado (por defecto) el POS cobra SIEMPRE en efectivo y no muestra
+    # el selector de método de pago. Se enciende cuando la tienda empiece a
+    # aceptar tarjeta/transferencia, para que aparezca el selector.
+    pos_multiple_payment_methods = models.BooleanField("aceptar otros métodos de pago", default=False)
 
     # Impresora térmica
     printer_mode = models.CharField(max_length=20, default="system")  # system|bluetooth|network|epos

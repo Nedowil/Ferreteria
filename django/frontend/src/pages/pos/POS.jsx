@@ -276,6 +276,7 @@ export default function POS() {
   const [busy, setBusy] = useState(false);
   const [companyName, setCompanyName] = useState("Ferretería");
   const [requireCash, setRequireCash] = useState(false); // obligar a ingresar el efectivo recibido
+  const [multiPayment, setMultiPayment] = useState(false); // aceptar tarjeta/transferencia (si no, solo efectivo)
   const [picking, setPicking] = useState(null); // producto en la ventana flotante
   const [addingCustomer, setAddingCustomer] = useState(false);
   const [addingProduct, setAddingProduct] = useState(false);
@@ -386,7 +387,7 @@ export default function POS() {
       try {
         const { data } = await api.get("/company-settings/");
         const cname = data.commercial_name || "Ferretería";
-        if (alive) { setCompanyName(cname); setRequireCash(!!data.pos_require_cash_received); setMeta("company_name", cname).catch(() => {}); }
+        if (alive) { setCompanyName(cname); setRequireCash(!!data.pos_require_cash_received); setMultiPayment(!!data.pos_multiple_payment_methods); setMeta("company_name", cname).catch(() => {}); }
       } catch {
         const cn = await getMeta("company_name").catch(() => null);
         if (alive) setCompanyName(cn || "Ferretería");
@@ -554,6 +555,10 @@ export default function POS() {
   // El descuento GENERAL se limita a lo que queda después de los descuentos por línea.
   const discountNum = Math.min(Math.max(0, Number(discount || 0)), Math.max(0, subtotal - lineDiscTotal));
   const total = Math.max(0, subtotal - lineDiscTotal - discountNum);
+  // Si la empresa no acepta otros métodos, el método de pago siempre es efectivo
+  // (aunque una venta pausada hubiera traído otro).
+  useEffect(() => { if (!multiPayment && paymentMethod !== "efectivo") setPaymentMethod("efectivo"); }, [multiPayment, paymentMethod]);
+
   const change = paymentMethod === "efectivo" && !credit ? Math.max(0, Number(paid || 0) - total) : 0;
   const exactPaid = paid !== "" && Math.abs(Number(paid) - total) < 0.005 && total > 0;
   // Si la empresa lo exige, en contado en efectivo hay que ingresar el efectivo
@@ -1239,6 +1244,9 @@ export default function POS() {
 
           {!credit && (
             <>
+              {/* El selector de método de pago solo aparece si la empresa acepta
+                  otros pagos (ajuste). Si no, se cobra siempre en efectivo. */}
+              {multiPayment && (
               <div>
                 <label className="block text-sm font-medium mb-1">Método de pago</label>
                 <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}
@@ -1248,6 +1256,7 @@ export default function POS() {
                   <option value="transferencia">Transferencia</option>
                 </select>
               </div>
+              )}
               {/* "Recibido/Vuelto" oculto por defecto (el sistema asume pago justo,
                   vuelto 0). Solo aparece si el admin activa "obligar efectivo
                   recibido" en Configuración de empresa. */}

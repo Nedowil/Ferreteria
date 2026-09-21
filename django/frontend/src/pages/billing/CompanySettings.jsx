@@ -204,6 +204,16 @@ export default function CompanySettings() {
               </span>
             </span>
           </label>
+          <label className="sm:col-span-2 flex items-start gap-2 text-sm text-slate-700 dark:text-slate-200 mt-1">
+            <input type="checkbox" className="mt-0.5" checked={!!c.pos_multiple_payment_methods}
+                   onChange={(e) => set("pos_multiple_payment_methods", e.target.checked)} />
+            <span>Aceptar otros métodos de pago (tarjeta / transferencia)
+              <span className="block text-xs text-slate-400">
+                Apagado: el POS cobra siempre en efectivo y no muestra el selector de método de pago.
+                Encendelo cuando empieces a aceptar tarjeta o transferencia, y aparecerá el selector.
+              </span>
+            </span>
+          </label>
         </Section>
 
         <Section title="Impresora térmica (tickets)">
