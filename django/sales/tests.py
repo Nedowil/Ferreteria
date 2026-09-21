@@ -229,6 +229,34 @@ class SaleServiceTests(TestCase):
                 user=self.user, branch=self.branch,
             )
 
+    def test_venta_a_costo_sin_ganancia_minima_requiere_autorizacion(self):
+        # Caso Nailo: costo 10/yarda, precio 12, 10 yardas (gross 120). Un
+        # descuento de 20 deja el neto en 100 = justo el costo (ganancia cero).
+        # Antes pasaba (no era ESTRICTAMENTE bajo costo); ahora, con la ganancia
+        # mínima del 10%, se rechaza sin autorización.
+        from core.models import CompanySetting
+        cfg = CompanySetting.current()
+        cfg.pos_min_profit_percent = Decimal("10")
+        cfg.save()
+        nailo = Product.objects.create(
+            sku="S-NAILO", name="Nailo", purchase_price=Decimal("10"),
+            sale_price=Decimal("12"), stock=Decimal("500"), tax_type="iva",
+        )
+        args = ({"payment_method": "efectivo", "paid_amount": "200", "discount": "20"},
+                [{"product_id": nailo.id, "quantity": "10", "unit_price": "12"}])
+        with self.assertRaises(SaleError):
+            create_sale(*args, user=self.user, branch=self.branch)
+        # Con autorización de supervisor, procede.
+        sale = create_sale(*args, user=self.user, branch=self.branch, special_authorized=True)
+        self.assertEqual(sale.total, Decimal("100.00"))
+        # Vendido con ganancia (Q13/yarda ⇒ neto 130 > 110 mínimo): pasa sin autorización.
+        ok = create_sale(
+            {"payment_method": "efectivo", "paid_amount": "200"},
+            [{"product_id": nailo.id, "quantity": "10", "unit_price": "13"}],
+            user=self.user, branch=self.branch,
+        )
+        self.assertEqual(ok.total, Decimal("130.00"))
+
     def test_fecha_retroactiva_queda_en_notas(self):
         sale = create_sale(
             {"payment_method": "efectivo", "paid_amount": "300", "date": "2026-07-01"},

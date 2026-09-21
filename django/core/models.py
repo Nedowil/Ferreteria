@@ -120,6 +120,14 @@ class CompanySetting(models.Model):
     pos_max_discount_percent = models.DecimalField(
         "descuento máx. sin autorización (%)", max_digits=5, decimal_places=2, default=25)
 
+    # Anti-fraude: ganancia MÍNIMA (% sobre el costo) que debe quedar en cada
+    # línea. Si un descuento deja el precio neto por debajo de costo × (1 + %),
+    # la venta requiere autorización de supervisor (mismo mecanismo que "bajo
+    # costo"). Con 0 solo se bloquea vender por debajo del costo. Ej: 10% ⇒ un
+    # producto de costo Q10 no puede venderse a menos de Q11.
+    pos_min_profit_percent = models.DecimalField(
+        "ganancia mín. sin autorización (%)", max_digits=5, decimal_places=2, default=10)
+
     # Anti-descuadre: si está activo, en las ventas de CONTADO en efectivo el
     # cajero está OBLIGADO a ingresar el efectivo recibido (no se asume pago
     # exacto). Así el vuelto queda bien calculado y la caja cuadra.

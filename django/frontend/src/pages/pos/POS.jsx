@@ -277,6 +277,7 @@ export default function POS() {
   const [companyName, setCompanyName] = useState("Ferretería");
   const [requireCash, setRequireCash] = useState(false); // obligar a ingresar el efectivo recibido
   const [multiPayment, setMultiPayment] = useState(false); // aceptar tarjeta/transferencia (si no, solo efectivo)
+  const [minProfitPct, setMinProfitPct] = useState(0); // ganancia mínima (% sobre costo) sin autorización
   const [picking, setPicking] = useState(null); // producto en la ventana flotante
   const [addingCustomer, setAddingCustomer] = useState(false);
   const [addingProduct, setAddingProduct] = useState(false);
@@ -387,7 +388,7 @@ export default function POS() {
       try {
         const { data } = await api.get("/company-settings/");
         const cname = data.commercial_name || "Ferretería";
-        if (alive) { setCompanyName(cname); setRequireCash(!!data.pos_require_cash_received); setMultiPayment(!!data.pos_multiple_payment_methods); setMeta("company_name", cname).catch(() => {}); }
+        if (alive) { setCompanyName(cname); setRequireCash(!!data.pos_require_cash_received); setMultiPayment(!!data.pos_multiple_payment_methods); setMinProfitPct(Number(data.pos_min_profit_percent || 0)); setMeta("company_name", cname).catch(() => {}); }
       } catch {
         const cn = await getMeta("company_name").catch(() => null);
         if (alive) setCompanyName(cn || "Ferretería");
@@ -712,13 +713,16 @@ export default function POS() {
       }
     }
 
-    // Aviso de venta BAJO EL COSTO: si alguna línea queda por debajo de su costo,
-    // se pide confirmación para no vender con pérdida por error. Solo se muestra a
+    // Aviso de venta SIN GANANCIA MÍNIMA: si un descuento deja alguna línea por
+    // debajo del costo, o sin la ganancia mínima exigida (% sobre el costo), se
+    // pide confirmación para no regalar la utilidad por error. Solo se muestra a
     // quien puede autorizarlo (al vendedor sin permiso lo bloquea el backend con
     // su propio mensaje). Requiere ver el costo; si no se conoce, no se advierte.
     if (can("ventas.autorizar_especial")) {
       const totalGross = cart.reduce((s, i) => s + Number(i.quantity || 0) * Number(i.unit_price || 0), 0);
-      const bajoCosto = [];
+      const factor = 1 + (Number(minProfitPct) || 0) / 100;
+      const bajoCosto = [];   // por debajo del costo (pérdida)
+      const sinMargen = [];   // sobre el costo pero sin la ganancia mínima
       for (const it of cart) {
         const costUnit = Number(it.product?.purchase_price || 0) * Number(it.units_factor || 1);
         if (!(costUnit > 0)) continue; // sin costo conocido: no se puede advertir
@@ -726,15 +730,25 @@ export default function POS() {
         const globalShare = totalGross > 0 ? (discountNum * gross) / totalGross : 0;
         const net = gross - lineDisc(it) - globalShare;
         const qty = Number(it.quantity || 0);
+        const netUnit = qty > 0 ? net / qty : net;
         if (net < costUnit * qty - 0.005) {
-          const netUnit = qty > 0 ? net / qty : net;
           bajoCosto.push(`• ${it.name}: precio Q${netUnit.toFixed(2)} vs costo Q${costUnit.toFixed(2)}`);
+        } else if (net < costUnit * qty * factor - 0.005) {
+          const minUnit = costUnit * factor;
+          sinMargen.push(`• ${it.name}: precio Q${netUnit.toFixed(2)} (mínimo Q${minUnit.toFixed(2)} para dejar ${minProfitPct}% sobre el costo Q${costUnit.toFixed(2)})`);
         }
       }
       if (bajoCosto.length > 0) {
+        const extra = sinMargen.length > 0 ? `\n\nAdemás, sin la ganancia mínima del ${minProfitPct}%:\n${sinMargen.join("\n")}` : "";
         const ok = await dialog.confirm(
-          `Estás vendiendo POR DEBAJO DEL COSTO:\n\n${bajoCosto.join("\n")}\n\n¿Confirmás la venta con pérdida?`,
-          { danger: true, okText: "Sí, vender bajo el costo" }
+          `Estás vendiendo POR DEBAJO DEL COSTO:\n\n${bajoCosto.join("\n")}${extra}\n\n¿Confirmás la venta con pérdida?`,
+          { danger: true, okText: "Sí, vender con pérdida" }
+        );
+        if (!ok) return;
+      } else if (sinMargen.length > 0) {
+        const ok = await dialog.confirm(
+          `Esta venta NO deja la ganancia mínima del ${minProfitPct}% sobre el costo:\n\n${sinMargen.join("\n")}\n\n¿Confirmás la venta igual?`,
+          { danger: true, okText: "Sí, vender igual" }
         );
         if (!ok) return;
       }

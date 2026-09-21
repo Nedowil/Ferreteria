@@ -39,9 +39,12 @@ def _check_special_authorization(lines, global_discount, special_authorized):
         return
     from core.models import CompanySetting
     try:
-        max_pct = Decimal(str(CompanySetting.current().pos_max_discount_percent or 0))
+        cfg = CompanySetting.current()
+        max_pct = Decimal(str(cfg.pos_max_discount_percent or 0))
+        min_profit_pct = Decimal(str(cfg.pos_min_profit_percent or 0))
     except Exception:
         max_pct = Decimal("25")
+        min_profit_pct = Decimal("0")
 
     total_gross = sum((l["gross"] for l in lines), Decimal("0"))
     global_disc = Decimal(str(global_discount or 0))
@@ -60,10 +63,24 @@ def _check_special_authorization(lines, global_discount, special_authorized):
         global_share = (global_disc * l["gross"] / total_gross) if total_gross > 0 else Decimal("0")
         line_net = l["gross"] - l["line_discount"] - global_share
         line_cost = l["unit_cost"] * l["quantity"]
-        if line_cost > 0 and line_net < line_cost:
+        if line_cost <= 0:
+            continue
+        # Neto mínimo aceptable = costo + ganancia mínima exigida.
+        min_net = line_cost * (Decimal("1") + min_profit_pct / 100)
+        if line_net < min_net:
+            qty = l["quantity"] or Decimal("1")
+            net_unit = (line_net / qty).quantize(Decimal("0.01"))
+            cost_unit = (line_cost / qty).quantize(Decimal("0.01"))
+            if line_net < line_cost:
+                raise SaleError(
+                    f"El precio de {l['product'].name} (Q{net_unit}) queda POR DEBAJO "
+                    f"del costo (Q{cost_unit}). Requiere autorización de un supervisor."
+                )
+            min_unit = (min_net / qty).quantize(Decimal("0.01"))
             raise SaleError(
-                f"El precio de {l['product'].name} queda por debajo del costo. "
-                "Requiere autorización de un supervisor."
+                f"El precio de {l['product'].name} (Q{net_unit}) no deja la ganancia "
+                f"mínima del {min_profit_pct:.0f}% sobre el costo (Q{cost_unit}): debe "
+                f"venderse al menos a Q{min_unit}. Requiere autorización de un supervisor."
             )
 
 

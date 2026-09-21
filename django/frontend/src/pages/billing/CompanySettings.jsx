@@ -194,6 +194,17 @@ export default function CompanySettings() {
             costo— la venta pide autorización de un supervisor (permiso «Autorizar descuento alto
             o precio bajo el mínimo»).
           </div>
+          <Field label="Ganancia mínima sin autorización (%)">
+            <input type="number" min="0" max="100" step="0.5" className={input}
+                   value={c.pos_min_profit_percent}
+                   onChange={(e) => set("pos_min_profit_percent", e.target.value)} />
+          </Field>
+          <div className="sm:col-span-2 text-xs text-slate-500 dark:text-slate-400 -mt-1">
+            Ganancia mínima que debe dejar cada producto, calculada como porcentaje sobre el
+            costo. Si un descuento deja el precio por debajo de ese margen, la venta pide
+            autorización de un supervisor. Ejemplo: con 10%, un producto de costo Q10 no puede
+            venderse a menos de Q11. Poné 0 para exigir solo que no se venda por debajo del costo.
+          </div>
           <label className="sm:col-span-2 flex items-start gap-2 text-sm text-slate-700 dark:text-slate-200 mt-1">
             <input type="checkbox" className="mt-0.5" checked={!!c.pos_require_cash_received}
                    onChange={(e) => set("pos_require_cash_received", e.target.checked)} />
