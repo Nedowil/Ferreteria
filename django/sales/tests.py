@@ -185,20 +185,46 @@ class SaleServiceTests(TestCase):
         self.assertEqual(self.prod.stock, Decimal("80.00"))
 
     def test_descuento_sobre_limite_requiere_autorizacion(self):
-        # 40% de descuento supera el máximo (25%): sin autorización se rechaza.
-        with self.assertRaises(SaleError):
-            create_sale(
-                {"payment_method": "efectivo", "paid_amount": "1000", "discount": "102"},
-                [{"product_id": self.prod.id, "quantity": "3", "unit_price": "85"}],
-                user=self.user, branch=self.branch,
-            )
-        # Con autorización de supervisor, la misma venta pasa.
-        sale = create_sale(
-            {"payment_method": "efectivo", "paid_amount": "1000", "discount": "102"},
-            [{"product_id": self.prod.id, "quantity": "3", "unit_price": "85"}],
-            user=self.user, branch=self.branch, special_authorized=True,
+        # Producto de buen margen (costo 10, precio 100) para aislar el control de
+        # descuento del piso de ganancia. 10 unidades = Q1,000; descuento de Q300
+        # (30% > 25% y > Q200 de colchón): sin autorización se rechaza.
+        from core.models import CompanySetting
+        cfg = CompanySetting.current()
+        cfg.pos_max_discount_percent = Decimal("25")
+        cfg.pos_discount_free_amount = Decimal("200")
+        cfg.save()
+        alto = Product.objects.create(
+            sku="S-ALTO", name="Broca premium", purchase_price=Decimal("10"),
+            sale_price=Decimal("100"), stock=Decimal("100"), tax_type="iva",
         )
-        self.assertEqual(sale.discount, Decimal("102.00"))
+        args = ({"payment_method": "efectivo", "paid_amount": "2000", "discount": "300"},
+                [{"product_id": alto.id, "quantity": "10", "unit_price": "100"}])
+        with self.assertRaises(SaleError):
+            create_sale(*args, user=self.user, branch=self.branch)
+        # Con autorización de supervisor, la misma venta pasa.
+        sale = create_sale(*args, user=self.user, branch=self.branch, special_authorized=True)
+        self.assertEqual(sale.discount, Decimal("300.00"))
+
+    def test_descuento_pequeno_bajo_colchon_no_requiere_autorizacion(self):
+        # Caso destornillador: precio 15, costo 7.50. Bajarlo a 10 es 33% (supera
+        # el 25%) pero solo Q5 de descuento: por debajo del colchón (Q200) pasa sin
+        # autorización, y deja ganancia sobre el costo (piso de ganancia OK).
+        from core.models import CompanySetting
+        cfg = CompanySetting.current()
+        cfg.pos_max_discount_percent = Decimal("25")
+        cfg.pos_discount_free_amount = Decimal("200")
+        cfg.pos_min_profit_percent = Decimal("10")
+        cfg.save()
+        dest = Product.objects.create(
+            sku="S-DEST", name="Destornillador", purchase_price=Decimal("7.50"),
+            sale_price=Decimal("15"), stock=Decimal("100"), tax_type="iva",
+        )
+        sale = create_sale(
+            {"payment_method": "efectivo", "paid_amount": "20", "discount": "5"},
+            [{"product_id": dest.id, "quantity": "1", "unit_price": "15"}],
+            user=self.user, branch=self.branch,
+        )
+        self.assertEqual(sale.total, Decimal("10.00"))
 
     def test_descuento_global_hunde_linea_bajo_costo_requiere_autorizacion(self):
         # Producto de margen delgado (costo 80, precio 85). Un descuento GLOBAL

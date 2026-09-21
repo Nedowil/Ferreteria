@@ -42,19 +42,24 @@ def _check_special_authorization(lines, global_discount, special_authorized):
         cfg = CompanySetting.current()
         max_pct = Decimal(str(cfg.pos_max_discount_percent or 0))
         min_profit_pct = Decimal(str(cfg.pos_min_profit_percent or 0))
+        free_amount = Decimal(str(cfg.pos_discount_free_amount or 0))
     except Exception:
         max_pct = Decimal("25")
         min_profit_pct = Decimal("0")
+        free_amount = Decimal("0")
 
     total_gross = sum((l["gross"] for l in lines), Decimal("0"))
     global_disc = Decimal(str(global_discount or 0))
     total_disc = sum((l["line_discount"] for l in lines), Decimal("0")) + global_disc
-    if total_gross > 0 and max_pct >= 0:
+    # El % máximo solo aplica cuando el descuento además pasa el "colchón" en
+    # quetzales: así un descuento chico (típico de productos baratos) no se frena
+    # aunque sea un % alto, pero un descuento grande en dinero sí se revisa.
+    if total_gross > 0 and max_pct >= 0 and total_disc > free_amount:
         disc_pct = total_disc / total_gross * 100
         if disc_pct > max_pct:
             raise SaleError(
-                f"El descuento ({disc_pct:.0f}%) supera el máximo permitido ({max_pct:.0f}%). "
-                "Requiere autorización de un supervisor."
+                f"El descuento (Q{total_disc:.2f}, {disc_pct:.0f}%) supera el máximo permitido "
+                f"({max_pct:.0f}%). Requiere autorización de un supervisor."
             )
     for l in lines:
         # El descuento global se reparte proporcional al importe de cada línea,

@@ -194,6 +194,17 @@ export default function CompanySettings() {
             costo— la venta pide autorización de un supervisor (permiso «Autorizar descuento alto
             o precio bajo el mínimo»).
           </div>
+          <Field label="Descuento sin autorización hasta (Q)">
+            <input type="number" min="0" step="1" className={input}
+                   value={c.pos_discount_free_amount}
+                   onChange={(e) => set("pos_discount_free_amount", e.target.value)} />
+          </Field>
+          <div className="sm:col-span-2 text-xs text-slate-500 dark:text-slate-400 -mt-1">
+            «Colchón» para productos baratos: un descuento por debajo de este monto en quetzales
+            nunca pide autorización, aunque supere el porcentaje máximo. Así, bajar un destornillador
+            de Q15 a Q10 (33%, pero solo Q5 de descuento) pasa sin problema, mientras que un descuento
+            grande en una máquina cara sí se revisa. Poné 0 para que el porcentaje aplique a cualquier monto.
+          </div>
           <Field label="Ganancia mínima sin autorización (%)">
             <input type="number" min="0" max="100" step="0.5" className={input}
                    value={c.pos_min_profit_percent}

@@ -128,6 +128,15 @@ class CompanySetting(models.Model):
     pos_min_profit_percent = models.DecimalField(
         "ganancia mín. sin autorización (%)", max_digits=5, decimal_places=2, default=10)
 
+    # Anti-fraude: "colchón" de descuento en quetzales. Un descuento por debajo
+    # de este monto NUNCA pide autorización, aunque supere el % máximo. Resuelve
+    # que en productos baratos un descuento chico en quetzales se vea como un %
+    # alto (ej. bajar un destornillador de Q15 a Q10 es 33% pero solo Q5). Así el
+    # % máximo protege lo caro sin frenar lo barato. El piso de ganancia mínima
+    # sigue aplicando siempre. Con 0, el % máximo aplica a cualquier monto.
+    pos_discount_free_amount = models.DecimalField(
+        "descuento sin autorización hasta (Q)", max_digits=12, decimal_places=2, default=200)
+
     # Anti-descuadre: si está activo, en las ventas de CONTADO en efectivo el
     # cajero está OBLIGADO a ingresar el efectivo recibido (no se asume pago
     # exacto). Así el vuelto queda bien calculado y la caja cuadra.
