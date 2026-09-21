@@ -114,28 +114,25 @@ class CompanySetting(models.Model):
     fel_cycle_month = models.PositiveSmallIntegerField(default=1)
     fel_cycle_day = models.PositiveSmallIntegerField(default=1)
 
-    # Anti-fraude: descuento máximo (%) que un cajero puede aplicar SIN
-    # autorización de supervisor. Pasarse (o vender por debajo del costo)
-    # requiere el permiso 'ventas.autorizar_especial'.
-    pos_max_discount_percent = models.DecimalField(
-        "descuento máx. sin autorización (%)", max_digits=5, decimal_places=2, default=25)
-
     # Anti-fraude: ganancia MÍNIMA (% sobre el costo) que debe quedar en cada
-    # línea. Si un descuento deja el precio neto por debajo de costo × (1 + %),
-    # la venta requiere autorización de supervisor (mismo mecanismo que "bajo
-    # costo"). Con 0 solo se bloquea vender por debajo del costo. Ej: 10% ⇒ un
-    # producto de costo Q10 no puede venderse a menos de Q11.
+    # línea. Es el control principal: si un descuento deja el precio neto por
+    # debajo de costo × (1 + %), la venta requiere autorización de supervisor.
+    # Se mide contra el costo REAL de cada producto, así una venta rentable pasa
+    # aunque el descuento sea grande (buen margen) y una que hunde el margen pide
+    # supervisor aunque el descuento parezca chico. Con 0 solo se bloquea vender
+    # por debajo del costo. Ej: 10% ⇒ un producto de costo Q10 no puede venderse
+    # a menos de Q11.
     pos_min_profit_percent = models.DecimalField(
         "ganancia mín. sin autorización (%)", max_digits=5, decimal_places=2, default=10)
 
-    # Anti-fraude: "colchón" de descuento en quetzales. Un descuento por debajo
-    # de este monto NUNCA pide autorización, aunque supere el % máximo. Resuelve
-    # que en productos baratos un descuento chico en quetzales se vea como un %
-    # alto (ej. bajar un destornillador de Q15 a Q10 es 33% pero solo Q5). Así el
-    # % máximo protege lo caro sin frenar lo barato. El piso de ganancia mínima
-    # sigue aplicando siempre. Con 0, el % máximo aplica a cualquier monto.
+    # OBSOLETOS: el tope de descuento por % y su "colchón" en quetzales se
+    # retiraron a favor de la ganancia mínima (un % fijo sobre el precio frenaba
+    # ventas rentables en productos de buen margen). Se conservan las columnas por
+    # compatibilidad de datos; ya no se usan ni se muestran en la configuración.
+    pos_max_discount_percent = models.DecimalField(
+        "descuento máx. sin autorización (%) [obsoleto]", max_digits=5, decimal_places=2, default=25)
     pos_discount_free_amount = models.DecimalField(
-        "descuento sin autorización hasta (Q)", max_digits=12, decimal_places=2, default=200)
+        "descuento sin autorización hasta (Q) [obsoleto]", max_digits=12, decimal_places=2, default=200)
 
     # Anti-descuadre: si está activo, en las ventas de CONTADO en efectivo el
     # cajero está OBLIGADO a ingresar el efectivo recibido (no se asume pago

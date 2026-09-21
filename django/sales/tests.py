@@ -184,74 +184,32 @@ class SaleServiceTests(TestCase):
         self.prod.refresh_from_db()
         self.assertEqual(self.prod.stock, Decimal("80.00"))
 
-    def test_descuento_sobre_limite_requiere_autorizacion(self):
-        # Producto de buen margen (costo 10, precio 100) para aislar el control de
-        # descuento del piso de ganancia. 10 unidades = Q1,000; descuento de Q300
-        # (30% > 25% y > Q200 de colchón): sin autorización se rechaza.
+    def test_descuento_grande_pero_rentable_no_requiere_autorizacion(self):
+        # Manda la ganancia mínima, no un tope de %. Estufa: costo 1200, precio
+        # 1800. Bajarla a 1330 es 26% de descuento (un tope de 25% lo habría
+        # frenado), pero deja Q130 de ganancia (>10% sobre el costo): pasa sin
+        # autorización.
         from core.models import CompanySetting
         cfg = CompanySetting.current()
-        cfg.pos_max_discount_percent = Decimal("25")
-        cfg.pos_discount_free_amount = Decimal("200")
-        cfg.save()
-        alto = Product.objects.create(
-            sku="S-ALTO", name="Broca premium", purchase_price=Decimal("10"),
-            sale_price=Decimal("100"), stock=Decimal("100"), tax_type="iva",
-        )
-        args = ({"payment_method": "efectivo", "paid_amount": "2000", "discount": "300"},
-                [{"product_id": alto.id, "quantity": "10", "unit_price": "100"}])
-        with self.assertRaises(SaleError):
-            create_sale(*args, user=self.user, branch=self.branch)
-        # Con autorización de supervisor, la misma venta pasa.
-        sale = create_sale(*args, user=self.user, branch=self.branch, special_authorized=True)
-        self.assertEqual(sale.discount, Decimal("300.00"))
-
-    def test_descuento_pequeno_bajo_colchon_no_requiere_autorizacion(self):
-        # Caso destornillador: precio 15, costo 7.50. Bajarlo a 10 es 33% (supera
-        # el 25%) pero solo Q5 de descuento: por debajo del colchón (Q200) pasa sin
-        # autorización, y deja ganancia sobre el costo (piso de ganancia OK).
-        from core.models import CompanySetting
-        cfg = CompanySetting.current()
-        cfg.pos_max_discount_percent = Decimal("25")
-        cfg.pos_discount_free_amount = Decimal("200")
         cfg.pos_min_profit_percent = Decimal("10")
         cfg.save()
-        dest = Product.objects.create(
-            sku="S-DEST", name="Destornillador", purchase_price=Decimal("7.50"),
-            sale_price=Decimal("15"), stock=Decimal("100"), tax_type="iva",
+        estufa = Product.objects.create(
+            sku="S-ESTUFA", name="Estufa", purchase_price=Decimal("1200"),
+            sale_price=Decimal("1800"), stock=Decimal("50"), tax_type="iva",
         )
         sale = create_sale(
-            {"payment_method": "efectivo", "paid_amount": "20", "discount": "5"},
-            [{"product_id": dest.id, "quantity": "1", "unit_price": "15"}],
+            {"payment_method": "efectivo", "paid_amount": "1400", "discount": "470"},
+            [{"product_id": estufa.id, "quantity": "1", "unit_price": "1800"}],
             user=self.user, branch=self.branch,
         )
-        self.assertEqual(sale.total, Decimal("10.00"))
-
-    def test_colchon_se_mide_por_producto_no_por_venta(self):
-        # El colchón es POR PRODUCTO: dos líneas con descuento de Q120 cada una
-        # (bajo el colchón de Q200) pasan, aunque el total (Q240) lo supere. Con la
-        # lógica por venta, ese total se habría frenado. Buen margen para aislar el
-        # control de descuento del piso de ganancia.
-        from core.models import CompanySetting
-        cfg = CompanySetting.current()
-        cfg.pos_max_discount_percent = Decimal("25")
-        cfg.pos_discount_free_amount = Decimal("200")
-        cfg.save()
-        p1 = Product.objects.create(
-            sku="S-CAJA1", name="Caja herramientas", purchase_price=Decimal("30"),
-            sale_price=Decimal("300"), stock=Decimal("100"), tax_type="iva",
-        )
-        p2 = Product.objects.create(
-            sku="S-CAJA2", name="Maletín", purchase_price=Decimal("30"),
-            sale_price=Decimal("300"), stock=Decimal("100"), tax_type="iva",
-        )
-        sale = create_sale(
-            {"payment_method": "efectivo", "paid_amount": "1000"},
-            [{"product_id": p1.id, "quantity": "1", "unit_price": "300", "discount": "120"},
-             {"product_id": p2.id, "quantity": "1", "unit_price": "300", "discount": "120"}],
-            user=self.user, branch=self.branch,
-        )
-        self.assertEqual(sale.discount, Decimal("240.00"))  # total sí pasa de 200
-        self.assertEqual(sale.total, Decimal("360.00"))     # 600 - 240
+        self.assertEqual(sale.total, Decimal("1330.00"))
+        # Por debajo del piso (10% ⇒ mínimo 1320) sí pide autorización.
+        with self.assertRaises(SaleError):
+            create_sale(
+                {"payment_method": "efectivo", "paid_amount": "1400", "discount": "500"},
+                [{"product_id": estufa.id, "quantity": "1", "unit_price": "1800"}],
+                user=self.user, branch=self.branch,
+            )
 
     def test_descuento_global_hunde_linea_bajo_costo_requiere_autorizacion(self):
         # Producto de margen delgado (costo 80, precio 85). Un descuento GLOBAL

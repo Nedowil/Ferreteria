@@ -184,38 +184,20 @@ export default function CompanySettings() {
         </Section>
 
         <Section title="Seguridad del punto de venta">
-          <Field label="Descuento máximo sin autorización (%)">
-            <input type="number" min="0" max="100" step="0.5" className={input}
-                   value={c.pos_max_discount_percent}
-                   onChange={(e) => set("pos_max_discount_percent", e.target.value)} />
-          </Field>
-          <div className="sm:col-span-2 text-xs text-slate-500 dark:text-slate-400 -mt-1">
-            Si un cajero intenta un descuento mayor a este porcentaje —o vender por debajo del
-            costo— la venta pide autorización de un supervisor (permiso «Autorizar descuento alto
-            o precio bajo el mínimo»).
-          </div>
-          <Field label="Descuento sin autorización hasta (Q)">
-            <input type="number" min="0" step="1" className={input}
-                   value={c.pos_discount_free_amount}
-                   onChange={(e) => set("pos_discount_free_amount", e.target.value)} />
-          </Field>
-          <div className="sm:col-span-2 text-xs text-slate-500 dark:text-slate-400 -mt-1">
-            «Colchón» para productos baratos, medido <b>por producto</b>: si el descuento de un
-            producto está por debajo de este monto en quetzales, no pide autorización aunque supere
-            el porcentaje máximo. Así, bajar un destornillador de Q15 a Q10 (33%, pero solo Q5 de
-            descuento) pasa sin problema, mientras que un descuento grande en una máquina cara sí se
-            revisa. Poné 0 para que el porcentaje aplique a cualquier monto.
-          </div>
           <Field label="Ganancia mínima sin autorización (%)">
             <input type="number" min="0" max="100" step="0.5" className={input}
                    value={c.pos_min_profit_percent}
                    onChange={(e) => set("pos_min_profit_percent", e.target.value)} />
           </Field>
           <div className="sm:col-span-2 text-xs text-slate-500 dark:text-slate-400 -mt-1">
-            Ganancia mínima que debe dejar cada producto, calculada como porcentaje sobre el
-            costo. Si un descuento deja el precio por debajo de ese margen, la venta pide
-            autorización de un supervisor. Ejemplo: con 10%, un producto de costo Q10 no puede
-            venderse a menos de Q11. Poné 0 para exigir solo que no se venda por debajo del costo.
+            Ganancia mínima que debe dejar <b>cada producto</b>, calculada como porcentaje sobre su
+            costo. Si un descuento deja el precio por debajo de ese margen (o por debajo del costo),
+            la venta pide autorización de un supervisor (permiso «Autorizar descuento alto o precio
+            bajo el mínimo»). Como se mide contra el costo real de cada producto, una venta rentable
+            pasa aunque el descuento sea grande, y una que hunde el margen se frena aunque el
+            descuento parezca chico. Ejemplo: un producto de costo Q10 con 10% no puede venderse a
+            menos de Q11; una estufa de costo Q1,200 puede bajar hasta Q1,320. Poné 0 para exigir
+            solo que no se venda por debajo del costo.
           </div>
           <label className="sm:col-span-2 flex items-start gap-2 text-sm text-slate-700 dark:text-slate-200 mt-1">
             <input type="checkbox" className="mt-0.5" checked={!!c.pos_require_cash_received}

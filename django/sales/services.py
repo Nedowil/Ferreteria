@@ -31,45 +31,30 @@ def generate_folio():
 
 
 def _check_special_authorization(lines, global_discount, special_authorized):
-    """Anti-fraude: exige autorización de supervisor para descuentos por encima
-    del máximo configurado o precios por debajo del costo. Si el llamador no está
-    autorizado (`special_authorized=False`) y la venta se pasa del límite, lanza
+    """Anti-fraude: exige autorización de supervisor cuando una venta deja un
+    producto por debajo del costo o sin la ganancia mínima configurada. Manda la
+    GANANCIA MÍNIMA (% sobre el costo real de cada producto), no un tope de
+    descuento por porcentaje: así una venta que deja ganancia justa pasa aunque
+    el descuento sea grande (típico de artículos con buen margen), y una que la
+    hunde pide supervisor aunque el descuento parezca chico. Si el llamador no
+    está autorizado (`special_authorized=False`) y la venta se pasa, lanza
     SaleError para que el cajero deba pedir a un supervisor que la registre."""
     if special_authorized:
         return
     from core.models import CompanySetting
     try:
-        cfg = CompanySetting.current()
-        max_pct = Decimal(str(cfg.pos_max_discount_percent or 0))
-        min_profit_pct = Decimal(str(cfg.pos_min_profit_percent or 0))
-        free_amount = Decimal(str(cfg.pos_discount_free_amount or 0))
+        min_profit_pct = Decimal(str(CompanySetting.current().pos_min_profit_percent or 0))
     except Exception:
-        max_pct = Decimal("25")
         min_profit_pct = Decimal("0")
-        free_amount = Decimal("0")
 
     total_gross = sum((l["gross"] for l in lines), Decimal("0"))
     global_disc = Decimal(str(global_discount or 0))
     for l in lines:
         # El descuento global se reparte proporcional al importe de cada línea,
         # para evaluar cada producto por separado (descuento de línea + su parte
-        # del descuento global).
+        # del descuento global) contra su propio costo.
         global_share = (global_disc * l["gross"] / total_gross) if total_gross > 0 else Decimal("0")
-        line_gross = l["gross"]
-        line_disc = l["line_discount"] + global_share
-        # Descuento POR PRODUCTO: el % máximo solo aplica cuando el descuento de
-        # ESTE producto además pasa el "colchón" en quetzales. Así un descuento
-        # chico (típico de lo barato) no se frena aunque sea un % alto, pero un
-        # descuento grande en dinero sí se revisa. El colchón se mide por producto
-        # para que sumar varias líneas no dispare el control por sí solo.
-        if line_gross > 0 and max_pct >= 0 and line_disc > free_amount:
-            disc_pct = line_disc / line_gross * 100
-            if disc_pct > max_pct:
-                raise SaleError(
-                    f"El descuento de {l['product'].name} (Q{line_disc:.2f}, {disc_pct:.0f}%) "
-                    f"supera el máximo permitido ({max_pct:.0f}%). Requiere autorización de un supervisor."
-                )
-        line_net = line_gross - line_disc
+        line_net = l["gross"] - l["line_discount"] - global_share
         line_cost = l["unit_cost"] * l["quantity"]
         if line_cost <= 0:
             continue
