@@ -102,7 +102,8 @@ export default function SaleDetailView({ id, onClose, onChanged }) {
                   <tr key={it.id} className="border-t border-slate-100 dark:border-slate-700">
                     <td className="px-4 py-2.5"><span className="font-mono text-xs text-slate-400">{it.product_sku}</span> {it.product_name}
                       {Number(it.units_factor) !== 1 && <span className="text-xs text-slate-400"> ({it.unit_label})</span>}
-                      {Number(it.discount) > 0 && <div className="text-xs text-amber-600 dark:text-amber-500 mt-0.5">🏷️ Descuento −{money(it.discount)}</div>}</td>
+                      {Number(it.discount) > 0 && <div className="text-xs text-amber-600 dark:text-amber-500 mt-0.5">🏷️ Descuento −{money(it.discount)}</div>}
+                      {Number(it.returned_quantity) > 0 && <div className="text-xs text-red-600 dark:text-red-400 mt-0.5">↩️ Devuelto: {Number(it.returned_quantity)} {it.unit_label || ""}</div>}</td>
                     <td className="px-4 py-2.5 text-right">{Number(it.quantity)}</td>
                     <td className="px-4 py-2.5 text-right">{money(it.unit_price)}</td>
                     <td className="px-4 py-2.5 text-right font-medium">{money(it.subtotal)}</td>

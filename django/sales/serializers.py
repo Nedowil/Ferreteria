@@ -23,12 +23,23 @@ class SaleItemSerializer(serializers.ModelSerializer):
     # descuento global de la venta). Es lo que el cliente pagó por unidad; se usa
     # en devoluciones para reembolsar el monto correcto.
     effective_unit_price = serializers.SerializerMethodField()
+    # Cuánto de esta partida se devolvió (devoluciones procesadas, no anuladas).
+    returned_quantity = serializers.SerializerMethodField()
 
     class Meta:
         model = SaleItem
         fields = ["id", "product", "product_name", "product_sku", "quantity",
                   "unit_price", "effective_unit_price", "discount", "subtotal",
-                  "unit_label", "units_factor", "tax_type"]
+                  "unit_label", "units_factor", "tax_type", "returned_quantity"]
+
+    def get_returned_quantity(self, obj):
+        from decimal import Decimal
+        from django.db.models import Sum
+        agg = obj.return_items.filter(
+            sale_return__status="procesada",
+            sale_return__deleted_at__isnull=True,
+        ).aggregate(q=Sum("quantity"))
+        return str(agg["q"] or Decimal("0"))
 
     def get_effective_unit_price(self, obj):
         from decimal import Decimal
