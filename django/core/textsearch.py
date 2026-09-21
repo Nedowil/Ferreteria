@@ -55,20 +55,23 @@ class TolerantSearchFilter(BaseFilterBackend):
         # letras, así que un código de barras (con ceros repetidos, etc.) puede
         # no encontrarse. Con la coincidencia exacta, un código escaneado SIEMPRE
         # encuentra su producto. El view declara qué campos son exactos.
+        # Si el término coincide EXACTAMENTE con un SKU o código de barras, se
+        # devuelve SOLO ese producto: quien escribe/escanea un código quiere ese
+        # producto puntual, no un montón de coincidencias difusas por nombre
+        # (p. ej. "TOM-0004" no debe traer "aTOMizador" o "TOMa corriente").
         exact_fields = getattr(view, "exact_search_fields", [])
-        exact_qs = None
         if exact_fields:
             eq = Q()
             for f in exact_fields:
                 eq |= Q(**{f"{f}__iexact": term})
             exact_qs = queryset.filter(eq)
+            if exact_qs.exists():
+                return exact_qs.distinct()
         # Búsqueda difusa por palabras (nombre): cada palabra debe estar (AND).
         words = search_norm(term).split()
+        if not words:
+            return queryset.none()
         fuzzy_qs = queryset
         for word in words:
             fuzzy_qs = fuzzy_qs.filter(search_index__contains=word)
-        if not words:
-            fuzzy_qs = queryset.none()
-        if exact_qs is not None:
-            return (exact_qs | fuzzy_qs).distinct()
         return fuzzy_qs
