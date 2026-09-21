@@ -193,16 +193,31 @@ def search_sales_by_product(query, *, branch=None, days=30, limit=20):
 
     Sirve al modo "por producto" cuando el cliente no recuerda el folio.
     """
-    product = (Product.objects.filter(deleted_at__isnull=True)
-               .filter(Q(barcode=query) | Q(sku=query) | Q(name__icontains=query) | Q(sku__icontains=query))
-               .first())
-    if not product:
+    q = (query or "").strip()
+    if not q:
         return {"product": None, "sales": []}
 
+    # Coincidencia EXACTA por código de barras o SKU (escaneo) tiene prioridad.
+    # Si no, se buscan TODOS los productos cuyo nombre o SKU CONTENGA el texto,
+    # para que un nombre PARCIAL ("toma corriente") también encuentre sus ventas
+    # —antes tomaba un solo producto y podía ser uno sin ventas—. Se limita a 50
+    # productos para no armar consultas gigantes.
+    exact = (Product.objects.filter(deleted_at__isnull=True)
+             .filter(Q(barcode=q) | Q(sku__iexact=q)).first())
+    if exact:
+        products = [exact]
+    else:
+        products = list(Product.objects.filter(deleted_at__isnull=True)
+                        .filter(Q(name__icontains=q) | Q(sku__icontains=q))
+                        .order_by("-times_sold", "name")[:50])
+    if not products:
+        return {"product": None, "sales": []}
+    product_ids = [p.id for p in products]
+
     since = timezone.now() - timedelta(days=days)
-    qs = (SaleItem.objects.filter(product=product, sale__status=Sale.STATUS_COMPLETADA,
+    qs = (SaleItem.objects.filter(product_id__in=product_ids, sale__status=Sale.STATUS_COMPLETADA,
                                   sale__date__gte=since)
-          .select_related("sale", "sale__customer").order_by("-sale__date"))
+          .select_related("sale", "sale__customer", "product").order_by("-sale__date"))
     if branch is not None:
         qs = qs.filter(sale__branch=branch)
 
@@ -215,11 +230,13 @@ def search_sales_by_product(query, *, branch=None, days=30, limit=20):
         rows.append({
             "sale_id": si.sale_id, "sale_item_id": si.id, "folio": si.sale.folio,
             "date": si.sale.date, "customer": si.sale.customer.name if si.sale.customer else None,
+            "product_name": si.product.name, "product_sku": si.product.sku,
             "quantity": si.quantity, "unit_price": si.unit_price, "unit_label": si.unit_label,
         })
         if len(rows) >= limit:
             break
     return {
-        "product": {"id": product.id, "sku": product.sku, "name": product.name},
+        "product": ({"id": products[0].id, "sku": products[0].sku, "name": products[0].name}
+                    if len(products) == 1 else None),
         "sales": rows,
     }
