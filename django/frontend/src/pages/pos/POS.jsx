@@ -711,6 +711,35 @@ export default function POS() {
         return;
       }
     }
+
+    // Aviso de venta BAJO EL COSTO: si alguna línea queda por debajo de su costo,
+    // se pide confirmación para no vender con pérdida por error. Solo se muestra a
+    // quien puede autorizarlo (al vendedor sin permiso lo bloquea el backend con
+    // su propio mensaje). Requiere ver el costo; si no se conoce, no se advierte.
+    if (can("ventas.autorizar_especial")) {
+      const totalGross = cart.reduce((s, i) => s + Number(i.quantity || 0) * Number(i.unit_price || 0), 0);
+      const bajoCosto = [];
+      for (const it of cart) {
+        const costUnit = Number(it.product?.purchase_price || 0) * Number(it.units_factor || 1);
+        if (!(costUnit > 0)) continue; // sin costo conocido: no se puede advertir
+        const gross = Number(it.quantity || 0) * Number(it.unit_price || 0);
+        const globalShare = totalGross > 0 ? (discountNum * gross) / totalGross : 0;
+        const net = gross - lineDisc(it) - globalShare;
+        const qty = Number(it.quantity || 0);
+        if (net < costUnit * qty - 0.005) {
+          const netUnit = qty > 0 ? net / qty : net;
+          bajoCosto.push(`• ${it.name}: precio Q${netUnit.toFixed(2)} vs costo Q${costUnit.toFixed(2)}`);
+        }
+      }
+      if (bajoCosto.length > 0) {
+        const ok = await dialog.confirm(
+          `Estás vendiendo POR DEBAJO DEL COSTO:\n\n${bajoCosto.join("\n")}\n\n¿Confirmás la venta con pérdida?`,
+          { danger: true, okText: "Sí, vender bajo el costo" }
+        );
+        if (!ok) return;
+      }
+    }
+
     const payload = {
       customer_id: customerId || null,
       date: saleDate || null,
