@@ -148,6 +148,11 @@ def build_invoice_xml(dte: dict) -> str:
         frases = '<dte:Frase TipoFrase="4" CodigoEscenario="9"/>'
     else:
         frases = '<dte:Frase TipoFrase="1" CodigoEscenario="1"/>'
+    # Regla SAT 2026 (NCRE/NDEB): si la nota se emite MÁS de dos meses calendario
+    # después de la factura de origen, se agrega la frase tipo 9 / escenario 22
+    # ("no se reconoce como crédito fiscal, Art. 17 Ley del IVA").
+    if dte.get("nota_posterior_dos_meses"):
+        frases += '<dte:Frase TipoFrase="9" CodigoEscenario="22"/>'
 
     return (
         '<?xml version="1.0" encoding="UTF-8"?>'

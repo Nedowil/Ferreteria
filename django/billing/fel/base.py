@@ -217,6 +217,21 @@ def _abonos_cambiaria(sale, gran_total):
     }]}
 
 
+def _mas_de_dos_meses(origen, nota):
+    """True si la nota se emite MÁS de 2 meses calendario después de la factura
+    de origen. Regla SAT (2026): en ese caso la NCRE/NDEB debe llevar la frase
+    tipo 9 / escenario 22 ("no se reconoce como crédito fiscal, Art. 17 Ley IVA").
+    Se suma 2 meses a la fecha de origen (ajustando el día) y se compara.
+    ``origen`` y ``nota`` son objetos date."""
+    import calendar
+    from datetime import date
+    total = (origen.month - 1) + 2
+    y = origen.year + total // 12
+    m = total % 12 + 1
+    d = min(origen.day, calendar.monthrange(y, m)[1])
+    return nota > date(y, m, d)
+
+
 def build_credit_note_dte(sale_return, invoice, company, *, motivo=None):
     """Construye el DTE de una Nota de Crédito (NCRE) desde una devolución.
 
@@ -235,15 +250,27 @@ def build_credit_note_dte(sale_return, invoice, company, *, motivo=None):
         rows, sale_return.discount, company, rate, pequeno)
     sale = sale_return.sale
     customer = sale_return.customer or (sale.customer if sale else None)
-    fecha_origen = _fecha_emision(sale.date)[:10] if sale else _fecha_emision(sale_return.date)[:10]
+    fecha_emision = _fecha_emision(sale_return.date)
+    fecha_nota = fecha_emision[:10]
+    fecha_origen = _fecha_emision(sale.date)[:10] if sale else fecha_nota
+    # Regla SAT 2026: si la nota se emite MÁS de dos meses calendario después de
+    # la factura de origen, debe llevar la frase tipo 9 / escenario 22 y ya no se
+    # reconoce como crédito fiscal (Art. 17 Ley del IVA). Se comparan las mismas
+    # fechas (locales) que van al DTE.
+    from datetime import date as _date
+    posterior = (
+        _mas_de_dos_meses(_date.fromisoformat(fecha_origen), _date.fromisoformat(fecha_nota))
+        if sale else False
+    )
     return {
         "tipo_documento": "NCRE",
         "moneda": company.currency_code,
-        "fecha_emision": _fecha_emision(sale_return.date),
+        "fecha_emision": fecha_emision,
         "emisor": _emisor(company, pequeno),
         "receptor": _receptor(customer),
         "items": items,
         "totales": {"gran_total": str(gran_total), "total_iva": str(total_iva)},
+        "nota_posterior_dos_meses": posterior,
         "referencia_nota": {
             "fecha_origen": fecha_origen,
             "motivo": (motivo or sale_return.reason or "Devolución")[:255],

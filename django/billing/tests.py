@@ -456,6 +456,40 @@ class CreditNoteTests(TestCase):
         self.assertIn("ReferenciasNota", xml)
         self.assertIn(f'NumeroAutorizacionDocumentoOrigen="{inv.uuid}"', xml)
         self.assertIn('MotivoAjuste="Devolución total"', xml)
+        # Nota reciente (misma fecha que la factura): NO lleva la frase 9/22.
+        self.assertNotIn('TipoFrase="9"', xml)
+        self.assertFalse(dte["nota_posterior_dos_meses"])
+
+    def test_mas_de_dos_meses_regla_sat(self):
+        """Frontera de "dos meses calendario" (frase 9 / escenario 22)."""
+        from datetime import date
+        from .fel.base import _mas_de_dos_meses
+        # Exactamente dos meses después NO cuenta como "posterior".
+        self.assertFalse(_mas_de_dos_meses(date(2026, 1, 15), date(2026, 3, 15)))
+        # Un día más allá de los dos meses SÍ cuenta.
+        self.assertTrue(_mas_de_dos_meses(date(2026, 1, 15), date(2026, 3, 16)))
+        # Dentro de los dos meses: no cuenta.
+        self.assertFalse(_mas_de_dos_meses(date(2026, 1, 15), date(2026, 2, 20)))
+        # Ajuste de fin de mes: 31-dic + 2 meses = 28-feb (2026 no bisiesto).
+        self.assertFalse(_mas_de_dos_meses(date(2025, 12, 31), date(2026, 2, 28)))
+        self.assertTrue(_mas_de_dos_meses(date(2025, 12, 31), date(2026, 3, 1)))
+
+    def test_nota_posterior_dos_meses_agrega_frase_9_22(self):
+        """NCRE emitida más de 2 meses después de la factura lleva frase 9/22."""
+        from datetime import timedelta
+        from .fel.base import build_credit_note_dte
+        from .fel.infile import build_invoice_xml
+        from core.models import CompanySetting
+        sale = _make_sale(folio="V-NC-TARDIA")
+        inv = services.emit_invoice(sale, user=None)
+        ret = self._return_for(sale, inv)
+        # La devolución se emite 3 meses después de la venta.
+        ret.date = sale.date + timedelta(days=95)
+        ret.save()
+        dte = build_credit_note_dte(ret, inv, CompanySetting.current())
+        self.assertTrue(dte["nota_posterior_dos_meses"])
+        xml = build_invoice_xml(dte)
+        self.assertIn('TipoFrase="9" CodigoEscenario="22"', xml)
 
     def test_emit_credit_note_certifica(self):
         sale = _make_sale(folio="V-NC-2")
