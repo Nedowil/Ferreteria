@@ -234,6 +234,47 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* Cierres de caja recientes con su diferencia, para que el supervisor se
+          entere del descuadre sin entrar al historial. */}
+      {data.cierres_recientes && data.cierres_recientes.length > 0 && (
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow p-5 mt-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold flex items-center gap-2">🧾 Cierres de caja recientes</h3>
+            <Link to="/caja/historial" className="text-sm text-orange-600 font-medium hover:underline">Ver historial →</Link>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-left text-xs uppercase tracking-wide text-slate-400">
+                <tr>
+                  <th className="py-2 pr-3">Cajero</th>
+                  <th className="py-2 pr-3">Cerrada</th>
+                  <th className="py-2 pr-3 text-right">Esperado</th>
+                  <th className="py-2 pr-3 text-right">Contado</th>
+                  <th className="py-2 text-right">Diferencia</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.cierres_recientes.map((c) => {
+                  const diff = Number(c.difference || 0);
+                  const ok = Math.abs(diff) < 0.005;
+                  return (
+                    <tr key={c.id} className="border-t border-slate-100 dark:border-slate-700">
+                      <td className="py-2 pr-3 font-medium text-slate-800 dark:text-slate-100">{c.cajero}{c.branch ? <span className="text-xs text-slate-400 font-normal"> · {c.branch}</span> : ""}</td>
+                      <td className="py-2 pr-3 text-slate-500 dark:text-slate-400">{new Date(c.closed_at).toLocaleString("es-GT")}</td>
+                      <td className="py-2 pr-3 text-right">{Q(c.expected)}</td>
+                      <td className="py-2 pr-3 text-right">{c.counted != null ? Q(c.counted) : "—"}</td>
+                      <td className={"py-2 text-right font-semibold " + (ok ? "text-emerald-600" : diff < 0 ? "text-red-600" : "text-amber-600")}>
+                        {ok ? "✓ Cuadró" : (diff > 0 ? "sobró " : "faltó ") + Q(Math.abs(diff))}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

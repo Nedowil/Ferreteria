@@ -145,6 +145,23 @@ def dashboard(request):
             status=CashSession.STATUS_ABIERTA
         ).count()
 
+    # Cierres de caja recientes con su diferencia (descuadre), para que el
+    # supervisor se entere sin entrar al historial. Dato sensible → solo quien
+    # ve el efectivo esperado.
+    if can("caja.ver_esperado"):
+        cierres = (CashSession.objects
+                   .filter(status=CashSession.STATUS_CERRADA, closed_at__isnull=False)
+                   .select_related("user", "branch").order_by("-closed_at")[:5])
+        data["cierres_recientes"] = [{
+            "id": c.id,
+            "cajero": c.user.name if c.user else "—",
+            "branch": c.branch.name if c.branch else None,
+            "closed_at": c.closed_at,
+            "expected": str(c.expected_cash),
+            "counted": str(c.counted_cash) if c.counted_cash is not None else None,
+            "difference": str(c.difference),
+        } for c in cierres]
+
     data["user"] = {
         "name": user.name or user.email,
         "roles": list(user.groups.values_list("name", flat=True)),
