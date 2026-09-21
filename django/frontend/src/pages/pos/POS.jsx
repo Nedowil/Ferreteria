@@ -448,6 +448,14 @@ export default function POS() {
       norm(p.barcode).includes(q));
   }, [products, search, serverHits]);
 
+  // Rendimiento: con catálogos grandes (miles de productos) dibujar TODAS las
+  // filas de golpe pone lento el POS. Se limita cuánto se DIBUJA (el catálogo
+  // completo sigue en memoria para buscar). Al escribir, el filtro reduce la
+  // lista y se ven los que coinciden.
+  const RENDER_LIMIT = 80;
+  const visible = useMemo(() => filtered.slice(0, RENDER_LIMIT), [filtered]);
+  const truncated = filtered.length > RENDER_LIMIT;
+
   // Abre el producto escaneado/buscado. Busca local (exacto + primeros 12 del
   // EAN-13) y, si no lo encuentra, cae al SERVIDOR (igual que el resto de la app,
   // que sí encuentra las etiquetas viejas). Así el POS ya no falla con ellas.
@@ -944,7 +952,7 @@ export default function POS() {
                   <span className="w-24 text-right shrink-0">Precio venta</span>
                 </div>
                 <div className="max-h-[19rem] overflow-auto border border-slate-100 dark:border-slate-700 rounded-xl divide-y divide-slate-100 dark:divide-slate-700">
-                  {filtered.map((p) => {
+                  {visible.map((p) => {
                     const avail = availableFor(p);
                     const unit = p.base_unit_label || "unidad";
                     return (
@@ -975,13 +983,18 @@ export default function POS() {
                       {products.length === 0 ? "No hay productos registrados." : "Sin coincidencias."}
                     </div>
                   )}
+                  {truncated && (
+                    <div className="text-center text-slate-400 py-3 text-xs">
+                      Mostrando {RENDER_LIMIT} de {filtered.length}. Escribí o escaneá para encontrar el producto.
+                    </div>
+                  )}
                 </div>
               </>
             )}
 
             {catalogView === "grid" && (
               <div className="max-h-[28rem] overflow-auto grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 p-1">
-                {filtered.map((p) => {
+                {visible.map((p) => {
                   const avail = availableFor(p);
                   const unit = p.base_unit_label || "unidad";
                   return (
@@ -1012,6 +1025,11 @@ export default function POS() {
                 {filtered.length === 0 && (
                   <div className="col-span-full text-center text-slate-400 py-10 text-sm">
                     {products.length === 0 ? "No hay productos registrados." : "Sin coincidencias."}
+                  </div>
+                )}
+                {truncated && (
+                  <div className="col-span-full text-center text-slate-400 py-3 text-xs">
+                    Mostrando {RENDER_LIMIT} de {filtered.length}. Escribí o escaneá para encontrar el producto.
                   </div>
                 )}
               </div>
