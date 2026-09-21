@@ -105,19 +105,27 @@ class BlindCashApiTests(TestCase):
         return c
 
     def test_cajero_no_ve_montos_sensibles(self):
-        r = self._client("c@test.com").get("/api/cashbox/cash-sessions/current/")
+        c = self._client("c@test.com")
+        r = c.get("/api/cashbox/cash-sessions/current/")
         sess = r.json()["session"]
         for campo in ("expected_cash", "current_expected", "difference",
-                      "movements", "totals_by_method", "opening_amount"):
+                      "totals_by_method", "opening_amount"):
             self.assertNotIn(campo, sess, f"El cajero NO debería ver {campo}")
+        # Los movimientos van en un endpoint aparte, también vedado al cajero.
+        self.assertEqual(
+            c.get(f"/api/cashbox/cash-sessions/{sess['id']}/movements/").status_code, 403)
 
     def test_supervisor_si_ve_todo(self):
-        r = self._client("a@test.com").get("/api/cashbox/cash-sessions/current/")
+        c = self._client("a@test.com")
+        r = c.get("/api/cashbox/cash-sessions/current/")
         sess = r.json()["session"]
         for campo in ("expected_cash", "current_expected", "difference",
-                      "movements", "totals_by_method", "opening_amount"):
+                      "totals_by_method", "opening_amount"):
             self.assertIn(campo, sess, f"El supervisor SÍ debería ver {campo}")
-        self.assertTrue(len(sess["movements"]) >= 1)
+        # Los movimientos ahora se piden paginados por su propio endpoint.
+        mr = c.get(f"/api/cashbox/cash-sessions/{sess['id']}/movements/")
+        self.assertEqual(mr.status_code, 200)
+        self.assertTrue(len(mr.json()["results"]) >= 1)
 
     def test_historial_solo_supervisor(self):
         # El cajero NO puede ver el historial (listado de sesiones); el supervisor sí.

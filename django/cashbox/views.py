@@ -8,6 +8,7 @@ from core.api_utils import get_request_branch
 from core.permissions import PermissionByActionMixin
 from .models import CashSession
 from .serializers import (
+    CashMovementSerializer,
     CashSessionDetailSerializer,
     CashSessionListSerializer,
     CloseSessionSerializer,
@@ -25,6 +26,9 @@ class CashSessionViewSet(PermissionByActionMixin, viewsets.ReadOnlyModelViewSet)
         # supervisor/admin. El cajero solo ve SU caja abierta con 'current'.
         "list": "caja.ver_esperado", "retrieve": "caja.ver_esperado", "current": "caja.ver",
         "open": "caja.abrir", "close": "caja.cerrar", "movement": "caja.movimientos",
+        # Ver la LISTA de movimientos (montos) es del supervisor: revela el
+        # efectivo esperado. El cajero a ciegas no la ve (igual que antes).
+        "movements": "caja.ver_esperado",
     }
 
     def get_queryset(self):
@@ -64,6 +68,17 @@ class CashSessionViewSet(PermissionByActionMixin, viewsets.ReadOnlyModelViewSet)
         except services.CashError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(CashSessionDetailSerializer(session, context={"request": request}).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["get"], url_path="movements")
+    def movements(self, request, pk=None):
+        """Movimientos de la sesión, PAGINADOS (más recientes primero). Se separa
+        del detalle para que la caja cargue rápido aunque tenga miles de ventas."""
+        session = self.get_object()
+        qs = session.movements.select_related("user").order_by("-id")
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            return self.get_paginated_response(CashMovementSerializer(page, many=True).data)
+        return Response(CashMovementSerializer(qs, many=True).data)
 
     @action(detail=True, methods=["post"])
     def movement(self, request, pk=None):

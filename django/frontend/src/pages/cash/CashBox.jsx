@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { dialog } from "../../components/Dialog";
-import { exportToExcel } from "../../utils/exportExcel";
+import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 import Pagination from "../../components/Pagination";
 
 const signedAmount = (m) => (["egreso", "devolucion"].includes(m.type) ? -Number(m.amount) : Number(m.amount));
@@ -21,6 +21,8 @@ export default function CashBox() {
   const [counted, setCounted] = useState("");
   const [exporting, setExporting] = useState("");
   const [movPage, setMovPage] = useState(1); // paginación de la tabla de movimientos
+  const [movements, setMovements] = useState([]); // página actual de movimientos
+  const [movCount, setMovCount] = useState(0);     // total de movimientos del turno
 
   // Columnas comunes para exportar los movimientos de la caja abierta.
   const movCols = () => [
@@ -32,9 +34,12 @@ export default function CashBox() {
     { header: "Monto (Q)", value: (m) => signedAmount(m) },
   ];
 
-  const exportMovExcel = () => {
-    const cols = movCols();
-    exportToExcel(`movimientos-caja`, cols, session.movements || []);
+  const exportMovExcel = async () => {
+    setExporting("excel");
+    try {
+      const rows = await fetchAll(`/cashbox/cash-sessions/${session.id}/movements/`);
+      exportToExcel(`movimientos-caja`, movCols(), rows);
+    } finally { setExporting(""); }
   };
 
   const exportMovPdf = async () => {
@@ -51,10 +56,11 @@ export default function CashBox() {
           : `Efectivo esperado: ${money(session.current_expected)}   ·   Fondo inicial: ${money(session.opening_amount ?? 0)}`,
         40, 58);
       const cols = movCols();
+      const rows = await fetchAll(`/cashbox/cash-sessions/${session.id}/movements/`);
       autoTable(doc, {
         startY: 72,
         head: [cols.map((c) => c.header)],
-        body: (session.movements || []).map((m) => cols.map((c) => {
+        body: rows.map((m) => cols.map((c) => {
           const v = c.value(m);
           return typeof v === "number" ? v.toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : v;
         })),
@@ -66,10 +72,25 @@ export default function CashBox() {
     } finally { setExporting(""); }
   };
 
+  // Los movimientos se piden PAGINADOS aparte (15 por página), para que la caja
+  // cargue rápido aunque el turno tenga miles de ventas. Solo el supervisor
+  // (caja.ver_esperado) ve la lista; el cajero a ciegas no.
+  const loadMovements = (page = 1, sid) => {
+    const id = sid || session?.id;
+    if (!id || !can("caja.ver_esperado")) { setMovements([]); setMovCount(0); return; }
+    api.get(`/cashbox/cash-sessions/${id}/movements/`, { params: { page } })
+      .then((r) => { setMovements(r.data.results || r.data); setMovCount(r.data.count ?? (r.data.results ? r.data.results.length : (r.data.length || 0))); setMovPage(page); })
+      .catch(() => {});
+  };
+
   const load = () => {
     setLoading(true);
     api.get("/cashbox/cash-sessions/current/")
-      .then((r) => setSession(r.data.session))
+      .then((r) => {
+        const s = r.data.session;
+        setSession(s);
+        if (s) loadMovements(1, s.id); else { setMovements([]); setMovCount(0); }
+      })
       .finally(() => setLoading(false));
   };
   useEffect(load, []);
@@ -191,13 +212,13 @@ export default function CashBox() {
               <span className="font-semibold">Movimientos</span>
               {!blind && (
                 <div className="flex gap-2">
-                  <button onClick={exportMovPdf} disabled={!!exporting || !session.movements?.length}
+                  <button onClick={exportMovPdf} disabled={!!exporting || !movCount}
                           className="border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg px-3 py-1 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition disabled:opacity-50">
                     {exporting === "pdf" ? "Generando…" : "⬇️ PDF"}
                   </button>
-                  <button onClick={exportMovExcel} disabled={!session.movements?.length}
+                  <button onClick={exportMovExcel} disabled={!!exporting || !movCount}
                           className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-3 py-1 text-xs font-medium hover:bg-emerald-100 transition disabled:opacity-50">
-                    ⬇️ Excel
+                    {exporting === "excel" ? "Generando…" : "⬇️ Excel"}
                   </button>
                 </div>
               )}
@@ -216,7 +237,7 @@ export default function CashBox() {
                     <th className="px-4 py-2">Descripción</th><th className="px-4 py-2 text-right">Monto</th></tr>
               </thead>
               <tbody>
-                {(session.movements || []).slice((movPage - 1) * MOV_PAGE_SIZE, movPage * MOV_PAGE_SIZE).map((m) => (
+                {movements.map((m) => (
                   <tr key={m.id} className="border-t">
                     <td className="px-4 py-2 text-xs text-slate-500 dark:text-slate-400">{new Date(m.created_at).toLocaleTimeString()}</td>
                     <td className="px-4 py-2">{m.type_display}</td>
@@ -228,14 +249,14 @@ export default function CashBox() {
                     </td>
                   </tr>
                 ))}
-                {(session.movements || []).length === 0 && <tr><td colSpan="6" className="px-5 py-8 text-center text-slate-400">Sin movimientos.</td></tr>}
+                {movCount === 0 && <tr><td colSpan="6" className="px-5 py-8 text-center text-slate-400">Sin movimientos.</td></tr>}
               </tbody>
             </table>
             </div>
             )}
-            {(session.movements || []).length > MOV_PAGE_SIZE && (
+            {movCount > MOV_PAGE_SIZE && (
               <div className="px-4 pb-3">
-                <Pagination page={movPage} count={(session.movements || []).length} pageSize={MOV_PAGE_SIZE} onPage={setMovPage} label="movimientos" />
+                <Pagination page={movPage} count={movCount} pageSize={MOV_PAGE_SIZE} onPage={(p) => loadMovements(p)} label="movimientos" />
               </div>
             )}
           </div>

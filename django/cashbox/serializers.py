@@ -25,7 +25,7 @@ class CashMovementSerializer(serializers.ModelSerializer):
 # montos de las ventas, el cajero podría deducir el efectivo esperado y burlar el
 # cuadre a ciegas. El cajero declara su conteo sin ver ninguna de estas cifras.
 _BLIND_FIELDS = ("expected_cash", "difference", "current_expected",
-                 "movements", "totals_by_method", "opening_amount")
+                 "totals_by_method", "opening_amount")
 
 
 class BlindCashMixin:
@@ -58,13 +58,16 @@ class CashSessionListSerializer(BlindCashMixin, serializers.ModelSerializer):
 
 
 class CashSessionDetailSerializer(CashSessionListSerializer):
-    movements = CashMovementSerializer(many=True, read_only=True)
+    # Los MOVIMIENTOS ya no van embebidos aquí: en una caja con miles de ventas
+    # eso hacía la carga muy lenta. Se piden aparte y paginados por el endpoint
+    # /cash-sessions/{id}/movements/. El resumen (esperado, totales) se calcula
+    # por agregación en la base, así que no necesita la lista completa.
     current_expected = serializers.SerializerMethodField()
     totals_by_method = serializers.SerializerMethodField()
 
     class Meta(CashSessionListSerializer.Meta):
         fields = CashSessionListSerializer.Meta.fields + [
-            "opening_notes", "closing_notes", "movements",
+            "opening_notes", "closing_notes",
             "current_expected", "totals_by_method",
         ]
 
