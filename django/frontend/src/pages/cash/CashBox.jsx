@@ -134,6 +134,7 @@ export default function CashBox() {
       {error && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm mb-4">{error}</div>}
 
       {!session ? (
+        can("caja.abrir") ? (
         <form onSubmit={openCash} className="max-w-md bg-white dark:bg-slate-800 rounded-lg shadow p-6">
           <h3 className="font-semibold mb-4">Abrir caja</h3>
           <label className="block text-sm font-medium mb-1">Monto inicial (fondo)</label>
@@ -145,6 +146,13 @@ export default function CashBox() {
                  className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm mb-5" />
           <button className="bg-green-600 text-white rounded px-5 py-2 text-sm font-medium">Abrir caja</button>
         </form>
+        ) : (
+          <div className="max-w-md bg-white dark:bg-slate-800 rounded-lg shadow p-6 text-center">
+            <div className="text-3xl mb-2">🔒</div>
+            <h3 className="font-semibold mb-1">No hay una caja abierta</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Pedile al encargado o supervisor que abra la caja del turno para poder cobrar.</p>
+          </div>
+        )
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div className="space-y-5">
