@@ -226,6 +226,33 @@ class SaleServiceTests(TestCase):
         )
         self.assertEqual(sale.total, Decimal("10.00"))
 
+    def test_colchon_se_mide_por_producto_no_por_venta(self):
+        # El colchón es POR PRODUCTO: dos líneas con descuento de Q120 cada una
+        # (bajo el colchón de Q200) pasan, aunque el total (Q240) lo supere. Con la
+        # lógica por venta, ese total se habría frenado. Buen margen para aislar el
+        # control de descuento del piso de ganancia.
+        from core.models import CompanySetting
+        cfg = CompanySetting.current()
+        cfg.pos_max_discount_percent = Decimal("25")
+        cfg.pos_discount_free_amount = Decimal("200")
+        cfg.save()
+        p1 = Product.objects.create(
+            sku="S-CAJA1", name="Caja herramientas", purchase_price=Decimal("30"),
+            sale_price=Decimal("300"), stock=Decimal("100"), tax_type="iva",
+        )
+        p2 = Product.objects.create(
+            sku="S-CAJA2", name="Maletín", purchase_price=Decimal("30"),
+            sale_price=Decimal("300"), stock=Decimal("100"), tax_type="iva",
+        )
+        sale = create_sale(
+            {"payment_method": "efectivo", "paid_amount": "1000"},
+            [{"product_id": p1.id, "quantity": "1", "unit_price": "300", "discount": "120"},
+             {"product_id": p2.id, "quantity": "1", "unit_price": "300", "discount": "120"}],
+            user=self.user, branch=self.branch,
+        )
+        self.assertEqual(sale.discount, Decimal("240.00"))  # total sí pasa de 200
+        self.assertEqual(sale.total, Decimal("360.00"))     # 600 - 240
+
     def test_descuento_global_hunde_linea_bajo_costo_requiere_autorizacion(self):
         # Producto de margen delgado (costo 80, precio 85). Un descuento GLOBAL
         # del 10% (bajo el 25%) hunde esa línea por debajo del costo aunque el

@@ -50,23 +50,26 @@ def _check_special_authorization(lines, global_discount, special_authorized):
 
     total_gross = sum((l["gross"] for l in lines), Decimal("0"))
     global_disc = Decimal(str(global_discount or 0))
-    total_disc = sum((l["line_discount"] for l in lines), Decimal("0")) + global_disc
-    # El % máximo solo aplica cuando el descuento además pasa el "colchón" en
-    # quetzales: así un descuento chico (típico de productos baratos) no se frena
-    # aunque sea un % alto, pero un descuento grande en dinero sí se revisa.
-    if total_gross > 0 and max_pct >= 0 and total_disc > free_amount:
-        disc_pct = total_disc / total_gross * 100
-        if disc_pct > max_pct:
-            raise SaleError(
-                f"El descuento (Q{total_disc:.2f}, {disc_pct:.0f}%) supera el máximo permitido "
-                f"({max_pct:.0f}%). Requiere autorización de un supervisor."
-            )
     for l in lines:
         # El descuento global se reparte proporcional al importe de cada línea,
-        # para que un descuento global que hunda UNA línea por debajo del costo
-        # también se detecte (no solo el descuento por línea).
+        # para evaluar cada producto por separado (descuento de línea + su parte
+        # del descuento global).
         global_share = (global_disc * l["gross"] / total_gross) if total_gross > 0 else Decimal("0")
-        line_net = l["gross"] - l["line_discount"] - global_share
+        line_gross = l["gross"]
+        line_disc = l["line_discount"] + global_share
+        # Descuento POR PRODUCTO: el % máximo solo aplica cuando el descuento de
+        # ESTE producto además pasa el "colchón" en quetzales. Así un descuento
+        # chico (típico de lo barato) no se frena aunque sea un % alto, pero un
+        # descuento grande en dinero sí se revisa. El colchón se mide por producto
+        # para que sumar varias líneas no dispare el control por sí solo.
+        if line_gross > 0 and max_pct >= 0 and line_disc > free_amount:
+            disc_pct = line_disc / line_gross * 100
+            if disc_pct > max_pct:
+                raise SaleError(
+                    f"El descuento de {l['product'].name} (Q{line_disc:.2f}, {disc_pct:.0f}%) "
+                    f"supera el máximo permitido ({max_pct:.0f}%). Requiere autorización de un supervisor."
+                )
+        line_net = line_gross - line_disc
         line_cost = l["unit_cost"] * l["quantity"]
         if line_cost <= 0:
             continue
