@@ -67,11 +67,58 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Arma un mensaje legible a partir de CUALQUIER forma de error del backend:
+// {detail}, {non_field_errors:[...]}, errores por campo {campo:[...]}, o texto.
+export function extractApiMessage(data) {
+  if (data == null) return null;
+  if (typeof data === "string") {
+    const s = data.trim();
+    // Ignorar HTML (página de error de Django en DEBUG) o textos larguísimos.
+    if (!s || s[0] === "<" || s.length > 300) return null;
+    return s;
+  }
+  if (typeof data.detail === "string" && data.detail.trim()) return data.detail.trim();
+  if (Array.isArray(data.non_field_errors) && data.non_field_errors.length) {
+    return data.non_field_errors.filter((x) => typeof x === "string").join(" ");
+  }
+  if (typeof data === "object") {
+    const parts = [];
+    for (const [k, v] of Object.entries(data)) {
+      if (k === "detail") continue;
+      let msg = null;
+      if (Array.isArray(v)) msg = v.filter((x) => typeof x === "string").join(" ");
+      else if (typeof v === "string") msg = v;
+      if (msg && msg.trim()) parts.push(msg.trim());
+    }
+    if (parts.length) return parts.join(" · ");
+  }
+  return null;
+}
+
+// Deja SIEMPRE un mensaje entendible en error.response.data.detail, para que
+// todas las pantallas (que ya leen `.detail`) muestren el motivo real y no un
+// mensaje genérico. Los errores de validación de DRF vienen por campo, no en
+// `detail`; sin esto se perdían y salía el aviso genérico.
+function normalizeError(error) {
+  const resp = error.response;
+  if (!resp) return error; // sin respuesta (red/timeout): el llamador usa su fallback
+  let msg = extractApiMessage(resp.data);
+  if (!msg && resp.status >= 500) {
+    msg = "Ocurrió un error en el servidor. Intentá de nuevo; si continúa, avisá al administrador.";
+  }
+  if (msg) {
+    if (!resp.data || typeof resp.data !== "object") resp.data = {};
+    if (!resp.data.detail) resp.data.detail = msg;
+  }
+  return error;
+}
+
 // Refresca el access token automáticamente ante un 401
 let refreshing = null;
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
+    normalizeError(error);
     const original = error.config;
     // Si ya pasaron las 11 h del turno, no renovamos: se vuelve a elegir perfil.
     if (error.response?.status === 401 && tokenStore.isExpired()) {
@@ -112,6 +159,7 @@ let devRefreshing = null;
 deviceApi.interceptors.response.use(
   (res) => res,
   async (error) => {
+    normalizeError(error);
     const original = error.config;
     if (error.response?.status === 401 && !original._retry && tokenStore.deviceRefresh) {
       original._retry = true;
