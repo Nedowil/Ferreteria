@@ -58,6 +58,31 @@ class SaleServiceTests(TestCase):
         self.assertEqual(sale.change_amount, Decimal("45.00"))   # 300 - 255
         self.assertEqual(sale.payment_status, Sale.PAY_PAGADA)
 
+    def test_ganancia_en_listado_solo_admin(self):
+        # La columna "Ganancia" del listado (total − costo histórico) solo se
+        # serializa para admin. Venta: total 255, costo 3×60 = 180 ⇒ ganancia 75.
+        from types import SimpleNamespace
+        from core.models import User
+        from .serializers import SaleListSerializer
+        sale = self._venta_simple()
+        admin = User.objects.create_user(username="a", email="a@t.com", password="x", is_superuser=True)
+        data_admin = SaleListSerializer(sale, context={"request": SimpleNamespace(user=admin)}).data
+        self.assertEqual(Decimal(str(data_admin["profit"])), Decimal("75.00"))
+        # Un usuario normal (no admin) ni siquiera recibe el campo.
+        data_user = SaleListSerializer(sale, context={"request": SimpleNamespace(user=self.user)}).data
+        self.assertNotIn("profit", data_user)
+
+    def test_ganancia_none_en_venta_cancelada(self):
+        from types import SimpleNamespace
+        from core.models import User
+        from .serializers import SaleListSerializer
+        sale = self._venta_simple()
+        sale.status = Sale.STATUS_CANCELADA
+        sale.save()
+        admin = User.objects.create_user(username="a2", email="a2@t.com", password="x", is_superuser=True)
+        data = SaleListSerializer(sale, context={"request": SimpleNamespace(user=admin)}).data
+        self.assertIsNone(data["profit"])
+
     def test_venta_descuenta_stock(self):
         self._venta_simple()
         self.prod.refresh_from_db()

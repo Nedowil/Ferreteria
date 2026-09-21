@@ -72,21 +72,37 @@ class SaleListSerializer(serializers.ModelSerializer):
     payment_status_display = serializers.CharField(source="get_payment_status_display", read_only=True)
     balance = RoundingDecimalField(max_digits=14, decimal_places=2, read_only=True)
     user_name = serializers.CharField(source="user.name", read_only=True, default=None)
+    # Ganancia de la venta (ingreso − costo). Dato sensible: solo para admin.
+    profit = serializers.SerializerMethodField()
 
     class Meta:
         model = Sale
         fields = [
             "id", "folio", "customer_name", "date", "total", "payment_method",
             "status", "status_display", "payment_status", "payment_status_display",
-            "paid_amount", "balance", "user_name",
+            "paid_amount", "balance", "user_name", "profit",
         ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Si quien consulta no es admin, el vendedor ni siquiera se serializa.
+        # Si quien consulta no es admin, ni el vendedor ni la ganancia se serializan.
         request = self.context.get("request")
         if not _is_admin(getattr(request, "user", None)):
             self.fields.pop("user_name", None)
+            self.fields.pop("profit", None)
+
+    def get_profit(self, obj):
+        """Ganancia = total − costo de lo vendido, usando el costo histórico
+        guardado en cada línea (``unit_cost``), igual que el reporte por vendedor.
+        Solo tiene sentido en ventas completadas; en canceladas devuelve None."""
+        from core.pricing import money
+        if obj.status != Sale.STATUS_COMPLETADA:
+            return None
+        cost = Decimal("0")
+        for it in obj.items.all():  # items ya vienen con prefetch en el listado
+            uc = it.unit_cost if it.unit_cost is not None else Decimal("0")
+            cost += Decimal(uc) * Decimal(it.quantity)
+        return money(Decimal(obj.total) - cost)
 
 
 class SaleDetailSerializer(SaleListSerializer):
