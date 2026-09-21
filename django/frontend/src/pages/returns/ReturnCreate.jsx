@@ -269,13 +269,24 @@ export default function ReturnCreate() {
                  onKeyDown={onProdScan} autoFocus
                  className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
           {prodSales.length > 0 && (
-            <div className="mt-2 divide-y text-sm">
+            <div className="mt-3 space-y-2">
               {prodSales.map((s) => (
-                <button key={s.sale_id} onClick={() => loadSale(s.sale_id)} className="block w-full text-left px-2 py-2 hover:bg-slate-100 dark:hover:bg-slate-700">
-                  {s.product_name && <div className="font-medium text-slate-800 dark:text-slate-100">{s.product_name}</div>}
-                  <div className="text-xs text-slate-500 dark:text-slate-400">
-                    <span className="font-mono">{s.folio}</span> · {new Date(s.date).toLocaleDateString()} · {s.customer || "Consumidor final"} · {s.quantity} × Q{s.unit_price}
+                <button key={s.sale_id} onClick={() => loadSale(s.sale_id)}
+                        className="group w-full flex items-center gap-3 text-left rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 hover:border-blue-400 hover:bg-blue-50/50 dark:hover:bg-slate-700 hover:shadow-sm transition">
+                  <div className="shrink-0 w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-900 flex items-center justify-center text-lg">📦</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-slate-800 dark:text-slate-100 truncate group-hover:text-blue-700 dark:group-hover:text-blue-400">{s.product_name || "Producto"}</div>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 dark:text-slate-400">
+                      <span className="font-mono text-[11px] bg-slate-100 dark:bg-slate-900 rounded px-1.5 py-0.5 text-slate-600 dark:text-slate-300">{s.folio}</span>
+                      <span>{new Date(s.date).toLocaleDateString("es-GT")}</span>
+                      <span>· {s.customer || "Consumidor final"}</span>
+                    </div>
                   </div>
+                  <div className="shrink-0 text-right">
+                    <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">Q{Number(s.unit_price || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                    <div className="text-[11px] text-slate-400">{Number(s.quantity)} {s.unit_label || "u"}</div>
+                  </div>
+                  <span className="shrink-0 text-slate-300 dark:text-slate-500 group-hover:text-blue-500 text-xl leading-none">›</span>
                 </button>
               ))}
             </div>
