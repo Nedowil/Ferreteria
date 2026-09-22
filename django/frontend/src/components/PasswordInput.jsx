@@ -37,11 +37,18 @@ export default function PasswordInput({ className = "", ...props }) {
       <button
         type="button"
         onClick={() => setShow((v) => !v)}
-        title={show ? "Ocultar contraseña" : "Ver contraseña"}
         aria-label={show ? "Ocultar contraseña" : "Ver contraseña"}
-        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 rounded transition"
+        className="group absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded transition"
       >
         {show ? <EyeOffIcon /> : <EyeIcon />}
+        {/* Tooltip propio: arriba del ojo y alineado a la derecha para que no se
+            salga del borde. Reemplaza al title nativo, que se veía tosco. */}
+        <span
+          role="tooltip"
+          className="pointer-events-none absolute bottom-full right-0 mb-2 whitespace-nowrap rounded-md bg-slate-800 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100"
+        >
+          {show ? "Ocultar contraseña" : "Ver contraseña"}
+        </span>
       </button>
     </div>
   );
