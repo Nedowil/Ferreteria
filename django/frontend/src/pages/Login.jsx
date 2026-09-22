@@ -101,7 +101,7 @@ export default function Login() {
                    className="w-full border border-slate-300 rounded-lg pl-10 pr-11 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" />
             <button type="button" onClick={() => setShowPass((v) => !v)}
                     aria-label={showPass ? "Ocultar contraseña" : "Ver contraseña"}
-                    className="group absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded transition">
+                    className="no-anim group absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded transition">
               {showPass ? <EyeOffIcon /> : <EyeIcon />}
               {/* Tooltip propio arriba del ojo (el title nativo se veía tosco y bajaba). */}
               <span role="tooltip"
