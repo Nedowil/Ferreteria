@@ -40,6 +40,24 @@ export default function ReportDamage() {
   const pick = (p) => { setPicked(p); setResults([]); setSearch(p.name); };
   const reset = () => { setPicked(null); setSearch(""); setQty("1"); setReason(""); };
 
+  // Escaneo con lector: el lector teclea el código y manda Enter. Se hace una
+  // búsqueda fresca y se elige el producto de coincidencia EXACTA por código de
+  // barras o SKU (o el primer resultado). Igual que en el POS y devoluciones.
+  const onScan = async (e) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    const q = search.trim();
+    if (picked || q.length < 2) return;
+    try {
+      const { data } = await api.get("/inventory/products/", { params: { search: q, active: 1, page_size: 8 } });
+      const list = data.results || data;
+      const ql = q.toLowerCase();
+      const hit = list.find((p) => (p.barcode || "").toLowerCase() === ql || (p.sku || "").toLowerCase() === ql) || list[0];
+      if (hit) pick(hit);
+      else setErr("No se encontró un producto con ese código.");
+    } catch { /* la búsqueda por letra ya refleja el estado */ }
+  };
+
   const submit = async () => {
     setErr("");
     if (!picked) { setErr("Buscá y seleccioná el producto dañado."); return; }
@@ -69,7 +87,8 @@ export default function ReportDamage() {
           <div className="flex gap-2">
             <input autoFocus value={search}
                    onChange={(e) => { setSearch(e.target.value); setPicked(null); }}
-                   placeholder="Escribí el nombre o código…"
+                   onKeyDown={onScan}
+                   placeholder="Escribí, buscá o escaneá el nombre o código…"
                    className="flex-1 border border-slate-300 dark:border-slate-600 dark:bg-slate-900 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
             {picked && <button onClick={reset} className="text-sm text-slate-500 px-2">✕</button>}
           </div>
