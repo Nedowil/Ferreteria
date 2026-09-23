@@ -232,7 +232,7 @@ export default function ReturnCreate() {
               </td>
               <td className="px-4 py-3 text-right">
                 <button type="button" onClick={() => removeSaleItem(it.id)} title="Quitar de la devolución"
-                        className="no-anim text-slate-300 hover:text-rose-500 text-lg transition">✕</button>
+                        className="no-anim inline-flex items-center justify-center w-8 h-8 rounded-lg text-rose-500 hover:bg-rose-100 dark:text-rose-400 dark:hover:bg-rose-900/30 text-base font-bold transition">✕</button>
               </td>
             </tr>
           ))}
@@ -356,7 +356,7 @@ export default function ReturnCreate() {
                         <td className="py-3"><input type="number" step="any" value={it.unit_price} onChange={(e) => updItem(idx, "unit_price", e.target.value)} className="border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1.5 text-sm w-28 text-right tabular-nums" /></td>
                         <td className="py-3 text-right">
                           <button type="button" onClick={() => removeItem(idx)} title="Quitar producto"
-                                  className="no-anim text-slate-300 hover:text-rose-500 text-lg transition">✕</button>
+                                  className="no-anim inline-flex items-center justify-center w-8 h-8 rounded-lg text-rose-500 hover:bg-rose-100 dark:text-rose-400 dark:hover:bg-rose-900/30 text-base font-bold transition">✕</button>
                         </td>
                       </tr>
                     ))}
