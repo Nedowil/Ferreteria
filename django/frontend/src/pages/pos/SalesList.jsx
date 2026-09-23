@@ -11,6 +11,21 @@ const STATUS_BADGE = {
   cancelada: "bg-red-100 text-red-700",
 };
 
+// Colores e inicial para el avatar del cliente en el listado (diseño "Opción A").
+const AV_COLORS = ["#6366f1", "#0ea5e9", "#14b8a6", "#f59e0b", "#ec4899", "#8b5cf6", "#ef4444", "#3b82f6"];
+const initials = (name) => {
+  const n = (name || "Consumidor final").replace("Consumidor final", "CF").trim().split(/\s+/);
+  return ((n[0]?.[0] || "") + (n[1]?.[0] || "")).toUpperCase() || "CF";
+};
+const avColor = (seed) => {
+  const str = String(seed || "");
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+  return AV_COLORS[h % AV_COLORS.length];
+};
+// Color de la franja de estado (verde = completada, rojo = cancelada).
+const stripeColor = (status) => (status === "completada" ? "#22c55e" : "#ef4444");
+
 export default function SalesList() {
   const { user, can } = useAuth();
   const isAdmin = !!user && (user.is_superuser || (user.roles || []).includes("admin"));
@@ -172,33 +187,50 @@ export default function SalesList() {
           {data.results.length === 0 && <div className="px-5 py-10 text-center text-slate-400">No hay ventas.</div>}
         </div>
 
-        {/* Escritorio: tabla */}
-        <div className="hidden md:block overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
-            <tr><th className="px-4 py-2.5">Folio</th><th className="px-4 py-2.5">Cliente</th><th className="px-4 py-2.5">Fecha</th>
-                {canSeeTotal && <th className="px-4 py-2.5 text-right">Total</th>}
-                {showProfitCol && <th className="px-4 py-2.5 text-right">Ganancia</th>}<th className="px-4 py-2.5">Pago</th><th className="px-4 py-2.5">Estado</th>
-                {isAdmin && <th className="px-4 py-2.5">Vendedor</th>}<th></th></tr>
-          </thead>
-          <tbody>
-            {data.results.map((s) => (
-              <tr key={s.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700 transition">
-                <td className="px-4 py-2 font-mono text-xs">{s.folio}</td>
-                <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">{s.customer_name || "Consumidor final"}</td>
-                <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{new Date(s.date).toLocaleString()}</td>
-                {canSeeTotal && <td className="px-4 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">Q{s.total}</td>}
-                {showProfitCol && <td className={"px-4 py-2 text-right font-semibold " + profitClass(s.profit)}>{profitText(s.profit)}</td>}
-                <td className="px-4 py-2 text-xs text-slate-500 dark:text-slate-400">{s.payment_status_display}{canSeeTotal && Number(s.balance) > 0 ? ` · saldo Q${s.balance}` : ""}</td>
-                <td className="px-4 py-2"><span className={"inline-block rounded-full px-2 py-0.5 text-xs font-medium " + STATUS_BADGE[s.status]}>{s.status_display}</span></td>
-                {isAdmin && <td className="px-4 py-2 text-slate-600 dark:text-slate-300">{s.user_name || "—"}</td>}
-                <td className="px-4 py-2 text-right"><button type="button" onClick={() => setViewId(s.id)} className="inline-flex items-center justify-center gap-1 rounded-lg px-6 py-1.5 text-sm font-semibold shadow-sm hover:shadow transition bg-slate-700 hover:bg-slate-800 text-white">Ver</button></td>
-              </tr>
-            ))}
-            {data.results.length === 0 && <tr><td colSpan={6 + (isAdmin ? 1 : 0) + (showProfitCol ? 1 : 0) + (canSeeTotal ? 1 : 0)} className="px-5 py-10 text-center text-slate-400">No hay ventas.</td></tr>}
-          </tbody>
-        </table>
-        </div>
+        {/* Escritorio: filas separadas tipo tarjeta con franja de estado (Opción A) */}
+        {(() => {
+          // Columnas del grid según lo que se muestre (Total/Ganancia/Vendedor son
+          // condicionales). Header y filas comparten el mismo template para alinear.
+          const cols = ["110px", "minmax(160px,1fr)", "130px",
+            canSeeTotal ? "120px" : null,
+            showProfitCol ? "120px" : null,
+            "130px", "150px",
+            isAdmin ? "120px" : null,
+            "88px"].filter(Boolean).join(" ");
+          return (
+            <div className="hidden md:block overflow-x-auto">
+              <div className="min-w-[820px]">
+                {/* Encabezados */}
+                <div className="grid items-center gap-3 px-4 pb-2 text-[11px] uppercase tracking-wide text-slate-400 font-semibold" style={{ gridTemplateColumns: cols }}>
+                  <span>Folio</span><span>Cliente</span><span>Fecha</span>
+                  {canSeeTotal && <span className="text-right">Total</span>}
+                  {showProfitCol && <span className="text-right">Ganancia</span>}
+                  <span>Pago</span><span>Estado</span>
+                  {isAdmin && <span>Vendedor</span>}<span></span>
+                </div>
+                {/* Filas */}
+                {data.results.map((s) => (
+                  <div key={s.id} className="grid items-center gap-3 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl px-4 py-3 mb-2.5 shadow-sm hover:shadow-md hover:-translate-y-px transition"
+                       style={{ gridTemplateColumns: cols, borderLeft: `5px solid ${stripeColor(s.status)}` }}>
+                    <span className="font-mono text-xs text-slate-400">{s.folio}</span>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="w-9 h-9 rounded-full inline-flex items-center justify-center text-[11px] font-bold text-white shrink-0" style={{ background: avColor(s.customer_name || s.folio) }}>{initials(s.customer_name)}</span>
+                      <span className="font-semibold text-slate-800 dark:text-slate-100 truncate">{s.customer_name || "Consumidor final"}</span>
+                    </div>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">{new Date(s.date).toLocaleString()}</span>
+                    {canSeeTotal && <span className="text-right font-bold text-slate-800 dark:text-slate-100">Q{s.total}</span>}
+                    {showProfitCol && <span className={"text-right font-semibold text-sm " + profitClass(s.profit)}>{profitText(s.profit)}</span>}
+                    <span className="text-sm text-slate-500 dark:text-slate-400">{s.payment_status_display}{canSeeTotal && Number(s.balance) > 0 ? <span className="block text-[11px] text-amber-600">saldo Q{s.balance}</span> : ""}</span>
+                    <span><span className={"inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium " + STATUS_BADGE[s.status]}><span className="w-1.5 h-1.5 rounded-full" style={{ background: stripeColor(s.status) }}></span>{s.status_display}</span></span>
+                    {isAdmin && <span className="text-sm text-slate-600 dark:text-slate-300 truncate">{s.user_name || "—"}</span>}
+                    <span className="text-right"><button type="button" onClick={() => setViewId(s.id)} className="no-anim inline-flex items-center justify-center rounded-lg px-5 py-1.5 text-sm font-semibold shadow-sm hover:shadow transition bg-slate-700 hover:bg-slate-800 text-white">Ver</button></span>
+                  </div>
+                ))}
+                {data.results.length === 0 && <div className="px-5 py-10 text-center text-slate-400">No hay ventas.</div>}
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       <Pagination page={page} count={data.count} pageSize={PAGE_SIZE} onPage={goPage} label="ventas" />
