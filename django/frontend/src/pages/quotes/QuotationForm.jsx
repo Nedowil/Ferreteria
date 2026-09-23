@@ -61,7 +61,15 @@ export default function QuotationForm() {
   const upd = (idx, f, v) => setItems(items.map((it, i) => i === idx ? { ...it, [f]: v } : it));
   const rm = (idx) => setItems(items.filter((_, i) => i !== idx));
 
+  const money = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const total = items.reduce((s, i) => s + Number(i.quantity || 0) * Number(i.unit_price || 0), 0);
+  // Los precios incluyen IVA (12%): se desglosa para el resumen; las líneas
+  // exentas no aportan IVA.
+  const totalIVA = items.reduce((s, i) => {
+    const line = Number(i.quantity || 0) * Number(i.unit_price || 0);
+    return s + (i.tax_type === "iva" ? line - line / 1.12 : 0);
+  }, 0);
+  const subtotal = total - totalIVA;
 
   const submit = async (e) => {
     e.preventDefault(); setError("");
@@ -81,73 +89,108 @@ export default function QuotationForm() {
   };
 
   return (
-    <form onSubmit={submit} className="max-w-4xl space-y-5">
-      <h1 className="text-lg font-semibold">Nueva cotización</h1>
-      {error && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm">{error}</div>}
+    <form onSubmit={submit}>
+      <div className="mb-4">
+        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">🧾 Nueva cotización</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400">Completá los datos y agregá los productos.</p>
+      </div>
+      {error && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm mb-4">{error}</div>}
 
-      <section className="bg-white dark:bg-slate-800 rounded-lg shadow p-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">Cliente</label>
-          <CustomerPicker value={header.customer_id} customers={customers} emptyLabel="Sin cliente"
-                          onChange={(id) => setHeader({ ...header, customer_id: id })}
-                          onAddNew={() => setAddingCustomer(true)} />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Fecha</label>
-          <input type="date" value={header.date} onChange={(e) => setHeader({ ...header, date: e.target.value })} className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Válida hasta</label>
-          <input type="date" value={header.valid_until} onChange={(e) => setHeader({ ...header, valid_until: e.target.value })} className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
-        </div>
-      </section>
-
-      <section className="bg-white dark:bg-slate-800 rounded-lg shadow p-5">
-        <h3 className="font-semibold mb-3">Productos</h3>
-        <div className="flex gap-2 mb-3">
-          <div className="relative flex-1">
-          <input placeholder="Buscar producto…" value={search} onChange={(e) => doSearch(e.target.value)}
-                 className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
-          {results.length > 0 && (
-            <div className="absolute z-10 bg-white dark:bg-slate-800 border rounded shadow w-full mt-1 max-h-60 overflow-auto">
-              {results.map((p) => measuresFor(p).map((m) => (
-                <button type="button" key={`${p.id}-${m.label}`} onClick={() => addItem(p, m)} className="block w-full text-left px-3 py-2 hover:bg-slate-100 text-sm">
-                  <span className="font-mono text-xs text-slate-400">{p.sku}</span> {p.name} <span className="text-slate-500 dark:text-slate-400">({m.label})</span> — Q{Number(m.price).toFixed(2)}
-                </button>
-              )))}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
+        <div className="lg:col-span-2 space-y-5">
+          {/* Datos de la cotización */}
+          <section className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+            <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-slate-100 dark:border-slate-700">
+              <span className="w-8 h-8 rounded-lg inline-flex items-center justify-center text-base" style={{ background: "#dbeafe" }}>👤</span>
+              <h3 className="font-semibold">Datos de la cotización</h3>
             </div>
-          )}
-          </div>
-          <button type="button" onClick={() => setAddingProduct(true)} title="Crear un producto nuevo"
-                  className="shrink-0 inline-flex items-center gap-1 bg-blue-600 text-white rounded px-3 py-2 text-sm font-medium hover:bg-blue-700 transition whitespace-nowrap">➕ Producto</button>
-        </div>
-        <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="text-slate-500 dark:text-slate-400 text-left">
-            <tr><th className="py-1">Producto</th><th className="py-1 w-24 text-right">Cant.</th><th className="py-1 w-28 text-right">Precio</th>
-                <th className="py-1 w-24">IVA</th><th className="py-1 w-28 text-right">Importe</th><th></th></tr>
-          </thead>
-          <tbody>
-            {items.map((it, idx) => (
-              <tr key={idx} className="border-t">
-                <td className="py-2"><div className="font-medium">{it.name}{it.unit_label ? ` (${it.unit_label})` : ""}</div><div className="text-xs font-mono text-slate-400">{it.sku}</div></td>
-                <td className="py-2"><input type="number" step="any" value={it.quantity} onChange={(e) => upd(idx, "quantity", e.target.value)} className="border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm w-24 text-right" /></td>
-                <td className="py-2"><input type="number" step="any" value={it.unit_price} onChange={(e) => upd(idx, "unit_price", e.target.value)} className="border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm w-28 text-right" /></td>
-                <td className="py-2"><select value={it.tax_type} onChange={(e) => upd(idx, "tax_type", e.target.value)} className="border border-slate-300 dark:border-slate-600 rounded px-1 py-1 text-sm"><option value="iva">IVA</option><option value="exento">Exento</option></select></td>
-                <td className="py-2 text-right">Q{(Number(it.quantity || 0) * Number(it.unit_price || 0)).toFixed(2)}</td>
-                <td className="py-2 text-right"><button type="button" onClick={() => rm(idx)} className="text-red-600 text-xs hover:underline">Quitar</button></td>
-              </tr>
-            ))}
-            {items.length === 0 && <tr><td colSpan="6" className="py-6 text-center text-slate-400">Busca productos para agregarlos.</td></tr>}
-          </tbody>
-        </table>
-        </div>
-        <div className="flex justify-end mt-4 text-base font-semibold">Total: Q{total.toFixed(2)}</div>
-      </section>
+            <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Cliente</label>
+                <CustomerPicker value={header.customer_id} customers={customers} emptyLabel="Sin cliente"
+                                onChange={(id) => setHeader({ ...header, customer_id: id })}
+                                onAddNew={() => setAddingCustomer(true)} />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Fecha</label>
+                <input type="date" value={header.date} onChange={(e) => setHeader({ ...header, date: e.target.value })} className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Válida hasta</label>
+                <input type="date" value={header.valid_until} onChange={(e) => setHeader({ ...header, valid_until: e.target.value })} className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm" />
+              </div>
+            </div>
+          </section>
 
-      <div className="flex gap-2">
-        <button disabled={busy} className="bg-blue-600 text-white rounded px-6 py-2 font-medium disabled:opacity-50">{busy ? "Guardando…" : "Guardar cotización"}</button>
-        <button type="button" onClick={() => navigate("/cotizaciones")} className="px-6 py-2 text-slate-500 dark:text-slate-400">Cancelar</button>
+          {/* Productos */}
+          <section className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+            <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-slate-100 dark:border-slate-700">
+              <span className="w-8 h-8 rounded-lg inline-flex items-center justify-center text-base" style={{ background: "#dcfce7" }}>📦</span>
+              <h3 className="font-semibold">Productos</h3>
+            </div>
+            <div className="p-5">
+              <div className="flex gap-2 mb-3">
+                <div className="relative flex-1">
+                  <input placeholder="🔎 Buscar producto por nombre o código…" value={search} onChange={(e) => doSearch(e.target.value)}
+                         className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                  {results.length > 0 && (
+                    <div className="absolute z-10 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg w-full mt-1 max-h-60 overflow-auto">
+                      {results.map((p) => measuresFor(p).map((m) => (
+                        <button type="button" key={`${p.id}-${m.label}`} onClick={() => addItem(p, m)} className="block w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm">
+                          <span className="font-mono text-xs text-slate-400">{p.sku}</span> {p.name} <span className="text-slate-500 dark:text-slate-400">({m.label})</span> — Q{Number(m.price).toFixed(2)}
+                        </button>
+                      )))}
+                    </div>
+                  )}
+                </div>
+                <button type="button" onClick={() => setAddingProduct(true)} title="Crear un producto nuevo"
+                        className="shrink-0 inline-flex items-center gap-1 bg-blue-600 text-white rounded-lg px-3 py-2 text-sm font-medium hover:bg-blue-700 transition whitespace-nowrap">➕ Producto</button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-slate-400 text-left text-xs uppercase tracking-wide">
+                    <tr><th className="py-2">Producto</th><th className="py-2 text-center">Cant.</th><th className="py-2 w-28 text-right">Precio</th>
+                        <th className="py-2 w-20">IVA</th><th className="py-2 w-28 text-right">Importe</th><th></th></tr>
+                  </thead>
+                  <tbody>
+                    {items.map((it, idx) => (
+                      <tr key={idx} className="border-t border-slate-100 dark:border-slate-700">
+                        <td className="py-3 pr-2"><div className="font-medium text-slate-800 dark:text-slate-100">{it.name}{it.unit_label ? ` (${it.unit_label})` : ""}</div><div className="text-xs font-mono text-slate-400">{it.sku}</div></td>
+                        <td className="py-3 text-center">
+                          <div className="inline-flex items-center border border-slate-300 dark:border-slate-600 rounded-lg overflow-hidden">
+                            <button type="button" onClick={() => upd(idx, "quantity", String(Math.max(0, Number(it.quantity || 0) - 1)))} className="no-anim w-8 h-8 text-slate-500 dark:text-slate-300 font-bold bg-slate-50 dark:bg-slate-700 hover:bg-slate-100">−</button>
+                            <input type="number" step="any" value={it.quantity} onChange={(e) => upd(idx, "quantity", e.target.value)} className="w-14 text-center text-sm border-0 bg-transparent outline-none tabular-nums" />
+                            <button type="button" onClick={() => upd(idx, "quantity", String(Number(it.quantity || 0) + 1))} className="no-anim w-8 h-8 text-slate-500 dark:text-slate-300 font-bold bg-slate-50 dark:bg-slate-700 hover:bg-slate-100">+</button>
+                          </div>
+                        </td>
+                        <td className="py-3"><input type="number" step="any" value={it.unit_price} onChange={(e) => upd(idx, "unit_price", e.target.value)} className="border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1.5 text-sm w-28 text-right tabular-nums" /></td>
+                        <td className="py-3"><select value={it.tax_type} onChange={(e) => upd(idx, "tax_type", e.target.value)} className="border border-slate-300 dark:border-slate-600 rounded-lg px-1.5 py-1.5 text-sm bg-white dark:bg-slate-800"><option value="iva">IVA</option><option value="exento">Exento</option></select></td>
+                        <td className="py-3 text-right font-semibold tabular-nums">Q{(Number(it.quantity || 0) * Number(it.unit_price || 0)).toFixed(2)}</td>
+                        <td className="py-3 text-right"><button type="button" onClick={() => rm(idx)} title="Quitar" className="no-anim text-slate-300 hover:text-rose-500 text-lg font-bold transition">✕</button></td>
+                      </tr>
+                    ))}
+                    {items.length === 0 && <tr><td colSpan="6" className="py-8 text-center text-slate-400">Busca productos para agregarlos.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        {/* Panel de resumen (derecha) */}
+        <div className="lg:sticky lg:top-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-5">
+          <h3 className="font-semibold mb-3">Resumen</h3>
+          <div className="text-sm space-y-2">
+            <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">Subtotal</span><span className="tabular-nums">{money(subtotal)}</span></div>
+            <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">IVA (12%)</span><span className="tabular-nums">{money(totalIVA)}</span></div>
+          </div>
+          <div className="flex justify-between items-baseline border-t-2 border-slate-100 dark:border-slate-700 mt-3 pt-3">
+            <span className="font-semibold">Total</span>
+            <span className="text-2xl font-extrabold text-blue-700 dark:text-blue-400 tabular-nums">{money(total)}</span>
+          </div>
+          <button disabled={busy} className="w-full mt-4 text-white rounded-lg px-4 py-3 text-sm font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transition disabled:opacity-50">{busy ? "Guardando…" : "💾 Guardar cotización"}</button>
+          <button type="button" onClick={() => navigate("/cotizaciones")} className="w-full mt-2 text-sm text-slate-500 dark:text-slate-400 py-1.5 hover:text-slate-700 dark:hover:text-slate-200 transition">Cancelar</button>
+        </div>
       </div>
 
       {addingCustomer && (
