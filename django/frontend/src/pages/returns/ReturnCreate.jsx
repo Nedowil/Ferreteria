@@ -64,6 +64,9 @@ export default function ReturnCreate() {
     try {
       const { data } = await api.get("/returns/sale/", { params: { id } });
       setSale(data); setQtys({}); setRemoved([]); setError("");
+      // Al elegir la venta se oculta la lista de resultados (puede ser larga) para
+      // que se vea de una la venta seleccionada, sin tener que hacer scroll.
+      setProdSales([]); setProdQuery("");
     } catch (e) {
       setError(e.response?.data?.detail || "No se pudo cargar la venta.");
     }
