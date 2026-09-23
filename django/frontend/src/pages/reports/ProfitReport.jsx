@@ -6,8 +6,6 @@ import Pagination from "../../components/Pagination";
 
 const PAGE_SIZE = 15;
 
-// Medalla para el top 3 por utilidad.
-function medal(rank) { return rank === 1 ? "🥇" : rank === 2 ? "🥈" : "🥉"; }
 // Color de la etiqueta de margen según qué tan bueno sea.
 function marginClass(m) {
   if (m >= 30) return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300";
@@ -79,7 +77,7 @@ export default function ProfitReport() {
                   const positive = Number(r.gross_profit) >= 0;
                   return (
                     <tr key={r.product__id} className="hover:bg-slate-50/70 dark:hover:bg-slate-700/40 transition">
-                      <td className="px-3 py-2.5 text-right tabular-nums text-slate-400">{rank <= 3 ? <span className="text-base">{medal(rank)}</span> : rank}</td>
+                      <td className="px-3 py-2.5 text-right tabular-nums text-slate-400">{rank}</td>
                       <td className="px-4 py-2.5">
                         <div className="font-medium text-slate-800 dark:text-slate-100">{r.product__name}</div>
                         <div className="text-[11px] font-mono text-slate-400">{r.product__sku}</div>
