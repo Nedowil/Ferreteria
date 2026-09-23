@@ -185,7 +185,7 @@ export default function SalesList() {
         <div className="hidden md:block overflow-x-auto">
           <div className="rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden bg-white dark:bg-slate-800 min-w-[820px]">
             <table className="w-full text-sm border-collapse">
-              <thead className="bg-slate-50 dark:bg-slate-900/60 text-slate-400 text-[11px] uppercase tracking-wide text-left">
+              <thead className="bg-slate-700 dark:bg-slate-900 text-slate-200 dark:text-slate-300 text-[11px] uppercase tracking-wide text-left">
                 <tr>
                   <th className="px-4 py-3 pl-5">Folio</th><th className="px-4 py-3">Cliente</th><th className="px-4 py-3">Fecha</th>
                   {canSeeTotal && <th className="px-4 py-3 text-right">Total</th>}
