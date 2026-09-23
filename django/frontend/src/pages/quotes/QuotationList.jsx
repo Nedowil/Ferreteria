@@ -4,6 +4,7 @@ import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 import Pagination from "../../components/Pagination";
+import { StatusPill, stripeColor } from "../../utils/ui";
 
 const BADGE = {
   vigente: "bg-blue-100 text-blue-700",
@@ -91,7 +92,7 @@ export default function QuotationList() {
                 </div>
                 <div className="text-right shrink-0">
                   <div className="font-semibold text-slate-700 dark:text-slate-200">Q{q.total}</div>
-                  <span className={"inline-block mt-0.5 rounded-full px-2 py-0.5 text-xs font-medium " + BADGE[q.status]}>{q.status_display}</span>
+                  <StatusPill label={q.status_display} />
                 </div>
               </div>
               <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-slate-500 dark:text-slate-400">
@@ -113,12 +114,12 @@ export default function QuotationList() {
           <tbody>
             {data.results.map((q) => (
               <tr key={q.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700 transition">
-                <td className="px-4 py-2 font-mono text-xs">{q.folio}</td>
+                <td className="px-4 py-2 pl-5 font-mono text-xs" style={{ borderLeft: "4px solid " + stripeColor(q.status_display) }}>{q.folio}</td>
                 <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">{q.customer_name || "Sin cliente"}</td>
                 <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{q.date}</td>
                 <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{q.valid_until || "—"}</td>
                 <td className="px-4 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">Q{q.total}</td>
-                <td className="px-4 py-2"><span className={"inline-block rounded-full px-2 py-0.5 text-xs font-medium " + BADGE[q.status]}>{q.status_display}</span></td>
+                <td className="px-4 py-2"><StatusPill label={q.status_display} /></td>
                 <td className="px-4 py-2 text-right"><Link to={`/cotizaciones/${q.id}`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-slate-700 hover:bg-slate-800 text-white">Ver</Link></td>
               </tr>
             ))}

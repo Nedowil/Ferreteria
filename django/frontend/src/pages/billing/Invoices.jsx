@@ -5,6 +5,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { exportToExcel } from "../../utils/exportExcel";
 import { dialog } from "../../components/Dialog";
 import Pagination from "../../components/Pagination";
+import { StatusPill, stripeColor } from "../../utils/ui";
 
 const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -208,7 +209,7 @@ export default function Invoices() {
                   </div>
                   <div className="text-right shrink-0">
                     <div className="font-semibold text-slate-700 dark:text-slate-200">{Q(i.total)}</div>
-                    <span className={"inline-block mt-0.5 rounded-full px-2 py-0.5 text-xs font-medium " + (statusBadge[i.status] || "")}>{i.status_display}</span>
+                    <StatusPill label={i.status_display} />
                   </div>
                 </div>
                 <div className="text-[11px] text-slate-400 font-mono break-all mt-1">{i.uuid || ""}</div>
@@ -238,14 +239,14 @@ export default function Invoices() {
             <tbody>
               {invoices.map((i) => (
                 <tr key={i.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700 transition">
-                  <td className="px-4 py-2"><Link to={`/ventas/${i.sale}`} className="text-blue-600">{i.sale_folio}</Link></td>
+                  <td className="px-4 py-2 pl-5" style={{ borderLeft: "4px solid " + stripeColor(i.status_display) }}><Link to={`/ventas/${i.sale}`} className="text-blue-600">{i.sale_folio}</Link></td>
                   <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">{i.customer_name || "Consumidor final"}</td>
                   <td className="px-4 py-2">{i.document_type}</td>
                   <td className="px-4 py-2 font-mono text-xs">{i.serie ? `${i.serie}-${i.numero}` : "—"}</td>
                   <td className="px-4 py-2 font-mono text-xs truncate max-w-[180px]" title={i.uuid}>{i.uuid || "—"}</td>
                   <td className="px-4 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">{Q(i.total)}</td>
                   <td className="px-4 py-2">
-                    <span className={"inline-block rounded-full px-2 py-0.5 text-xs font-medium " + (statusBadge[i.status] || "")}>{i.status_display}</span>
+                    <StatusPill label={i.status_display} />
                   </td>
                   <td className="px-4 py-2 text-right whitespace-nowrap">
                     <div className="inline-flex gap-1.5">

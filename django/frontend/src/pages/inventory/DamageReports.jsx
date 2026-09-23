@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import api from "../../api/client";
 import { dialog } from "../../components/Dialog";
 import Pagination from "../../components/Pagination";
+import { StatusPill, stripeColor } from "../../utils/ui";
 
 const STATUS = {
   pendiente: { t: "Pendiente", c: "bg-amber-100 text-amber-700" },
@@ -74,7 +75,7 @@ export default function DamageReports() {
           <tbody>
             {rows.map((r) => (
               <tr key={r.id} className="border-t border-slate-100 dark:border-slate-700">
-                <td className="px-4 py-2.5">
+                <td className="px-4 py-2.5 pl-5" style={{ borderLeft: "4px solid " + stripeColor(STATUS[r.status]?.t || r.status) }}>
                   <div className="font-medium text-slate-800 dark:text-slate-100">{r.product_name}</div>
                   <div className="text-xs text-slate-400 font-mono">{r.product_sku}</div>
                 </td>
@@ -83,7 +84,7 @@ export default function DamageReports() {
                   {r.review_note && <div className="text-xs text-slate-400 mt-0.5">Nota: {r.review_note}</div>}
                 </td>
                 <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400 text-xs">{r.reported_by_name || "—"}<br /><span className="text-slate-400">{new Date(r.created_at).toLocaleString("es-GT")}</span></td>
-                <td className="px-4 py-2.5"><span className={"text-[11px] rounded-full px-2 py-0.5 " + (STATUS[r.status]?.c || "")}>{STATUS[r.status]?.t || r.status}</span></td>
+                <td className="px-4 py-2.5"><StatusPill label={STATUS[r.status]?.t || r.status} /></td>
                 <td className="px-4 py-2.5 text-right">
                   {r.status === "pendiente" ? (
                     <div className="inline-flex gap-1.5 justify-end">

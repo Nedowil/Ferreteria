@@ -84,7 +84,7 @@ export default function LowStock() {
           </thead>
           <tbody>
             {pageRows.map((r) => (
-              <tr key={r.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700/70 transition">
+              <tr key={r.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700/40 transition">
                 <td className="px-4 py-2 font-mono text-xs text-slate-500 dark:text-slate-400">{r.sku}</td>
                 <td className="px-4 py-2">
                   <div className="font-medium text-slate-800 dark:text-slate-100">{r.name}</div>

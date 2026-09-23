@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../../api/client";
 import Pagination from "../../components/Pagination";
+import { StatusPill, stripeColor } from "../../utils/ui";
 
 const BADGE = {
   pendiente: "bg-amber-100 text-amber-700",
@@ -46,11 +47,11 @@ export default function Transfers() {
           <tbody>
             {data.results.map((t) => (
               <tr key={t.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700 transition">
-                <td className="px-4 py-2 font-mono text-xs">{t.folio}</td>
+                <td className="px-4 py-2 pl-5 font-mono text-xs" style={{ borderLeft: "4px solid " + stripeColor(t.status_display) }}>{t.folio}</td>
                 <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">{t.from_branch_name}</td>
                 <td className="px-4 py-2">{t.to_branch_name}</td>
                 <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{new Date(t.date).toLocaleDateString()}</td>
-                <td className="px-4 py-2"><span className={"inline-block rounded-full px-2 py-0.5 text-xs font-medium " + BADGE[t.status]}>{t.status_display}</span></td>
+                <td className="px-4 py-2"><StatusPill label={t.status_display} /></td>
                 <td className="px-4 py-2 text-right"><Link to={`/transferencias/${t.id}`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-slate-700 hover:bg-slate-800 text-white">Ver</Link></td>
               </tr>
             ))}

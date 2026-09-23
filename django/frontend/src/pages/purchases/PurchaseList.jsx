@@ -4,6 +4,7 @@ import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 import Pagination from "../../components/Pagination";
+import { StatusPill, stripeColor } from "../../utils/ui";
 
 const STATUS_BADGE = {
   pendiente: "bg-amber-100 text-amber-700",
@@ -90,11 +91,11 @@ export default function PurchaseList() {
           <tbody>
             {data.results.map((p) => (
               <tr key={p.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700/70 transition">
-                <td className="px-4 py-2 font-mono text-xs">{p.folio}</td>
+                <td className="px-4 py-2 pl-5 font-mono text-xs" style={{ borderLeft: "4px solid " + stripeColor(p.status_display) }}>{p.folio}</td>
                 <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">{p.supplier_name}</td>
                 <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{p.date}</td>
                 <td className="px-4 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">Q{p.total}</td>
-                <td className="px-4 py-2"><span className={"inline-block rounded-full px-2 py-0.5 text-xs font-medium " + STATUS_BADGE[p.status]}>{p.status_display}</span></td>
+                <td className="px-4 py-2"><StatusPill label={p.status_display} /></td>
                 <td className="px-4 py-2 text-xs text-slate-500 dark:text-slate-400">{p.payment_status_display}{Number(p.balance) > 0 && p.status === "recibida" ? ` · saldo Q${p.balance}` : ""}</td>
                 <td className="px-4 py-2 text-right"><Link to={`/compras/${p.id}`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-slate-700 hover:bg-slate-800 text-white">Ver</Link></td>
               </tr>

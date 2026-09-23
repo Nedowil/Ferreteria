@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import api from "../../api/client";
 import { dialog } from "../../components/Dialog";
 import { toast } from "../../components/Toast";
+import { Avatar } from "../../utils/ui";
 
 const BLANK = { name: "", code: "", address: "", phone: "", email: "", is_main: false, active: true };
 
@@ -44,7 +45,7 @@ export default function Branches() {
           <tbody>
             {items.map((b) => (
               <tr key={b.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700 transition">
-                <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">{b.name}</td>
+                <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100"><div className="flex items-center gap-2.5 min-w-0"><Avatar name={b.name} /><span className="font-medium text-slate-800 dark:text-slate-100 truncate">{b.name}</span></div></td>
                 <td className="px-4 py-2 font-mono text-xs">{b.code}</td>
                 <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{b.phone || "—"}</td>
                 <td className="px-4 py-2">{b.is_main ? "★" : ""}</td>

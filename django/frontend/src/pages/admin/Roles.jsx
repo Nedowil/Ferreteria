@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import api from "../../api/client";
 import { dialog } from "../../components/Dialog";
 import { toast } from "../../components/Toast";
+import { Avatar } from "../../utils/ui";
 
 const SYSTEM = ["admin", "vendedor", "almacenista"];
 
@@ -79,7 +80,7 @@ export default function Roles() {
           <tbody>
             {roles.map((r) => (
               <tr key={r.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700 transition">
-                <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">{r.name} {SYSTEM.includes(r.name) && <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">sistema</span>}</td>
+                <td className="px-4 py-2"><div className="flex items-center gap-2.5 min-w-0"><Avatar name={r.name} /><span className="font-medium text-slate-800 dark:text-slate-100 truncate">{r.name}</span> {SYSTEM.includes(r.name) && <span className="inline-block shrink-0 rounded-full px-2 py-0.5 text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">sistema</span>}</div></td>
                 <td className="px-4 py-2 text-right">{r.permissions.length}</td>
                 <td className="px-4 py-2 text-right">{r.user_count}</td>
                 <td className="px-4 py-2 text-right">

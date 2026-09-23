@@ -150,7 +150,7 @@ export default function StockCount() {
               {products.map((p) => {
                 const d = derive(p);
                 return (
-                  <tr key={p.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 transition">
+                  <tr key={p.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700/40 transition">
                     <td className="px-4 py-2 font-mono text-xs text-slate-500 dark:text-slate-400">{p.sku}</td>
                     <td className="px-4 py-2">
                       <div className="font-medium text-slate-800 dark:text-slate-100">{p.name}</div>

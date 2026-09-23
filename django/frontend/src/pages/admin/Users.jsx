@@ -5,6 +5,7 @@ import PasswordInput from "../../components/PasswordInput";
 import { dialog } from "../../components/Dialog";
 import { toast } from "../../components/Toast";
 import Pagination from "../../components/Pagination";
+import { Avatar } from "../../utils/ui";
 
 export default function Users() {
   const { can } = useAuth();
@@ -95,9 +96,12 @@ export default function Users() {
           {users.map((u) => (
             <div key={u.id} className="p-4">
               <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="font-medium text-slate-800 dark:text-slate-100 break-words">{u.name}</div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400 break-all">{u.email}</div>
+                <div className="flex items-center gap-2 min-w-0">
+                  <Avatar name={u.name} size={28} />
+                  <div className="min-w-0">
+                    <div className="font-medium text-slate-800 dark:text-slate-100 break-words">{u.name}</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 break-all">{u.email}</div>
+                  </div>
                 </div>
                 {u.is_active
                   ? <span className="shrink-0 inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700">Activo</span>
@@ -126,7 +130,7 @@ export default function Users() {
           <tbody>
             {users.map((u) => (
               <tr key={u.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700 transition">
-                <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">{u.name}</td>
+                <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100"><div className="flex items-center gap-2.5 min-w-0"><Avatar name={u.name} /><span className="font-medium text-slate-800 dark:text-slate-100 truncate">{u.name}</span></div></td>
                 <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{u.email}</td>
                 <td className="px-4 py-2">{u.roles.map((r) => <span key={r} className="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 mr-1">{r}</span>)}</td>
                 <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{u.branches.map((b) => b.name).join(", ") || "—"}</td>
