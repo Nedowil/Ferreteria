@@ -25,12 +25,36 @@ class SaleItemSerializer(serializers.ModelSerializer):
     effective_unit_price = serializers.SerializerMethodField()
     # Cuánto de esta partida se devolvió (devoluciones procesadas, no anuladas).
     returned_quantity = serializers.SerializerMethodField()
+    # Costo y ganancia de la partida. Dato sensible: solo se serializa para admin.
+    unit_cost = serializers.SerializerMethodField()
+    profit = serializers.SerializerMethodField()
 
     class Meta:
         model = SaleItem
         fields = ["id", "product", "product_name", "product_sku", "quantity",
                   "unit_price", "effective_unit_price", "discount", "subtotal",
-                  "unit_label", "units_factor", "tax_type", "returned_quantity"]
+                  "unit_label", "units_factor", "tax_type", "returned_quantity",
+                  "unit_cost", "profit"]
+
+    def get_unit_cost(self, obj):
+        # Solo admin: en un serializer anidado el request se lee del contexto
+        # dentro del método (no en __init__, donde aún no está disponible).
+        request = self.context.get("request")
+        if not _is_admin(getattr(request, "user", None)):
+            return None
+        from core.pricing import money
+        return money(obj.unit_cost or 0)
+
+    def get_profit(self, obj):
+        # Ganancia de la partida = importe (neto de su descuento) − costo. Usa el
+        # costo histórico guardado en la línea (unit_cost), igual que los reportes.
+        # Dato sensible: solo admin.
+        request = self.context.get("request")
+        if not _is_admin(getattr(request, "user", None)):
+            return None
+        from core.pricing import money
+        cost = (obj.unit_cost or Decimal("0")) * Decimal(obj.quantity)
+        return money(Decimal(obj.subtotal) - cost)
 
     def get_returned_quantity(self, obj):
         from decimal import Decimal

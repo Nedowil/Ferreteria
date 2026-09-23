@@ -21,6 +21,10 @@ export default function SalesList() {
   // lista sin totales, pero al dar "Ver" sí ve el total en el detalle. El dueño
   // asigna este permiso al rol que quiera desde la pantalla de Roles.
   const canSeeTotal = can("ventas.ver_total_lista");
+  // La ganancia (columna y tarjeta) viene OCULTA por defecto: el admin la muestra
+  // con un botón, para que el cliente frente a la pantalla no la vea sin querer.
+  const [showProfit, setShowProfit] = useState(false);
+  const showProfitCol = isAdmin && showProfit;
   const [searchParams] = useSearchParams();
   const [data, setData] = useState({ results: [], count: 0 });
   const [summary, setSummary] = useState({ count: 0, completed_count: 0, total_income: 0, total_profit: 0, total_cost: 0 });
@@ -84,7 +88,7 @@ export default function SalesList() {
         { header: "Cliente", value: (s) => s.customer_name || "Consumidor final" },
         { header: "Fecha", value: (s) => new Date(s.date).toLocaleString("es-GT") },
         ...(canSeeTotal ? [{ header: "Total", value: (s) => Number(s.total) }] : []),
-        ...(isAdmin ? [{ header: "Ganancia", value: (s) => s.profit != null ? Number(s.profit) : "" }] : []),
+        ...(showProfitCol ? [{ header: "Ganancia", value: (s) => s.profit != null ? Number(s.profit) : "" }] : []),
         { header: "Pago", value: (s) => s.payment_status_display },
         ...(canSeeTotal ? [{ header: "Saldo", value: (s) => Number(s.balance) }] : []),
         { header: "Estado", value: (s) => s.status_display },
@@ -100,6 +104,7 @@ export default function SalesList() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">🧾 Ventas</h1>
         <div className="flex flex-wrap gap-2">
+          {isAdmin && <button onClick={() => setShowProfit((v) => !v)} className="no-anim border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg px-4 py-2 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition">{showProfit ? "🙈 Ocultar ganancia" : "👁️ Ver ganancia"}</button>}
           <button onClick={exportExcel} disabled={exporting} className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-100 transition">{exporting ? "Exportando…" : "⬇️ Excel"}</button>
           <Link to="/pos" className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">Ir al POS</Link>
         </div>
@@ -116,11 +121,12 @@ export default function SalesList() {
           <div className="flex items-center justify-between"><span className="text-sm font-medium text-emerald-100">Ingresos totales</span><span className="text-2xl">💰</span></div>
           <div className="text-3xl font-extrabold mt-2">{money(summary.total_income)}</div>
         </div>
-        {/* Ganancia = ingresos − costo de lo vendido. Info sensible: solo admin. */}
+        {/* Ganancia = ingresos − costo de lo vendido. Info sensible: el número se
+            oculta hasta que el admin toca "Ver ganancia" (cliente frente a pantalla). */}
         <div className="rounded-2xl p-5 text-white shadow-md bg-gradient-to-br from-teal-500 to-cyan-600">
           <div className="flex items-center justify-between"><span className="text-sm font-medium text-teal-100">Ganancia</span><span className="text-2xl">📈</span></div>
-          <div className="text-3xl font-extrabold mt-2">{money(summary.total_profit)}</div>
-          <div className="text-[11px] text-teal-100 mt-1">Ingresos menos costo</div>
+          <div className="text-3xl font-extrabold mt-2">{showProfit ? money(summary.total_profit) : "••••••"}</div>
+          <div className="text-[11px] text-teal-100 mt-1">{showProfit ? "Ingresos menos costo" : "Toca «Ver ganancia» para mostrar"}</div>
         </div>
         <div className="rounded-2xl p-5 text-white shadow-md bg-gradient-to-br from-violet-500 to-purple-600">
           <div className="flex items-center justify-between"><span className="text-sm font-medium text-violet-100">Completadas</span><span className="text-2xl">✅</span></div>
@@ -152,7 +158,7 @@ export default function SalesList() {
                 </div>
                 <div className="text-right shrink-0">
                   {canSeeTotal && <div className="font-semibold text-slate-700 dark:text-slate-200">Q{s.total}</div>}
-                  {isAdmin && <div className={"text-xs font-semibold " + profitClass(s.profit)}>Ganancia {profitText(s.profit)}</div>}
+                  {showProfitCol && <div className={"text-xs font-semibold " + profitClass(s.profit)}>Ganancia {profitText(s.profit)}</div>}
                   <span className={"inline-block mt-0.5 rounded-full px-2 py-0.5 text-xs font-medium " + STATUS_BADGE[s.status]}>{s.status_display}</span>
                 </div>
               </div>
@@ -172,7 +178,7 @@ export default function SalesList() {
           <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
             <tr><th className="px-4 py-2.5">Folio</th><th className="px-4 py-2.5">Cliente</th><th className="px-4 py-2.5">Fecha</th>
                 {canSeeTotal && <th className="px-4 py-2.5 text-right">Total</th>}
-                {isAdmin && <th className="px-4 py-2.5 text-right">Ganancia</th>}<th className="px-4 py-2.5">Pago</th><th className="px-4 py-2.5">Estado</th>
+                {showProfitCol && <th className="px-4 py-2.5 text-right">Ganancia</th>}<th className="px-4 py-2.5">Pago</th><th className="px-4 py-2.5">Estado</th>
                 {isAdmin && <th className="px-4 py-2.5">Vendedor</th>}<th></th></tr>
           </thead>
           <tbody>
@@ -182,14 +188,14 @@ export default function SalesList() {
                 <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">{s.customer_name || "Consumidor final"}</td>
                 <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{new Date(s.date).toLocaleString()}</td>
                 {canSeeTotal && <td className="px-4 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">Q{s.total}</td>}
-                {isAdmin && <td className={"px-4 py-2 text-right font-semibold " + profitClass(s.profit)}>{profitText(s.profit)}</td>}
+                {showProfitCol && <td className={"px-4 py-2 text-right font-semibold " + profitClass(s.profit)}>{profitText(s.profit)}</td>}
                 <td className="px-4 py-2 text-xs text-slate-500 dark:text-slate-400">{s.payment_status_display}{canSeeTotal && Number(s.balance) > 0 ? ` · saldo Q${s.balance}` : ""}</td>
                 <td className="px-4 py-2"><span className={"inline-block rounded-full px-2 py-0.5 text-xs font-medium " + STATUS_BADGE[s.status]}>{s.status_display}</span></td>
                 {isAdmin && <td className="px-4 py-2 text-slate-600 dark:text-slate-300">{s.user_name || "—"}</td>}
                 <td className="px-4 py-2 text-right"><button type="button" onClick={() => setViewId(s.id)} className="inline-flex items-center justify-center gap-1 rounded-lg px-6 py-1.5 text-sm font-semibold shadow-sm hover:shadow transition bg-slate-700 hover:bg-slate-800 text-white">Ver</button></td>
               </tr>
             ))}
-            {data.results.length === 0 && <tr><td colSpan={6 + (isAdmin ? 2 : 0) + (canSeeTotal ? 1 : 0)} className="px-5 py-10 text-center text-slate-400">No hay ventas.</td></tr>}
+            {data.results.length === 0 && <tr><td colSpan={6 + (isAdmin ? 1 : 0) + (showProfitCol ? 1 : 0) + (canSeeTotal ? 1 : 0)} className="px-5 py-10 text-center text-slate-400">No hay ventas.</td></tr>}
           </tbody>
         </table>
         </div>

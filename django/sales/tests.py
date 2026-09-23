@@ -72,6 +72,21 @@ class SaleServiceTests(TestCase):
         data_user = SaleListSerializer(sale, context={"request": SimpleNamespace(user=self.user)}).data
         self.assertNotIn("profit", data_user)
 
+    def test_ganancia_por_partida_solo_admin(self):
+        # En el detalle de venta, cada partida trae costo y ganancia solo para
+        # admin; para un usuario normal esos campos vienen en None.
+        from types import SimpleNamespace
+        from core.models import User
+        from .serializers import SaleDetailSerializer
+        sale = self._venta_simple()  # 3 × 85 = 255, costo 3×60 = 180 ⇒ ganancia 75
+        admin = User.objects.create_user(username="ad", email="ad@t.com", password="x", is_superuser=True)
+        it = SaleDetailSerializer(sale, context={"request": SimpleNamespace(user=admin)}).data["items"][0]
+        self.assertEqual(Decimal(str(it["unit_cost"])), Decimal("60.00"))
+        self.assertEqual(Decimal(str(it["profit"])), Decimal("75.00"))
+        it2 = SaleDetailSerializer(sale, context={"request": SimpleNamespace(user=self.user)}).data["items"][0]
+        self.assertIsNone(it2["unit_cost"])
+        self.assertIsNone(it2["profit"])
+
     def test_ganancia_none_en_venta_cancelada(self):
         from types import SimpleNamespace
         from core.models import User

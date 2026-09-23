@@ -19,6 +19,10 @@ export default function SaleDetailView({ id, onClose, onChanged }) {
   const [invoice, setInvoice] = useState(null);
   const [pay, setPay] = useState({ amount: "", payment_method: "efectivo", reference: "" });
   const [error, setError] = useState("");
+  // La ganancia/costo viene OCULTA por defecto: se muestra solo cuando el admin
+  // lo pide (para que el cliente frente a la pantalla no la vea sin querer).
+  const [profitVisible, setProfitVisible] = useState(false);
+  const showProfit = isAdmin && profitVisible;
 
   const load = () => {
     api.get(`/sales/${id}/`).then((r) => setS(r.data));
@@ -90,15 +94,27 @@ export default function SaleDetailView({ id, onClose, onChanged }) {
           </section>
 
           <section className="bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
-            <div className="px-5 py-3 border-b border-slate-100 dark:border-slate-700 font-semibold flex items-center gap-2">🧾 Partidas <span className="text-xs font-normal text-slate-400">({s.items.length})</span></div>
+            <div className="px-5 py-3 border-b border-slate-100 dark:border-slate-700 font-semibold flex items-center gap-2">🧾 Partidas <span className="text-xs font-normal text-slate-400">({s.items.length})</span>
+              {isAdmin && (
+                <button type="button" onClick={() => setProfitVisible((v) => !v)}
+                        className="no-anim ml-auto inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition">
+                  {profitVisible ? "🙈 Ocultar ganancia" : "👁️ Ver ganancia"}
+                </button>
+              )}
+            </div>
             <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-50 dark:bg-slate-900/60 text-slate-500 dark:text-slate-400 text-left text-xs uppercase tracking-wide">
                 <tr><th className="px-4 py-2.5">Producto</th><th className="px-4 py-2.5 text-right">Cant.</th>
-                    <th className="px-4 py-2.5 text-right">Precio</th><th className="px-4 py-2.5 text-right">Importe</th></tr>
+                    <th className="px-4 py-2.5 text-right">Precio</th>
+                    {showProfit && <th className="px-4 py-2.5 text-right">Costo</th>}
+                    <th className="px-4 py-2.5 text-right">Importe</th>
+                    {showProfit && <th className="px-4 py-2.5 text-right">Ganancia</th>}</tr>
               </thead>
               <tbody>
-                {s.items.map((it) => (
+                {s.items.map((it) => {
+                  const prof = Number(it.profit || 0);
+                  return (
                   <tr key={it.id} className="border-t border-slate-100 dark:border-slate-700">
                     <td className="px-4 py-2.5"><span className="font-mono text-xs text-slate-400">{it.product_sku}</span> {it.product_name}
                       {Number(it.units_factor) !== 1 && <span className="text-xs text-slate-400"> ({it.unit_label})</span>}
@@ -106,15 +122,18 @@ export default function SaleDetailView({ id, onClose, onChanged }) {
                       {Number(it.returned_quantity) > 0 && <div className="text-xs text-red-600 dark:text-red-400 mt-0.5">↩️ Devuelto: {Number(it.returned_quantity)} {it.unit_label || ""}</div>}</td>
                     <td className="px-4 py-2.5 text-right">{Number(it.quantity)}</td>
                     <td className="px-4 py-2.5 text-right">{money(it.unit_price)}</td>
+                    {showProfit && <td className="px-4 py-2.5 text-right text-slate-400">{money(it.unit_cost)}</td>}
                     <td className="px-4 py-2.5 text-right font-medium">{money(it.subtotal)}</td>
+                    {showProfit && <td className="px-4 py-2.5 text-right"><span className={"inline-block rounded-full px-2 py-0.5 text-xs font-semibold " + (prof >= 0 ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300" : "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300")}>{money(prof)}</span></td>}
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
               <tfoot className="text-sm bg-slate-50/60 dark:bg-slate-900/40">
-                <tr className="border-t border-slate-100 dark:border-slate-700"><td colSpan="3" className="px-4 py-1.5 text-right text-slate-500 dark:text-slate-400">Subtotal</td><td className="px-4 py-1.5 text-right">{money(s.subtotal)}</td></tr>
-                {Number(s.discount) > 0 && <tr><td colSpan="3" className="px-4 py-1.5 text-right text-slate-500 dark:text-slate-400">Descuento</td><td className="px-4 py-1.5 text-right text-red-600">−{money(s.discount)}</td></tr>}
-                <tr><td colSpan="3" className="px-4 py-1.5 text-right text-slate-500 dark:text-slate-400">IVA</td><td className="px-4 py-1.5 text-right">{money(s.tax)}</td></tr>
-                <tr className="font-bold text-base border-t border-slate-200 dark:border-slate-600"><td colSpan="3" className="px-4 py-2.5 text-right">Total</td><td className="px-4 py-2.5 text-right text-emerald-700 dark:text-emerald-400">{money(s.total)}</td></tr>
+                <tr className="border-t border-slate-100 dark:border-slate-700"><td colSpan={showProfit ? 4 : 3} className="px-4 py-1.5 text-right text-slate-500 dark:text-slate-400">Subtotal</td><td className="px-4 py-1.5 text-right">{money(s.subtotal)}</td>{showProfit && <td></td>}</tr>
+                {Number(s.discount) > 0 && <tr><td colSpan={showProfit ? 4 : 3} className="px-4 py-1.5 text-right text-slate-500 dark:text-slate-400">Descuento</td><td className="px-4 py-1.5 text-right text-red-600">−{money(s.discount)}</td>{showProfit && <td></td>}</tr>}
+                <tr><td colSpan={showProfit ? 4 : 3} className="px-4 py-1.5 text-right text-slate-500 dark:text-slate-400">IVA</td><td className="px-4 py-1.5 text-right">{money(s.tax)}</td>{showProfit && <td></td>}</tr>
+                <tr className="font-bold text-base border-t border-slate-200 dark:border-slate-600"><td colSpan={showProfit ? 4 : 3} className="px-4 py-2.5 text-right">Total</td><td className="px-4 py-2.5 text-right text-emerald-700 dark:text-emerald-400">{money(s.total)}</td>{showProfit && <td className="px-4 py-2.5 text-right text-emerald-700 dark:text-emerald-400">{money(s.items.reduce((a, it) => a + Number(it.profit || 0), 0))}</td>}</tr>
               </tfoot>
             </table>
             </div>
