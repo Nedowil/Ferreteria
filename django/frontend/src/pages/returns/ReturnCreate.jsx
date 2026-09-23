@@ -202,193 +202,213 @@ export default function ReturnCreate() {
   };
 
   const renderSaleItemsTable = () => (
-    <div className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden mt-4">
-      <div className="px-5 py-3 border-b font-semibold text-sm">Venta {sale.folio} — {sale.customer_name || "Consumidor final"}</div>
+    <section className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+      <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-slate-100 dark:border-slate-700">
+        <span className="w-8 h-8 rounded-lg inline-flex items-center justify-center text-base shrink-0" style={{ background: "#dcfce7" }}>📦</span>
+        <div className="min-w-0">
+          <h3 className="font-semibold leading-tight">Productos de la venta {sale.folio}</h3>
+          <div className="text-xs text-slate-400">{sale.customer_name || "Consumidor final"} · indicá cuánto devolver de cada uno</div>
+        </div>
+      </div>
       <div className="overflow-x-auto">
       <table className="w-full text-sm">
-        <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-left">
-          <tr><th className="px-4 py-2">Producto</th><th className="px-4 py-2 text-right">Comprado</th><th className="px-4 py-2 text-right">Precio</th><th className="px-4 py-2 text-right w-32">Cantidad de producto</th><th className="px-4 py-2 w-10"></th></tr>
+        <thead className="bg-slate-50 dark:bg-slate-900/60 text-slate-400 text-left text-xs uppercase tracking-wide">
+          <tr><th className="px-4 py-2.5">Producto</th><th className="px-4 py-2.5 text-right">Comprado</th><th className="px-4 py-2.5 text-right">Precio</th><th className="px-4 py-2.5 text-right w-32">Devolver</th><th className="px-4 py-2.5 w-10"></th></tr>
         </thead>
         <tbody>
           {sale.items.filter((it) => !removed.includes(it.id)).map((it) => (
-            <tr key={it.id} className="border-t">
-              <td className="px-4 py-2"><span className="font-mono text-xs text-slate-400">{it.product_sku}</span> {it.product_name}</td>
-              <td className="px-4 py-2 text-right">{it.quantity}</td>
-              <td className="px-4 py-2 text-right">Q{Number(it.effective_unit_price ?? it.unit_price).toFixed(2)}</td>
-              <td className="px-4 py-2 text-right">
-                <input type="number" step="any" min="0" max={it.quantity} value={qtys[it.id] || ""}
+            <tr key={it.id} className="border-t border-slate-100 dark:border-slate-700">
+              <td className="px-4 py-3"><div className="font-medium text-slate-800 dark:text-slate-100">{it.product_name}</div><div className="text-xs font-mono text-slate-400">{it.product_sku}</div></td>
+              <td className="px-4 py-3 text-right tabular-nums">{Number(it.quantity)}</td>
+              <td className="px-4 py-3 text-right tabular-nums">Q{Number(it.effective_unit_price ?? it.unit_price).toFixed(2)}</td>
+              <td className="px-4 py-3 text-right">
+                <input type="number" step="any" min="0" max={it.quantity} value={qtys[it.id] || ""} placeholder="0"
                        onChange={(e) => setSaleQty(it, e.target.value)}
-                       className="border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm w-24 text-right" />
+                       className="border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1.5 text-sm w-24 text-right tabular-nums" />
                 <div className="text-[10px] text-slate-400 mt-0.5">máx {Number(it.quantity)}</div>
               </td>
-              <td className="px-4 py-2 text-right">
+              <td className="px-4 py-3 text-right">
                 <button type="button" onClick={() => removeSaleItem(it.id)} title="Quitar de la devolución"
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50 rounded p-1.5 transition">🗑️</button>
+                        className="no-anim text-slate-300 hover:text-rose-500 text-lg transition">✕</button>
               </td>
             </tr>
           ))}
           {sale.items.filter((it) => !removed.includes(it.id)).length === 0 && (
-            <tr><td colSpan="5" className="px-4 py-4 text-center text-slate-400">Quitaste todos los productos.</td></tr>
+            <tr><td colSpan="5" className="px-4 py-6 text-center text-slate-400">Quitaste todos los productos.</td></tr>
           )}
         </tbody>
-        <tfoot>
-          <tr className="border-t bg-slate-50 dark:bg-slate-900/40">
-            <td colSpan="3" className="px-4 py-2.5 text-right font-semibold text-slate-600 dark:text-slate-300">Total a devolver</td>
-            <td className="px-4 py-2.5 text-right font-bold text-lg text-slate-800 dark:text-slate-100">{Q(total)}</td>
-            <td></td>
-          </tr>
-        </tfoot>
       </table>
       </div>
+    </section>
+  );
+
+  const cardCls = "bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden";
+  const CardHead = ({ icon, bg, title, sub }) => (
+    <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-slate-100 dark:border-slate-700">
+      <span className="w-8 h-8 rounded-lg inline-flex items-center justify-center text-base shrink-0" style={{ background: bg }}>{icon}</span>
+      <div className="min-w-0"><h3 className="font-semibold leading-tight">{title}</h3>{sub && <div className="text-xs text-slate-400">{sub}</div>}</div>
     </div>
   );
 
   return (
-    <div className="max-w-4xl">
-      <h1 className="text-lg font-semibold mb-4">Nueva devolución</h1>
+    <div>
+      <div className="mb-4">
+        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">↩️ Nueva devolución</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400">Elegí cómo devolver, indicá los productos y el reembolso.</p>
+      </div>
       {error && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm mb-4">{error}</div>}
 
-      <div className="flex gap-2 mb-4">
+      {/* Pestañas tipo segmento */}
+      <div className="inline-flex flex-wrap gap-1 rounded-xl bg-slate-100 dark:bg-slate-800 p-1 mb-5">
         {modes.map(([v, l]) => (
           <button key={v} onClick={() => { setMode(v); setSale(null); setError(""); }}
-                  className={"px-4 py-2 rounded text-sm font-medium " + (mode === v ? "bg-slate-800 text-white" : "bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600")}>{l}</button>
+                  className={"no-anim px-4 py-2 rounded-lg text-sm font-medium transition " + (mode === v ? "bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200")}>{l}</button>
         ))}
       </div>
 
-      {mode === "ticket" && (
-        <form onSubmit={findByFolio} className="bg-white dark:bg-slate-800 rounded-lg shadow p-4 flex gap-2">
-          <input placeholder="Folio de la venta (ej. V-000001)" value={folio} onChange={(e) => setFolio(e.target.value)}
-                 className="border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm w-64" />
-          <button className="bg-slate-700 text-white rounded px-4 py-2 text-sm">Buscar venta</button>
-        </form>
-      )}
-
-      {mode === "producto" && (
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
-          <input placeholder="Buscar o escanear producto (nombre, SKU o código)…" value={prodQuery} onChange={(e) => searchProduct(e.target.value)}
-                 onKeyDown={onProdScan} autoFocus
-                 className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
-          {prodSales.length > 0 && (
-            <div className="mt-3 space-y-2">
-              {prodSales.map((s) => (
-                <button key={s.sale_id} onClick={() => loadSale(s.sale_id)}
-                        className="group w-full flex items-center gap-3 text-left rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 hover:border-blue-400 hover:bg-blue-50/50 dark:hover:bg-slate-700 hover:shadow-sm transition">
-                  <div className="shrink-0 w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-900 flex items-center justify-center text-lg">📦</div>
-                  <div className="min-w-0 flex-1">
-                    <div className="font-medium text-slate-800 dark:text-slate-100 truncate group-hover:text-blue-700 dark:group-hover:text-blue-400">{s.product_name || "Producto"}</div>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 dark:text-slate-400">
-                      <span className="font-mono text-[11px] bg-slate-100 dark:bg-slate-900 rounded px-1.5 py-0.5 text-slate-600 dark:text-slate-300">{s.folio}</span>
-                      <span>{new Date(s.date).toLocaleDateString("es-GT")}</span>
-                      <span>· {s.customer || "Consumidor final"}</span>
-                    </div>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">Q{Number(s.unit_price || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                    <div className="text-[11px] text-slate-400">{Number(s.quantity)} {s.unit_label || "u"}</div>
-                  </div>
-                  <span className="shrink-0 text-slate-300 dark:text-slate-500 group-hover:text-blue-500 text-xl leading-none">›</span>
-                </button>
-              ))}
-            </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
+        <div className="lg:col-span-2 space-y-5">
+          {mode === "ticket" && (
+            <section className={cardCls}>
+              <CardHead icon="🔎" bg="#dbeafe" title="Buscar la venta" sub="Escribí el folio del comprobante" />
+              <form onSubmit={findByFolio} className="p-5 flex gap-2">
+                <input placeholder="Folio de la venta (ej. V-000001)" value={folio} onChange={(e) => setFolio(e.target.value)}
+                       className="flex-1 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm" />
+                <button className="shrink-0 bg-slate-700 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-slate-800 transition">Buscar venta</button>
+              </form>
+            </section>
           )}
-          {prodQuery.length >= 2 && prodSales.length === 0 && <p className="text-sm text-slate-400 mt-2">Sin ventas recientes con ese producto.</p>}
-        </div>
-      )}
 
-      {mode === "sin_ticket" && (
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
-          <div className="relative">
-            <input placeholder="Buscar o escanear producto a reintegrar…" value={search} onChange={(e) => doSearch(e.target.value)}
-                   onKeyDown={onSinTicketScan} autoFocus
-                   className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
-            {results.length > 0 && (
-              <div className="absolute z-10 bg-white dark:bg-slate-800 border rounded shadow w-full mt-1 max-h-60 overflow-auto">
-                {results.map((p) => (
-                  <button type="button" key={p.id} onClick={() => addItem(p)} className="block w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm">
-                    <span className="font-mono text-xs text-slate-400">{p.sku}</span> {p.name} — Q{p.sale_price}
-                  </button>
-                ))}
+          {mode === "producto" && (
+            <section className={cardCls}>
+              <CardHead icon="🔎" bg="#dbeafe" title="Buscar por producto" sub="Nombre, SKU o código de barras" />
+              <div className="p-5">
+                <input placeholder="Buscar o escanear producto…" value={prodQuery} onChange={(e) => searchProduct(e.target.value)}
+                       onKeyDown={onProdScan} autoFocus
+                       className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm" />
+                {prodSales.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {prodSales.map((s) => (
+                      <button key={s.sale_id} onClick={() => loadSale(s.sale_id)}
+                              className="group w-full flex items-center gap-3 text-left rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 hover:border-blue-400 hover:bg-blue-50/50 dark:hover:bg-slate-700 hover:shadow-sm transition">
+                        <div className="shrink-0 w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-900 flex items-center justify-center text-lg">📦</div>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium text-slate-800 dark:text-slate-100 truncate group-hover:text-blue-700 dark:group-hover:text-blue-400">{s.product_name || "Producto"}</div>
+                          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 dark:text-slate-400">
+                            <span className="font-mono text-[11px] bg-slate-100 dark:bg-slate-900 rounded px-1.5 py-0.5 text-slate-600 dark:text-slate-300">{s.folio}</span>
+                            <span>{new Date(s.date).toLocaleDateString("es-GT")}</span>
+                            <span>· {s.customer || "Consumidor final"}</span>
+                          </div>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">Q{Number(s.unit_price || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                          <div className="text-[11px] text-slate-400">{Number(s.quantity)} {s.unit_label || "u"}</div>
+                        </div>
+                        <span className="shrink-0 text-slate-300 dark:text-slate-500 group-hover:text-blue-500 text-xl leading-none">›</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {prodQuery.length >= 2 && prodSales.length === 0 && <p className="text-sm text-slate-400 mt-2">Sin ventas recientes con ese producto.</p>}
               </div>
-            )}
-          </div>
-          <div className="overflow-x-auto">
-          <table className="w-full text-sm mt-3">
-            <thead className="text-slate-500 dark:text-slate-400 text-left"><tr><th className="py-1">Producto</th><th className="py-1">Medida</th><th className="py-1 w-24 text-right">Cant.</th><th className="py-1 w-28 text-right">Precio</th><th className="py-1 w-10"></th></tr></thead>
-            <tbody>
-              {items.map((it, idx) => (
-                <tr key={idx} className="border-t">
-                  <td className="py-2"><div className="font-medium">{it.name}</div><div className="text-xs font-mono text-slate-400">{it.sku}</div></td>
-                  <td className="py-2">
-                    {(it.measures || []).length > 1 ? (
-                      <select value={it.measureKey} onChange={(e) => setMeasure(idx, e.target.value)}
-                              className="border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm">
-                        {it.measures.map((m) => <option key={m.key} value={m.key}>{m.label} · Q{Number(m.price).toFixed(2)}</option>)}
-                      </select>
-                    ) : (
-                      <span className="text-xs text-slate-500 dark:text-slate-400">{it.unit_label}</span>
-                    )}
-                  </td>
-                  <td className="py-2"><input type="number" step="any" value={it.quantity} onChange={(e) => updItem(idx, "quantity", e.target.value)} className="border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm w-24 text-right" /></td>
-                  <td className="py-2"><input type="number" step="any" value={it.unit_price} onChange={(e) => updItem(idx, "unit_price", e.target.value)} className="border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm w-28 text-right" /></td>
-                  <td className="py-2 text-right">
-                    <button type="button" onClick={() => removeItem(idx)} title="Quitar producto"
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50 rounded p-1.5 transition">🗑️</button>
-                  </td>
-                </tr>
-              ))}
-              {items.length === 0 && <tr><td colSpan="5" className="py-4 text-center text-slate-400">Agrega productos a reintegrar.</td></tr>}
-            </tbody>
-            {items.length > 0 && (
-              <tfoot>
-                <tr className="border-t">
-                  <td colSpan="2" className="py-2 text-right font-semibold text-slate-600 dark:text-slate-300">Total a devolver</td>
-                  <td colSpan="2" className="py-2 text-right font-bold text-lg text-slate-800 dark:text-slate-100">{Q(total)}</td>
-                  <td></td>
-                </tr>
-              </tfoot>
-            )}
-          </table>
-          </div>
-        </div>
-      )}
+            </section>
+          )}
 
-      {sale && mode !== "sin_ticket" && renderSaleItemsTable()}
+          {mode === "sin_ticket" && (
+            <section className={cardCls}>
+              <CardHead icon="📦" bg="#dcfce7" title="Productos a reintegrar" sub="Devolución sin comprobante" />
+              <div className="p-5">
+                <div className="relative">
+                  <input placeholder="🔎 Buscar o escanear producto a reintegrar…" value={search} onChange={(e) => doSearch(e.target.value)}
+                         onKeyDown={onSinTicketScan} autoFocus
+                         className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm" />
+                  {results.length > 0 && (
+                    <div className="absolute z-10 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg w-full mt-1 max-h-60 overflow-auto">
+                      {results.map((p) => (
+                        <button type="button" key={p.id} onClick={() => addItem(p)} className="block w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm">
+                          <span className="font-mono text-xs text-slate-400">{p.sku}</span> {p.name} — Q{p.sale_price}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="overflow-x-auto">
+                <table className="w-full text-sm mt-3">
+                  <thead className="text-slate-400 text-left text-xs uppercase tracking-wide"><tr><th className="py-2">Producto</th><th className="py-2">Medida</th><th className="py-2 w-24 text-right">Cant.</th><th className="py-2 w-28 text-right">Precio</th><th className="py-2 w-10"></th></tr></thead>
+                  <tbody>
+                    {items.map((it, idx) => (
+                      <tr key={idx} className="border-t border-slate-100 dark:border-slate-700">
+                        <td className="py-3"><div className="font-medium text-slate-800 dark:text-slate-100">{it.name}</div><div className="text-xs font-mono text-slate-400">{it.sku}</div></td>
+                        <td className="py-3">
+                          {(it.measures || []).length > 1 ? (
+                            <select value={it.measureKey} onChange={(e) => setMeasure(idx, e.target.value)}
+                                    className="border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1.5 text-sm bg-white dark:bg-slate-800">
+                              {it.measures.map((m) => <option key={m.key} value={m.key}>{m.label} · Q{Number(m.price).toFixed(2)}</option>)}
+                            </select>
+                          ) : (
+                            <span className="text-xs text-slate-500 dark:text-slate-400">{it.unit_label}</span>
+                          )}
+                        </td>
+                        <td className="py-3"><input type="number" step="any" value={it.quantity} onChange={(e) => updItem(idx, "quantity", e.target.value)} className="border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1.5 text-sm w-24 text-right tabular-nums" /></td>
+                        <td className="py-3"><input type="number" step="any" value={it.unit_price} onChange={(e) => updItem(idx, "unit_price", e.target.value)} className="border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1.5 text-sm w-28 text-right tabular-nums" /></td>
+                        <td className="py-3 text-right">
+                          <button type="button" onClick={() => removeItem(idx)} title="Quitar producto"
+                                  className="no-anim text-slate-300 hover:text-rose-500 text-lg transition">✕</button>
+                        </td>
+                      </tr>
+                    ))}
+                    {items.length === 0 && <tr><td colSpan="5" className="py-6 text-center text-slate-400">Agrega productos a reintegrar.</td></tr>}
+                  </tbody>
+                </table>
+                </div>
+              </div>
+            </section>
+          )}
 
-      <section className="bg-white dark:bg-slate-800 rounded-lg shadow p-5 mt-4 grid grid-cols-2 gap-4">
-        {mode !== "sin_ticket" && (
-          <div>
-            <label className="block text-sm font-medium mb-1">Motivo</label>
-            <select value={reasonType} onChange={(e) => setReasonType(e.target.value)} className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm">
-              <option value="equivocacion">Equivocación</option><option value="defectuoso">Defectuoso</option>
-              <option value="no_satisfecho">No satisfecho</option><option value="otro">Otro</option>
-            </select>
-          </div>
-        )}
-        <div>
-          <label className="block text-sm font-medium mb-1">Reembolso</label>
-          <select value={refund} onChange={(e) => setRefund(e.target.value)} className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm">
-            <option value="efectivo">Efectivo</option><option value="tarjeta">Tarjeta</option>
-            <option value="transferencia">Transferencia</option><option value="credito_nota">Nota de crédito</option>
-          </select>
-        </div>
-        <div className="col-span-2">
-          <label className="block text-sm font-medium mb-1">Detalle (opcional)</label>
-          <input value={reason} onChange={(e) => setReason(e.target.value)} className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
-        </div>
-      </section>
+          {sale && mode !== "sin_ticket" && renderSaleItemsTable()}
 
-      <div className="flex flex-wrap items-center gap-3 mt-4">
-        <button disabled={busy || (mode !== "sin_ticket" && !sale)} onClick={submit}
-                className="bg-green-600 text-white rounded px-6 py-2 font-medium disabled:opacity-50">
-          {busy ? "Procesando…" : "Procesar devolución"}
-        </button>
-        <button onClick={() => navigate("/devoluciones")} className="px-6 py-2 text-slate-500 dark:text-slate-400">Cancelar</button>
-        {(mode === "sin_ticket" ? items.length > 0 : !!sale) && (
-          <div className="ml-auto text-right">
-            <div className="text-xs text-slate-500 dark:text-slate-400">Total a devolver</div>
-            <div className="text-2xl font-extrabold text-green-700 dark:text-green-400">{Q(total)}</div>
+          {/* Motivo y reembolso */}
+          <section className={cardCls}>
+            <CardHead icon="📝" bg="#fef3c7" title="Motivo y reembolso" />
+            <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {mode !== "sin_ticket" && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Motivo</label>
+                  <select value={reasonType} onChange={(e) => setReasonType(e.target.value)} className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-800">
+                    <option value="equivocacion">Equivocación</option><option value="defectuoso">Defectuoso</option>
+                    <option value="no_satisfecho">No satisfecho</option><option value="otro">Otro</option>
+                  </select>
+                </div>
+              )}
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Reembolso</label>
+                <select value={refund} onChange={(e) => setRefund(e.target.value)} className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-800">
+                  <option value="efectivo">Efectivo</option><option value="tarjeta">Tarjeta</option>
+                  <option value="transferencia">Transferencia</option><option value="credito_nota">Nota de crédito</option>
+                </select>
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Detalle (opcional)</label>
+                <input value={reason} onChange={(e) => setReason(e.target.value)} className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm" />
+              </div>
+            </div>
+          </section>
+        </div>
+
+        {/* Panel de resumen (derecha) */}
+        <div className="lg:sticky lg:top-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-5">
+          <h3 className="font-semibold mb-3">Resumen</h3>
+          <div className="rounded-lg bg-slate-50 dark:bg-slate-900/50 px-4 py-3">
+            <div className="text-[11px] uppercase tracking-wide text-slate-400">Total a reembolsar</div>
+            <div className="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 tabular-nums">{Q(total)}</div>
           </div>
-        )}
+          <button disabled={busy || (mode !== "sin_ticket" && !sale)} onClick={submit}
+                  className="w-full mt-4 text-white rounded-lg px-4 py-3 text-sm font-semibold bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+            {busy ? "Procesando…" : "✅ Procesar devolución"}
+          </button>
+          <button type="button" onClick={() => navigate("/devoluciones")} className="w-full mt-2 text-sm text-slate-500 dark:text-slate-400 py-1.5 hover:text-slate-700 dark:hover:text-slate-200 transition">Cancelar</button>
+          {(mode !== "sin_ticket" && !sale) && <p className="text-xs text-slate-400 mt-3 text-center">Primero buscá una venta para poder procesar.</p>}
+        </div>
       </div>
     </div>
   );
