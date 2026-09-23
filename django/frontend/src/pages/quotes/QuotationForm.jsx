@@ -4,6 +4,7 @@ import api from "../../api/client";
 import QuickCustomerModal from "../../components/QuickCustomerModal";
 import QuickProductModal from "../../components/QuickProductModal";
 import CustomerPicker from "../../components/CustomerPicker";
+import MeasureModal from "../../components/MeasureModal";
 
 export default function QuotationForm() {
   const navigate = useNavigate();
@@ -17,10 +18,11 @@ export default function QuotationForm() {
   const [busy, setBusy] = useState(false);
   const [addingCustomer, setAddingCustomer] = useState(false);
   const [addingProduct, setAddingProduct] = useState(false);
+  const [picking, setPicking] = useState(null); // producto elegido en la búsqueda → modal de medida
 
   // Producto recién creado desde el modal: se agrega como partida (medida base).
   const onProductCreated = (p) => {
-    addItem(p, { label: p.base_unit_label || "unidad", price: Number(p.sale_price) });
+    addItem(p, { label: p.base_unit_label || "unidad", price: Number(p.sale_price) }, 1);
     setAddingProduct(false);
   };
 
@@ -41,22 +43,29 @@ export default function QuotationForm() {
   };
   // Medidas en que se puede cotizar un producto: unidad base + empaque + presentaciones.
   const measuresFor = (p) => {
-    const out = [{ label: p.base_unit_label || "unidad", price: Number(p.sale_price) }];
+    const out = [{ key: "base", label: p.base_unit_label || "unidad", price: Number(p.sale_price), units_factor: 1 }];
     const cf = Number(p.container_factor || 0);
     if (p.container_label && cf > 0) {
       const cp = Number(p.container_price || 0) || Number(p.sale_price) * cf;
-      out.push({ label: p.container_label, price: cp });
+      out.push({ key: "container", label: p.container_label, price: cp, units_factor: cf });
     }
     (p.presentations || []).filter((pr) => pr.active !== false).forEach((pr) =>
-      out.push({ label: pr.label, price: Number(pr.price) }));
+      out.push({ key: `pres-${pr.id}`, label: pr.label, price: Number(pr.price), units_factor: Number(pr.units_factor) || 1 }));
     return out;
   };
-  // Agrega una medida específica del producto (permite el mismo producto en varias medidas).
-  const addItem = (p, m) => {
-    if (!items.find((i) => i.product_id === p.id && i.unit_label === m.label))
+  // Agrega una medida específica del producto en la cantidad elegida
+  // (permite el mismo producto en varias medidas; si ya existe, suma la cantidad).
+  const addItem = (p, m, qty) => {
+    const q = Number(qty) || 1;
+    const found = items.find((i) => i.product_id === p.id && i.unit_label === m.label);
+    if (found) {
+      setItems(items.map((i) => i === found
+        ? { ...i, quantity: String(Number(i.quantity || 0) + q) } : i));
+    } else {
       setItems([...items, { product_id: p.id, name: p.name, sku: p.sku, unit_label: m.label,
-        quantity: "1", unit_price: m.price, tax_type: p.tax_type || "iva" }]);
-    setSearch(""); setResults([]);
+        quantity: String(q), unit_price: m.price, tax_type: p.tax_type || "iva" }]);
+    }
+    setSearch(""); setResults([]); setPicking(null);
   };
   const upd = (idx, f, v) => setItems(items.map((it, i) => i === idx ? { ...it, [f]: v } : it));
   const rm = (idx) => setItems(items.filter((_, i) => i !== idx));
@@ -135,11 +144,15 @@ export default function QuotationForm() {
                          className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
                   {results.length > 0 && (
                     <div className="absolute z-10 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg w-full mt-1 max-h-60 overflow-auto">
-                      {results.map((p) => measuresFor(p).map((m) => (
-                        <button type="button" key={`${p.id}-${m.label}`} onClick={() => addItem(p, m)} className="block w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm">
-                          <span className="font-mono text-xs text-slate-400">{p.sku}</span> {p.name} <span className="text-slate-500 dark:text-slate-400">({m.label})</span> — Q{Number(m.price).toFixed(2)}
+                      {results.map((p) => (
+                        <button type="button" key={p.id} onClick={() => setPicking(p)} className="flex w-full items-center justify-between gap-2 text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm">
+                          <span className="min-w-0">
+                            <span className="font-medium text-slate-800 dark:text-slate-100">{p.name}</span>
+                            <span className="block text-xs font-mono text-slate-400">{p.sku}</span>
+                          </span>
+                          <span className="shrink-0 text-slate-500 dark:text-slate-400 tabular-nums">Q{Number(p.sale_price).toFixed(2)}</span>
                         </button>
-                      )))}
+                      ))}
                     </div>
                   )}
                 </div>
@@ -193,6 +206,12 @@ export default function QuotationForm() {
         </div>
       </div>
 
+      {picking && (
+        <MeasureModal product={picking} measures={measuresFor(picking)}
+                      available={picking.stock}
+                      onAdd={(m, qty) => addItem(picking, m, qty)}
+                      onClose={() => setPicking(null)} />
+      )}
       {addingCustomer && (
         <QuickCustomerModal onClose={() => setAddingCustomer(false)} onCreated={onCustomerCreated} />
       )}
