@@ -171,24 +171,24 @@ export default function CashBox() {
           {/* Tarjetas de color arriba (solo si NO es cuadre a ciegas). */}
           {!blind && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
-              <div className="lg:col-span-2 rounded-2xl p-5 text-white shadow-md bg-gradient-to-br from-emerald-500 to-teal-600">
+              <div className="lg:col-span-2 rounded-2xl p-5 text-white shadow-md bg-gradient-to-br from-emerald-600 to-green-700">
                 <div className="flex items-start justify-between">
                   <div>
-                    <div className="text-sm text-emerald-50/90">Efectivo esperado</div>
-                    <div className="text-3xl font-extrabold mt-1">{money(session.current_expected)}</div>
+                    <div className="text-sm font-medium text-white/85">Efectivo esperado</div>
+                    <div className="text-3xl font-extrabold mt-1 drop-shadow-sm">{money(session.current_expected)}</div>
                   </div>
                   <span className="text-2xl">💰</span>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">
-                  <div className="bg-white/15 rounded-xl px-3 py-2"><div className="text-[11px] text-emerald-50/85">Ventas efectivo</div><div className="font-bold text-sm">{money(session.totals_by_method?.efectivo)}</div></div>
-                  <div className="bg-white/15 rounded-xl px-3 py-2"><div className="text-[11px] text-emerald-50/85">Fondo inicial</div><div className="font-bold text-sm">{money(session.opening_amount)}</div></div>
-                  <div className="bg-white/15 rounded-xl px-3 py-2"><div className="text-[11px] text-emerald-50/85">Tarjeta</div><div className="font-bold text-sm">{money(session.totals_by_method?.tarjeta)}</div></div>
-                  <div className="bg-white/15 rounded-xl px-3 py-2"><div className="text-[11px] text-emerald-50/85">Transferencia</div><div className="font-bold text-sm">{money(session.totals_by_method?.transferencia)}</div></div>
+                  <div className="bg-black/15 rounded-xl px-3 py-2"><div className="text-[11px] text-white/75">Ventas efectivo</div><div className="font-bold text-sm">{money(session.totals_by_method?.efectivo)}</div></div>
+                  <div className="bg-black/15 rounded-xl px-3 py-2"><div className="text-[11px] text-white/75">Fondo inicial</div><div className="font-bold text-sm">{money(session.opening_amount)}</div></div>
+                  <div className="bg-black/15 rounded-xl px-3 py-2"><div className="text-[11px] text-white/75">Tarjeta</div><div className="font-bold text-sm">{money(session.totals_by_method?.tarjeta)}</div></div>
+                  <div className="bg-black/15 rounded-xl px-3 py-2"><div className="text-[11px] text-white/75">Transferencia</div><div className="font-bold text-sm">{money(session.totals_by_method?.transferencia)}</div></div>
                 </div>
               </div>
-              <div className="rounded-2xl p-5 text-white shadow-md bg-gradient-to-br from-violet-500 to-purple-600 flex flex-col justify-center">
-                <div className="flex items-center justify-between"><span className="text-sm text-violet-50/90">Movimientos del turno</span><span className="text-2xl">📄</span></div>
-                <div className="text-3xl font-extrabold mt-1">{movCount}</div>
+              <div className="rounded-2xl p-5 text-white shadow-md bg-gradient-to-br from-violet-600 to-purple-700 flex flex-col justify-center">
+                <div className="flex items-center justify-between"><span className="text-sm font-medium text-white/85">Movimientos del turno</span><span className="text-2xl">📄</span></div>
+                <div className="text-3xl font-extrabold mt-1 drop-shadow-sm">{movCount}</div>
               </div>
             </div>
           )}
