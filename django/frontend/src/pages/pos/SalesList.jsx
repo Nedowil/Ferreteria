@@ -132,9 +132,12 @@ export default function SalesList() {
           <div className="flex items-center justify-between"><span className="text-sm font-medium text-indigo-100">Total ventas</span><span className="text-2xl">🧾</span></div>
           <div className="text-3xl font-extrabold mt-2">{summary.count}</div>
         </div>
+        {/* Ingresos totales: también es un monto sensible; se oculta hasta que el
+            admin toca "Ver ganancia" (el cliente frente a la pantalla no lo ve). */}
         <div className="rounded-2xl p-5 text-white shadow-md bg-gradient-to-br from-emerald-500 to-emerald-600">
           <div className="flex items-center justify-between"><span className="text-sm font-medium text-emerald-100">Ingresos totales</span><span className="text-2xl">💰</span></div>
-          <div className="text-3xl font-extrabold mt-2">{money(summary.total_income)}</div>
+          <div className="text-3xl font-extrabold mt-2">{showProfit ? money(summary.total_income) : "••••••"}</div>
+          {!showProfit && <div className="text-[11px] text-emerald-100 mt-1">Toca «Ver ganancia» para mostrar</div>}
         </div>
         {/* Ganancia = ingresos − costo de lo vendido. Info sensible: el número se
             oculta hasta que el admin toca "Ver ganancia" (cliente frente a pantalla). */}
@@ -187,50 +190,46 @@ export default function SalesList() {
           {data.results.length === 0 && <div className="px-5 py-10 text-center text-slate-400">No hay ventas.</div>}
         </div>
 
-        {/* Escritorio: filas separadas tipo tarjeta con franja de estado (Opción A) */}
-        {(() => {
-          // Columnas del grid según lo que se muestre (Total/Ganancia/Vendedor son
-          // condicionales). Header y filas comparten el mismo template para alinear.
-          const cols = ["110px", "minmax(160px,1fr)", "130px",
-            canSeeTotal ? "120px" : null,
-            showProfitCol ? "120px" : null,
-            "130px", "150px",
-            isAdmin ? "120px" : null,
-            "88px"].filter(Boolean).join(" ");
-          return (
-            <div className="hidden md:block overflow-x-auto">
-              <div className="min-w-[820px]">
-                {/* Encabezados */}
-                <div className="grid items-center gap-3 px-4 pb-2 text-[11px] uppercase tracking-wide text-slate-400 font-semibold" style={{ gridTemplateColumns: cols }}>
-                  <span>Folio</span><span>Cliente</span><span>Fecha</span>
-                  {canSeeTotal && <span className="text-right">Total</span>}
-                  {showProfitCol && <span className="text-right">Ganancia</span>}
-                  <span>Pago</span><span>Estado</span>
-                  {isAdmin && <span>Vendedor</span>}<span></span>
-                </div>
-                {/* Filas */}
-                {data.results.map((s) => (
-                  <div key={s.id} className="grid items-center gap-3 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl px-4 py-3 mb-2.5 shadow-sm hover:shadow-md hover:-translate-y-px transition"
-                       style={{ gridTemplateColumns: cols, borderLeft: `5px solid ${stripeColor(s.status)}` }}>
-                    <span className="font-mono text-xs text-slate-400">{s.folio}</span>
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="w-9 h-9 rounded-full inline-flex items-center justify-center text-[11px] font-bold text-white shrink-0" style={{ background: avColor(s.customer_name || s.folio) }}>{initials(s.customer_name)}</span>
-                      <span className="font-semibold text-slate-800 dark:text-slate-100 truncate">{s.customer_name || "Consumidor final"}</span>
-                    </div>
-                    <span className="text-xs text-slate-500 dark:text-slate-400">{new Date(s.date).toLocaleString()}</span>
-                    {canSeeTotal && <span className="text-right font-bold text-slate-800 dark:text-slate-100">Q{s.total}</span>}
-                    {showProfitCol && <span className={"text-right font-semibold text-sm " + profitClass(s.profit)}>{profitText(s.profit)}</span>}
-                    <span className="text-sm text-slate-500 dark:text-slate-400">{s.payment_status_display}{canSeeTotal && Number(s.balance) > 0 ? <span className="block text-[11px] text-amber-600">saldo Q{s.balance}</span> : ""}</span>
-                    <span><span className={"inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium " + STATUS_BADGE[s.status]}><span className="w-1.5 h-1.5 rounded-full" style={{ background: stripeColor(s.status) }}></span>{s.status_display}</span></span>
-                    {isAdmin && <span className="text-sm text-slate-600 dark:text-slate-300 truncate">{s.user_name || "—"}</span>}
-                    <span className="text-right"><button type="button" onClick={() => setViewId(s.id)} className="no-anim inline-flex items-center justify-center rounded-lg px-5 py-1.5 text-sm font-semibold shadow-sm hover:shadow transition bg-slate-700 hover:bg-slate-800 text-white">Ver</button></span>
-                  </div>
-                ))}
-                {data.results.length === 0 && <div className="px-5 py-10 text-center text-slate-400">No hay ventas.</div>}
-              </div>
-            </div>
-          );
-        })()}
+        {/* Escritorio: tabla con franja de estado; canceladas resaltadas (Opción B) */}
+        <div className="hidden md:block overflow-x-auto">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden bg-white dark:bg-slate-800 min-w-[820px]">
+            <table className="w-full text-sm border-collapse">
+              <thead className="bg-slate-50 dark:bg-slate-900/60 text-slate-400 text-[11px] uppercase tracking-wide text-left">
+                <tr>
+                  <th className="px-4 py-3 pl-5">Folio</th><th className="px-4 py-3">Cliente</th><th className="px-4 py-3">Fecha</th>
+                  {canSeeTotal && <th className="px-4 py-3 text-right">Total</th>}
+                  {showProfitCol && <th className="px-4 py-3 text-right">Ganancia</th>}
+                  <th className="px-4 py-3">Pago</th><th className="px-4 py-3">Estado</th>
+                  {isAdmin && <th className="px-4 py-3">Vendedor</th>}<th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.results.map((s) => {
+                  const cancelled = s.status !== "completada";
+                  return (
+                  <tr key={s.id} className={"border-t border-slate-100 dark:border-slate-700 transition " + (cancelled ? "bg-rose-50 dark:bg-rose-900/10" : "hover:bg-slate-50/70 dark:hover:bg-slate-700/40")}>
+                    <td className="px-4 py-3 pl-5 font-mono text-xs text-slate-500 dark:text-slate-400" style={{ borderLeft: `4px solid ${stripeColor(s.status)}` }}>{s.folio}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="w-8 h-8 rounded-full inline-flex items-center justify-center text-[11px] font-bold text-white shrink-0" style={{ background: avColor(s.customer_name || s.folio) }}>{initials(s.customer_name)}</span>
+                        <span className={"font-semibold truncate " + (cancelled ? "text-rose-800 dark:text-rose-300 line-through decoration-rose-300" : "text-slate-800 dark:text-slate-100")}>{s.customer_name || "Consumidor final"}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs">{new Date(s.date).toLocaleString()}</td>
+                    {canSeeTotal && <td className={"px-4 py-3 text-right font-bold " + (cancelled ? "text-rose-700 dark:text-rose-400" : "text-slate-800 dark:text-slate-100")}>Q{s.total}</td>}
+                    {showProfitCol && <td className={"px-4 py-3 text-right font-semibold " + profitClass(s.profit)}>{profitText(s.profit)}</td>}
+                    <td className="px-4 py-3 text-sm text-slate-500 dark:text-slate-400">{s.payment_status_display}{canSeeTotal && Number(s.balance) > 0 ? <span className="block text-[11px] text-amber-600">saldo Q{s.balance}</span> : ""}</td>
+                    <td className="px-4 py-3"><span className={"inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium " + STATUS_BADGE[s.status]}><span className="w-1.5 h-1.5 rounded-full" style={{ background: stripeColor(s.status) }}></span>{s.status_display}</span></td>
+                    {isAdmin && <td className="px-4 py-3 text-slate-600 dark:text-slate-300 truncate">{s.user_name || "—"}</td>}
+                    <td className="px-4 py-3 text-right"><button type="button" onClick={() => setViewId(s.id)} className="no-anim inline-flex items-center justify-center rounded-lg px-5 py-1.5 text-sm font-semibold shadow-sm hover:shadow transition bg-slate-700 hover:bg-slate-800 text-white">Ver</button></td>
+                  </tr>
+                  );
+                })}
+                {data.results.length === 0 && <tr><td colSpan={6 + (canSeeTotal ? 1 : 0) + (showProfitCol ? 1 : 0) + (isAdmin ? 1 : 0)} className="px-5 py-10 text-center text-slate-400">No hay ventas.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       <Pagination page={page} count={data.count} pageSize={PAGE_SIZE} onPage={goPage} label="ventas" />
