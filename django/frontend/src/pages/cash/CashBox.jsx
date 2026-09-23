@@ -11,6 +11,19 @@ const MOV_PAGE_SIZE = 15;
 // Formatea montos con separador de miles (Q57,161.00) para leerlos fácil.
 const money = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+// Color del chip de tipo de movimiento (venta verde, ingreso azul, egreso rojo…).
+const TYPE_CHIP = {
+  venta: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+  ingreso: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  egreso: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
+  devolucion: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
+  apertura: "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300",
+  cierre: "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300",
+};
+const TYPE_DOT = { venta: "#22c55e", ingreso: "#3b82f6", egreso: "#ef4444", devolucion: "#ef4444", apertura: "#94a3b8", cierre: "#94a3b8" };
+const typeChip = (t) => TYPE_CHIP[t] || "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300";
+const typeDot = (t) => TYPE_DOT[t] || "#94a3b8";
+
 export default function CashBox() {
   const { can } = useAuth();
   const [session, setSession] = useState(null);
@@ -154,121 +167,136 @@ export default function CashBox() {
           </div>
         )
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          <div className="space-y-5">
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-5">
-              {blind ? (
-                <>
-                  <div className="text-sm text-slate-500 dark:text-slate-400">Arqueo de caja</div>
-                  <div className="text-lg font-semibold mt-1">🔒 Cuadre a ciegas</div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                    Contá el efectivo y regístralo abajo. El supervisor revisa la diferencia.
+        <>
+          {/* Tarjetas de color arriba (solo si NO es cuadre a ciegas). */}
+          {!blind && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
+              <div className="lg:col-span-2 rounded-2xl p-5 text-white shadow-md bg-gradient-to-br from-emerald-500 to-teal-600">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="text-sm text-emerald-50/90">Efectivo esperado</div>
+                    <div className="text-3xl font-extrabold mt-1">{money(session.current_expected)}</div>
                   </div>
-                </>
-              ) : (
-                <>
-                  <div className="text-sm text-slate-500 dark:text-slate-400">Efectivo esperado</div>
-                  <div className="text-3xl font-bold mt-1">{money(session.current_expected)}</div>
-                  <div className="text-xs text-slate-400 mt-1">Fondo inicial: {money(session.opening_amount)}</div>
-                  <div className="mt-3 text-sm space-y-1">
-                    <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">Ventas efectivo</span><span>{money(session.totals_by_method?.efectivo)}</span></div>
-                    <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">Tarjeta</span><span>{money(session.totals_by_method?.tarjeta)}</span></div>
-                    <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">Transferencia</span><span>{money(session.totals_by_method?.transferencia)}</span></div>
-                  </div>
-                </>
-              )}
-            </div>
-
-            <form onSubmit={addMovement} className="bg-white dark:bg-slate-800 rounded-lg shadow p-5 space-y-3">
-              <h3 className="font-semibold">Movimiento manual</h3>
-              <select value={mov.type} onChange={(e) => setMov({ ...mov, type: e.target.value })}
-                      className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm">
-                <option value="ingreso">Ingreso</option>
-                <option value="egreso">Egreso</option>
-              </select>
-              <input type="number" step="any" required placeholder="Monto" value={mov.amount}
-                     onChange={(e) => setMov({ ...mov, amount: e.target.value })}
-                     className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
-              <input placeholder="Descripción" value={mov.description}
-                     onChange={(e) => setMov({ ...mov, description: e.target.value })}
-                     className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
-              <button className="w-full bg-slate-700 text-white rounded px-4 py-2 text-sm font-medium">Registrar</button>
-            </form>
-
-            <form onSubmit={closeCash} className="bg-white dark:bg-slate-800 rounded-lg shadow p-5 space-y-3 border-t-4 border-red-400">
-              <h3 className="font-semibold">Arqueo y cierre</h3>
-              <input type="number" step="any" required placeholder="Efectivo contado" value={counted}
-                     onChange={(e) => setCounted(e.target.value)}
-                     className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
-              {counted !== "" && !blind && (
-                <div className="text-sm flex justify-between">
-                  <span className="text-slate-500 dark:text-slate-400">Diferencia</span>
-                  <span className={Number(counted) - Number(session.current_expected) < 0 ? "text-red-600 font-medium" : "text-green-600 font-medium"}>
-                    {money(Number(counted) - Number(session.current_expected))}
-                  </span>
+                  <span className="text-2xl">💰</span>
                 </div>
-              )}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">
+                  <div className="bg-white/15 rounded-xl px-3 py-2"><div className="text-[11px] text-emerald-50/85">Ventas efectivo</div><div className="font-bold text-sm">{money(session.totals_by_method?.efectivo)}</div></div>
+                  <div className="bg-white/15 rounded-xl px-3 py-2"><div className="text-[11px] text-emerald-50/85">Fondo inicial</div><div className="font-bold text-sm">{money(session.opening_amount)}</div></div>
+                  <div className="bg-white/15 rounded-xl px-3 py-2"><div className="text-[11px] text-emerald-50/85">Tarjeta</div><div className="font-bold text-sm">{money(session.totals_by_method?.tarjeta)}</div></div>
+                  <div className="bg-white/15 rounded-xl px-3 py-2"><div className="text-[11px] text-emerald-50/85">Transferencia</div><div className="font-bold text-sm">{money(session.totals_by_method?.transferencia)}</div></div>
+                </div>
+              </div>
+              <div className="rounded-2xl p-5 text-white shadow-md bg-gradient-to-br from-violet-500 to-purple-600 flex flex-col justify-center">
+                <div className="flex items-center justify-between"><span className="text-sm text-violet-50/90">Movimientos del turno</span><span className="text-2xl">📄</span></div>
+                <div className="text-3xl font-extrabold mt-1">{movCount}</div>
+              </div>
+            </div>
+          )}
+
+          {/* Formularios a la IZQUIERDA + tabla de movimientos a la derecha. */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
+            <div className="space-y-5">
               {blind && (
-                <div className="text-xs text-slate-400">La diferencia la revisa el supervisor al cerrar.</div>
+                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-5">
+                  <div className="text-lg font-semibold">🔒 Cuadre a ciegas</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Contá el efectivo y registralo abajo. El supervisor revisa la diferencia.</div>
+                </div>
               )}
-              <button className="w-full bg-red-600 text-white rounded px-4 py-2 text-sm font-medium">Cerrar caja</button>
-            </form>
-          </div>
 
-          <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
-            <div className="px-5 py-3 border-b flex items-center justify-between gap-2">
-              <span className="font-semibold">Movimientos</span>
-              {!blind && (
-                <div className="flex gap-2">
-                  <button onClick={exportMovPdf} disabled={!!exporting || !movCount}
-                          className="border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg px-3 py-1 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition disabled:opacity-50">
-                    {exporting === "pdf" ? "Generando…" : "⬇️ PDF"}
-                  </button>
-                  <button onClick={exportMovExcel} disabled={!!exporting || !movCount}
-                          className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-3 py-1 text-xs font-medium hover:bg-emerald-100 transition disabled:opacity-50">
-                    {exporting === "excel" ? "Generando…" : "⬇️ Excel"}
-                  </button>
+              <form onSubmit={addMovement} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 space-y-3">
+                <h3 className="font-semibold">Movimiento manual</h3>
+                <select value={mov.type} onChange={(e) => setMov({ ...mov, type: e.target.value })}
+                        className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-800">
+                  <option value="ingreso">Ingreso</option>
+                  <option value="egreso">Egreso</option>
+                </select>
+                <input type="number" step="any" required placeholder="Monto" value={mov.amount}
+                       onChange={(e) => setMov({ ...mov, amount: e.target.value })}
+                       className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm" />
+                <input placeholder="Descripción" value={mov.description}
+                       onChange={(e) => setMov({ ...mov, description: e.target.value })}
+                       className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm" />
+                <button className="w-full text-white rounded-lg px-4 py-2.5 text-sm font-semibold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 transition">Registrar</button>
+              </form>
+
+              <form onSubmit={closeCash} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 space-y-3">
+                <h3 className="font-semibold">Arqueo y cierre</h3>
+                <input type="number" step="any" required placeholder="Efectivo contado" value={counted}
+                       onChange={(e) => setCounted(e.target.value)}
+                       className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm" />
+                {counted !== "" && !blind && (
+                  <div className="text-sm flex justify-between">
+                    <span className="text-slate-500 dark:text-slate-400">Diferencia</span>
+                    <span className={Number(counted) - Number(session.current_expected) < 0 ? "text-red-600 font-medium" : "text-green-600 font-medium"}>
+                      {money(Number(counted) - Number(session.current_expected))}
+                    </span>
+                  </div>
+                )}
+                {blind && (
+                  <div className="text-xs text-slate-400">La diferencia la revisa el supervisor al cerrar.</div>
+                )}
+                <button className="w-full text-white rounded-lg px-4 py-2.5 text-sm font-semibold bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 transition">Cerrar caja</button>
+              </form>
+            </div>
+
+            <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between gap-2">
+                <span className="font-semibold">Movimientos</span>
+                {!blind && (
+                  <div className="flex gap-2">
+                    <button onClick={exportMovPdf} disabled={!!exporting || !movCount}
+                            className="border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg px-3 py-1 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition disabled:opacity-50">
+                      {exporting === "pdf" ? "Generando…" : "⬇️ PDF"}
+                    </button>
+                    <button onClick={exportMovExcel} disabled={!!exporting || !movCount}
+                            className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-3 py-1 text-xs font-medium hover:bg-emerald-100 transition disabled:opacity-50">
+                      {exporting === "excel" ? "Generando…" : "⬇️ Excel"}
+                    </button>
+                  </div>
+                )}
+              </div>
+              {blind ? (
+                <div className="px-5 py-12 text-center text-slate-400 text-sm">
+                  🔒 El detalle de movimientos y montos solo lo ve el supervisor.<br />
+                  Esto mantiene el cuadre a ciegas: contá el efectivo y registralo en «Arqueo y cierre».
+                </div>
+              ) : (
+              <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 dark:bg-slate-900/60 text-slate-400 text-left text-xs uppercase tracking-wide">
+                  <tr><th className="px-4 py-2.5">Hora</th><th className="px-4 py-2.5">Tipo</th><th className="px-4 py-2.5">Método</th>
+                      <th className="px-4 py-2.5">Usuario</th>
+                      <th className="px-4 py-2.5">Descripción</th><th className="px-4 py-2.5 text-right">Monto</th></tr>
+                </thead>
+                <tbody>
+                  {movements.map((m) => {
+                    const out = ["egreso", "devolucion"].includes(m.type);
+                    return (
+                    <tr key={m.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700/40 transition">
+                      <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400 tabular-nums">{new Date(m.created_at).toLocaleTimeString()}</td>
+                      <td className="px-4 py-3"><span className={"inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium " + typeChip(m.type)}><span className="w-1.5 h-1.5 rounded-full" style={{ background: typeDot(m.type) }} />{m.type_display}</span></td>
+                      <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs">{m.payment_method || "—"}</td>
+                      <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{m.user_name || "—"}</td>
+                      <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{m.description || "—"}</td>
+                      <td className={"px-4 py-3 text-right font-bold tabular-nums " + (out ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400")}>
+                        {out ? "−" : "+"}{money(m.amount)}
+                      </td>
+                    </tr>
+                    );
+                  })}
+                  {movCount === 0 && <tr><td colSpan="6" className="px-5 py-8 text-center text-slate-400">Sin movimientos.</td></tr>}
+                </tbody>
+              </table>
+              </div>
+              )}
+              {movCount > MOV_PAGE_SIZE && (
+                <div className="px-4 pb-3">
+                  <Pagination page={movPage} count={movCount} pageSize={MOV_PAGE_SIZE} onPage={(p) => loadMovements(p)} label="movimientos" />
                 </div>
               )}
             </div>
-            {blind ? (
-              <div className="px-5 py-12 text-center text-slate-400 text-sm">
-                🔒 El detalle de movimientos y montos solo lo ve el supervisor.<br />
-                Esto mantiene el cuadre a ciegas: contá el efectivo y registralo en «Arqueo y cierre».
-              </div>
-            ) : (
-            <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-left">
-                <tr><th className="px-4 py-2">Hora</th><th className="px-4 py-2">Tipo</th><th className="px-4 py-2">Método</th>
-                    <th className="px-4 py-2">Usuario</th>
-                    <th className="px-4 py-2">Descripción</th><th className="px-4 py-2 text-right">Monto</th></tr>
-              </thead>
-              <tbody>
-                {movements.map((m) => (
-                  <tr key={m.id} className="border-t">
-                    <td className="px-4 py-2 text-xs text-slate-500 dark:text-slate-400">{new Date(m.created_at).toLocaleTimeString()}</td>
-                    <td className="px-4 py-2">{m.type_display}</td>
-                    <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{m.payment_method}</td>
-                    <td className="px-4 py-2 text-slate-600 dark:text-slate-300">{m.user_name || "—"}</td>
-                    <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{m.description || "—"}</td>
-                    <td className={"px-4 py-2 text-right " + (["egreso", "devolucion"].includes(m.type) ? "text-red-600" : "text-green-700")}>
-                      {["egreso", "devolucion"].includes(m.type) ? "−" : "+"}{money(m.amount)}
-                    </td>
-                  </tr>
-                ))}
-                {movCount === 0 && <tr><td colSpan="6" className="px-5 py-8 text-center text-slate-400">Sin movimientos.</td></tr>}
-              </tbody>
-            </table>
-            </div>
-            )}
-            {movCount > MOV_PAGE_SIZE && (
-              <div className="px-4 pb-3">
-                <Pagination page={movPage} count={movCount} pageSize={MOV_PAGE_SIZE} onPage={(p) => loadMovements(p)} label="movimientos" />
-              </div>
-            )}
           </div>
-        </div>
+        </>
       )}
     </div>
   );
