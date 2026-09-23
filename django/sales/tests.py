@@ -203,10 +203,12 @@ class SaleServiceTests(TestCase):
 
     def test_venta_con_descuento_global(self):
         # Descuento global de Q55 sobre 3×85=255 → total 200 (IVA incluido).
+        # (special_authorized: el descuento baja el neto por debajo de la ganancia
+        # mínima del rango barato; aquí solo se valida la matemática del total.)
         sale = create_sale(
             {"payment_method": "efectivo", "paid_amount": "200", "discount": "55"},
             [{"product_id": self.prod.id, "quantity": "3", "unit_price": "85", "tax_type": "iva"}],
-            user=self.user, branch=self.branch,
+            user=self.user, branch=self.branch, special_authorized=True,
         )
         self.assertEqual(sale.discount, Decimal("55.00"))
         self.assertEqual(sale.total, Decimal("200.00"))
@@ -225,14 +227,9 @@ class SaleServiceTests(TestCase):
         self.assertEqual(self.prod.stock, Decimal("80.00"))
 
     def test_descuento_grande_pero_rentable_no_requiere_autorizacion(self):
-        # Manda la ganancia mínima, no un tope de %. Estufa: costo 1200, precio
-        # 1800. Bajarla a 1330 es 26% de descuento (un tope de 25% lo habría
-        # frenado), pero deja Q130 de ganancia: pasa sin autorización.
-        from core.models import CompanySetting
-        cfg = CompanySetting.current()
-        cfg.pos_min_profit_percent = Decimal("10")
-        cfg.pos_min_profit_amount = Decimal("100")
-        cfg.save()
+        # Ganancia mínima POR RANGO de precio. Estufa: costo 1200, precio 1800
+        # (rango Q1,000–9,999 ⇒ 4%, mínimo 1248). Bajarla a 1330 es 26% de
+        # descuento pero deja Q130 (>4%): pasa sin autorización.
         estufa = Product.objects.create(
             sku="S-ESTUFA", name="Estufa", purchase_price=Decimal("1200"),
             sale_price=Decimal("1800"), stock=Decimal("50"), tax_type="iva",
@@ -243,24 +240,18 @@ class SaleServiceTests(TestCase):
             user=self.user, branch=self.branch,
         )
         self.assertEqual(sale.total, Decimal("1330.00"))
-        # Mínimo aceptable = min(10% ⇒ 1320, +Q100 ⇒ 1300) = 1300. A 1250 (deja
-        # solo Q50) sí pide autorización.
+        # Mínimo aceptable = 4% ⇒ 1248. A 1240 (deja solo Q40) sí pide autorización.
         with self.assertRaises(SaleError):
             create_sale(
-                {"payment_method": "efectivo", "paid_amount": "1400", "discount": "550"},
+                {"payment_method": "efectivo", "paid_amount": "1400", "discount": "560"},
                 [{"product_id": estufa.id, "quantity": "1", "unit_price": "1800"}],
                 user=self.user, branch=self.branch,
             )
 
-    def test_ganancia_minima_por_monto_en_quetzales(self):
-        # Caso máquina: costo 2500, precio 2900. Venderla a 2625 deja Q125 = 5%
-        # (por debajo del 10%), pero como supera la ganancia mínima en quetzales
-        # (Q100), pasa sin autorización. A 2550 (deja Q50) sí pide supervisor.
-        from core.models import CompanySetting
-        cfg = CompanySetting.current()
-        cfg.pos_min_profit_percent = Decimal("10")
-        cfg.pos_min_profit_amount = Decimal("100")
-        cfg.save()
+    def test_ganancia_minima_por_rango_precio_alto(self):
+        # Caso máquina: costo 2500, precio 2900 (rango Q1,000–9,999 ⇒ 4%, mínimo
+        # 2600). Venderla a 2625 deja Q125 (5% > 4%): pasa sin autorización. A
+        # 2550 (deja Q50, ~2%) sí pide supervisor.
         maquina = Product.objects.create(
             sku="S-MAQ", name="Máquina", purchase_price=Decimal("2500"),
             sale_price=Decimal("2900"), stock=Decimal("20"), tax_type="iva",
@@ -270,11 +261,53 @@ class SaleServiceTests(TestCase):
             [{"product_id": maquina.id, "quantity": "1", "unit_price": "2900"}],
             user=self.user, branch=self.branch,
         )
-        self.assertEqual(sale.total, Decimal("2625.00"))  # deja Q125 ≥ Q100 ⇒ pasa
+        self.assertEqual(sale.total, Decimal("2625.00"))  # deja Q125 ≥ 4% ⇒ pasa
         with self.assertRaises(SaleError):
             create_sale(
                 {"payment_method": "efectivo", "paid_amount": "3000", "discount": "350"},
                 [{"product_id": maquina.id, "quantity": "1", "unit_price": "2900"}],
+                user=self.user, branch=self.branch,
+            )
+
+    def test_ganancia_minima_baja_para_precio_medio(self):
+        # Caso cilindro de gas: costo 275, precio 300 (rango Q100–999 ⇒ 8%,
+        # mínimo 297). A Q300 deja Q25 (9% > 8%): pasa sin autorización, aunque
+        # con el 10% plano anterior (mínimo 302.50) lo frenaba.
+        cilindro = Product.objects.create(
+            sku="S-GAS", name="Cilindro de gas vacío", purchase_price=Decimal("275"),
+            sale_price=Decimal("300"), stock=Decimal("40"), tax_type="iva",
+        )
+        sale = create_sale(
+            {"payment_method": "efectivo", "paid_amount": "300"},
+            [{"product_id": cilindro.id, "quantity": "1", "unit_price": "300"}],
+            user=self.user, branch=self.branch,
+        )
+        self.assertEqual(sale.total, Decimal("300.00"))
+        # A Q290 (deja Q15, ~5% < 8%) sí pide autorización.
+        with self.assertRaises(SaleError):
+            create_sale(
+                {"payment_method": "efectivo", "paid_amount": "300", "discount": "10"},
+                [{"product_id": cilindro.id, "quantity": "1", "unit_price": "300"}],
+                user=self.user, branch=self.branch,
+            )
+
+    def test_ganancia_minima_por_rango_maquina_cara(self):
+        # Caso máquina industrial: costo 10,000, precio 10,100 (rango Q10,000+ ⇒
+        # 1%, mínimo 10,100). Deja Q100 (=1%): pasa. A 10,050 (deja Q50) falla.
+        maq = Product.objects.create(
+            sku="S-IND", name="Máquina industrial", purchase_price=Decimal("10000"),
+            sale_price=Decimal("10100"), stock=Decimal("5"), tax_type="iva",
+        )
+        sale = create_sale(
+            {"payment_method": "efectivo", "paid_amount": "10100"},
+            [{"product_id": maq.id, "quantity": "1", "unit_price": "10100"}],
+            user=self.user, branch=self.branch,
+        )
+        self.assertEqual(sale.total, Decimal("10100.00"))
+        with self.assertRaises(SaleError):
+            create_sale(
+                {"payment_method": "efectivo", "paid_amount": "10100", "discount": "50"},
+                [{"product_id": maq.id, "quantity": "1", "unit_price": "10100"}],
                 user=self.user, branch=self.branch,
             )
 
@@ -310,12 +343,8 @@ class SaleServiceTests(TestCase):
     def test_venta_a_costo_sin_ganancia_minima_requiere_autorizacion(self):
         # Caso Nailo: costo 10/yarda, precio 12, 10 yardas (gross 120). Un
         # descuento de 20 deja el neto en 100 = justo el costo (ganancia cero).
-        # Antes pasaba (no era ESTRICTAMENTE bajo costo); ahora, con la ganancia
-        # mínima del 10%, se rechaza sin autorización.
-        from core.models import CompanySetting
-        cfg = CompanySetting.current()
-        cfg.pos_min_profit_percent = Decimal("10")
-        cfg.save()
+        # Con la ganancia mínima del rango <Q100 (20%, mínimo 120), se rechaza
+        # sin autorización.
         nailo = Product.objects.create(
             sku="S-NAILO", name="Nailo", purchase_price=Decimal("10"),
             sale_price=Decimal("12"), stock=Decimal("500"), tax_type="iva",
@@ -327,7 +356,7 @@ class SaleServiceTests(TestCase):
         # Con autorización de supervisor, procede.
         sale = create_sale(*args, user=self.user, branch=self.branch, special_authorized=True)
         self.assertEqual(sale.total, Decimal("100.00"))
-        # Vendido con ganancia (Q13/yarda ⇒ neto 130 > 110 mínimo): pasa sin autorización.
+        # Vendido con ganancia (Q13/yarda ⇒ neto 130 > 120 mínimo): pasa sin autorización.
         ok = create_sale(
             {"payment_method": "efectivo", "paid_amount": "200"},
             [{"product_id": nailo.id, "quantity": "10", "unit_price": "13"}],

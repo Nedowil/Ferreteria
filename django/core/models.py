@@ -1,7 +1,23 @@
 """Modelos núcleo: Usuario y Sucursal (multi-sucursal)."""
 
+from decimal import Decimal
+
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+
+
+# Anti-fraude: ganancia mínima EXIGIDA POR RANGO DE PRECIO. Un porcentaje fijo no
+# sirve para todos los precios: en un producto de Q300 el 10% (Q30) es mucho, pero
+# en una máquina de Q10,000 el 10% (Q1,000) es demasiado. Por eso el % baja según
+# sube el precio de venta. Cada rango: `max` = precio de venta (por unidad) por
+# DEBAJO del cual aplica ese %; el último con `max: null` cubre "de ahí en adelante".
+def default_profit_tiers():
+    return [
+        {"max": 100, "percent": 20},      # menos de Q100
+        {"max": 1000, "percent": 8},      # Q100 a Q999
+        {"max": 10000, "percent": 4},     # Q1,000 a Q9,999
+        {"max": None, "percent": 1},      # Q10,000 en adelante
+    ]
 
 
 class User(AbstractUser):
@@ -134,6 +150,14 @@ class CompanySetting(models.Model):
     pos_min_profit_amount = models.DecimalField(
         "ganancia mín. sin autorización (Q)", max_digits=12, decimal_places=2, default=100)
 
+    # Anti-fraude (modelo vigente): ganancia mínima por RANGO DE PRECIO. Lista de
+    # rangos [{max, percent}]; se elige el % del primer rango cuyo `max` supere el
+    # precio de venta unitario (el `max: null` es el último, "en adelante"). Ver
+    # default_profit_tiers(). Reemplaza al % plano y al monto en Q de arriba, que
+    # se conservan solo como respaldo si la lista quedara vacía.
+    pos_profit_tiers = models.JSONField(
+        "ganancia mínima por rango de precio", default=default_profit_tiers, blank=True)
+
     # OBSOLETOS: el tope de descuento por % y su "colchón" en quetzales se
     # retiraron a favor de la ganancia mínima (un % fijo sobre el precio frenaba
     # ventas rentables en productos de buen margen). Se conservan las columnas por
@@ -199,6 +223,34 @@ class CompanySetting(models.Model):
         if obj is None:
             obj = cls.objects.create()
         return obj
+
+    def profit_tiers(self):
+        """Rangos de ganancia mínima normalizados y ordenados (tope ascendente,
+        el `max: null` = "en adelante" al final). Si la lista quedara vacía, cae
+        al % plano histórico (`pos_min_profit_percent`) como un solo rango."""
+        raw = self.pos_profit_tiers or []
+        tiers = []
+        for t in raw:
+            try:
+                mx = t.get("max")
+                mx = None if mx in (None, "") else float(mx)
+                pct = float(t.get("percent") or 0)
+            except (AttributeError, TypeError, ValueError):
+                continue
+            tiers.append({"max": mx, "percent": pct})
+        tiers.sort(key=lambda t: (t["max"] is None, t["max"] if t["max"] is not None else 0))
+        if not tiers:
+            return [{"max": None, "percent": float(self.pos_min_profit_percent or 0)}]
+        return tiers
+
+    def profit_percent_for(self, price):
+        """% de ganancia mínima que aplica a un precio de venta (por unidad)."""
+        price = float(price or 0)
+        tiers = self.profit_tiers()
+        for t in tiers:
+            if t["max"] is None or price < t["max"]:
+                return Decimal(str(t["percent"]))
+        return Decimal(str(tiers[-1]["percent"]))
 
 
 class BranchUser(models.Model):

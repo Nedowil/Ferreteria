@@ -32,23 +32,21 @@ def generate_folio():
 
 def _check_special_authorization(lines, global_discount, special_authorized):
     """Anti-fraude: exige autorización de supervisor cuando una venta deja un
-    producto por debajo del costo o sin la ganancia mínima configurada. Manda la
-    GANANCIA MÍNIMA (% sobre el costo real de cada producto), no un tope de
-    descuento por porcentaje: así una venta que deja ganancia justa pasa aunque
-    el descuento sea grande (típico de artículos con buen margen), y una que la
-    hunde pide supervisor aunque el descuento parezca chico. Si el llamador no
-    está autorizado (`special_authorized=False`) y la venta se pasa, lanza
-    SaleError para que el cajero deba pedir a un supervisor que la registre."""
+    producto por debajo del costo o sin la GANANCIA MÍNIMA POR RANGO DE PRECIO.
+    El % mínimo exigido baja según sube el precio de venta (ver
+    CompanySetting.profit_tiers): un porcentaje fijo no sirve para todos los
+    precios, porque el 10% de un cilindro de Q300 es poco y el 10% de una máquina
+    de Q10,000 es demasiado. Así una venta rentable pasa aunque el descuento sea
+    grande, y una que hunde el margen pide supervisor aunque el descuento parezca
+    chico. Si el llamador no está autorizado (`special_authorized=False`) y la
+    venta se pasa, lanza SaleError para que un supervisor deba registrarla."""
     if special_authorized:
         return
     from core.models import CompanySetting
     try:
         cfg = CompanySetting.current()
-        min_profit_pct = Decimal(str(cfg.pos_min_profit_percent or 0))
-        min_profit_amount = Decimal(str(cfg.pos_min_profit_amount or 0))
     except Exception:
-        min_profit_pct = Decimal("0")
-        min_profit_amount = Decimal("0")
+        cfg = None
 
     total_gross = sum((l["gross"] for l in lines), Decimal("0"))
     global_disc = Decimal(str(global_discount or 0))
@@ -61,14 +59,10 @@ def _check_special_authorization(lines, global_discount, special_authorized):
         line_cost = l["unit_cost"] * l["quantity"]
         if line_cost <= 0:
             continue
-        # La venta pasa si deja al menos el % O al menos el monto en quetzales de
-        # ganancia (lo que exija MENOS). El neto mínimo aceptable es el menor de
-        # los dos umbrales: costo×(1+%) y costo+monto. Así el 10% cuida lo barato
-        # y el monto (ej. Q100) deja pasar ventas de poco % pero buena plata en
-        # artículos caros (una máquina con Q125 de ganancia).
-        min_net_pct = line_cost * (Decimal("1") + min_profit_pct / 100)
-        min_net_amt = line_cost + min_profit_amount
-        min_net = min(min_net_pct, min_net_amt)
+        # El % mínimo depende del RANGO de precio de venta unitario del producto.
+        # El neto mínimo aceptable es costo × (1 + %/100).
+        min_profit_pct = cfg.profit_percent_for(l["unit_price"]) if cfg else Decimal("0")
+        min_net = line_cost * (Decimal("1") + min_profit_pct / 100)
         if line_net < min_net:
             qty = l["quantity"] or Decimal("1")
             net_unit = (line_net / qty).quantize(Decimal("0.01"))
@@ -81,8 +75,8 @@ def _check_special_authorization(lines, global_discount, special_authorized):
             min_unit = (min_net / qty).quantize(Decimal("0.01"))
             raise SaleError(
                 f"El precio de {l['product'].name} (Q{net_unit}) no deja la ganancia "
-                f"mínima ({min_profit_pct:.0f}% sobre el costo Q{cost_unit}, o Q{min_profit_amount:.2f} "
-                f"de ganancia): debe venderse al menos a Q{min_unit}. Requiere autorización de un supervisor."
+                f"mínima ({min_profit_pct:.0f}% sobre el costo Q{cost_unit}): debe venderse "
+                f"al menos a Q{min_unit}. Requiere autorización de un supervisor."
             )
 
 

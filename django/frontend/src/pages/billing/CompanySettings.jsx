@@ -19,6 +19,89 @@ const Field = ({ label, children, full }) => (
 
 const input = "w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm";
 
+// Editor de la ganancia mínima por RANGO de precio. Cada rango tiene un tope de
+// precio (`max`) y el % mínimo que debe dejar; la última fila (sin tope) es
+// "en adelante". Se muestra ordenado por precio para que se lea como una tabla.
+function ProfitTiers({ tiers, editable, onChange }) {
+  const list = Array.isArray(tiers) && tiers.length ? tiers : [{ max: null, percent: 0 }];
+  const sorted = [...list].sort((a, b) =>
+    (a.max == null ? 1 : b.max == null ? -1 : Number(a.max) - Number(b.max)));
+
+  const commit = (next) => onChange(next);
+  const setRow = (i, field, v) => {
+    const next = sorted.map((t, idx) => idx === i
+      ? { ...t, [field]: field === "max" ? (v === "" ? null : v) : v } : t);
+    commit(next);
+  };
+  const addRow = () => {
+    // Nueva fila con tope: se inserta antes de la de "en adelante".
+    const withMax = sorted.filter((t) => t.max != null);
+    const openRow = sorted.find((t) => t.max == null) || { max: null, percent: 0 };
+    commit([...withMax, { max: "", percent: "" }, openRow]);
+  };
+  const rmRow = (i) => commit(sorted.filter((_, idx) => idx !== i));
+
+  const fmt = (n) => Number(n || 0).toLocaleString("es-GT");
+  const rangeText = (i) => {
+    const cur = sorted[i];
+    const prevMax = i > 0 ? Number(sorted[i - 1].max || 0) : 0;
+    if (cur.max == null) return `Q${fmt(prevMax)} en adelante`;
+    if (i === 0) return `Menos de Q${fmt(cur.max)}`;
+    return `Q${fmt(prevMax)} – Q${fmt(Number(cur.max) - 0.01)}`;
+  };
+
+  return (
+    <div className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <table className="w-full text-sm">
+        <thead className="bg-slate-50 dark:bg-slate-700/40 text-slate-500 dark:text-slate-300 text-xs uppercase tracking-wide">
+          <tr>
+            <th className="text-left px-3 py-2 font-medium">Rango de precio</th>
+            <th className="text-left px-3 py-2 font-medium w-40">Precio hasta (Q)</th>
+            <th className="text-left px-3 py-2 font-medium w-32">% mínimo</th>
+            <th className="w-10"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((t, i) => (
+            <tr key={i} className="border-t border-slate-100 dark:border-slate-700">
+              <td className="px-3 py-2 text-slate-600 dark:text-slate-300">{rangeText(i)}</td>
+              <td className="px-3 py-2">
+                {t.max == null ? (
+                  <span className="text-xs text-slate-400 italic">en adelante</span>
+                ) : (
+                  <input type="number" min="0" step="1" disabled={!editable}
+                         className="w-full border border-slate-300 dark:border-slate-600 rounded px-2 py-1.5 text-sm tabular-nums"
+                         value={t.max} onChange={(e) => setRow(i, "max", e.target.value)} />
+                )}
+              </td>
+              <td className="px-3 py-2">
+                <div className="flex items-center gap-1">
+                  <input type="number" min="0" max="100" step="0.5" disabled={!editable}
+                         className="w-full border border-slate-300 dark:border-slate-600 rounded px-2 py-1.5 text-sm tabular-nums"
+                         value={t.percent} onChange={(e) => setRow(i, "percent", e.target.value)} />
+                  <span className="text-slate-400">%</span>
+                </div>
+              </td>
+              <td className="px-2 py-2 text-center">
+                {editable && sorted.length > 1 && t.max != null && (
+                  <button type="button" onClick={() => rmRow(i)} title="Quitar rango"
+                          className="no-anim inline-flex items-center justify-center w-7 h-7 rounded-lg text-rose-500 hover:bg-rose-100 dark:text-rose-400 dark:hover:bg-rose-900/30 font-bold transition">✕</button>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {editable && (
+        <div className="px-3 py-2 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/30">
+          <button type="button" onClick={addRow}
+                  className="text-sm text-blue-600 dark:text-blue-400 font-medium hover:underline">+ Agregar rango</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function CompanySettings() {
   const { can } = useAuth();
   const editable = can("configuracion.gestionar");
@@ -184,26 +267,17 @@ export default function CompanySettings() {
         </Section>
 
         <Section title="Seguridad del punto de venta">
-          <Field label="Ganancia mínima sin autorización (%)">
-            <input type="number" min="0" max="100" step="0.5" className={input}
-                   value={c.pos_min_profit_percent}
-                   onChange={(e) => set("pos_min_profit_percent", e.target.value)} />
-          </Field>
-          <Field label="…o ganancia mínima (Q)">
-            <input type="number" min="0" step="1" className={input}
-                   value={c.pos_min_profit_amount}
-                   onChange={(e) => set("pos_min_profit_amount", e.target.value)} />
-          </Field>
-          <div className="sm:col-span-2 text-xs text-slate-500 dark:text-slate-400 -mt-1">
-            Ganancia mínima que debe dejar <b>cada producto</b>. La venta pasa si deja al menos el
-            <b> porcentaje</b> sobre su costo <b>o</b> al menos ese <b>monto en quetzales</b> de
-            ganancia (lo que se cumpla primero); si no, pide autorización de un supervisor (permiso
-            «Autorizar descuento alto o precio bajo el mínimo»). El porcentaje cuida los productos
-            baratos y el monto en quetzales deja pasar ventas de poco margen pero buena ganancia en
-            artículos caros. Ejemplo con 10% y Q100: un producto de costo Q10 no baja de Q11; una
-            máquina de costo Q2,500 puede venderse hasta Q2,600 (deja Q100) aunque sea solo 4%.
-            Poné 0 en el monto para exigir solo el porcentaje, o 0 en ambos para solo bloquear ventas
-            por debajo del costo.
+          <div className="sm:col-span-2">
+            <div className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Ganancia mínima por rango de precio</div>
+            <div className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+              Un porcentaje fijo no sirve para todos los precios: el 10% de un producto de Q300 es
+              poco, pero el 10% de una máquina de Q10,000 es demasiado. Por eso el <b>% mínimo baja
+              según sube el precio de venta</b>. Cada rango exige que el producto deje al menos ese %
+              sobre su costo; si no, pide autorización de un supervisor. La fila «En adelante» (sin
+              precio) cubre todo lo que supere el último rango.
+            </div>
+            <ProfitTiers tiers={c.pos_profit_tiers} editable={editable}
+                         onChange={(t) => set("pos_profit_tiers", t)} />
           </div>
           <label className="sm:col-span-2 flex items-start gap-2 text-sm text-slate-700 dark:text-slate-200 mt-1">
             <input type="checkbox" className="mt-0.5" checked={!!c.pos_require_cash_received}

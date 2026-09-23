@@ -53,6 +53,18 @@ function measuresFor(product, customer) {
   return out;
 }
 
+// Ganancia mínima por RANGO de precio: devuelve el % que aplica a un precio de
+// venta unitario. Se elige el primer rango cuyo `max` supere el precio (el
+// `max` nulo/vacío es el último, "en adelante"). Igual que el backend.
+function tierPercentFor(tiers, price) {
+  const list = (Array.isArray(tiers) ? tiers : [])
+    .map((t) => ({ max: t.max == null || t.max === "" ? null : Number(t.max), percent: Number(t.percent) || 0 }))
+    .sort((a, b) => (a.max == null ? 1 : b.max == null ? -1 : a.max - b.max));
+  const p = Number(price) || 0;
+  for (const t of list) if (t.max == null || p < t.max) return t.percent;
+  return list.length ? list[list.length - 1].percent : 0;
+}
+
 // Billetes comunes en Guatemala para cobro rápido en efectivo.
 const QUICK_CASH = [5, 10, 20, 50, 100, 200];
 
@@ -277,8 +289,7 @@ export default function POS() {
   const [companyName, setCompanyName] = useState("Ferretería");
   const [requireCash, setRequireCash] = useState(false); // obligar a ingresar el efectivo recibido
   const [multiPayment, setMultiPayment] = useState(false); // aceptar tarjeta/transferencia (si no, solo efectivo)
-  const [minProfitPct, setMinProfitPct] = useState(0); // ganancia mínima (% sobre costo) sin autorización
-  const [minProfitAmount, setMinProfitAmount] = useState(0); // ganancia mínima (Q) alternativa al %
+  const [profitTiers, setProfitTiers] = useState([]); // ganancia mínima por rango de precio [{max,percent}]
   const [picking, setPicking] = useState(null); // producto en la ventana flotante
   const [addingCustomer, setAddingCustomer] = useState(false);
   const [addingProduct, setAddingProduct] = useState(false);
@@ -389,7 +400,7 @@ export default function POS() {
       try {
         const { data } = await api.get("/company-settings/");
         const cname = data.commercial_name || "Ferretería";
-        if (alive) { setCompanyName(cname); setRequireCash(!!data.pos_require_cash_received); setMultiPayment(!!data.pos_multiple_payment_methods); setMinProfitPct(Number(data.pos_min_profit_percent || 0)); setMinProfitAmount(Number(data.pos_min_profit_amount || 0)); setMeta("company_name", cname).catch(() => {}); }
+        if (alive) { setCompanyName(cname); setRequireCash(!!data.pos_require_cash_received); setMultiPayment(!!data.pos_multiple_payment_methods); setProfitTiers(Array.isArray(data.pos_profit_tiers) ? data.pos_profit_tiers : []); setMeta("company_name", cname).catch(() => {}); }
       } catch {
         const cn = await getMeta("company_name").catch(() => null);
         if (alive) setCompanyName(cn || "Ferretería");
@@ -721,8 +732,6 @@ export default function POS() {
     // su propio mensaje). Requiere ver el costo; si no se conoce, no se advierte.
     if (can("ventas.autorizar_especial")) {
       const totalGross = cart.reduce((s, i) => s + Number(i.quantity || 0) * Number(i.unit_price || 0), 0);
-      const factor = 1 + (Number(minProfitPct) || 0) / 100;
-      const minAmount = Number(minProfitAmount) || 0;
       const bajoCosto = [];   // por debajo del costo (pérdida)
       const sinMargen = [];   // sobre el costo pero sin la ganancia mínima
       for (const it of cart) {
@@ -734,14 +743,14 @@ export default function POS() {
         const qty = Number(it.quantity || 0);
         const netUnit = qty > 0 ? net / qty : net;
         const lineCost = costUnit * qty;
-        // Pasa si deja el % O el monto en quetzales: el mínimo aceptable es el
-        // menor de los dos umbrales (costo×factor y costo+monto).
-        const minNet = Math.min(lineCost * factor, lineCost + minAmount);
+        // El % mínimo depende del RANGO de precio de venta unitario.
+        const pct = tierPercentFor(profitTiers, Number(it.unit_price || 0));
+        const minNet = lineCost * (1 + pct / 100);
         if (net < lineCost - 0.005) {
           bajoCosto.push(`• ${it.name}: precio Q${netUnit.toFixed(2)} vs costo Q${costUnit.toFixed(2)}`);
         } else if (net < minNet - 0.005) {
           const minUnit = qty > 0 ? minNet / qty : minNet;
-          sinMargen.push(`• ${it.name}: precio Q${netUnit.toFixed(2)} (mínimo Q${minUnit.toFixed(2)} para dejar ${minProfitPct}% o Q${minAmount.toFixed(2)} de ganancia sobre el costo Q${costUnit.toFixed(2)})`);
+          sinMargen.push(`• ${it.name}: precio Q${netUnit.toFixed(2)} (mínimo Q${minUnit.toFixed(2)} para dejar ${pct}% de ganancia sobre el costo Q${costUnit.toFixed(2)})`);
         }
       }
       if (bajoCosto.length > 0) {
@@ -753,7 +762,7 @@ export default function POS() {
         if (!ok) return;
       } else if (sinMargen.length > 0) {
         const ok = await dialog.confirm(
-          `Esta venta NO deja la ganancia mínima (${minProfitPct}% o Q${minAmount.toFixed(2)}):\n\n${sinMargen.join("\n")}\n\n¿Confirmás la venta igual?`,
+          `Esta venta NO deja la ganancia mínima según el rango de precio:\n\n${sinMargen.join("\n")}\n\n¿Confirmás la venta igual?`,
           { danger: true, okText: "Sí, vender igual" }
         );
         if (!ok) return;
