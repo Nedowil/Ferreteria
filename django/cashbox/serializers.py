@@ -48,14 +48,20 @@ class CashSessionListSerializer(BlindCashMixin, serializers.ModelSerializer):
     responsible_name = serializers.CharField(source="responsible.name", read_only=True, default=None)
     branch_name = serializers.CharField(source="branch.name", read_only=True, default=None)
     status_display = serializers.CharField(source="get_status_display", read_only=True)
+    handover_count = serializers.SerializerMethodField()
 
     class Meta:
         model = CashSession
         fields = [
             "id", "user_name", "responsible_name", "branch_name", "opened_at", "closed_at",
             "opening_amount", "expected_cash", "counted_cash", "difference",
-            "status", "status_display",
+            "status", "status_display", "handover_count",
         ]
+
+    def get_handover_count(self, obj):
+        # Cuántos cambios de responsable (relevos) tuvo el turno (para marcarlos
+        # en el historial). Usa el conteo anotado si existe, si no lo calcula.
+        return getattr(obj, "handover_count", None) if hasattr(obj, "handover_count") else obj.handovers.count()
 
 
 class CashSessionDetailSerializer(CashSessionListSerializer):

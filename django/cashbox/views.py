@@ -35,7 +35,10 @@ class CashSessionViewSet(PermissionByActionMixin, viewsets.ReadOnlyModelViewSet)
     }
 
     def get_queryset(self):
-        qs = CashSession.objects.select_related("user", "branch").order_by("-opened_at")
+        from django.db.models import Count
+        qs = (CashSession.objects.select_related("user", "branch", "responsible")
+              .annotate(handover_count=Count("handovers"))
+              .order_by("-opened_at"))
         user = self.request.user
         if not (user.is_superuser or user.groups.filter(name="admin").exists()):
             # Caja compartida por sucursal: un no-admin ve las cajas propias y
