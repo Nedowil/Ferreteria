@@ -4,12 +4,14 @@ import { useAuth } from "../../auth/AuthContext";
 import { sendEposPrint, resolveEposUrl, getLocalEpos, setLocalEpos, eposCodeMessage, EPOS_HELP } from "../../utils/epos";
 
 const Section = ({ title, subtitle, icon = "⚙️", color = "#3b82f6", children }) => (
-  <section className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
-    <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-700">
-      <span className="w-10 h-10 rounded-xl inline-flex items-center justify-center text-xl shrink-0"
-            style={{ background: color + "22" }}>{icon}</span>
+  <section className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 border-l-4 overflow-hidden"
+           style={{ borderLeftColor: color }}>
+    <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-700"
+         style={{ background: color + "12" }}>
+      <span className="w-10 h-10 rounded-xl inline-flex items-center justify-center text-xl shrink-0 shadow-sm"
+            style={{ background: color + "26" }}>{icon}</span>
       <div className="min-w-0">
-        <h3 className="font-semibold text-slate-800 dark:text-slate-100 leading-tight">{title}</h3>
+        <h3 className="font-semibold leading-tight" style={{ color }}>{title}</h3>
         {subtitle && <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{subtitle}</p>}
       </div>
     </div>
