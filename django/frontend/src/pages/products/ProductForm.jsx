@@ -20,6 +20,19 @@ const EMPTY = {
 // otra vez, poné SHOW_MARCA = false.
 const SHOW_MARCA = true;
 
+// Encabezado de sección con chip de ícono y título de color (para distinguir
+// visualmente cada bloque del formulario).
+const SecHead = ({ icon, color, title, subtitle }) => (
+  <div className="flex items-center gap-2.5 mb-4">
+    <span className="w-9 h-9 rounded-lg inline-flex items-center justify-center text-base shadow-sm shrink-0"
+          style={{ background: color + "26" }}>{icon}</span>
+    <div className="min-w-0">
+      <h3 className="font-semibold leading-tight" style={{ color }}>{title}</h3>
+      {subtitle && <p className="text-xs text-slate-500 dark:text-slate-400">{subtitle}</p>}
+    </div>
+  </div>
+);
+
 // Parsea "1/2", "0,5", "10" -> número (0 si inválido)
 function parseFrac(s) {
   if (s === null || s === undefined) return 0;
@@ -389,7 +402,10 @@ export default function ProductForm() {
 
   return (
     <form onSubmit={submit} className="max-w-4xl space-y-5">
-      <h1 className="text-lg font-semibold">{editing ? "Editar producto" : "Nuevo producto"}</h1>
+      <div>
+        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">📦 {editing ? "Editar producto" : "Nuevo producto"}</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400">Completá los datos del producto.</p>
+      </div>
       {errors.detail && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm">{errors.detail}</div>}
       {!errors.detail && Object.keys(errors).length > 0 && (
         <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm">
@@ -402,8 +418,8 @@ export default function ProductForm() {
         </div>
       )}
 
-      <section className="bg-white dark:bg-slate-800 rounded-lg shadow p-5">
-        <h3 className="font-semibold mb-3">Identificación</h3>
+      <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 border-l-4 p-5" style={{ borderLeftColor: "#3b82f6" }}>
+        <SecHead icon="🏷️" color="#3b82f6" title="Identificación" subtitle="Código, nombre, ubicación y marca." />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <TextField label="SKU" name="sku" form={form} errors={errors} onChange={set} hint="Se autogenera si lo dejas vacío" />
           <TextField label="Código de barras" name="barcode" form={form} errors={errors} onChange={set} hint="EAN-13 automático si lo dejas vacío" />
@@ -454,9 +470,8 @@ export default function ProductForm() {
         </div>
       </section>
 
-      <section className="bg-sky-50 dark:bg-sky-500/15 rounded-lg shadow p-5">
-        <h3 className="font-semibold mb-1">Unidad y empaque</h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">Ej.: empaque "caja", factor 50 → 1 caja = 50 unidades base.</p>
+      <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 border-l-4 p-5" style={{ borderLeftColor: "#0ea5e9" }}>
+        <SecHead icon="📐" color="#0ea5e9" title="Unidad y empaque" subtitle='Ej.: empaque "caja", factor 50 → 1 caja = 50 unidades base.' />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <TextField label="Unidad base" name="base_unit_label" form={form} errors={errors} onChange={set} placeholder="unidad" />
           <TextField label="Empaque" name="container_label" form={form} errors={errors} onChange={set} />
@@ -465,8 +480,8 @@ export default function ProductForm() {
         </div>
       </section>
 
-      <section className="bg-white dark:bg-slate-800 rounded-lg shadow p-5">
-        <h3 className="font-semibold mb-3">Precios e impuesto</h3>
+      <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 border-l-4 p-5" style={{ borderLeftColor: "#10b981" }}>
+        <SecHead icon="💵" color="#10b981" title="Precios e impuesto" subtitle="Costo, precio de venta e IVA." />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <PriceField label="Precio de compra" raw={purchaseRaw} mode={purchaseMode}
                       onRaw={onPriceRaw("purchase")} onMode={onPriceMode("purchase")} error={errors.purchase_price}
@@ -492,8 +507,8 @@ export default function ProductForm() {
         </div>
       </section>
 
-      <section className="bg-white dark:bg-slate-800 rounded-lg shadow p-5">
-        <h3 className="font-semibold mb-3">Inventario</h3>
+      <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 border-l-4 p-5" style={{ borderLeftColor: "#8b5cf6" }}>
+        <SecHead icon="📊" color="#8b5cf6" title="Inventario" subtitle="Stock inicial y stock mínimo." />
         {!editing ? (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
             <TextField label="Stock inicial" name="initial_stock" form={form} errors={errors} onChange={set} type="number" placeholder="0" />
@@ -557,8 +572,8 @@ export default function ProductForm() {
 
       <PresentationsSection rows={presentations} setRows={setPresentations} />
 
-      <section className="bg-white dark:bg-slate-800 rounded-lg shadow p-5">
-        <h3 className="font-semibold mb-3">Estado</h3>
+      <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 border-l-4 p-5" style={{ borderLeftColor: "#f59e0b" }}>
+        <SecHead icon="🔘" color="#f59e0b" title="Estado" subtitle="Activo o inactivo en el sistema." />
         <div className="flex gap-6 text-sm">
           <label className="flex items-center gap-2">
             <input type="checkbox" checked={form.active} onChange={(e) => set("active", e.target.checked)} /> Activo
