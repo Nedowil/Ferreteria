@@ -177,21 +177,53 @@ export default function CashBox() {
 
       {!session ? (
         can("caja.abrir") ? (
-        <form onSubmit={openCash} className="max-w-md bg-white dark:bg-slate-800 rounded-lg shadow p-6">
-          <h3 className="font-semibold mb-4">Abrir caja</h3>
-          <label className="block text-sm font-medium mb-1">Monto inicial (fondo)</label>
-          <input type="number" step="any" required value={opening.opening_amount} placeholder="0.00"
-                 onChange={(e) => setOpening({ ...opening, opening_amount: e.target.value })}
-                 className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm mb-4" />
-          <label className="block text-sm font-medium mb-1">Notas (opcional)</label>
-          <input value={opening.opening_notes} onChange={(e) => setOpening({ ...opening, opening_notes: e.target.value })}
-                 className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm mb-5" />
-          <button className="bg-green-600 text-white rounded px-5 py-2 text-sm font-medium">Abrir caja</button>
+        <form onSubmit={openCash} className="max-w-md mx-auto bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-slate-100 dark:border-slate-700 overflow-hidden">
+          {/* Encabezado con degradado */}
+          <div className="bg-gradient-to-br from-emerald-600 to-green-700 text-white px-6 py-5">
+            <div className="flex items-center gap-3">
+              <span className="w-11 h-11 rounded-xl bg-white/20 inline-flex items-center justify-center text-2xl">🔓</span>
+              <div>
+                <div className="text-lg font-bold leading-tight drop-shadow-sm">Abrir caja</div>
+                <div className="text-xs text-emerald-100">Empezá el turno con el efectivo que dejás de fondo.</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-6 space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Monto inicial (fondo)</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-lg">Q</span>
+                <input type="number" step="any" required value={opening.opening_amount} placeholder="0.00" autoFocus
+                       onChange={(e) => setOpening({ ...opening, opening_amount: e.target.value })}
+                       className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-900 rounded-xl pl-8 pr-3 py-3 text-lg font-semibold tabular-nums outline-none focus:ring-2 focus:ring-emerald-500" />
+              </div>
+              <div className="flex flex-wrap gap-2 mt-2.5">
+                {[0, 100, 200, 500, 1000].map((q) => (
+                  <button key={q} type="button" onClick={() => setOpening({ ...opening, opening_amount: String(q) })}
+                          className="no-anim rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:border-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition">
+                    {q === 0 ? "Sin fondo" : `Q${q}`}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Notas (opcional)</label>
+              <input value={opening.opening_notes} onChange={(e) => setOpening({ ...opening, opening_notes: e.target.value })}
+                     placeholder="Ej: turno de la mañana"
+                     className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-900 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500" />
+            </div>
+
+            <button className="w-full text-white rounded-xl px-5 py-3 text-sm font-semibold shadow bg-gradient-to-r from-emerald-600 to-green-700 hover:from-emerald-700 hover:to-green-800 transition flex items-center justify-center gap-2">
+              🔓 Abrir caja
+            </button>
+          </div>
         </form>
         ) : (
-          <div className="max-w-md bg-white dark:bg-slate-800 rounded-lg shadow p-6 text-center">
-            <div className="text-3xl mb-2">🔒</div>
-            <h3 className="font-semibold mb-1">No hay una caja abierta</h3>
+          <div className="max-w-md mx-auto bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-slate-100 dark:border-slate-700 p-8 text-center">
+            <div className="w-16 h-16 mx-auto rounded-2xl bg-slate-100 dark:bg-slate-700 inline-flex items-center justify-center text-4xl mb-3">🔒</div>
+            <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100 mb-1">No hay una caja abierta</h3>
             <p className="text-sm text-slate-500 dark:text-slate-400">Pedile al encargado o supervisor que abra la caja del turno para poder cobrar.</p>
           </div>
         )
