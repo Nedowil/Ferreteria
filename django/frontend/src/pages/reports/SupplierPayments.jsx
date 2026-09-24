@@ -83,14 +83,14 @@ export default function SupplierPayments() {
       </div>
 
       {/* Desglose por forma de pago (este año) */}
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden mb-6">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden mb-6">
         <div className="px-5 py-3 border-b font-semibold text-sm">Por forma de pago (este año)</div>
         <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-left"><tr><th className="px-4 py-2">Forma de pago</th><th className="px-4 py-2 text-right">Total</th></tr></thead>
+          <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide"><tr><th className="px-4 py-2">Forma de pago</th><th className="px-4 py-2 text-right">Total</th></tr></thead>
           <tbody>
             {d.by_method_year.filter((m) => Number(m.total) > 0).map((m) => (
-              <tr key={m.method} className="border-t"><td className="px-4 py-2">{m.method_display}</td><td className="px-4 py-2 text-right font-semibold">{Q(m.total)}</td></tr>
+              <tr key={m.method} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700/40 transition"><td className="px-4 py-2">{m.method_display}</td><td className="px-4 py-2 text-right font-semibold">{Q(m.total)}</td></tr>
             ))}
             {d.by_method_year.every((m) => Number(m.total) === 0) && (
               <tr><td colSpan="2" className="px-5 py-6 text-center text-slate-400">Sin pagos este año.</td></tr>
@@ -101,14 +101,14 @@ export default function SupplierPayments() {
       </div>
 
       {/* Historial de fondos */}
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
         <div className="px-5 py-3 border-b font-semibold text-sm flex items-center justify-between">
           <span>Historial de fondos (abiertos / cerrados)</span>
           <ExcelButton onClick={exportFunds} disabled={!d.funds || !d.funds.length} />
         </div>
         <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-left">
+          <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
             <tr>
               <th className="px-4 py-2">Abierto</th><th className="px-4 py-2">Cerrado</th><th className="px-4 py-2">Estado</th>
               <th className="px-4 py-2 text-right">Inicial</th><th className="px-4 py-2 text-right">Aportes</th>
@@ -117,7 +117,7 @@ export default function SupplierPayments() {
           </thead>
           <tbody>
             {(d.funds || []).slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((f) => (
-              <tr key={f.id} className="border-t">
+              <tr key={f.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700/40 transition">
                 <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{dt(f.opened_at)}</td>
                 <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{f.closed_at ? dt(f.closed_at) : "—"}</td>
                 <td className="px-4 py-2">

@@ -40,16 +40,16 @@ export default function ReturnsReport() {
           </div>
 
           {data.by_reason?.length > 0 && (
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden mb-5">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden mb-5">
               <div className="px-5 py-3 border-b font-semibold">Por motivo</div>
               <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-left">
+                <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
                   <tr><th className="px-4 py-2">Motivo</th><th className="px-4 py-2 text-right">Cantidad</th><th className="px-4 py-2 text-right">Total</th></tr>
                 </thead>
                 <tbody>
                   {data.by_reason.map((m, i) => (
-                    <tr key={i} className="border-t">
+                    <tr key={i} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700/40 transition">
                       <td className="px-4 py-2">{m.reason}</td>
                       <td className="px-4 py-2 text-right">{m.count}</td>
                       <td className="px-4 py-2 text-right">{Q(m.total)}</td>
@@ -61,18 +61,18 @@ export default function ReturnsReport() {
             </div>
           )}
 
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
             <div className="px-5 py-3 border-b font-semibold">Detalle</div>
             <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-left">
+              <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
                 <tr><th className="px-4 py-2">Folio</th><th className="px-4 py-2">Fecha</th><th className="px-4 py-2">Venta</th>
                     <th className="px-4 py-2">Cliente</th><th className="px-4 py-2">Vendedor</th><th className="px-4 py-2">Motivo</th>
                     <th className="px-4 py-2 text-right">Total</th></tr>
               </thead>
               <tbody>
                 {pageRows.map((r, i) => (
-                  <tr key={i} className="border-t">
+                  <tr key={i} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700/40 transition">
                     <td className="px-4 py-2 font-mono text-xs">{r.folio}</td>
                     <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{dt(r.date)}</td>
                     <td className="px-4 py-2 font-mono text-xs text-slate-400">{r.sale_folio || "—"}</td>

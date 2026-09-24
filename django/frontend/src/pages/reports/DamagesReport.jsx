@@ -58,17 +58,17 @@ export default function DamagesReport() {
             <KpiCard label="Pendientes" value={data.count_pendiente} accent="text-amber-600" />
             <KpiCard label="Aprobadas" value={data.count_aprobada} accent="text-emerald-600" />
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
             <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-left">
+              <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
                 <tr><th className="px-4 py-2">Fecha</th><th className="px-4 py-2">Producto</th>
                     <th className="px-4 py-2 text-right">Cant.</th><th className="px-4 py-2">Motivo</th>
                     <th className="px-4 py-2">Estado</th><th className="px-4 py-2">Reportó</th><th className="px-4 py-2 text-right">Costo</th></tr>
               </thead>
               <tbody>
                 {pageRows.map((r) => (
-                  <tr key={r.id} className="border-t">
+                  <tr key={r.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700/40 transition">
                     <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{dt(r.date)}</td>
                     <td className="px-4 py-2"><span className="font-mono text-xs text-slate-400">{r.sku}</span> {r.product}</td>
                     <td className="px-4 py-2 text-right">{Number(r.quantity)}</td>

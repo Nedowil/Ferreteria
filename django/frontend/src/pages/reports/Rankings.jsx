@@ -53,15 +53,15 @@ function RankingTable({ title, path, columns, filter }) {
         )}
       </DateRangeBar>
       {data && (
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
           <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-left">
+            <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
               <tr>{columns.map((c) => <th key={c.key} className={"px-4 py-2 " + (c.right ? "text-right" : "")}>{c.label}</th>)}</tr>
             </thead>
             <tbody>
               {pageRows.map((r, i) => (
-                <tr key={i} className="border-t">
+                <tr key={i} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700/40 transition">
                   {columns.map((c) => <td key={c.key} className={"px-4 py-2 " + (c.right ? "text-right" : "")}>{c.render ? c.render(r) : r[c.key]}</td>)}
                 </tr>
               ))}
@@ -157,10 +157,10 @@ export function BySeller() {
             <KpiCard label="Ventas" value={data.total_count} />
             <KpiCard label="Mejor vendedor" value={data.top_seller || "—"} accent="text-slate-800 dark:text-slate-100 truncate" />
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
             <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-left">
+              <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
                 <tr>
                   <th className="px-4 py-2">Vendedor</th>
                   <th className="px-4 py-2 text-right">Ventas</th>
@@ -177,7 +177,7 @@ export function BySeller() {
               </thead>
               <tbody>
                 {pageRows.map((r, i) => (
-                  <tr key={i} className="border-t">
+                  <tr key={i} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700/40 transition">
                     <td className="px-4 py-2 font-medium">{r.name}</td>
                     <td className="px-4 py-2 text-right">{r.sales_count}</td>
                     <td className="px-4 py-2 text-right">{Q(r.total_revenue)}</td>

@@ -44,16 +44,16 @@ export default function CashDiffs() {
           </div>
 
           {data.by_user?.length > 0 && (
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden mb-5">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden mb-5">
               <div className="px-5 py-3 border-b font-semibold">Por cajero</div>
               <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-left">
+                <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
                   <tr><th className="px-4 py-2">Cajero</th><th className="px-4 py-2 text-right">Cierres</th><th className="px-4 py-2 text-right">Diferencia acumulada</th></tr>
                 </thead>
                 <tbody>
                   {data.by_user.map((u, i) => (
-                    <tr key={i} className="border-t">
+                    <tr key={i} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700/40 transition">
                       <td className="px-4 py-2">{u.user}</td>
                       <td className="px-4 py-2 text-right">{u.cierres}</td>
                       <td className={"px-4 py-2 text-right " + diffClass(u.difference)}>{Q(u.difference)}</td>
@@ -65,18 +65,18 @@ export default function CashDiffs() {
             </div>
           )}
 
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
             <div className="px-5 py-3 border-b font-semibold">Detalle de cierres</div>
             <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-left">
+              <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
                 <tr><th className="px-4 py-2">Cajero</th><th className="px-4 py-2">Cierre</th>
                     <th className="px-4 py-2 text-right">Fondo</th><th className="px-4 py-2 text-right">Esperado</th>
                     <th className="px-4 py-2 text-right">Contado</th><th className="px-4 py-2 text-right">Diferencia</th></tr>
               </thead>
               <tbody>
                 {pageRows.map((r) => (
-                  <tr key={r.id} className="border-t">
+                  <tr key={r.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700/40 transition">
                     <td className="px-4 py-2">{r.user}</td>
                     <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{dt(r.closed_at)}</td>
                     <td className="px-4 py-2 text-right text-slate-500 dark:text-slate-400">{Q(r.opening_amount)}</td>

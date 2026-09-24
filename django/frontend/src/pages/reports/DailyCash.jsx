@@ -40,10 +40,10 @@ export default function DailyCash() {
             <KpiCard label="Contado" value={Q(data.totals.counted)} />
             {!blind && <KpiCard label="Diferencia" value={Q(data.totals.difference)} accent={Number(data.totals.difference) < 0 ? "text-red-600" : "text-green-600"} />}
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
             <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-left">
+              <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
                 <tr><th className="px-4 py-2">Cajero</th><th className="px-4 py-2">Cierre</th>
                     {!blind && <th className="px-4 py-2 text-right">Fondo</th>}
                     {!blind && <th className="px-4 py-2 text-right">Esperado</th>}
@@ -52,7 +52,7 @@ export default function DailyCash() {
               </thead>
               <tbody>
                 {data.sessions.map((s) => (
-                  <tr key={s.id} className="border-t">
+                  <tr key={s.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700/40 transition">
                     <td className="px-4 py-2">{s.user}</td>
                     <td className="px-4 py-2 text-xs text-slate-500 dark:text-slate-400">{new Date(s.closed_at).toLocaleTimeString()}</td>
                     {!blind && <td className="px-4 py-2 text-right">{Q(s.opening_amount)}</td>}

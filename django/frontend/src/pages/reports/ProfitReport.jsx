@@ -58,7 +58,7 @@ export default function ProfitReport() {
             </div>
             <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50 dark:bg-slate-900/60 text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wide">
+              <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
                 <tr>
                   <th className="px-3 py-2.5 text-right font-medium w-12">#</th>
                   <th className="px-4 py-2.5 text-left font-medium">Producto</th>

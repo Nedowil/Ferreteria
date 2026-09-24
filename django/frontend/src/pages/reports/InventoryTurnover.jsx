@@ -69,17 +69,17 @@ export default function InventoryTurnover() {
             <b>Rotación</b>: cuántas veces se movió el stock en el periodo (vendido ÷ stock). ·
             <b> Días de cobertura</b>: cuánto dura el stock actual al ritmo de venta (menos = se vende rápido).
           </p>
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
             <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-left">
+              <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
                 <tr><th className="px-4 py-2">Producto</th><th className="px-4 py-2 text-right">Vendido</th>
                     <th className="px-4 py-2 text-right">Stock</th><th className="px-4 py-2 text-right">Rotación</th>
                     <th className="px-4 py-2 text-right">Días cobertura</th><th className="px-4 py-2 text-right">Ingreso</th></tr>
               </thead>
               <tbody>
                 {pageRows.map((r) => (
-                  <tr key={r.id} className="border-t">
+                  <tr key={r.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700/40 transition">
                     <td className="px-4 py-2"><span className="font-mono text-xs text-slate-400">{r.sku}</span> {r.name}</td>
                     <td className="px-4 py-2 text-right">{num(r.sold)} <span className="text-xs text-slate-400">{r.base_unit}</span></td>
                     <td className="px-4 py-2 text-right text-slate-500 dark:text-slate-400">{num(r.stock)}</td>
