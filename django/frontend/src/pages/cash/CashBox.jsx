@@ -163,7 +163,7 @@ export default function CashBox() {
       <div className="flex items-center justify-between mb-4 gap-3">
         <div className="flex items-center gap-2 flex-wrap">
           <h1 className="text-lg font-semibold">Caja</h1>
-          {session?.responsible_name && (
+          {!blind && session?.responsible_name && (
             <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 dark:text-amber-300 dark:bg-amber-900/30 dark:border-amber-500/30 rounded-full px-2.5 py-1">
               👤 Responsable: {session.responsible_name}
             </span>
@@ -197,9 +197,12 @@ export default function CashBox() {
         )
       ) : (
         <>
-          {/* Cambios de responsable del turno: banner destacado y muy visible. */}
-          {session.handovers?.length > 0 && (
-            <div className="mb-5 rounded-2xl border-2 border-amber-300 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-900/20 shadow-md overflow-hidden">
+          {/* Cambios de responsable del turno: banner destacado y muy visible.
+              Parpadea unos segundos si el último relevo fue reciente. En cuadre a
+              ciegas no se muestra (el cajero solo ve «Cuadre a ciegas»). */}
+          {!blind && session.handovers?.length > 0 && (
+            <div className={"mb-5 rounded-2xl border-2 border-amber-300 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-900/20 shadow-md overflow-hidden"
+              + ((Date.now() - new Date(session.handovers[0].handed_at).getTime()) < 10 * 60 * 1000 ? " flash-attention" : "")}>
               <div className="flex items-center gap-2.5 px-5 py-3 bg-gradient-to-r from-amber-400 to-orange-500 text-white">
                 <span className="text-xl">🔄</span>
                 <span className="font-bold text-base sm:text-lg drop-shadow-sm">Cambios de responsable en este turno</span>
@@ -266,7 +269,6 @@ export default function CashBox() {
               {blind && (
                 <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-5">
                   <div className="text-lg font-semibold">🔒 Cuadre a ciegas</div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Contá el efectivo y registralo abajo. El supervisor revisa la diferencia.</div>
                 </div>
               )}
 
@@ -311,21 +313,13 @@ export default function CashBox() {
                   Lo ven los que operan la caja pero NO pueden cerrarla. */}
               {canHandover && (
                 <form onSubmit={doHandover} className="bg-white dark:bg-slate-800 rounded-xl border border-amber-200 dark:border-amber-500/30 shadow-sm p-5 space-y-3">
-                  <div>
-                    <h3 className="font-semibold flex items-center gap-2">🔄 Cambio de responsable</h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                      ¿Te vas pero la tienda sigue atendiendo? Contá tu efectivo y entregá la caja: <b>no se cierra</b>,
-                      sigue abierta. <b>El que la reciba queda registrado solo</b> cuando entre con su usuario. El cierre
-                      se hace una sola vez al final del día.
-                    </p>
-                  </div>
+                  <h3 className="font-semibold flex items-center gap-2">🔄 Cambio de responsable</h3>
                   <input type="number" step="any" placeholder="Efectivo que entregás (contado)" value={handover.counted_cash}
                          onChange={(e) => setHandover({ ...handover, counted_cash: e.target.value })}
                          className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm" />
                   <input placeholder="Notas (opcional)" value={handover.notes}
                          onChange={(e) => setHandover({ ...handover, notes: e.target.value })}
                          className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm" />
-                  {blind && <div className="text-xs text-slate-400">La diferencia la revisa el supervisor; vos solo contás y entregás.</div>}
                   <button className="w-full text-white rounded-lg px-4 py-2.5 text-sm font-semibold bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 transition">Entregar caja</button>
                 </form>
               )}
@@ -348,9 +342,8 @@ export default function CashBox() {
                 )}
               </div>
               {blind ? (
-                <div className="px-5 py-12 text-center text-slate-400 text-sm">
-                  🔒 El detalle de movimientos y montos solo lo ve el supervisor.<br />
-                  Esto mantiene el cuadre a ciegas: contá el efectivo y registralo en «Arqueo y cierre».
+                <div className="px-5 py-16 text-center text-slate-300 dark:text-slate-600 text-7xl select-none">
+                  🔒
                 </div>
               ) : (
               <div className="overflow-x-auto">
