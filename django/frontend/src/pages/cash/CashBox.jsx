@@ -32,6 +32,10 @@ export default function CashBox() {
   const [opening, setOpening] = useState({ opening_amount: "", opening_notes: "" });
   const [mov, setMov] = useState({ type: "ingreso", amount: "", description: "" });
   const [counted, setCounted] = useState("");
+  // Cambio de responsable (relevo): el que se va cuenta y entrega su efectivo,
+  // la caja sigue abierta bajo quien recibe.
+  const [handover, setHandover] = useState({ counted_cash: "", to_user: "", to_name: "", notes: "" });
+  const [staff, setStaff] = useState([]);
   const [exporting, setExporting] = useState("");
   const [movPage, setMovPage] = useState(1); // paginación de la tabla de movimientos
   const [movements, setMovements] = useState([]); // página actual de movimientos
@@ -108,6 +112,30 @@ export default function CashBox() {
   };
   useEffect(load, []);
 
+  // Lista liviana de quién puede recibir la caja en un relevo (solo si este
+  // usuario puede hacer el cambio de responsable).
+  useEffect(() => {
+    if (!can("caja.cerrar")) return;
+    api.get("/cashbox/cash-sessions/staff/").then((r) => setStaff(r.data || [])).catch(() => setStaff([]));
+  }, [can]);
+
+  const doHandover = async (e) => {
+    e.preventDefault(); setError("");
+    if (!handover.counted_cash) { setError("Contá el efectivo que estás entregando."); return; }
+    if (!handover.to_user && !handover.to_name.trim()) { setError("Indicá quién recibe la caja."); return; }
+    try {
+      await api.post(`/cashbox/cash-sessions/${session.id}/handover/`, {
+        counted_cash: handover.counted_cash,
+        to_user: handover.to_user || null,
+        to_name: handover.to_name || null,
+        notes: handover.notes || null,
+      });
+      await dialog.alert("Cambio de responsable registrado. La caja sigue abierta para el nuevo responsable.");
+      setHandover({ counted_cash: "", to_user: "", to_name: "", notes: "" });
+      load();
+    } catch (err) { setError(err.response?.data?.detail || "No se pudo registrar el relevo."); }
+  };
+
   const openCash = async (e) => {
     e.preventDefault(); setError("");
     try { await api.post("/cashbox/cash-sessions/open/", opening); load(); }
@@ -138,8 +166,15 @@ export default function CashBox() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-lg font-semibold">Caja</h1>
+      <div className="flex items-center justify-between mb-4 gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          <h1 className="text-lg font-semibold">Caja</h1>
+          {session?.responsible_name && (
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 dark:text-amber-300 dark:bg-amber-900/30 dark:border-amber-500/30 rounded-full px-2.5 py-1">
+              👤 Responsable: {session.responsible_name}
+            </span>
+          )}
+        </div>
         {can("caja.ver_esperado") && (
           <Link to="/caja/historial" className="inline-flex items-center gap-1 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 hover:bg-blue-100 hover:border-blue-300 transition">🕘 Ver historial</Link>
         )}
@@ -237,6 +272,38 @@ export default function CashBox() {
                 )}
                 <button className="w-full text-white rounded-lg px-4 py-2.5 text-sm font-semibold bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 transition">Cerrar caja</button>
               </form>
+
+              {/* Cambio de responsable (relevo): seguir vendiendo sin cerrar. */}
+              {can("caja.cerrar") && (
+                <form onSubmit={doHandover} className="bg-white dark:bg-slate-800 rounded-xl border border-amber-200 dark:border-amber-500/30 shadow-sm p-5 space-y-3">
+                  <div>
+                    <h3 className="font-semibold flex items-center gap-2">🔄 Cambio de responsable</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      ¿Te vas pero la tienda sigue atendiendo? Contá tu efectivo y entregá la caja: <b>no se cierra</b>,
+                      sigue abierta para quien queda. El cierre se hace una sola vez al final del día.
+                    </p>
+                  </div>
+                  <input type="number" step="any" placeholder="Efectivo que entregás (contado)" value={handover.counted_cash}
+                         onChange={(e) => setHandover({ ...handover, counted_cash: e.target.value })}
+                         className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm" />
+                  {staff.length > 0 ? (
+                    <select value={handover.to_user} onChange={(e) => setHandover({ ...handover, to_user: e.target.value })}
+                            className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-800">
+                      <option value="">¿Quién recibe la caja?</option>
+                      {staff.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+                    </select>
+                  ) : (
+                    <input placeholder="¿Quién recibe la caja?" value={handover.to_name}
+                           onChange={(e) => setHandover({ ...handover, to_name: e.target.value })}
+                           className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm" />
+                  )}
+                  <input placeholder="Notas (opcional)" value={handover.notes}
+                         onChange={(e) => setHandover({ ...handover, notes: e.target.value })}
+                         className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm" />
+                  {blind && <div className="text-xs text-slate-400">La diferencia la revisa el supervisor; vos solo contás y entregás.</div>}
+                  <button className="w-full text-white rounded-lg px-4 py-2.5 text-sm font-semibold bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 transition">Entregar caja</button>
+                </form>
+              )}
             </div>
 
             <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
@@ -255,6 +322,25 @@ export default function CashBox() {
                   </div>
                 )}
               </div>
+              {session.handovers?.length > 0 && (
+                <div className="px-5 py-3 border-b border-slate-100 dark:border-slate-700 bg-amber-50/60 dark:bg-amber-900/10">
+                  <div className="text-xs font-semibold text-amber-700 dark:text-amber-300 mb-1.5">🔄 Cambios de responsable en este turno</div>
+                  <ul className="space-y-1">
+                    {session.handovers.map((h) => (
+                      <li key={h.id} className="text-xs text-slate-600 dark:text-slate-300 flex flex-wrap items-center gap-x-2">
+                        <span className="tabular-nums text-slate-400">{new Date(h.handed_at).toLocaleTimeString("es-GT", { hour: "2-digit", minute: "2-digit" })}</span>
+                        <span><b>{h.from_name || "—"}</b> → <b>{h.to_name || "—"}</b></span>
+                        {h.difference != null && (
+                          <span className={Number(h.difference) < 0 ? "text-rose-600 dark:text-rose-400" : Number(h.difference) > 0 ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"}>
+                            (contó {money(h.counted_cash)}, dif {money(h.difference)})
+                          </span>
+                        )}
+                        {h.notes && <span className="text-slate-400 italic">· {h.notes}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               {blind ? (
                 <div className="px-5 py-12 text-center text-slate-400 text-sm">
                   🔒 El detalle de movimientos y montos solo lo ve el supervisor.<br />

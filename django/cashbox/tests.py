@@ -9,7 +9,7 @@ from core.models import Branch
 from .models import CashMovement, CashSession
 from .services import (
     CashError, active_session, close_session, compute_expected, current_session_for,
-    open_session, open_session_for_branch, register_movement,
+    hand_over, open_session, open_session_for_branch, register_movement,
 )
 
 User = get_user_model()
@@ -42,6 +42,34 @@ class CashServiceTests(TestCase):
         s = close_session(s, 500)
         with self.assertRaises(CashError):
             register_movement(s, CashMovement.INGRESO, 50)
+
+    def test_relevo_no_cierra_y_cambia_responsable(self):
+        # El cajero abre y vende; hace un relevo entregando su efectivo al admin.
+        admin = User.objects.create_user(username="admin", email="a@test.com", password="x")
+        s = open_session(self.user, 500, branch=self.branch)
+        self.assertEqual(s.responsible_id, self.user.id)
+        CashMovement.objects.create(session=s, type=CashMovement.VENTA, payment_method="efectivo", amount=300)
+        # Esperado = 500 + 300 = 800. El cajero cuenta 795 (faltan Q5) y entrega.
+        ho = hand_over(s, 795, from_user=self.user, to_user=admin, notes="Relevo 6pm")
+        self.assertEqual(ho.expected_cash, Decimal("800.00"))
+        self.assertEqual(ho.difference, Decimal("-5.00"))
+        s.refresh_from_db()
+        # La caja SIGUE abierta y ahora el responsable es el admin.
+        self.assertTrue(s.is_open)
+        self.assertEqual(s.responsible_id, admin.id)
+        # El esperado no cambia por el relevo (el dinero queda en la gaveta).
+        self.assertEqual(compute_expected(s), Decimal("800.00"))
+        # Se puede seguir vendiendo y cerrar una sola vez al final.
+        CashMovement.objects.create(session=s, type=CashMovement.VENTA, payment_method="efectivo", amount=100)
+        s = close_session(s, 900)
+        self.assertEqual(s.status, CashSession.STATUS_CERRADA)
+        self.assertEqual(s.difference, Decimal("0.00"))  # 900 contado vs 900 esperado
+
+    def test_relevo_falla_si_caja_cerrada(self):
+        s = open_session(self.user, 100)
+        s = close_session(s, 100)
+        with self.assertRaises(CashError):
+            hand_over(s, 100, from_user=self.user)
 
     def test_compute_expected_solo_efectivo(self):
         s = open_session(self.user, 100)

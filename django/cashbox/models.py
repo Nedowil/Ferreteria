@@ -29,6 +29,12 @@ class CashSession(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_ABIERTA)
     opening_notes = models.TextField("notas de apertura", blank=True, null=True)
     closing_notes = models.TextField("notas de cierre", blank=True, null=True)
+    # Responsable ACTUAL de la caja. Al abrir es quien la abre; con un cambio de
+    # responsable (relevo) pasa a ser quien recibe, sin cerrar la caja.
+    responsible = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="cash_sessions_responsible",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -95,3 +101,40 @@ class CashMovement(models.Model):
         if self.type in (self.EGRESO, self.DEVOLUCION):
             return -Decimal(self.amount)
         return Decimal(self.amount)
+
+
+class CashHandover(models.Model):
+    """Cambio de responsable (relevo) de una caja que SIGUE ABIERTA.
+
+    Cuando el que atendía se va antes del cierre, cuenta y entrega su efectivo:
+    queda el registro de quién entrega, quién recibe, cuánto contó y la
+    diferencia contra lo esperado en ese momento. La caja NO se cierra; continúa
+    con un solo arqueo/cierre al final del día, ya bajo el nuevo responsable.
+    Así se sabe de quién era el faltante o sobrante al momento del relevo."""
+
+    session = models.ForeignKey(CashSession, on_delete=models.CASCADE, related_name="handovers")
+    from_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="cash_handovers_given",
+    )
+    to_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="cash_handovers_received",
+    )
+    # Nombre del que recibe, como respaldo si no se eligió un usuario del sistema.
+    to_name = models.CharField("recibe", max_length=255, blank=True, null=True)
+    handed_at = models.DateTimeField("entregada el")
+    expected_cash = models.DecimalField("efectivo esperado", max_digits=14, decimal_places=2, default=0)
+    counted_cash = models.DecimalField("efectivo contado", max_digits=14, decimal_places=2, default=0)
+    difference = models.DecimalField("diferencia", max_digits=14, decimal_places=2, default=0)
+    notes = models.TextField("notas", blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "cambio de responsable de caja"
+        verbose_name_plural = "cambios de responsable de caja"
+        ordering = ["-handed_at"]
+        indexes = [models.Index(fields=["session"])]
+
+    def __str__(self):
+        return f"Relevo caja #{self.session_id} ({self.handed_at:%Y-%m-%d %H:%M})"

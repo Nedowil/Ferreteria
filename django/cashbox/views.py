@@ -12,6 +12,7 @@ from .serializers import (
     CashSessionDetailSerializer,
     CashSessionListSerializer,
     CloseSessionSerializer,
+    HandoverWriteSerializer,
     MovementWriteSerializer,
     OpenSessionSerializer,
 )
@@ -26,6 +27,8 @@ class CashSessionViewSet(PermissionByActionMixin, viewsets.ReadOnlyModelViewSet)
         # supervisor/admin. El cajero solo ve SU caja abierta con 'current'.
         "list": "caja.ver_esperado", "retrieve": "caja.ver_esperado", "current": "caja.ver",
         "open": "caja.abrir", "close": "caja.cerrar", "movement": "caja.movimientos",
+        # El cambio de responsable (relevo) lo hace quien puede cerrar la caja.
+        "handover": "caja.cerrar", "staff": "caja.cerrar",
         # Ver la LISTA de movimientos (montos) es del supervisor: revela el
         # efectivo esperado. El cajero a ciegas no la ve (igual que antes).
         "movements": "caja.ver_esperado",
@@ -89,6 +92,42 @@ class CashSessionViewSet(PermissionByActionMixin, viewsets.ReadOnlyModelViewSet)
             services.register_movement(
                 session, ser.validated_data["type"], ser.validated_data["amount"],
                 description=ser.validated_data.get("description"), user=request.user,
+            )
+        except services.CashError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(CashSessionDetailSerializer(self.get_object(), context={"request": request}).data)
+
+    @action(detail=False, methods=["get"])
+    def staff(self, request):
+        """Usuarios que pueden recibir la caja en un relevo (id + nombre). Lista
+        liviana para el selector de 'cambio de responsable', sin exigir permiso
+        de gestión de usuarios."""
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        rows = (User.objects.filter(is_active=True)
+                .exclude(pk=request.user.pk)
+                .order_by("name", "email")
+                .values("id", "name", "email"))
+        return Response([{"id": r["id"], "name": r["name"] or r["email"]} for r in rows])
+
+    @action(detail=True, methods=["post"])
+    def handover(self, request, pk=None):
+        """Cambio de responsable (relevo): registra el corte de entrega SIN
+        cerrar la caja, que continúa con el nuevo responsable."""
+        session = self.get_object()
+        ser = HandoverWriteSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        to_user = None
+        to_user_id = ser.validated_data.get("to_user")
+        if to_user_id:
+            from django.contrib.auth import get_user_model
+            to_user = get_user_model().objects.filter(pk=to_user_id, is_active=True).first()
+        try:
+            services.hand_over(
+                session, ser.validated_data["counted_cash"],
+                from_user=request.user, to_user=to_user,
+                to_name=ser.validated_data.get("to_name"),
+                notes=ser.validated_data.get("notes"),
             )
         except services.CashError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)

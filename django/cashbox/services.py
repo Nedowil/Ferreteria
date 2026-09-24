@@ -6,7 +6,7 @@ from django.db import transaction
 from django.db.models import Sum, Q
 from django.utils import timezone
 
-from .models import CashMovement, CashSession
+from .models import CashHandover, CashMovement, CashSession
 
 
 class CashError(Exception):
@@ -63,6 +63,7 @@ def open_session(user, opening_amount, *, notes=None, branch=None):
         user=user, branch=branch, opened_at=timezone.now(),
         opening_amount=opening_amount, expected_cash=opening_amount,
         status=CashSession.STATUS_ABIERTA, opening_notes=notes,
+        responsible=user,
     )
 
 
@@ -147,6 +148,32 @@ def register_movement(session, mtype, amount, *, description=None, user=None):
     )
     _refresh_expected(session)
     return mov
+
+
+@transaction.atomic
+def hand_over(session, counted_cash, *, from_user=None, to_user=None, to_name=None, notes=None):
+    """Cambio de responsable (relevo) SIN cerrar la caja.
+
+    El que se va cuenta su efectivo y lo entrega: se guarda un checkpoint con lo
+    contado, lo esperado en ese momento y la diferencia (para saber de quién era
+    el faltante/sobrante), y la caja sigue abierta bajo el nuevo responsable. El
+    dinero permanece en la gaveta; el arqueo definitivo se hace en el cierre.
+    """
+    session = CashSession.objects.select_for_update().get(pk=session.pk)
+    if not session.is_open:
+        raise CashError("La caja está cerrada.")
+    counted = Decimal(str(counted_cash))
+    expected = compute_expected(session)
+    handover = CashHandover.objects.create(
+        session=session, from_user=from_user, to_user=to_user,
+        to_name=(to_name or (to_user.name if to_user else None)),
+        handed_at=timezone.now(), expected_cash=expected, counted_cash=counted,
+        difference=counted - expected, notes=notes,
+    )
+    if to_user is not None:
+        session.responsible = to_user
+        session.save(update_fields=["responsible", "updated_at"])
+    return handover
 
 
 @transaction.atomic
