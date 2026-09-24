@@ -109,6 +109,37 @@ class ProductListSerializer(serializers.ModelSerializer):
         return obj.stock_for(branch.pk if branch else None)
 
 
+class ProductTrashSerializer(serializers.ModelSerializer):
+    """Producto en la PAPELERA (eliminado, pendiente de borrado definitivo)."""
+
+    category_name = serializers.CharField(source="category.name", read_only=True, default=None)
+    brand_name = serializers.CharField(source="brand.name", read_only=True, default=None)
+    stock_display = serializers.CharField(source="format_stock_mixed", read_only=True)
+    has_history = serializers.SerializerMethodField()
+    days_left = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Product
+        fields = [
+            "id", "sku", "barcode", "name", "category_name", "brand_name",
+            "stock", "stock_display", "sale_price", "image",
+            "deleted_at", "has_history", "days_left",
+        ]
+
+    def get_has_history(self, obj):
+        return obj.has_business_history()
+
+    def get_days_left(self, obj):
+        """Días que faltan para el borrado automático. None si la retención está
+        en 0 (nunca borra) o si el producto tiene historial (queda archivado)."""
+        retention = self.context.get("retention_days")
+        if not retention or obj.has_business_history() or not obj.deleted_at:
+            return None
+        from django.utils import timezone
+        elapsed = (timezone.now() - obj.deleted_at).days
+        return max(0, retention - elapsed)
+
+
 class ProductSerializer(serializers.ModelSerializer):
     """Detalle y escritura de un producto."""
 

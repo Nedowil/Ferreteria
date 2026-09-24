@@ -25,6 +25,12 @@ python manage.py init_app
 echo "==> Limpieza de bitácora (retención ${AUDIT_RETENTION_MONTHS:-36} meses)…"
 python manage.py purgar_auditoria --meses "${AUDIT_RETENTION_MONTHS:-36}" --yes || true
 
+# Papelera de productos: borra definitivamente los eliminados hace más de N días
+# (N sale de la configuración de la empresa). Los que tienen historial de ventas
+# quedan archivados. El "|| true" evita que un fallo bloquee el arranque.
+echo "==> Vaciando papelera de productos vencidos…"
+python manage.py purgar_productos --yes || true
+
 # Datos de demostración solo si se pide explícitamente.
 if [ "${SEED_DEMO:-false}" = "true" ]; then
   echo "==> Sembrando datos de demostración…"

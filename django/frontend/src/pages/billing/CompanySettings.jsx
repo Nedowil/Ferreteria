@@ -254,6 +254,21 @@ export default function CompanySettings() {
           </Field>
         </Section>
 
+        <Section title="Papelera de productos">
+          <Field label="Días en la papelera antes de borrar (0 = nunca)">
+            <input type="number" min="0" max="365" step="1" className={input}
+                   value={c.trash_retention_days}
+                   onChange={(e) => set("trash_retention_days", e.target.value)} />
+          </Field>
+          <div className="sm:col-span-2 text-xs text-slate-500 dark:text-slate-400 -mt-1">
+            Cuando se elimina un producto va a la <b>papelera</b> y puede restaurarse. Pasados estos
+            días se borra <b>solo y definitivo</b> (ej. 15 o 30). Los productos que ya tienen
+            historial de ventas o compras <b>no se borran</b> —romperían los reportes—: quedan
+            archivados en la papelera. Con <b>0</b> nunca se borran solos (se quedan hasta que
+            alguien los borre a mano).
+          </div>
+        </Section>
+
         <Section title="Cupo FEL (bolsón de DTEs)">
           <Field label="Cupo anual (0 = sin límite)">
             <input type="number" min="0" className={input} value={c.fel_yearly_quota} onChange={(e) => set("fel_yearly_quota", e.target.value)} />

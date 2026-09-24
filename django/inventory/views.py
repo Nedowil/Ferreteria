@@ -31,6 +31,7 @@ from .serializers import (
     MovementSerializer,
     ProductListSerializer,
     ProductSerializer,
+    ProductTrashSerializer,
     StockCountSerializer,
     UbicacionSerializer,
     UnitSerializer,
@@ -149,6 +150,9 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
         "restore_locations": "productos.editar",
         "create": "productos.crear", "update": "productos.editar",
         "partial_update": "productos.editar", "destroy": "productos.eliminar",
+        # Papelera de productos: ver, restaurar y borrar definitivamente.
+        "trash": "productos.eliminar", "restore": "productos.eliminar",
+        "purge": "productos.eliminar",
         # El kardex (ver e insertar movimientos) es para quien gestiona
         # inventario, no para cualquiera que pueda ver productos.
         "movements": {"GET": "inventario.ajustar", "POST": "inventario.ajustar"},
@@ -220,6 +224,59 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
         instance.deleted_at = timezone.now()
         instance.active = False
         instance.save(update_fields=["deleted_at", "active", "updated_at"])
+
+    # ---- Papelera de productos ----
+
+    @action(detail=False, methods=["get"])
+    def trash(self, request):
+        """Productos en la papelera (eliminados, pendientes de borrado). Se
+        ordenan por fecha de eliminación (los más recientes primero)."""
+        qs = (Product.objects.filter(deleted_at__isnull=False)
+              .select_related("category", "brand")
+              .prefetch_related("stocks")
+              .order_by("-deleted_at"))
+        retention = int(CompanySetting.current().trash_retention_days or 0)
+        page = self.paginate_queryset(qs)
+        ctx = {"request": request, "branch": self.branch, "retention_days": retention}
+        if page is not None:
+            ser = ProductTrashSerializer(page, many=True, context=ctx)
+            resp = self.get_paginated_response(ser.data)
+            resp.data["retention_days"] = retention
+            return resp
+        ser = ProductTrashSerializer(qs, many=True, context=ctx)
+        return Response({"results": ser.data, "retention_days": retention})
+
+    @action(detail=True, methods=["post"])
+    def restore(self, request, pk=None):
+        """Saca un producto de la papelera y lo deja activo otra vez."""
+        product = Product.objects.filter(pk=pk, deleted_at__isnull=False).first()
+        if not product:
+            return Response({"detail": "El producto no está en la papelera."},
+                            status=status.HTTP_404_NOT_FOUND)
+        product.deleted_at = None
+        product.active = True
+        product.save(update_fields=["deleted_at", "active", "updated_at"])
+        return Response(ProductTrashSerializer(product, context={"request": request}).data)
+
+    @action(detail=True, methods=["delete"])
+    def purge(self, request, pk=None):
+        """Borra un producto DEFINITIVAMENTE (desde la papelera). Si tiene
+        historial de ventas/compras/etc. no se puede borrar (rompería los
+        reportes): se queda archivado en la papelera."""
+        from django.db.models import ProtectedError
+        product = Product.objects.filter(pk=pk, deleted_at__isnull=False).first()
+        if not product:
+            return Response({"detail": "El producto no está en la papelera."},
+                            status=status.HTTP_404_NOT_FOUND)
+        try:
+            product.delete()
+        except ProtectedError:
+            return Response(
+                {"detail": "No se puede borrar: el producto tiene historial de ventas o "
+                           "compras. Queda archivado en la papelera para no dañar los reportes."},
+                status=status.HTTP_409_CONFLICT,
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     # ---- Acciones de inventario ----
 

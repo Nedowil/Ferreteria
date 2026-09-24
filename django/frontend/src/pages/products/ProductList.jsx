@@ -832,7 +832,7 @@ export default function ProductList() {
 
   const remove = async (p) => {
     const nombre = p.name + (p.sku ? ` (${p.sku})` : "");
-    if (!(await dialog.confirm(`¿Estás seguro de que deseas eliminar el producto "${nombre}"?`, { danger: true, okText: "Eliminar" }))) return;
+    if (!(await dialog.confirm(`El producto "${nombre}" se moverá a la papelera. Podés restaurarlo desde ahí; si nadie lo recupera, se borra solo al vencer el plazo. ¿Continuar?`, { danger: true, okText: "Mover a papelera" }))) return;
     await api.delete(`/inventory/products/${p.id}/`);
     load();
   };
@@ -885,6 +885,7 @@ export default function ProductList() {
               la línea de abajo. */}
           {false && can("productos.editar") && <button onClick={() => setRestoreLoc(true)} className="border border-amber-300 text-amber-700 bg-amber-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-amber-100 transition" title="Recuperar ubicaciones desde la auditoría (deshacer un cambio masivo)">🔄 Recuperar ubicaciones</button>}
           {can("productos.etiquetar") && <button onClick={() => setPriceTag({})} className="border border-amber-300 text-amber-700 bg-amber-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-amber-100 transition">🏷️ Etiquetas de precio</button>}
+          {can("productos.eliminar") && <Link to="/productos/papelera" className="border border-slate-300 text-slate-700 bg-white dark:bg-slate-800 dark:text-slate-200 dark:border-slate-600 rounded-lg px-4 py-2 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition">🗑️ Papelera</Link>}
           <button onClick={exportExcel} disabled={exporting} className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-100 transition">{exporting ? "Exportando…" : "⬇️ Excel"}</button>
           {can("productos.crear") && <Link to="/productos/nuevo" className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nuevo producto</Link>}
         </div>

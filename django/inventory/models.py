@@ -214,6 +214,21 @@ class Product(models.Model):
     def is_low_stock(self):
         return self.stock <= self.min_stock
 
+    def has_business_history(self):
+        """¿El producto aparece en algún documento del negocio (ventas, compras,
+        cotizaciones, devoluciones, traslados o reportes de daño)? Estos vínculos
+        son PROTECT: mientras existan, el producto NO se puede borrar de verdad
+        (rompería el historial). Se usa para la papelera: los que tienen historial
+        quedan archivados; los que no, se borran definitivamente al vencer."""
+        return (
+            self.sale_items.exists()
+            or self.purchase_items.exists()
+            or self.quotation_items.exists()
+            or self.return_items.exists()
+            or self.transfer_items.exists()
+            or self.damage_reports.exists()
+        )
+
     def stock_for(self, branch_id):
         """Existencia en una sucursal. Si el producto aún no se distribuyó a
         ninguna sucursal, devuelve el stock global (fallback).

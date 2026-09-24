@@ -588,3 +588,72 @@ class RestoreLocationsTests(TestCase):
         r = self.c.post("/api/inventory/products/restore-locations/",
                         {"apply": False}, format="json")
         self.assertEqual(r.status_code, 400)
+
+
+class ProductTrashTests(TestCase):
+    """Papelera de productos: eliminar (soft), listar, restaurar y purgar."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from django.contrib.auth.models import Group
+        from core.models import CompanySetting
+        from core.permissions import ROLE_MATRIX, sync_permissions
+        self.User = get_user_model()
+        self.company = CompanySetting.current()
+        self.company.trash_retention_days = 15
+        self.company.save()
+        self.branch = Branch.objects.create(name="Matriz", code="M", is_main=True)
+        perms = sync_permissions()
+        for role, codes in ROLE_MATRIX.items():
+            g, _ = Group.objects.get_or_create(name=role)
+            g.permissions.set([perms[c] for c in codes if c in perms])
+        self.admin = self.User.objects.create_user(username="a", email="a@test.com", password="x123", is_superuser=True)
+
+    def _client(self):
+        from rest_framework.test import APIClient
+        c = APIClient()
+        r = c.post("/api/auth/token/", {"email": "a@test.com", "password": "x123"}, format="json")
+        c.credentials(HTTP_AUTHORIZATION=f"Bearer {r.json()['access']}", HTTP_X_BRANCH_ID=str(self.branch.id))
+        return c
+
+    def test_eliminar_va_a_papelera_no_se_borra(self):
+        p = Product.objects.create(sku="P-1", name="Clavo", sale_price=Decimal("2"))
+        c = self._client()
+        self.assertEqual(c.delete(f"/api/inventory/products/{p.id}/").status_code, 204)
+        p.refresh_from_db()
+        self.assertIsNotNone(p.deleted_at)      # sigue existiendo, solo oculto
+        self.assertFalse(p.active)
+        # No aparece en el catálogo, sí en la papelera.
+        listado = c.get("/api/inventory/products/").json()["results"]
+        self.assertFalse(any(x["id"] == p.id for x in listado))
+        trash = c.get("/api/inventory/products/trash/").json()
+        self.assertEqual(trash["retention_days"], 15)
+        row = next(x for x in trash["results"] if x["id"] == p.id)
+        self.assertFalse(row["has_history"])
+        self.assertEqual(row["days_left"], 15)
+
+    def test_restaurar(self):
+        p = Product.objects.create(sku="P-2", name="Tuerca", sale_price=Decimal("1"))
+        c = self._client()
+        c.delete(f"/api/inventory/products/{p.id}/")
+        self.assertEqual(c.post(f"/api/inventory/products/{p.id}/restore/").status_code, 200)
+        p.refresh_from_db()
+        self.assertIsNone(p.deleted_at)
+        self.assertTrue(p.active)
+
+    def test_purgar_sin_historial_borra(self):
+        p = Product.objects.create(sku="P-3", name="Bisagra", sale_price=Decimal("5"))
+        c = self._client()
+        c.delete(f"/api/inventory/products/{p.id}/")
+        self.assertEqual(c.delete(f"/api/inventory/products/{p.id}/purge/").status_code, 204)
+        self.assertFalse(Product.objects.filter(pk=p.id).exists())
+
+    def test_purgar_con_historial_bloqueado(self):
+        from inventory.models import DamageReport
+        p = Product.objects.create(sku="P-4", name="Candado", sale_price=Decimal("30"))
+        DamageReport.objects.create(product=p, quantity=1, reason="prueba")
+        c = self._client()
+        c.delete(f"/api/inventory/products/{p.id}/")
+        r = c.delete(f"/api/inventory/products/{p.id}/purge/")
+        self.assertEqual(r.status_code, 409)
+        self.assertTrue(Product.objects.filter(pk=p.id).exists())  # sigue archivado

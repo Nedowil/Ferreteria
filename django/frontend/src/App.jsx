@@ -13,6 +13,7 @@ import Profiles from "./pages/Profiles"; // eager: pantalla de perfiles (estilo 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const ProductList = lazy(() => import("./pages/products/ProductList"));
 const ProductForm = lazy(() => import("./pages/products/ProductForm"));
+const ProductTrash = lazy(() => import("./pages/products/ProductTrash"));
 const InventoryShow = lazy(() => import("./pages/products/InventoryShow"));
 const LowStock = lazy(() => import("./pages/products/LowStock"));
 const StockCount = lazy(() => import("./pages/products/StockCount"));
@@ -161,6 +162,7 @@ export default function App() {
       <Route path="/pantalla-cliente" element={<CustomerDisplay />} />
       <Route path="/" element={<Protected><Dashboard /></Protected>} />
       <Route path="/productos" element={<Protected perm="productos.ver"><ProductList /></Protected>} />
+      <Route path="/productos/papelera" element={<Protected perm="productos.eliminar"><ProductTrash /></Protected>} />
       <Route path="/productos/nuevo" element={<Protected perm="productos.crear"><ProductForm /></Protected>} />
       <Route path="/productos/:id/editar" element={<Protected perm="productos.editar"><ProductForm /></Protected>} />
       <Route path="/productos/:id/inventario" element={<Protected perm="inventario.ajustar"><InventoryShow /></Protected>} />

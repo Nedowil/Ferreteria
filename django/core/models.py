@@ -167,6 +167,14 @@ class CompanySetting(models.Model):
     pos_discount_free_amount = models.DecimalField(
         "descuento sin autorización hasta (Q) [obsoleto]", max_digits=12, decimal_places=2, default=200)
 
+    # Papelera de productos: un producto eliminado NO se borra al instante; queda
+    # en la papelera y puede restaurarse. Pasados estos días se borra de forma
+    # definitiva y automática (solo los que no tienen historial de ventas/compras;
+    # los que sí tienen quedan archivados para no romper reportes). 0 = nunca
+    # borrar automáticamente (quedan en la papelera hasta que alguien los borre).
+    trash_retention_days = models.PositiveSmallIntegerField(
+        "días en la papelera antes de borrar", default=30)
+
     # Anti-descuadre: si está activo, en las ventas de CONTADO en efectivo el
     # cajero está OBLIGADO a ingresar el efectivo recibido (no se asume pago
     # exacto). Así el vuelto queda bien calculado y la caja cuadra.
