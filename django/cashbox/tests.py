@@ -213,6 +213,7 @@ class CashPermissionTests(TestCase):
         from core.permissions import user_permission_codenames
         codes = user_permission_codenames(self.cajero)
         self.assertNotIn("caja.cerrar", codes)      # el cajero ya no cierra
+        self.assertNotIn("caja.abrir", codes)       # ni abre la caja (solo el admin)
         self.assertIn("caja.movimientos", codes)    # pero sí opera la caja
 
     def test_cajero_entrega_pero_no_cierra(self):
