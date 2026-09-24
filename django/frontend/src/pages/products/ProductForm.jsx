@@ -414,20 +414,21 @@ export default function ProductForm() {
           <textarea value={form.description ?? ""} onChange={(e) => set("description", e.target.value)} rows="2"
                     className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
         </div>
-        <div className="mt-4 sm:max-w-md">
-          <SelectField label="Ubicación" name="ubicacion" form={form} onChange={set}
-                       options={ubicaciones} empty="— Sin ubicación —" />
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Pasillo/estante donde está el producto. Se administran en <b>Ubicaciones</b>.
-          </p>
-        </div>
-        {/* Marca oculta temporalmente (no la usan por ahora). Para reactivar,
-            cambiar SHOW_MARCA a true arriba del archivo. */}
-        {SHOW_MARCA && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
-            <SelectField label="Marca" name="brand" form={form} onChange={set} options={brands} empty="— Sin marca —" />
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <SelectField label="Ubicación" name="ubicacion" form={form} onChange={set}
+                         options={ubicaciones} empty="— Sin ubicación —" />
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              Pasillo/estante donde está el producto. Se administran en <b>Ubicaciones</b>.
+            </p>
           </div>
-        )}
+          {/* Marca al lado de Ubicación. Para ocultarla, poné SHOW_MARCA = false. */}
+          {SHOW_MARCA && (
+            <div>
+              <SelectField label="Marca" name="brand" form={form} onChange={set} options={brands} empty="— Sin marca —" />
+            </div>
+          )}
+        </div>
 
         <div className="mt-4">
           <label className="block text-sm font-medium mb-1">Imagen del producto (opcional)</label>
