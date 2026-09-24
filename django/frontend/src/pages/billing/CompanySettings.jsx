@@ -3,9 +3,16 @@ import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { sendEposPrint, resolveEposUrl, getLocalEpos, setLocalEpos, eposCodeMessage, EPOS_HELP } from "../../utils/epos";
 
-const Section = ({ title, children }) => (
-  <section className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
-    <div className="px-5 py-3 border-b font-semibold">{title}</div>
+const Section = ({ title, subtitle, icon = "⚙️", color = "#3b82f6", children }) => (
+  <section className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+    <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+      <span className="w-10 h-10 rounded-xl inline-flex items-center justify-center text-xl shrink-0"
+            style={{ background: color + "22" }}>{icon}</span>
+      <div className="min-w-0">
+        <h3 className="font-semibold text-slate-800 dark:text-slate-100 leading-tight">{title}</h3>
+        {subtitle && <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{subtitle}</p>}
+      </div>
+    </div>
     <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">{children}</div>
   </section>
 );
@@ -196,11 +203,14 @@ export default function CompanySettings() {
 
   return (
     <form onSubmit={save} className="max-w-4xl space-y-5">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold">Configuración de la empresa</h1>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">⚙️ Configuración de la empresa</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Datos del negocio, impuestos, impresoras y seguridad.</p>
+        </div>
         {editable && (
-          <button disabled={saving} className="bg-blue-600 text-white rounded px-5 py-2 text-sm font-medium disabled:opacity-50">
-            {saving ? "Guardando…" : "Guardar cambios"}
+          <button disabled={saving} className="shrink-0 text-white rounded-lg px-5 py-2.5 text-sm font-semibold shadow bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transition disabled:opacity-50">
+            {saving ? "Guardando…" : "💾 Guardar cambios"}
           </button>
         )}
       </div>
@@ -209,7 +219,7 @@ export default function CompanySettings() {
       {err && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm">{err}</div>}
 
       <fieldset disabled={!editable} className="space-y-5">
-        <Section title="Datos fiscales (emisor)">
+        <Section title="Datos fiscales (emisor)" icon="🏢" color="#3b82f6" subtitle="Datos del negocio que salen en las facturas.">
           <Field label="Nombre comercial">
             <input className={input} value={c.commercial_name || ""} onChange={(e) => set("commercial_name", e.target.value)} />
           </Field>
@@ -242,7 +252,7 @@ export default function CompanySettings() {
           </Field>
         </Section>
 
-        <Section title="IVA y facturación">
+        <Section title="IVA y facturación" icon="🧾" color="#10b981" subtitle="Cómo se calcula y se muestra el impuesto.">
           <Field label="IVA (%)">
             <input type="number" step="0.01" className={input} value={c.default_tax_rate} onChange={(e) => set("default_tax_rate", e.target.value)} />
           </Field>
@@ -254,7 +264,7 @@ export default function CompanySettings() {
           </Field>
         </Section>
 
-        <Section title="Papelera de productos">
+        <Section title="Papelera de productos" icon="🗑️" color="#f43f5e" subtitle="Cuándo se borran los productos eliminados.">
           <Field label="Días en la papelera antes de borrar (0 = nunca)">
             <input type="number" min="0" max="365" step="1" className={input}
                    value={c.trash_retention_days}
@@ -269,7 +279,7 @@ export default function CompanySettings() {
           </div>
         </Section>
 
-        <Section title="Cupo FEL (bolsón de DTEs)">
+        <Section title="Cupo FEL (bolsón de DTEs)" icon="📊" color="#8b5cf6" subtitle="Control del cupo anual de documentos electrónicos.">
           <Field label="Cupo anual (0 = sin límite)">
             <input type="number" min="0" className={input} value={c.fel_yearly_quota} onChange={(e) => set("fel_yearly_quota", e.target.value)} />
           </Field>
@@ -281,7 +291,7 @@ export default function CompanySettings() {
           </Field>
         </Section>
 
-        <Section title="Seguridad del punto de venta">
+        <Section title="Seguridad del punto de venta" icon="🛡️" color="#f59e0b" subtitle="Ganancia mínima y control del efectivo.">
           <div className="sm:col-span-2">
             <div className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Ganancia mínima por rango de precio</div>
             <div className="text-xs text-slate-500 dark:text-slate-400 mb-3">
@@ -316,7 +326,7 @@ export default function CompanySettings() {
           </label>
         </Section>
 
-        <Section title="Impresora térmica (tickets)">
+        <Section title="Impresora térmica (tickets)" icon="🖨️" color="#6366f1" subtitle="Impresión de tickets de venta.">
           <Field label="Modo">
             <select className={input} value={c.printer_mode} onChange={(e) => set("printer_mode", e.target.value)}>
               <option value="system">Sistema (USB)</option>
@@ -395,7 +405,7 @@ export default function CompanySettings() {
           </div>
         </Section>
 
-        <Section title="Impresora Zebra (etiquetas)">
+        <Section title="Impresora Zebra (etiquetas)" icon="🏷️" color="#14b8a6" subtitle="Etiquetas de código de barras y precio.">
           <Field label="Modo">
             <select className={input} value={c.zebra_mode} onChange={(e) => set("zebra_mode", e.target.value)}>
               <option value="system">Sistema</option>
@@ -432,7 +442,7 @@ export default function CompanySettings() {
           </div>
         </Section>
 
-        <Section title="Catálogo público (en línea)">
+        <Section title="Catálogo público (en línea)" icon="🌐" color="#0ea5e9" subtitle="Tu catálogo visible en internet.">
           <Field label="Catálogo habilitado">
             <select className={input} value={c.public_catalog_enabled ? "1" : "0"} onChange={(e) => set("public_catalog_enabled", e.target.value === "1")}>
               <option value="0">Deshabilitado</option>
