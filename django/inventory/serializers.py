@@ -13,6 +13,8 @@ from .models import (
     Product,
     ProductPresentation,
     ProductStock,
+    StockCountLine,
+    StockCountSession,
     Ubicacion,
     Unit,
 )
@@ -274,3 +276,43 @@ class DamageReportWriteSerializer(serializers.Serializer):
     product = serializers.IntegerField()
     quantity = RoundingDecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0.01"))
     reason = serializers.CharField(max_length=2000)
+
+
+class StockCountSessionListSerializer(serializers.ModelSerializer):
+    user_name = serializers.CharField(source="user.name", read_only=True, default=None)
+    branch_name = serializers.CharField(source="branch.name", read_only=True, default=None)
+    mode_display = serializers.CharField(source="get_mode_display", read_only=True)
+
+    class Meta:
+        model = StockCountSession
+        fields = [
+            "id", "created_at", "user_name", "branch_name", "mode", "mode_display", "reason",
+            "products_count", "discrepancy_count", "units_system", "units_final",
+            "value_final", "value_diff",
+        ]
+
+
+class StockCountLineSerializer(serializers.ModelSerializer):
+    value_final = serializers.SerializerMethodField()
+    value_diff = serializers.SerializerMethodField()
+
+    class Meta:
+        model = StockCountLine
+        fields = [
+            "id", "product", "sku", "name", "base_unit_label",
+            "system_qty", "counted_qty", "final_qty", "difference", "unit_cost",
+            "value_final", "value_diff",
+        ]
+
+    def get_value_final(self, obj):
+        return (obj.final_qty or 0) * (obj.unit_cost or 0)
+
+    def get_value_diff(self, obj):
+        return (obj.difference or 0) * (obj.unit_cost or 0)
+
+
+class StockCountSessionDetailSerializer(StockCountSessionListSerializer):
+    lines = StockCountLineSerializer(many=True, read_only=True)
+
+    class Meta(StockCountSessionListSerializer.Meta):
+        fields = StockCountSessionListSerializer.Meta.fields + ["lines"]

@@ -657,3 +657,50 @@ class ProductTrashTests(TestCase):
         r = c.delete(f"/api/inventory/products/{p.id}/purge/")
         self.assertEqual(r.status_code, 409)
         self.assertTrue(Product.objects.filter(pk=p.id).exists())  # sigue archivado
+
+
+class StockCountHistoryTests(TestCase):
+    """El conteo físico queda guardado como inventario y se puede comparar."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        self.User = get_user_model()
+        self.branch = Branch.objects.create(name="Matriz", code="M", is_main=True)
+        self.admin = self.User.objects.create_user(username="a", email="a@t.com", password="x123", is_superuser=True)
+        self.p1 = Product.objects.create(sku="P1", name="Tornillo", purchase_price=Decimal("2"), sale_price=Decimal("3"), stock=Decimal("100"))
+        self.p2 = Product.objects.create(sku="P2", name="Clavo", purchase_price=Decimal("1"), sale_price=Decimal("2"), stock=Decimal("50"))
+
+    def _c(self):
+        from rest_framework.test import APIClient
+        c = APIClient()
+        r = c.post("/api/auth/token/", {"email": "a@t.com", "password": "x123"}, format="json")
+        c.credentials(HTTP_AUTHORIZATION=f"Bearer {r.json()['access']}", HTTP_X_BRANCH_ID=str(self.branch.id))
+        return c
+
+    def _count(self, c, counts):
+        return c.post("/api/inventory/stock-count/", {"mode": "set", "reason": "Inv", "counts": counts}, format="json")
+
+    def test_guarda_inventario_y_compara(self):
+        c = self._c()
+        rA = self._count(c, [{"product_id": self.p1.id, "new_count": "90", "unit": "base"},
+                             {"product_id": self.p2.id, "new_count": "50", "unit": "base"}])
+        rB = self._count(c, [{"product_id": self.p1.id, "new_count": "120", "unit": "base"},
+                             {"product_id": self.p2.id, "new_count": "40", "unit": "base"}])
+        sa, sb = rA.json()["session_id"], rB.json()["session_id"]
+        # Se listan los dos inventarios guardados.
+        lst = c.get("/api/inventory/stock-counts/").json()
+        results = lst.get("results", lst)
+        self.assertEqual(len(results), 2)
+        # Detalle con líneas.
+        det = c.get(f"/api/inventory/stock-counts/{sb}/").json()
+        self.assertEqual(len(det["lines"]), 2)
+        # Comparación A→B: Tornillo sube +30, Clavo baja -10; total unidades +20.
+        cmp = c.get("/api/inventory/stock-counts/compare/", {"a": sa, "b": sb}).json()
+        by = {r["sku"]: r for r in cmp["rows"]}
+        self.assertEqual(Decimal(str(by["P1"]["delta"])), Decimal("30.00"))
+        self.assertEqual(Decimal(str(by["P2"]["delta"])), Decimal("-10.00"))
+        self.assertEqual(by["P1"]["estado"], "subio")
+        self.assertEqual(by["P2"]["estado"], "bajo")
+        self.assertEqual(Decimal(str(cmp["totals"]["units_delta"])), Decimal("20.00"))
+        # Valor: (120*2+40*1) - (90*2+50*1) = 280 - 230 = 50
+        self.assertEqual(Decimal(str(cmp["totals"]["value_delta"])), Decimal("50.00"))

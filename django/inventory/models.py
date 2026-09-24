@@ -434,3 +434,62 @@ class DamageReport(models.Model):
 
     def __str__(self):
         return f"Daño {self.product.sku} x{self.quantity} ({self.status})"
+
+
+class StockCountSession(models.Model):
+    """Un INVENTARIO (conteo físico) guardado como registro, para poder
+    consultarlo después y COMPARAR año contra año (crecimiento/discrepancia).
+
+    Cada vez que se aplica un conteo se crea una sesión con una línea por
+    producto contado (foto de lo que decía el sistema, lo contado y el costo del
+    momento). Así el inventario de 2027 se puede comparar con el de 2026."""
+
+    MODE_SET = "set"      # fijar existencia (recuento total)
+    MODE_ADD = "add"      # sumar lo encontrado
+    MODE_CHOICES = [(MODE_SET, "Recuento total"), (MODE_ADD, "Sumar encontrado")]
+
+    branch = models.ForeignKey("core.Branch", on_delete=models.SET_NULL, null=True, blank=True, related_name="stock_counts")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="stock_counts")
+    mode = models.CharField(max_length=10, choices=MODE_CHOICES, default=MODE_SET)
+    reason = models.CharField("motivo", max_length=255, blank=True, null=True)
+    # Resumen (se calcula al crear, para listar rápido).
+    products_count = models.PositiveIntegerField(default=0)
+    discrepancy_count = models.PositiveIntegerField(default=0)   # líneas con diferencia
+    units_system = models.DecimalField(max_digits=16, decimal_places=2, default=0)   # suma existencia previa
+    units_final = models.DecimalField(max_digits=16, decimal_places=2, default=0)    # suma existencia resultante
+    value_final = models.DecimalField(max_digits=16, decimal_places=2, default=0)    # valor a costo de lo contado
+    value_diff = models.DecimalField(max_digits=16, decimal_places=2, default=0)     # valor de la discrepancia (final - sistema)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "inventario (conteo)"
+        verbose_name_plural = "inventarios (conteos)"
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["branch", "created_at"])]
+
+    def __str__(self):
+        return f"Inventario #{self.pk} ({self.created_at:%Y-%m-%d})"
+
+
+class StockCountLine(models.Model):
+    """Una línea del inventario guardado: foto de un producto en ese conteo."""
+
+    session = models.ForeignKey(StockCountSession, on_delete=models.CASCADE, related_name="lines")
+    product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True, blank=True, related_name="count_lines")
+    sku = models.CharField(max_length=64, blank=True, null=True)
+    name = models.CharField(max_length=255, blank=True, null=True)
+    base_unit_label = models.CharField(max_length=40, blank=True, null=True)
+    system_qty = models.DecimalField(max_digits=16, decimal_places=2, default=0)   # existencia antes
+    counted_qty = models.DecimalField(max_digits=16, decimal_places=2, default=0)  # lo ingresado (en base)
+    final_qty = models.DecimalField(max_digits=16, decimal_places=2, default=0)    # existencia resultante
+    difference = models.DecimalField(max_digits=16, decimal_places=2, default=0)   # final - sistema
+    unit_cost = models.DecimalField(max_digits=14, decimal_places=2, default=0)    # costo del momento
+
+    class Meta:
+        verbose_name = "línea de inventario"
+        verbose_name_plural = "líneas de inventario"
+        ordering = ["id"]
+        indexes = [models.Index(fields=["session"]), models.Index(fields=["product"])]
+
+    def __str__(self):
+        return f"{self.sku} contado {self.counted_qty}"

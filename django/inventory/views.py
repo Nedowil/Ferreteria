@@ -33,6 +33,8 @@ from .serializers import (
     ProductSerializer,
     ProductTrashSerializer,
     StockCountSerializer,
+    StockCountSessionDetailSerializer,
+    StockCountSessionListSerializer,
     UbicacionSerializer,
     UnitSerializer,
 )
@@ -466,6 +468,15 @@ class StockCountView(APIView):
         mode = ser.validated_data.get("mode", "set")  # "set" = fijar, "add" = sumar
         branch = get_request_branch(request)
 
+        # Se guarda el inventario como REGISTRO (para comparar año contra año).
+        from .models import StockCountLine, StockCountSession
+        session = StockCountSession.objects.create(
+            branch=branch, user=request.user, mode=mode, reason=reason,
+        )
+        lines = []
+        totals = {"products": 0, "discrep": 0, "sys": Decimal("0"), "final": Decimal("0"),
+                  "value_final": Decimal("0"), "value_diff": Decimal("0")}
+
         adjusted, errors = 0, []
         for item in ser.validated_data["counts"]:
             product = Product.objects.filter(pk=item["product_id"]).first()
@@ -477,6 +488,22 @@ class StockCountView(APIView):
             if item.get("unit") == "container" and product.container_factor:
                 value = value * Decimal(product.container_factor)
             current = product.stock_for(branch.pk if branch else None)
+            final = current + value if mode == "add" else value
+            cost = Decimal(product.purchase_price or 0)
+            diff = final - current
+            # Línea del registro (una foto por producto contado).
+            lines.append(StockCountLine(
+                session=session, product=product, sku=product.sku, name=product.name,
+                base_unit_label=product.base_unit_label, system_qty=current,
+                counted_qty=value, final_qty=final, difference=diff, unit_cost=cost,
+            ))
+            totals["products"] += 1
+            if abs(diff) >= Decimal("0.001"):
+                totals["discrep"] += 1
+            totals["sys"] += current
+            totals["final"] += final
+            totals["value_final"] += final * cost
+            totals["value_diff"] += diff * cost
             try:
                 if mode == "add":
                     if value <= 0:
@@ -498,7 +525,89 @@ class StockCountView(APIView):
                     adjusted += 1
             except InventoryError as e:
                 errors.append(f"{product.sku}: {e}")
-        return Response({"adjusted": adjusted, "errors": errors})
+
+        StockCountLine.objects.bulk_create(lines)
+        session.products_count = totals["products"]
+        session.discrepancy_count = totals["discrep"]
+        session.units_system = totals["sys"]
+        session.units_final = totals["final"]
+        session.value_final = totals["value_final"]
+        session.value_diff = totals["value_diff"]
+        session.save(update_fields=["products_count", "discrepancy_count", "units_system",
+                                    "units_final", "value_final", "value_diff"])
+        return Response({"adjusted": adjusted, "errors": errors, "session_id": session.id})
+
+
+class StockCountSessionViewSet(BranchContextMixin, viewsets.ReadOnlyModelViewSet):
+    """Historial de INVENTARIOS (conteos guardados) y comparación entre dos."""
+
+    permission_classes = [HasPermission.require("inventario.ajustar")]
+
+    def get_queryset(self):
+        from .models import StockCountSession
+        qs = StockCountSession.objects.select_related("user", "branch").order_by("-created_at")
+        branch = get_request_branch(self.request)
+        if branch is not None:
+            qs = qs.filter(branch=branch)
+        return qs
+
+    def get_serializer_class(self):
+        return StockCountSessionListSerializer if self.action == "list" else StockCountSessionDetailSerializer
+
+    @action(detail=False, methods=["get"])
+    def compare(self, request):
+        """Compara dos inventarios (a=anterior, b=actual) producto por producto:
+        cuánto había en cada uno, el cambio (crecimiento/baja) y su valor."""
+        from .models import StockCountSession
+        try:
+            a = StockCountSession.objects.get(pk=request.query_params.get("a"))
+            b = StockCountSession.objects.get(pk=request.query_params.get("b"))
+        except (StockCountSession.DoesNotExist, ValueError, TypeError):
+            return Response({"detail": "Elegí dos inventarios válidos para comparar."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        def key(line):
+            return line.product_id or f"sku:{line.sku}"
+
+        amap = {key(l): l for l in a.lines.all()}
+        bmap = {key(l): l for l in b.lines.all()}
+        rows = []
+        tot = {"qa": Decimal("0"), "qb": Decimal("0"), "va": Decimal("0"), "vb": Decimal("0"),
+               "nuevos": 0, "salieron": 0}
+        for k in sorted(set(amap) | set(bmap), key=lambda x: (bmap.get(x) or amap.get(x)).name or ""):
+            la, lb = amap.get(k), bmap.get(k)
+            qa = Decimal(la.final_qty) if la else Decimal("0")
+            qb = Decimal(lb.final_qty) if lb else Decimal("0")
+            cost = Decimal((lb or la).unit_cost or 0)
+            va, vb = qa * cost, qb * cost
+            if not la:
+                estado = "nuevo"; tot["nuevos"] += 1
+            elif not lb:
+                estado = "salio"; tot["salieron"] += 1
+            elif qb > qa:
+                estado = "subio"
+            elif qb < qa:
+                estado = "bajo"
+            else:
+                estado = "igual"
+            rows.append({
+                "product": (lb or la).product_id, "sku": (lb or la).sku, "name": (lb or la).name,
+                "base_unit_label": (lb or la).base_unit_label,
+                "qty_a": qa, "qty_b": qb, "delta": qb - qa,
+                "unit_cost": cost, "value_a": va, "value_b": vb, "value_delta": vb - va,
+                "estado": estado,
+            })
+            tot["qa"] += qa; tot["qb"] += qb; tot["va"] += va; tot["vb"] += vb
+        return Response({
+            "a": StockCountSessionListSerializer(a).data,
+            "b": StockCountSessionListSerializer(b).data,
+            "rows": rows,
+            "totals": {
+                "units_a": tot["qa"], "units_b": tot["qb"], "units_delta": tot["qb"] - tot["qa"],
+                "value_a": tot["va"], "value_b": tot["vb"], "value_delta": tot["vb"] - tot["va"],
+                "nuevos": tot["nuevos"], "salieron": tot["salieron"],
+            },
+        })
 
 
 class DamageReportViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.ModelViewSet):
