@@ -47,11 +47,23 @@ export function ExcelButton({ onClick, disabled }) {
   );
 }
 
-export function KpiCard({ label, value, accent = "" }) {
+// Tarjeta KPI compartida por los reportes. `accent` (clase de color) tiñe el
+// número y una franja superior; `icon` opcional. Look consistente y menos plano.
+const ACCENT_BAR = {
+  "text-green-600": "#16a34a", "text-emerald-600": "#059669", "text-red-600": "#dc2626",
+  "text-rose-600": "#e11d48", "text-blue-600": "#2563eb", "text-amber-600": "#d97706",
+  "text-violet-600": "#7c3aed", "text-sky-600": "#0284c7",
+};
+export function KpiCard({ label, value, accent = "", icon }) {
+  const bar = ACCENT_BAR[accent] || "#3b82f6";
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-5">
-      <div className="text-sm text-slate-500 dark:text-slate-400">{label}</div>
-      <div className={`text-2xl font-bold mt-1 ${accent}`}>{value}</div>
+    <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-5 overflow-hidden">
+      <div className="absolute inset-x-0 top-0 h-1" style={{ background: bar }} />
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-slate-500 dark:text-slate-400">{label}</div>
+        {icon && <span className="text-lg opacity-80">{icon}</span>}
+      </div>
+      <div className={`text-2xl font-extrabold mt-1 tabular-nums ${accent || "text-slate-800 dark:text-slate-100"}`}>{value}</div>
     </div>
   );
 }
