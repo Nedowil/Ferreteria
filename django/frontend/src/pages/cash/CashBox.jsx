@@ -29,7 +29,8 @@ export default function CashBox() {
   // Solo quien puede CERRAR ve el arqueo/cierre (el admin). Los demás que operan
   // la caja (cajeros) solo pueden ENTREGARLA (cambio de responsable).
   const canClose = can("caja.cerrar");
-  const canHandover = !canClose && (can("caja.movimientos") || can("caja.abrir"));
+  // Entregar la caja (relevo) tiene su propio permiso, sin relación con abrir.
+  const canHandover = !canClose && can("caja.entregar");
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -304,6 +305,7 @@ export default function CashBox() {
                 </div>
               )}
 
+              {can("caja.movimientos") && (
               <form onSubmit={addMovement} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 space-y-3">
                 <h3 className="font-semibold">Movimiento manual</h3>
                 <select value={mov.type} onChange={(e) => setMov({ ...mov, type: e.target.value })}
@@ -319,6 +321,7 @@ export default function CashBox() {
                        className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm" />
                 <button className="w-full text-white rounded-lg px-4 py-2.5 text-sm font-semibold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 transition">Registrar</button>
               </form>
+              )}
 
               {canClose && (
               <form onSubmit={closeCash} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 space-y-3">

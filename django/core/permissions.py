@@ -66,6 +66,9 @@ PERMISSIONS = [
     ("caja.ver", "Ver caja", "Caja"),
     ("caja.abrir", "Abrir caja", "Caja"),
     ("caja.cerrar", "Cerrar caja", "Caja"),
+    # Entregar la caja (cambio de responsable / relevo) SIN poder abrirla ni
+    # cerrarla: permite que el cajero termine su turno entregando la caja.
+    ("caja.entregar", "Entregar caja (cambio de responsable)", "Caja"),
     ("caja.movimientos", "Movimientos de caja", "Caja"),
     # Anti-fraude (cuadre a ciegas): ver el efectivo esperado y la diferencia.
     # El cajero cierra su caja SIN ver el esperado; solo el supervisor lo ve.
@@ -119,8 +122,8 @@ ROLE_MATRIX = {
         "productos.ver", "clientes.ver", "clientes.crear", "clientes.editar",
         # El cajero NO abre ni cierra la caja: el admin la abre al inicio del día
         # y la cierra al final. El cajero vende, opera (ingresos/egresos) y al
-        # terminar su turno ENTREGA la caja (cambio de responsable).
-        "ventas.ver", "ventas.crear", "caja.ver",
+        # terminar su turno ENTREGA la caja (permiso propio, no necesita abrir).
+        "ventas.ver", "ventas.crear", "caja.ver", "caja.entregar",
         "caja.movimientos", "cotizaciones.ver", "cotizaciones.crear",
         "cotizaciones.convertir", "cotizaciones.cancelar", "facturas.ver", "facturas.emitir",
         "cuentas_cobrar.ver", "devoluciones.ver", "devoluciones.crear", "mermas.reportar",

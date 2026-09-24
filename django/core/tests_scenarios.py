@@ -116,7 +116,9 @@ class ScenarioTests(APITestCase):
 
     def test_C_no_dos_cajas_en_misma_sucursal(self):
         self._open_cash(self.admin, self.b1, "500")
-        r = self._open_cash(self.vend, self.b1, "300")   # otra persona, misma sucursal
+        # Otro intento de abrir en la MISMA sucursal (por alguien que sí puede
+        # abrir) debe fallar con la regla de negocio, no crear una segunda caja.
+        r = self._open_cash(self.admin, self.b1, "300")
         self.assertEqual(r.status_code, 400)
 
     # -- Escenario D: sincronización de ventas offline ---------------------
