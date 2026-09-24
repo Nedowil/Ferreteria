@@ -541,7 +541,7 @@ class StockCountView(APIView):
 class StockCountSessionViewSet(BranchContextMixin, viewsets.ReadOnlyModelViewSet):
     """Historial de INVENTARIOS (conteos guardados) y comparación entre dos."""
 
-    permission_classes = [HasPermission.require("inventario.ajustar")]
+    permission_classes = [HasPermission.require("inventario.historial")]
 
     def get_queryset(self):
         from .models import StockCountSession

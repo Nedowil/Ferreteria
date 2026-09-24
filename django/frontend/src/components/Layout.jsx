@@ -122,7 +122,7 @@ export default function Layout({ children }) {
               {can("productos.ver") && <NavItem to="/ubicaciones" icon="📍" label="Ubicaciones" />}
               {can("productos.ver") && <NavItem to="/bajo-stock" icon="⚠️" label="Stock bajo" />}
               {can("inventario.ajustar") && <NavItem to="/conteo" icon="🔢" label="Conteo físico" />}
-              {can("inventario.ajustar") && <NavItem to="/conteo/historial" icon="📚" label="Historial de inventarios" />}
+              {can("inventario.historial") && <NavItem to="/conteo/historial" icon="📚" label="Historial de inventarios" />}
               {can("mermas.reportar") && !can("mermas.gestionar") && <NavItem to="/reportar-dano" icon="🛠️" label="Reportar daño" />}
               {can("mermas.gestionar") && <NavItem to="/mermas" icon="🛠️" label="Reportes de daño" badge={pendingDamage} />}
             </>

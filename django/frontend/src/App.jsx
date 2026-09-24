@@ -169,7 +169,7 @@ export default function App() {
       <Route path="/productos/:id/inventario" element={<Protected perm="inventario.ajustar"><InventoryShow /></Protected>} />
       <Route path="/bajo-stock" element={<Protected perm="productos.ver"><LowStock /></Protected>} />
       <Route path="/conteo" element={<Protected perm="inventario.ajustar"><StockCount /></Protected>} />
-      <Route path="/conteo/historial" element={<Protected perm="inventario.ajustar"><StockCountHistory /></Protected>} />
+      <Route path="/conteo/historial" element={<Protected perm="inventario.historial"><StockCountHistory /></Protected>} />
       <Route path="/reportar-dano" element={<Protected perm="mermas.reportar"><ReportDamage /></Protected>} />
       <Route path="/mermas" element={<Protected perm="mermas.gestionar"><DamageReports /></Protected>} />
       <Route path="/categorias" element={<Protected perm="productos.ver"><CatalogList kind="categories" /></Protected>} />

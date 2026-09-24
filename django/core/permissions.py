@@ -21,6 +21,8 @@ PERMISSIONS = [
     ("productos.eliminar", "Eliminar productos", "Inventario"),
     ("productos.etiquetar", "Imprimir etiquetas de productos", "Inventario"),
     ("inventario.ajustar", "Ajustar inventario", "Inventario"),
+    # Ver el historial de inventarios (conteos guardados) y comparar dos.
+    ("inventario.historial", "Ver historial de inventarios", "Inventario"),
     ("mermas.reportar", "Reportar productos dañados", "Inventario"),
     ("mermas.gestionar", "Aprobar/rechazar reportes de daño", "Inventario"),
     ("proveedores.ver", "Ver proveedores", "Compras"),
@@ -111,7 +113,8 @@ ROLE_MATRIX = {
     "admin": [c for c in ALL_CODENAMES if c not in OPT_IN_ONLY],
     "almacenista": [
         "catalogos.gestionar", "productos.ver", "productos.crear", "productos.editar",
-        "productos.eliminar", "productos.etiquetar", "inventario.ajustar", "proveedores.ver", "proveedores.crear",
+        "productos.eliminar", "productos.etiquetar", "inventario.ajustar", "inventario.historial",
+        "proveedores.ver", "proveedores.crear",
         "proveedores.editar", "proveedores.eliminar", "compras.ver", "compras.crear",
         "compras.recibir", "compras.cancelar", "facturas_prov.ver", "facturas_prov.gestionar",
         "cuentas_pagar.ver", "mermas.reportar", "mermas.gestionar",
