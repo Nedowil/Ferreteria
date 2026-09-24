@@ -27,34 +27,40 @@ const Field = ({ label, children, full }) => (
 const input = "w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm";
 
 // Editor de la ganancia mínima por RANGO de precio. Cada rango tiene un tope de
-// precio (`max`) y el % mínimo que debe dejar; la última fila (sin tope) es
-// "en adelante". Se muestra ordenado por precio para que se lea como una tabla.
+// precio (`max`) y el % mínimo que debe dejar; la última fila (`max: null`) es
+// "en adelante". Se editan EN EL ORDEN guardado (sin reordenar mientras se
+// escribe) para que el campo no salte ni desaparezca; el backend ordena por
+// precio al aplicar la regla. Al terminar de escribir (blur) se ordena solo.
 function ProfitTiers({ tiers, editable, onChange }) {
-  const list = Array.isArray(tiers) && tiers.length ? tiers : [{ max: null, percent: 0 }];
-  const sorted = [...list].sort((a, b) =>
-    (a.max == null ? 1 : b.max == null ? -1 : Number(a.max) - Number(b.max)));
+  const rows = Array.isArray(tiers) && tiers.length ? tiers : [{ max: null, percent: 0 }];
 
   const commit = (next) => onChange(next);
-  const setRow = (i, field, v) => {
-    const next = sorted.map((t, idx) => idx === i
-      ? { ...t, [field]: field === "max" ? (v === "" ? null : v) : v } : t);
-    commit(next);
-  };
+  // Guarda el valor TAL CUAL se escribe (incluida cadena vacía): así borrar el
+  // número no convierte la fila en "en adelante" ni la hace desaparecer.
+  const setRow = (i, field, v) => commit(rows.map((t, idx) => idx === i ? { ...t, [field]: v } : t));
+  const rmRow = (i) => commit(rows.filter((_, idx) => idx !== i));
   const addRow = () => {
-    // Nueva fila con tope: se inserta antes de la de "en adelante".
-    const withMax = sorted.filter((t) => t.max != null);
-    const openRow = sorted.find((t) => t.max == null) || { max: null, percent: 0 };
-    commit([...withMax, { max: "", percent: "" }, openRow]);
+    const idx = rows.findIndex((t) => t.max == null);
+    const copy = [...rows];
+    copy.splice(idx === -1 ? copy.length : idx, 0, { max: "", percent: "" });
+    commit(copy);
   };
-  const rmRow = (i) => commit(sorted.filter((_, idx) => idx !== i));
+  // Al salir de un campo de precio se ordena por tope (con "en adelante" al
+  // final) para que las etiquetas queden bien, sin saltar mientras se escribe.
+  const sortOnBlur = () => {
+    const rank = (m) => (m == null || m === "" ? Number.POSITIVE_INFINITY : Number(m));
+    commit([...rows].sort((a, b) => rank(a.max) - rank(b.max)));
+  };
 
+  const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
   const fmt = (n) => Number(n || 0).toLocaleString("es-GT");
   const rangeText = (i) => {
-    const cur = sorted[i];
-    const prevMax = i > 0 ? Number(sorted[i - 1].max || 0) : 0;
-    if (cur.max == null) return `Q${fmt(prevMax)} en adelante`;
+    const cur = rows[i];
+    const prev = i > 0 ? num(rows[i - 1].max) : 0;
+    if (cur.max == null) return `Q${fmt(prev)} en adelante`;
+    if (cur.max === "") return `Desde Q${fmt(prev)} (poné el tope →)`;
     if (i === 0) return `Menos de Q${fmt(cur.max)}`;
-    return `Q${fmt(prevMax)} – Q${fmt(Number(cur.max) - 0.01)}`;
+    return `Q${fmt(prev)} – Q${fmt(num(cur.max) - 0.01)}`;
   };
 
   return (
@@ -69,28 +75,28 @@ function ProfitTiers({ tiers, editable, onChange }) {
           </tr>
         </thead>
         <tbody>
-          {sorted.map((t, i) => (
+          {rows.map((t, i) => (
             <tr key={i} className="border-t border-slate-100 dark:border-slate-700">
               <td className="px-3 py-2 text-slate-600 dark:text-slate-300">{rangeText(i)}</td>
               <td className="px-3 py-2">
                 {t.max == null ? (
                   <span className="text-xs text-slate-400 italic">en adelante</span>
                 ) : (
-                  <input type="number" min="0" step="1" disabled={!editable}
+                  <input type="number" min="0" step="1" disabled={!editable} placeholder="0"
                          className="w-full border border-slate-300 dark:border-slate-600 rounded px-2 py-1.5 text-sm tabular-nums"
-                         value={t.max} onChange={(e) => setRow(i, "max", e.target.value)} />
+                         value={t.max ?? ""} onChange={(e) => setRow(i, "max", e.target.value)} onBlur={sortOnBlur} />
                 )}
               </td>
               <td className="px-3 py-2">
                 <div className="flex items-center gap-1">
-                  <input type="number" min="0" max="100" step="0.5" disabled={!editable}
+                  <input type="number" min="0" max="100" step="0.5" disabled={!editable} placeholder="0"
                          className="w-full border border-slate-300 dark:border-slate-600 rounded px-2 py-1.5 text-sm tabular-nums"
-                         value={t.percent} onChange={(e) => setRow(i, "percent", e.target.value)} />
+                         value={t.percent ?? ""} onChange={(e) => setRow(i, "percent", e.target.value)} />
                   <span className="text-slate-400">%</span>
                 </div>
               </td>
               <td className="px-2 py-2 text-center">
-                {editable && sorted.length > 1 && t.max != null && (
+                {editable && rows.length > 1 && t.max != null && (
                   <button type="button" onClick={() => rmRow(i)} title="Quitar rango"
                           className="no-anim inline-flex items-center justify-center w-7 h-7 rounded-lg text-rose-500 hover:bg-rose-100 dark:text-rose-400 dark:hover:bg-rose-900/30 font-bold transition">✕</button>
                 )}
