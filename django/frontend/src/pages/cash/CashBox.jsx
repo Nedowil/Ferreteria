@@ -197,6 +197,44 @@ export default function CashBox() {
         )
       ) : (
         <>
+          {/* Cambios de responsable del turno: banner destacado y muy visible. */}
+          {session.handovers?.length > 0 && (
+            <div className="mb-5 rounded-2xl border-2 border-amber-300 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-900/20 shadow-md overflow-hidden">
+              <div className="flex items-center gap-2.5 px-5 py-3 bg-gradient-to-r from-amber-400 to-orange-500 text-white">
+                <span className="text-xl">🔄</span>
+                <span className="font-bold text-base sm:text-lg drop-shadow-sm">Cambios de responsable en este turno</span>
+                <span className="ml-auto bg-white/25 rounded-full px-2.5 py-0.5 text-sm font-bold">{session.handovers.length}</span>
+              </div>
+              <ul className="divide-y divide-amber-200 dark:divide-amber-500/20">
+                {session.handovers.map((h) => (
+                  <li key={h.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-3">
+                    <span className="tabular-nums text-sm font-semibold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/40 rounded-md px-2 py-0.5">
+                      {new Date(h.handed_at).toLocaleTimeString("es-GT", { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                    <span className="text-base font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                      {h.from_name || "—"}
+                      <span className="text-amber-500 text-lg">→</span>
+                      {h.to_name
+                        ? h.to_name
+                        : <span className="italic font-medium text-slate-400">en espera</span>}
+                    </span>
+                    {h.difference != null && (
+                      <span className={"text-sm font-bold rounded-full px-2.5 py-0.5 " +
+                        (Number(h.difference) < 0
+                          ? "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300"
+                          : Number(h.difference) > 0
+                            ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+                            : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300")}>
+                        contó {money(h.counted_cash)} · dif {money(h.difference)}
+                      </span>
+                    )}
+                    {h.notes && <span className="text-sm text-slate-500 dark:text-slate-400 italic">· {h.notes}</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {/* Tarjetas de color arriba (solo si NO es cuadre a ciegas). */}
           {!blind && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
@@ -309,25 +347,6 @@ export default function CashBox() {
                   </div>
                 )}
               </div>
-              {session.handovers?.length > 0 && (
-                <div className="px-5 py-3 border-b border-slate-100 dark:border-slate-700 bg-amber-50/60 dark:bg-amber-900/10">
-                  <div className="text-xs font-semibold text-amber-700 dark:text-amber-300 mb-1.5">🔄 Cambios de responsable en este turno</div>
-                  <ul className="space-y-1">
-                    {session.handovers.map((h) => (
-                      <li key={h.id} className="text-xs text-slate-600 dark:text-slate-300 flex flex-wrap items-center gap-x-2">
-                        <span className="tabular-nums text-slate-400">{new Date(h.handed_at).toLocaleTimeString("es-GT", { hour: "2-digit", minute: "2-digit" })}</span>
-                        <span><b>{h.from_name || "—"}</b> → <b>{h.to_name || "en espera"}</b></span>
-                        {h.difference != null && (
-                          <span className={Number(h.difference) < 0 ? "text-rose-600 dark:text-rose-400" : Number(h.difference) > 0 ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"}>
-                            (contó {money(h.counted_cash)}, dif {money(h.difference)})
-                          </span>
-                        )}
-                        {h.notes && <span className="text-slate-400 italic">· {h.notes}</span>}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
               {blind ? (
                 <div className="px-5 py-12 text-center text-slate-400 text-sm">
                   🔒 El detalle de movimientos y montos solo lo ve el supervisor.<br />
