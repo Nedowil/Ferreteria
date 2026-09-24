@@ -108,10 +108,10 @@ export default function QuotationForm() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
         <div className="lg:col-span-2 space-y-5">
           {/* Datos de la cotización */}
-          <section className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-            <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-slate-100 dark:border-slate-700">
-              <span className="w-8 h-8 rounded-lg inline-flex items-center justify-center text-base" style={{ background: "#dbeafe" }}>👤</span>
-              <h3 className="font-semibold">Datos de la cotización</h3>
+          <section className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 border-l-4 shadow-sm overflow-hidden" style={{ borderLeftColor: "#3b82f6" }}>
+            <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-slate-100 dark:border-slate-700" style={{ background: "#3b82f612" }}>
+              <span className="w-9 h-9 rounded-lg inline-flex items-center justify-center text-base shadow-sm" style={{ background: "#3b82f626" }}>👤</span>
+              <h3 className="font-semibold" style={{ color: "#3b82f6" }}>Datos de la cotización</h3>
             </div>
             <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2">
@@ -132,10 +132,10 @@ export default function QuotationForm() {
           </section>
 
           {/* Productos */}
-          <section className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-            <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-slate-100 dark:border-slate-700">
-              <span className="w-8 h-8 rounded-lg inline-flex items-center justify-center text-base" style={{ background: "#dcfce7" }}>📦</span>
-              <h3 className="font-semibold">Productos</h3>
+          <section className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 border-l-4 shadow-sm overflow-hidden" style={{ borderLeftColor: "#10b981" }}>
+            <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-slate-100 dark:border-slate-700" style={{ background: "#10b98112" }}>
+              <span className="w-9 h-9 rounded-lg inline-flex items-center justify-center text-base shadow-sm" style={{ background: "#10b98126" }}>📦</span>
+              <h3 className="font-semibold" style={{ color: "#10b981" }}>Productos</h3>
             </div>
             <div className="p-5">
               <div className="flex gap-2 mb-3">
