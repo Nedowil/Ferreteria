@@ -113,7 +113,7 @@ export default function CashSessions() {
                         {relevos.map((h) => (
                           <li key={h.id} className="text-xs text-slate-600 dark:text-slate-300 flex flex-wrap items-center gap-x-2">
                             <span className="tabular-nums text-slate-400">{new Date(h.handed_at).toLocaleString("es-GT")}</span>
-                            <span><b>{h.from_name || "—"}</b> → <b>{h.to_name || "—"}</b></span>
+                            <span><b>{h.from_name || "—"}</b> → <b>{h.to_name || "en espera"}</b></span>
                             {h.difference != null && (
                               <span className={Number(h.difference) < 0 ? "text-rose-600 dark:text-rose-400" : Number(h.difference) > 0 ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"}>
                                 (contó {money(h.counted_cash)}, esperado {money(h.expected_cash)}, dif {money(h.difference)})

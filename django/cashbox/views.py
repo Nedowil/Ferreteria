@@ -61,6 +61,9 @@ class CashSessionViewSet(PermissionByActionMixin, viewsets.ReadOnlyModelViewSet)
         session = services.active_session(
             branch=get_request_branch(request), user=request.user
         )
+        # Relevo automático: si la caja fue entregada (sin destinatario), el primer
+        # usuario DISTINTO que la abre con su perfil queda como responsable.
+        services.claim_responsible_if_pending(session, request.user)
         data = CashSessionDetailSerializer(session, context={"request": request}).data if session else None
         return Response({"session": data})
 

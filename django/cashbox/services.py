@@ -102,6 +102,9 @@ def register_sale(sale):
     session = active_session(branch=sale.branch, user=sale.user)
     if session is None:
         return None
+    # Si la caja fue entregada y aún no tiene responsable, quien registra la
+    # venta (con su perfil) la toma automáticamente.
+    claim_responsible_if_pending(session, sale.user)
     sale.cash_session = session
     sale.save(update_fields=["cash_session", "updated_at"])
     # Efectivo (o monto) que realmente queda registrado por la venta:
@@ -170,10 +173,34 @@ def hand_over(session, counted_cash, *, from_user=None, to_user=None, to_name=No
         handed_at=timezone.now(), expected_cash=expected, counted_cash=counted,
         difference=counted - expected, notes=notes,
     )
-    if to_user is not None:
-        session.responsible = to_user
-        session.save(update_fields=["responsible", "updated_at"])
+    # Con destinatario explícito queda como responsable. Sin destinatario (caso
+    # normal), la caja queda EN ESPERA: el próximo usuario distinto que la use
+    # con su perfil queda como responsable automáticamente (claim_responsible_if_pending).
+    session.responsible = to_user  # None = en espera de relevo
+    session.save(update_fields=["responsible", "updated_at"])
     return handover
+
+
+def claim_responsible_if_pending(session, user):
+    """Asigna al responsable de una caja ENTREGADA (relevo sin destinatario).
+
+    El primer usuario DISTINTO al que la entregó que abra/use la caja con su
+    perfil queda como nuevo responsable, y se completa el registro del relevo.
+    Es idempotente: si ya hay responsable o no hay relevo pendiente, no hace nada.
+    """
+    if session is None or not session.is_open:
+        return
+    if not user or not getattr(user, "id", None) or session.responsible_id is not None:
+        return
+    pending = (session.handovers.filter(to_user__isnull=True)
+               .order_by("-handed_at").first())
+    if not pending or pending.from_user_id == user.id:
+        return
+    session.responsible = user
+    session.save(update_fields=["responsible", "updated_at"])
+    pending.to_user = user
+    pending.to_name = getattr(user, "name", None) or None
+    pending.save(update_fields=["to_user", "to_name"])
 
 
 @transaction.atomic

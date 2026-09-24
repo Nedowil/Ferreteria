@@ -36,10 +36,10 @@ export default function CashBox() {
   const [opening, setOpening] = useState({ opening_amount: "", opening_notes: "" });
   const [mov, setMov] = useState({ type: "ingreso", amount: "", description: "" });
   const [counted, setCounted] = useState("");
-  // Cambio de responsable (relevo): el que se va cuenta y entrega su efectivo,
-  // la caja sigue abierta bajo quien recibe.
-  const [handover, setHandover] = useState({ counted_cash: "", to_user: "", to_name: "", notes: "" });
-  const [staff, setStaff] = useState([]);
+  // Cambio de responsable (relevo): el que se va cuenta y entrega su efectivo;
+  // la caja sigue abierta y el que la reciba queda registrado solo cuando entra
+  // con su usuario (relevo automático).
+  const [handover, setHandover] = useState({ counted_cash: "", notes: "" });
   const [exporting, setExporting] = useState("");
   const [movPage, setMovPage] = useState(1); // paginación de la tabla de movimientos
   const [movements, setMovements] = useState([]); // página actual de movimientos
@@ -116,28 +116,18 @@ export default function CashBox() {
   };
   useEffect(load, []);
 
-  // Lista liviana de quién puede recibir la caja en un relevo (solo si este
-  // usuario puede hacer el cambio de responsable).
-  useEffect(() => {
-    if (!canHandover) return;
-    api.get("/cashbox/cash-sessions/staff/").then((r) => setStaff(r.data || [])).catch(() => setStaff([]));
-  }, [canHandover]);
-
   const doHandover = async (e) => {
     e.preventDefault(); setError("");
     if (!handover.counted_cash) { setError("Contá el efectivo que estás entregando."); return; }
-    if (!handover.to_user && !handover.to_name.trim()) { setError("Indicá quién recibe la caja."); return; }
     try {
       await api.post(`/cashbox/cash-sessions/${session.id}/handover/`, {
         counted_cash: handover.counted_cash,
-        to_user: handover.to_user || null,
-        to_name: handover.to_name || null,
         notes: handover.notes || null,
       });
-      await dialog.alert("Cambio de responsable registrado. La caja sigue abierta para el nuevo responsable.");
-      setHandover({ counted_cash: "", to_user: "", to_name: "", notes: "" });
+      await dialog.alert("Caja entregada. Queda abierta; el que la reciba quedará registrado cuando entre con su usuario.");
+      setHandover({ counted_cash: "", notes: "" });
       load();
-    } catch (err) { setError(err.response?.data?.detail || "No se pudo registrar el relevo."); }
+    } catch (err) { setError(err.response?.data?.detail || "No se pudo registrar la entrega."); }
   };
 
   const openCash = async (e) => {
@@ -287,23 +277,13 @@ export default function CashBox() {
                     <h3 className="font-semibold flex items-center gap-2">🔄 Cambio de responsable</h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                       ¿Te vas pero la tienda sigue atendiendo? Contá tu efectivo y entregá la caja: <b>no se cierra</b>,
-                      sigue abierta para quien queda. El cierre se hace una sola vez al final del día.
+                      sigue abierta. <b>El que la reciba queda registrado solo</b> cuando entre con su usuario. El cierre
+                      se hace una sola vez al final del día.
                     </p>
                   </div>
                   <input type="number" step="any" placeholder="Efectivo que entregás (contado)" value={handover.counted_cash}
                          onChange={(e) => setHandover({ ...handover, counted_cash: e.target.value })}
                          className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm" />
-                  {staff.length > 0 ? (
-                    <select value={handover.to_user} onChange={(e) => setHandover({ ...handover, to_user: e.target.value })}
-                            className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-800">
-                      <option value="">¿Quién recibe la caja?</option>
-                      {staff.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-                    </select>
-                  ) : (
-                    <input placeholder="¿Quién recibe la caja?" value={handover.to_name}
-                           onChange={(e) => setHandover({ ...handover, to_name: e.target.value })}
-                           className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm" />
-                  )}
                   <input placeholder="Notas (opcional)" value={handover.notes}
                          onChange={(e) => setHandover({ ...handover, notes: e.target.value })}
                          className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm" />
@@ -336,7 +316,7 @@ export default function CashBox() {
                     {session.handovers.map((h) => (
                       <li key={h.id} className="text-xs text-slate-600 dark:text-slate-300 flex flex-wrap items-center gap-x-2">
                         <span className="tabular-nums text-slate-400">{new Date(h.handed_at).toLocaleTimeString("es-GT", { hour: "2-digit", minute: "2-digit" })}</span>
-                        <span><b>{h.from_name || "—"}</b> → <b>{h.to_name || "—"}</b></span>
+                        <span><b>{h.from_name || "—"}</b> → <b>{h.to_name || "en espera"}</b></span>
                         {h.difference != null && (
                           <span className={Number(h.difference) < 0 ? "text-rose-600 dark:text-rose-400" : Number(h.difference) > 0 ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"}>
                             (contó {money(h.counted_cash)}, dif {money(h.difference)})

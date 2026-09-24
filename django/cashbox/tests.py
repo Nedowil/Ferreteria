@@ -71,6 +71,30 @@ class CashServiceTests(TestCase):
         with self.assertRaises(CashError):
             hand_over(s, 100, from_user=self.user)
 
+    def test_relevo_sin_destinatario_lo_toma_el_siguiente(self):
+        from cashbox.services import claim_responsible_if_pending
+        admin = User.objects.create_user(username="ad2", email="ad2@test.com", password="x")
+        s = open_session(self.user, 100, branch=self.branch)
+        # El cajero entrega SIN elegir destinatario: queda en espera.
+        hand_over(s, 100, from_user=self.user)
+        s.refresh_from_db()
+        self.assertIsNone(s.responsible_id)
+        # El MISMO que entregó no la reclama (sigue en espera).
+        claim_responsible_if_pending(s, self.user)
+        s.refresh_from_db()
+        self.assertIsNone(s.responsible_id)
+        # El primer usuario DISTINTO que la usa queda como responsable.
+        claim_responsible_if_pending(s, admin)
+        s.refresh_from_db()
+        self.assertEqual(s.responsible_id, admin.id)
+        ho = s.handovers.first()
+        self.assertEqual(ho.to_user_id, admin.id)  # el relevo queda completo
+        # Ya no se reasigna a otro (idempotente).
+        otro = User.objects.create_user(username="o", email="o@test.com", password="x")
+        claim_responsible_if_pending(s, otro)
+        s.refresh_from_db()
+        self.assertEqual(s.responsible_id, admin.id)
+
     def test_compute_expected_solo_efectivo(self):
         s = open_session(self.user, 100)
         # Venta efectivo 200, venta tarjeta 300 (no cuenta), egreso 50
@@ -199,14 +223,19 @@ class CashPermissionTests(TestCase):
         # NO puede cerrar (403).
         r_close = cc.post(f"/api/cashbox/cash-sessions/{s.id}/close/", {"counted_cash": "150"}, format="json")
         self.assertEqual(r_close.status_code, 403)
-        # SÍ puede entregar (relevo) al admin.
+        # SÍ puede entregar (relevo) sin elegir destinatario: queda en espera.
         r_ho = cc.post(f"/api/cashbox/cash-sessions/{s.id}/handover/",
-                       {"counted_cash": "150", "to_user": self.admin.id}, format="json")
+                       {"counted_cash": "150"}, format="json")
         self.assertEqual(r_ho.status_code, 200)
         s.refresh_from_db()
         self.assertTrue(s.is_open)                  # sigue abierta
+        self.assertIsNone(s.responsible_id)         # en espera de relevo
+        # Cuando el ADMIN abre la caja con su perfil, la toma automáticamente.
+        admin_c = self._c("ad@t.com")
+        admin_c.get("/api/cashbox/cash-sessions/current/")
+        s.refresh_from_db()
         self.assertEqual(s.responsible_id, self.admin.id)
-        # El admin sí puede cerrar.
-        r_admin = self._c("ad@t.com").post(f"/api/cashbox/cash-sessions/{s.id}/close/",
-                                           {"counted_cash": "150"}, format="json")
+        # Y el admin sí puede cerrar.
+        r_admin = admin_c.post(f"/api/cashbox/cash-sessions/{s.id}/close/",
+                               {"counted_cash": "150"}, format="json")
         self.assertEqual(r_admin.status_code, 200)
