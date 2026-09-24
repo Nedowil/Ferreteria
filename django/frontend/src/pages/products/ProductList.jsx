@@ -832,7 +832,7 @@ export default function ProductList() {
 
   const remove = async (p) => {
     const nombre = p.name + (p.sku ? ` (${p.sku})` : "");
-    if (!(await dialog.confirm(`El producto "${nombre}" se moverá a la papelera. Podés restaurarlo desde ahí; si nadie lo recupera, se borra solo al vencer el plazo. ¿Continuar?`, { danger: true, okText: "Mover a papelera" }))) return;
+    if (!(await dialog.confirm(`¿Estás seguro de que deseas eliminar el producto "${nombre}"? Quedará en la papelera por si necesitás restaurarlo.`, { danger: true, okText: "Eliminar" }))) return;
     await api.delete(`/inventory/products/${p.id}/`);
     load();
   };
