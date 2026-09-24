@@ -10,9 +10,9 @@ import { printZpl } from "../../utils/zebraBrowserPrint";
 // Enlace a la auditoría del producto (quién lo creó, editó o eliminó).
 const historyLink = (id) => `/admin/auditoria?type=inventory.Product&q=${id}`;
 
-// La "Marca" no se usa por el momento: se oculta el filtro. Para reactivarla,
-// poné SHOW_MARCA = true (y descomentar el enlace del menú en Layout).
-const SHOW_MARCA = false;
+// La "Marca" está activa: se muestra el filtro. Para ocultarlo otra vez, poné
+// SHOW_MARCA = false.
+const SHOW_MARCA = true;
 
 // Genera un <svg> de código de barras (EAN-13 si son 13 dígitos, si no Code128)
 // y devuelve su HTML. Igual criterio que la etiqueta Zebra del backend.

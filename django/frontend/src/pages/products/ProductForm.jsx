@@ -16,9 +16,9 @@ const EMPTY = {
   ubicacion: "",
 };
 
-// La "Marca" no se usa por el momento: se oculta del formulario, del filtro y
-// del menú. Para volver a mostrarla, poné SHOW_MARCA = true.
-const SHOW_MARCA = false;
+// La "Marca" se muestra en el formulario, el filtro y el menú. Para ocultarla
+// otra vez, poné SHOW_MARCA = false.
+const SHOW_MARCA = true;
 
 // Parsea "1/2", "0,5", "10" -> número (0 si inválido)
 function parseFrac(s) {
