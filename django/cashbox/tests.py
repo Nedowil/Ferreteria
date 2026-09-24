@@ -159,3 +159,54 @@ class BlindCashApiTests(TestCase):
         # El cajero NO puede ver el historial (listado de sesiones); el supervisor sí.
         self.assertEqual(self._client("c@test.com").get("/api/cashbox/cash-sessions/").status_code, 403)
         self.assertEqual(self._client("a@test.com").get("/api/cashbox/cash-sessions/").status_code, 200)
+
+
+class CashPermissionTests(TestCase):
+    """Permisos: el cajero ENTREGA la caja (relevo) pero NO la cierra; el admin
+    sí la cierra."""
+
+    def setUp(self):
+        from django.contrib.auth.models import Group
+        from core.models import Branch as B
+        from core.permissions import ROLE_MATRIX, sync_permissions
+        self.branch = B.objects.create(name="Matriz", code="M", is_main=True)
+        perms = sync_permissions()
+        for role, codes in ROLE_MATRIX.items():
+            g, _ = Group.objects.get_or_create(name=role)
+            g.permissions.set([perms[c] for c in codes if c in perms])
+        self.admin = User.objects.create_user(username="ad", email="ad@t.com", password="x123", is_superuser=True)
+        self.cajero = User.objects.create_user(username="ca", email="ca@t.com", password="x123")
+        self.cajero.groups.add(Group.objects.get(name="vendedor"))
+
+    def _c(self, email):
+        from rest_framework.test import APIClient
+        c = APIClient()
+        r = c.post("/api/auth/token/", {"email": email, "password": "x123"}, format="json")
+        c.credentials(HTTP_AUTHORIZATION=f"Bearer {r.json()['access']}", HTTP_X_BRANCH_ID=str(self.branch.id))
+        return c
+
+    def test_cajero_no_tiene_cerrar_pero_si_entregar(self):
+        from core.permissions import user_permission_codenames
+        codes = user_permission_codenames(self.cajero)
+        self.assertNotIn("caja.cerrar", codes)      # el cajero ya no cierra
+        self.assertIn("caja.movimientos", codes)    # pero sí opera la caja
+
+    def test_cajero_entrega_pero_no_cierra(self):
+        # El cajero abre la caja de la sucursal y hace una venta.
+        s = open_session(self.cajero, 100, branch=self.branch)
+        CashMovement.objects.create(session=s, type=CashMovement.VENTA, payment_method="efectivo", amount=50)
+        cc = self._c("ca@t.com")
+        # NO puede cerrar (403).
+        r_close = cc.post(f"/api/cashbox/cash-sessions/{s.id}/close/", {"counted_cash": "150"}, format="json")
+        self.assertEqual(r_close.status_code, 403)
+        # SÍ puede entregar (relevo) al admin.
+        r_ho = cc.post(f"/api/cashbox/cash-sessions/{s.id}/handover/",
+                       {"counted_cash": "150", "to_user": self.admin.id}, format="json")
+        self.assertEqual(r_ho.status_code, 200)
+        s.refresh_from_db()
+        self.assertTrue(s.is_open)                  # sigue abierta
+        self.assertEqual(s.responsible_id, self.admin.id)
+        # El admin sí puede cerrar.
+        r_admin = self._c("ad@t.com").post(f"/api/cashbox/cash-sessions/{s.id}/close/",
+                                           {"counted_cash": "150"}, format="json")
+        self.assertEqual(r_admin.status_code, 200)

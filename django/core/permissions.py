@@ -117,7 +117,9 @@ ROLE_MATRIX = {
     ],
     "vendedor": [
         "productos.ver", "clientes.ver", "clientes.crear", "clientes.editar",
-        "ventas.ver", "ventas.crear", "caja.ver", "caja.abrir", "caja.cerrar",
+        # El cajero abre y opera la caja, pero NO la cierra: al terminar su turno
+        # ENTREGA la caja (cambio de responsable) y el admin es quien la cierra.
+        "ventas.ver", "ventas.crear", "caja.ver", "caja.abrir",
         "caja.movimientos", "cotizaciones.ver", "cotizaciones.crear",
         "cotizaciones.convertir", "cotizaciones.cancelar", "facturas.ver", "facturas.emitir",
         "cuentas_cobrar.ver", "devoluciones.ver", "devoluciones.crear", "mermas.reportar",

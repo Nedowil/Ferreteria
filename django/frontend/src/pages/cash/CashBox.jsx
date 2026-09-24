@@ -26,6 +26,10 @@ const typeDot = (t) => TYPE_DOT[t] || "#94a3b8";
 
 export default function CashBox() {
   const { can } = useAuth();
+  // Solo quien puede CERRAR ve el arqueo/cierre (el admin). Los demás que operan
+  // la caja (cajeros) solo pueden ENTREGARLA (cambio de responsable).
+  const canClose = can("caja.cerrar");
+  const canHandover = !canClose && (can("caja.movimientos") || can("caja.abrir"));
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -115,9 +119,9 @@ export default function CashBox() {
   // Lista liviana de quién puede recibir la caja en un relevo (solo si este
   // usuario puede hacer el cambio de responsable).
   useEffect(() => {
-    if (!can("caja.cerrar")) return;
+    if (!canHandover) return;
     api.get("/cashbox/cash-sessions/staff/").then((r) => setStaff(r.data || [])).catch(() => setStaff([]));
-  }, [can]);
+  }, [canHandover]);
 
   const doHandover = async (e) => {
     e.preventDefault(); setError("");
@@ -254,6 +258,7 @@ export default function CashBox() {
                 <button className="w-full text-white rounded-lg px-4 py-2.5 text-sm font-semibold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 transition">Registrar</button>
               </form>
 
+              {canClose && (
               <form onSubmit={closeCash} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 space-y-3">
                 <h3 className="font-semibold">Arqueo y cierre</h3>
                 <input type="number" step="any" required placeholder="Efectivo contado" value={counted}
@@ -272,9 +277,11 @@ export default function CashBox() {
                 )}
                 <button className="w-full text-white rounded-lg px-4 py-2.5 text-sm font-semibold bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 transition">Cerrar caja</button>
               </form>
+              )}
 
-              {/* Cambio de responsable (relevo): seguir vendiendo sin cerrar. */}
-              {can("caja.cerrar") && (
+              {/* Cambio de responsable (relevo): seguir vendiendo sin cerrar.
+                  Lo ven los que operan la caja pero NO pueden cerrarla. */}
+              {canHandover && (
                 <form onSubmit={doHandover} className="bg-white dark:bg-slate-800 rounded-xl border border-amber-200 dark:border-amber-500/30 shadow-sm p-5 space-y-3">
                   <div>
                     <h3 className="font-semibold flex items-center gap-2">🔄 Cambio de responsable</h3>

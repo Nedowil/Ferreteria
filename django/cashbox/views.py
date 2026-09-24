@@ -27,8 +27,11 @@ class CashSessionViewSet(PermissionByActionMixin, viewsets.ReadOnlyModelViewSet)
         # supervisor/admin. El cajero solo ve SU caja abierta con 'current'.
         "list": "caja.ver_esperado", "retrieve": "caja.ver_esperado", "current": "caja.ver",
         "open": "caja.abrir", "close": "caja.cerrar", "movement": "caja.movimientos",
-        # El cambio de responsable (relevo) lo hace quien puede cerrar la caja.
-        "handover": "caja.cerrar", "staff": "caja.cerrar",
+        # El cambio de responsable (relevo) lo hace quien OPERA la caja aunque no
+        # pueda cerrarla (el cajero entrega; solo el admin cierra). Por eso NO
+        # exige 'caja.cerrar', sino cualquier permiso de operación de caja.
+        "handover": ("caja.movimientos", "caja.abrir", "caja.cerrar"),
+        "staff": ("caja.movimientos", "caja.abrir", "caja.cerrar"),
         # Ver la LISTA de movimientos (montos) es del supervisor: revela el
         # efectivo esperado. El cajero a ciegas no la ve (igual que antes).
         "movements": "caja.ver_esperado",
