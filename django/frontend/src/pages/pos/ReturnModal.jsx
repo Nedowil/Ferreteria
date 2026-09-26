@@ -111,7 +111,8 @@ export default function ReturnModal({ onClose, initialFolio = "" }) {
                   <div className="px-4 py-2 bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-700 text-sm font-semibold text-slate-700 dark:text-slate-200">
                     {sale.folio} — {sale.customer_name || "Consumidor final"}
                   </div>
-                  <table className="w-full text-sm">
+                  <div className="overflow-x-auto">
+                  <table className="w-full text-sm min-w-[420px]">
                     <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
                       <tr><th className="px-3 py-2">Producto</th><th className="px-3 py-2 text-right">Comprado</th>
                           <th className="px-3 py-2 text-right">Precio</th><th className="px-3 py-2 text-right w-28">A devolver</th></tr>
@@ -134,6 +135,7 @@ export default function ReturnModal({ onClose, initialFolio = "" }) {
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
