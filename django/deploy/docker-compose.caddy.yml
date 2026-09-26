@@ -1,0 +1,27 @@
+# Overlay opcional: pone Caddy (TLS automático) delante de la app.
+# Ejecutar desde el directorio django/:
+#   DOMAIN=tu-dominio.com docker compose \
+#     -f docker-compose.yml -f deploy/docker-compose.caddy.yml up -d --build
+#
+# Caddy obtiene y renueva el certificado solo; el dominio debe apuntar (DNS) a
+# este servidor y los puertos 80/443 estar accesibles.
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - web
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:-ferreteria.example.com}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

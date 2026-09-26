@@ -1,0 +1,481 @@
+"""Tests del módulo de Ventas (POS)."""
+
+from decimal import Decimal
+
+from django.contrib.auth import get_user_model
+from django.test import TestCase
+
+from cashbox.models import CashMovement
+from cashbox.services import open_session
+from core.models import Branch
+from inventory.models import Product
+from partners.models import Customer
+from .models import Sale
+from .services import (
+    SaleError, cancel_sale, create_sale, register_payment, register_print, sync_offline_sale,
+)
+
+User = get_user_model()
+
+
+class SaleServiceTests(TestCase):
+    def setUp(self):
+        self.branch = Branch.objects.create(name="Matriz", code="M", is_main=True)
+        self.user = User.objects.create_user(username="v", email="v@test.com", password="x")
+        self.prod = Product.objects.create(
+            sku="S-1", name="Cemento", purchase_price=Decimal("60"), sale_price=Decimal("85"),
+            stock=Decimal("100"), tax_type="iva", base_unit_label="bolsa",
+        )
+
+    def _venta_simple(self, qty="3", paid="300"):
+        return create_sale(
+            {"payment_method": "efectivo", "paid_amount": paid},
+            [{"product_id": self.prod.id, "quantity": qty, "unit_price": "85", "tax_type": "iva"}],
+            user=self.user, branch=self.branch,
+        )
+
+    def test_efectivo_obligatorio_sin_recibido_falla(self):
+        # Con la opción activa, no se puede cobrar contado sin el efectivo recibido.
+        with self.assertRaises(SaleError):
+            create_sale(
+                {"payment_method": "efectivo"},  # sin paid_amount
+                [{"product_id": self.prod.id, "quantity": "1", "unit_price": "85", "tax_type": "iva"}],
+                user=self.user, branch=self.branch, require_cash_received=True,
+            )
+
+    def test_efectivo_obligatorio_con_recibido_ok(self):
+        sale = create_sale(
+            {"payment_method": "efectivo", "paid_amount": "100"},
+            [{"product_id": self.prod.id, "quantity": "1", "unit_price": "85", "tax_type": "iva"}],
+            user=self.user, branch=self.branch, require_cash_received=True,
+        )
+        self.assertEqual(sale.change_amount, Decimal("15.00"))  # 100 - 85
+
+    def test_venta_totales_iva_incluido_y_vuelto(self):
+        sale = self._venta_simple()
+        self.assertEqual(sale.total, Decimal("255.00"))          # 3 * 85
+        self.assertEqual(sale.tax, Decimal("27.32"))             # 255 - 255/1.12
+        self.assertEqual(sale.change_amount, Decimal("45.00"))   # 300 - 255
+        self.assertEqual(sale.payment_status, Sale.PAY_PAGADA)
+
+    def test_ganancia_en_listado_solo_admin(self):
+        # La columna "Ganancia" del listado (total − costo histórico) solo se
+        # serializa para admin. Venta: total 255, costo 3×60 = 180 ⇒ ganancia 75.
+        from types import SimpleNamespace
+        from core.models import User
+        from .serializers import SaleListSerializer
+        sale = self._venta_simple()
+        admin = User.objects.create_user(username="a", email="a@t.com", password="x", is_superuser=True)
+        data_admin = SaleListSerializer(sale, context={"request": SimpleNamespace(user=admin)}).data
+        self.assertEqual(Decimal(str(data_admin["profit"])), Decimal("75.00"))
+        # Un usuario normal (no admin) ni siquiera recibe el campo.
+        data_user = SaleListSerializer(sale, context={"request": SimpleNamespace(user=self.user)}).data
+        self.assertNotIn("profit", data_user)
+
+    def test_ganancia_por_partida_solo_admin(self):
+        # En el detalle de venta, cada partida trae costo y ganancia solo para
+        # admin; para un usuario normal esos campos vienen en None.
+        from types import SimpleNamespace
+        from core.models import User
+        from .serializers import SaleDetailSerializer
+        sale = self._venta_simple()  # 3 × 85 = 255, costo 3×60 = 180 ⇒ ganancia 75
+        admin = User.objects.create_user(username="ad", email="ad@t.com", password="x", is_superuser=True)
+        it = SaleDetailSerializer(sale, context={"request": SimpleNamespace(user=admin)}).data["items"][0]
+        self.assertEqual(Decimal(str(it["unit_cost"])), Decimal("60.00"))
+        self.assertEqual(Decimal(str(it["profit"])), Decimal("75.00"))
+        it2 = SaleDetailSerializer(sale, context={"request": SimpleNamespace(user=self.user)}).data["items"][0]
+        self.assertIsNone(it2["unit_cost"])
+        self.assertIsNone(it2["profit"])
+
+    def test_ganancia_none_en_venta_cancelada(self):
+        from types import SimpleNamespace
+        from core.models import User
+        from .serializers import SaleListSerializer
+        sale = self._venta_simple()
+        sale.status = Sale.STATUS_CANCELADA
+        sale.save()
+        admin = User.objects.create_user(username="a2", email="a2@t.com", password="x", is_superuser=True)
+        data = SaleListSerializer(sale, context={"request": SimpleNamespace(user=admin)}).data
+        self.assertIsNone(data["profit"])
+
+    def test_venta_descuenta_stock(self):
+        self._venta_simple()
+        self.prod.refresh_from_db()
+        self.assertEqual(self.prod.stock, Decimal("97.00"))
+
+    def test_sync_offline_idempotente(self):
+        # Sincronizar la misma venta offline dos veces = una sola venta.
+        entry = {
+            "offline_uuid": "uuid-xyz", "payment_method": "efectivo",
+            "payment_status": "pagada", "paid_amount": "170",
+            "items": [{"product_id": self.prod.id, "quantity": "2", "unit_price": "85", "units_factor": "1"}],
+        }
+        r1 = sync_offline_sale(entry, user=self.user, branch=self.branch)
+        r2 = sync_offline_sale(entry, user=self.user, branch=self.branch)
+        self.assertTrue(r1["ok"])
+        self.assertNotIn("duplicate", r1)
+        self.assertTrue(r2["ok"] and r2["duplicate"])
+        self.assertEqual(r1["id"], r2["id"])
+        self.assertEqual(Sale.objects.filter(offline_uuid="uuid-xyz").count(), 1)
+        self.prod.refresh_from_db()
+        self.assertEqual(self.prod.stock, Decimal("98.00"))  # descuenta una sola vez
+
+    def test_sync_offline_sin_uuid(self):
+        r = sync_offline_sale({"items": []}, user=self.user, branch=self.branch)
+        self.assertFalse(r["ok"])
+
+    def test_sync_offline_conflicto_sin_stock(self):
+        # Venta offline de más unidades de las que hay: se devuelve conflicto,
+        # NO se registra ni se toca el stock (espera decisión del supervisor).
+        entry = {
+            "offline_uuid": "uuid-conf", "payment_method": "efectivo",
+            "payment_status": "pagada", "paid_amount": "8500",
+            "items": [{"product_id": self.prod.id, "quantity": "100", "unit_price": "85", "units_factor": "1"}],
+        }
+        # Dejar el stock en 5 para forzar el faltante.
+        self.prod.stock = Decimal("5")
+        self.prod.save(update_fields=["stock"])
+        r = sync_offline_sale(entry, user=self.user, branch=self.branch)
+        self.assertFalse(r["ok"])
+        self.assertTrue(r.get("conflict"))
+        self.assertEqual(Sale.objects.filter(offline_uuid="uuid-conf").count(), 0)
+        self.prod.refresh_from_db()
+        self.assertEqual(self.prod.stock, Decimal("5"))  # intacto
+
+    def test_sync_offline_forzada_permite_stock_negativo(self):
+        # El supervisor decide registrar la venta que ya se cobró: se crea con
+        # stock negativo (alerta de ajuste) y queda constancia en las notas.
+        self.prod.stock = Decimal("5")
+        self.prod.save(update_fields=["stock"])
+        entry = {
+            "offline_uuid": "uuid-forz", "payment_method": "efectivo",
+            "payment_status": "pagada", "paid_amount": "850", "force": True,
+            "items": [{"product_id": self.prod.id, "quantity": "10", "unit_price": "85", "units_factor": "1"}],
+        }
+        r = sync_offline_sale(entry, user=self.user, branch=self.branch)
+        self.assertTrue(r["ok"])
+        sale = Sale.objects.get(offline_uuid="uuid-forz")
+        self.assertIn("ajustar inventario", (sale.notes or ""))
+        self.prod.refresh_from_db()
+        self.assertEqual(self.prod.stock, Decimal("-5"))  # 5 - 10
+
+    def test_reimpresion_marca_copia_y_deja_rastro(self):
+        # La 1ª impresión es ORIGINAL; de la 2ª en adelante es COPIA y se cuenta.
+        from audit.models import AuditLog
+        sale = self._venta_simple()
+        r1 = register_print(sale, user=self.user)
+        self.assertEqual(r1["copy_number"], 1)
+        self.assertFalse(r1["is_reprint"])
+        r2 = register_print(sale, user=self.user)
+        self.assertEqual(r2["copy_number"], 2)
+        self.assertTrue(r2["is_reprint"])
+        sale.refresh_from_db()
+        self.assertEqual(sale.print_count, 2)
+        self.assertIsNotNone(sale.first_printed_at)
+        self.assertEqual(sale.last_printed_by_id, self.user.id)
+        # La copia deja un registro explícito en la bitácora de auditoría.
+        self.assertTrue(
+            AuditLog.objects.filter(auditable_type="sales.Sale", auditable_id=str(sale.pk),
+                                    description__icontains="Reimpresión").exists()
+        )
+
+    def test_ticket_escpos_estampa_marca_de_agua(self):
+        from billing.services import build_ticket
+        from billing import printing
+        sale = self._venta_simple()
+        ticket = build_ticket(sale)
+        reprint = {"copy_number": 2, "printed_at": None, "printed_by": "Juan"}
+        data = printing.build_ticket_escpos(ticket, width_mm=80, reprint=reprint)
+        self.assertIn(b"COPIA", data)
+        self.assertIn(b"REIMPRESION", data)
+        # Sin reprint no debe aparecer la marca.
+        limpio = printing.build_ticket_escpos(ticket, width_mm=80)
+        self.assertNotIn(b"REIMPRESION", limpio)
+
+    def test_venta_con_fecha_personalizada(self):
+        # Regresión: una fecha explícita no debe romper la creación de la venta.
+        sale = create_sale(
+            {"payment_method": "efectivo", "paid_amount": "300", "date": "2026-07-01"},
+            [{"product_id": self.prod.id, "quantity": "1", "unit_price": "85"}],
+            user=self.user, branch=self.branch,
+        )
+        self.assertEqual(sale.date.date().isoformat(), "2026-07-01")
+
+    def test_venta_con_descuento_global(self):
+        # Descuento global de Q55 sobre 3×85=255 → total 200 (IVA incluido).
+        # (special_authorized: el descuento baja el neto por debajo de la ganancia
+        # mínima del rango barato; aquí solo se valida la matemática del total.)
+        sale = create_sale(
+            {"payment_method": "efectivo", "paid_amount": "200", "discount": "55"},
+            [{"product_id": self.prod.id, "quantity": "3", "unit_price": "85", "tax_type": "iva"}],
+            user=self.user, branch=self.branch, special_authorized=True,
+        )
+        self.assertEqual(sale.discount, Decimal("55.00"))
+        self.assertEqual(sale.total, Decimal("200.00"))
+        self.assertEqual(sale.change_amount, Decimal("0.00"))
+
+    def test_descuenta_por_units_factor(self):
+        # Vender 2 cajas con factor 10 -> descuenta 20 del stock físico. El precio
+        # por caja (700) va por encima del costo (60/u × 10 = 600), como debe ser.
+        create_sale(
+            {"payment_method": "efectivo", "paid_amount": "1400"},
+            [{"product_id": self.prod.id, "quantity": "2", "unit_price": "700",
+              "units_factor": "10", "unit_label": "caja"}],
+            user=self.user, branch=self.branch,
+        )
+        self.prod.refresh_from_db()
+        self.assertEqual(self.prod.stock, Decimal("80.00"))
+
+    def test_descuento_grande_pero_rentable_no_requiere_autorizacion(self):
+        # Ganancia mínima POR RANGO de precio. Estufa: costo 1200, precio 1800
+        # (rango Q1,000–9,999 ⇒ 4%, mínimo 1248). Bajarla a 1330 es 26% de
+        # descuento pero deja Q130 (>4%): pasa sin autorización.
+        estufa = Product.objects.create(
+            sku="S-ESTUFA", name="Estufa", purchase_price=Decimal("1200"),
+            sale_price=Decimal("1800"), stock=Decimal("50"), tax_type="iva",
+        )
+        sale = create_sale(
+            {"payment_method": "efectivo", "paid_amount": "1400", "discount": "470"},
+            [{"product_id": estufa.id, "quantity": "1", "unit_price": "1800"}],
+            user=self.user, branch=self.branch,
+        )
+        self.assertEqual(sale.total, Decimal("1330.00"))
+        # Mínimo aceptable = 4% ⇒ 1248. A 1240 (deja solo Q40) sí pide autorización.
+        with self.assertRaises(SaleError):
+            create_sale(
+                {"payment_method": "efectivo", "paid_amount": "1400", "discount": "560"},
+                [{"product_id": estufa.id, "quantity": "1", "unit_price": "1800"}],
+                user=self.user, branch=self.branch,
+            )
+
+    def test_ganancia_minima_por_rango_precio_alto(self):
+        # Caso máquina: costo 2500, precio 2900 (rango Q1,000–9,999 ⇒ 4%, mínimo
+        # 2600). Venderla a 2625 deja Q125 (5% > 4%): pasa sin autorización. A
+        # 2550 (deja Q50, ~2%) sí pide supervisor.
+        maquina = Product.objects.create(
+            sku="S-MAQ", name="Máquina", purchase_price=Decimal("2500"),
+            sale_price=Decimal("2900"), stock=Decimal("20"), tax_type="iva",
+        )
+        sale = create_sale(
+            {"payment_method": "efectivo", "paid_amount": "3000", "discount": "275"},
+            [{"product_id": maquina.id, "quantity": "1", "unit_price": "2900"}],
+            user=self.user, branch=self.branch,
+        )
+        self.assertEqual(sale.total, Decimal("2625.00"))  # deja Q125 ≥ 4% ⇒ pasa
+        with self.assertRaises(SaleError):
+            create_sale(
+                {"payment_method": "efectivo", "paid_amount": "3000", "discount": "350"},
+                [{"product_id": maquina.id, "quantity": "1", "unit_price": "2900"}],
+                user=self.user, branch=self.branch,
+            )
+
+    def test_ganancia_minima_baja_para_precio_medio(self):
+        # Caso cilindro de gas: costo 275, precio 300 (rango Q100–999 ⇒ 8%,
+        # mínimo 297). A Q300 deja Q25 (9% > 8%): pasa sin autorización, aunque
+        # con el 10% plano anterior (mínimo 302.50) lo frenaba.
+        cilindro = Product.objects.create(
+            sku="S-GAS", name="Cilindro de gas vacío", purchase_price=Decimal("275"),
+            sale_price=Decimal("300"), stock=Decimal("40"), tax_type="iva",
+        )
+        sale = create_sale(
+            {"payment_method": "efectivo", "paid_amount": "300"},
+            [{"product_id": cilindro.id, "quantity": "1", "unit_price": "300"}],
+            user=self.user, branch=self.branch,
+        )
+        self.assertEqual(sale.total, Decimal("300.00"))
+        # A Q290 (deja Q15, ~5% < 8%) sí pide autorización.
+        with self.assertRaises(SaleError):
+            create_sale(
+                {"payment_method": "efectivo", "paid_amount": "300", "discount": "10"},
+                [{"product_id": cilindro.id, "quantity": "1", "unit_price": "300"}],
+                user=self.user, branch=self.branch,
+            )
+
+    def test_ganancia_minima_por_rango_maquina_cara(self):
+        # Caso máquina industrial: costo 10,000, precio 10,100 (rango Q10,000+ ⇒
+        # 1%, mínimo 10,100). Deja Q100 (=1%): pasa. A 10,050 (deja Q50) falla.
+        maq = Product.objects.create(
+            sku="S-IND", name="Máquina industrial", purchase_price=Decimal("10000"),
+            sale_price=Decimal("10100"), stock=Decimal("5"), tax_type="iva",
+        )
+        sale = create_sale(
+            {"payment_method": "efectivo", "paid_amount": "10100"},
+            [{"product_id": maq.id, "quantity": "1", "unit_price": "10100"}],
+            user=self.user, branch=self.branch,
+        )
+        self.assertEqual(sale.total, Decimal("10100.00"))
+        with self.assertRaises(SaleError):
+            create_sale(
+                {"payment_method": "efectivo", "paid_amount": "10100", "discount": "50"},
+                [{"product_id": maq.id, "quantity": "1", "unit_price": "10100"}],
+                user=self.user, branch=self.branch,
+            )
+
+    def test_descuento_global_hunde_linea_bajo_costo_requiere_autorizacion(self):
+        # Producto de margen delgado (costo 80, precio 85). Un descuento GLOBAL
+        # del 10% (bajo el 25%) hunde esa línea por debajo del costo aunque el
+        # descuento por línea sea 0: debe pedir autorización.
+        thin = Product.objects.create(
+            sku="S-THIN", name="Tornillo", purchase_price=Decimal("80"),
+            sale_price=Decimal("85"), stock=Decimal("100"), tax_type="iva",
+        )
+        items = [
+            {"product_id": thin.id, "quantity": "1", "unit_price": "85"},
+            {"product_id": self.prod.id, "quantity": "1", "unit_price": "85"},
+        ]
+        with self.assertRaises(SaleError):
+            create_sale({"payment_method": "efectivo", "paid_amount": "200", "discount": "17"},
+                        items, user=self.user, branch=self.branch)
+        # Con autorización de supervisor, procede.
+        sale = create_sale({"payment_method": "efectivo", "paid_amount": "200", "discount": "17"},
+                           items, user=self.user, branch=self.branch, special_authorized=True)
+        self.assertEqual(sale.discount, Decimal("17.00"))
+
+    def test_precio_bajo_costo_requiere_autorizacion(self):
+        # Vender por debajo del costo (60) sin autorización se rechaza.
+        with self.assertRaises(SaleError):
+            create_sale(
+                {"payment_method": "efectivo", "paid_amount": "1000"},
+                [{"product_id": self.prod.id, "quantity": "1", "unit_price": "50"}],
+                user=self.user, branch=self.branch,
+            )
+
+    def test_venta_a_costo_sin_ganancia_minima_requiere_autorizacion(self):
+        # Caso Nailo: costo 10/yarda, precio 12, 10 yardas (gross 120). Un
+        # descuento de 20 deja el neto en 100 = justo el costo (ganancia cero).
+        # Con la ganancia mínima del rango <Q100 (20%, mínimo 120), se rechaza
+        # sin autorización.
+        nailo = Product.objects.create(
+            sku="S-NAILO", name="Nailo", purchase_price=Decimal("10"),
+            sale_price=Decimal("12"), stock=Decimal("500"), tax_type="iva",
+        )
+        args = ({"payment_method": "efectivo", "paid_amount": "200", "discount": "20"},
+                [{"product_id": nailo.id, "quantity": "10", "unit_price": "12"}])
+        with self.assertRaises(SaleError):
+            create_sale(*args, user=self.user, branch=self.branch)
+        # Con autorización de supervisor, procede.
+        sale = create_sale(*args, user=self.user, branch=self.branch, special_authorized=True)
+        self.assertEqual(sale.total, Decimal("100.00"))
+        # Vendido con ganancia (Q13/yarda ⇒ neto 130 > 120 mínimo): pasa sin autorización.
+        ok = create_sale(
+            {"payment_method": "efectivo", "paid_amount": "200"},
+            [{"product_id": nailo.id, "quantity": "10", "unit_price": "13"}],
+            user=self.user, branch=self.branch,
+        )
+        self.assertEqual(ok.total, Decimal("130.00"))
+
+    def test_fecha_retroactiva_queda_en_notas(self):
+        sale = create_sale(
+            {"payment_method": "efectivo", "paid_amount": "300", "date": "2026-07-01"},
+            [{"product_id": self.prod.id, "quantity": "1", "unit_price": "85"}],
+            user=self.user, branch=self.branch,
+        )
+        self.assertIn("Fecha del documento cambiada", (sale.notes or ""))
+
+    def test_stock_insuficiente(self):
+        with self.assertRaises(SaleError):
+            create_sale(
+                {"payment_method": "efectivo", "paid_amount": "100000"},
+                [{"product_id": self.prod.id, "quantity": "999", "unit_price": "85"}],
+                user=self.user, branch=self.branch,
+            )
+
+    def test_pago_insuficiente_sin_credito(self):
+        with self.assertRaises(SaleError):
+            create_sale(
+                {"payment_method": "efectivo", "paid_amount": "10"},
+                [{"product_id": self.prod.id, "quantity": "3", "unit_price": "85"}],
+                user=self.user, branch=self.branch,
+            )
+
+    def test_linea_exenta_sin_iva(self):
+        self.prod.tax_type = "exento"
+        self.prod.save()
+        sale = create_sale(
+            {"payment_method": "efectivo", "paid_amount": "255"},
+            [{"product_id": self.prod.id, "quantity": "3", "unit_price": "85", "tax_type": "exento"}],
+            user=self.user, branch=self.branch,
+        )
+        self.assertEqual(sale.tax, Decimal("0.00"))
+        self.assertEqual(sale.total, Decimal("255.00"))
+
+    def test_credito_requiere_cliente_y_deriva_estado(self):
+        with self.assertRaises(SaleError):
+            create_sale(
+                {"payment_method": "credito", "paid_amount": "0", "payment_status": "al_credito"},
+                [{"product_id": self.prod.id, "quantity": "1", "unit_price": "85"}],
+                user=self.user, branch=self.branch,
+            )
+        customer = Customer.objects.create(name="Cliente", credit_enabled=True)
+        sale = create_sale(
+            {"payment_method": "credito", "paid_amount": "0", "payment_status": "al_credito",
+             "customer_id": customer.id},
+            [{"product_id": self.prod.id, "quantity": "1", "unit_price": "85"}],
+            user=self.user, branch=self.branch,
+        )
+        self.assertEqual(sale.payment_status, Sale.PAY_CREDITO)
+        self.assertIsNotNone(sale.due_date)
+        self.assertEqual(sale.balance, sale.total)
+
+    def test_abono_a_venta_credito(self):
+        customer = Customer.objects.create(name="Cliente", credit_enabled=True)
+        sale = create_sale(
+            {"payment_method": "credito", "paid_amount": "0", "payment_status": "al_credito",
+             "customer_id": customer.id},
+            [{"product_id": self.prod.id, "quantity": "2", "unit_price": "85"}],  # total 170
+            user=self.user, branch=self.branch,
+        )
+        register_payment(sale, "170")
+        sale.refresh_from_db()
+        self.assertEqual(sale.payment_status, Sale.PAY_PAGADA)
+        self.assertEqual(sale.balance, Decimal("0.00"))
+
+    def test_cancelar_revierte_stock(self):
+        sale = self._venta_simple()
+        self.prod.refresh_from_db()
+        self.assertEqual(self.prod.stock, Decimal("97.00"))
+        cancel_sale(sale, user=self.user)
+        sale.refresh_from_db()
+        self.prod.refresh_from_db()
+        self.assertEqual(sale.status, Sale.STATUS_CANCELADA)
+        self.assertEqual(self.prod.stock, Decimal("100.00"))
+
+    def test_venta_registra_en_caja(self):
+        session = open_session(self.user, 500, branch=self.branch)
+        sale = self._venta_simple()  # efectivo, deja 255 en caja
+        session.refresh_from_db()
+        self.assertEqual(session.expected_cash, Decimal("755.00"))  # 500 + 255
+        self.assertTrue(session.movements.filter(type=CashMovement.VENTA, sale=sale).exists())
+        self.assertEqual(sale.cash_session_id, session.id)
+
+
+class SalesSummaryProfitTests(TestCase):
+    """Resumen de ventas: la ganancia = ingresos − costo (con el costo histórico
+    guardado en cada línea)."""
+
+    def setUp(self):
+        from rest_framework.test import APIClient
+        self.branch = Branch.objects.create(name="Matriz", code="M", is_main=True)
+        self.admin = User.objects.create_superuser(
+            username="a", email="a@a.com", password="x", name="A")
+        self.prod = Product.objects.create(
+            sku="G-1", name="Cemento", purchase_price=Decimal("60"), sale_price=Decimal("85"),
+            stock=Decimal("100"), tax_type="iva",
+        )
+        # Venta: 3 x 85 = 255 ingreso; costo 3 x 60 = 180; ganancia = 75.
+        create_sale(
+            {"payment_method": "efectivo", "paid_amount": "300"},
+            [{"product_id": self.prod.id, "quantity": "3", "unit_price": "85", "tax_type": "iva"}],
+            user=self.admin, branch=self.branch,
+        )
+        self.c = APIClient()
+        self.c.force_authenticate(self.admin)
+        self.c.credentials(HTTP_X_BRANCH_ID=str(self.branch.id))
+
+    def test_summary_calcula_ganancia(self):
+        r = self.c.get("/api/sales/summary/")
+        self.assertEqual(r.status_code, 200, r.content)
+        d = r.json()
+        self.assertEqual(Decimal(str(d["total_income"])), Decimal("255.00"))
+        self.assertEqual(Decimal(str(d["total_cost"])), Decimal("180.00"))
+        self.assertEqual(Decimal(str(d["total_profit"])), Decimal("75.00"))
