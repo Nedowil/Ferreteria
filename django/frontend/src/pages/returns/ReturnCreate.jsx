@@ -5,6 +5,22 @@ import { useAuth } from "../../auth/AuthContext";
 
 const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+// Fecha y hora de la venta (para distinguir bien de qué venta es la devolución).
+const fmtWhen = (s) => {
+  const d = new Date(s);
+  return d.toLocaleDateString("es-GT", { day: "2-digit", month: "2-digit", year: "numeric" }) +
+    " " + d.toLocaleTimeString("es-GT", { hour: "2-digit", minute: "2-digit" });
+};
+// "hoy" / "ayer" / "hace N días" a partir de la fecha de la venta.
+const relDays = (s) => {
+  const d = new Date(s); const now = new Date();
+  const days = Math.floor((new Date(now.getFullYear(), now.getMonth(), now.getDate()) -
+    new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);
+  if (days <= 0) return "hoy";
+  if (days === 1) return "ayer";
+  return `hace ${days} días`;
+};
+
 // Medidas en que está registrado un producto (unidad base, empaque/caja y
 // presentaciones). Cada una dice cuántas unidades base equivale (units_factor)
 // y su precio. Igual que en el POS, para que la devolución sin ticket restituya
@@ -316,9 +332,14 @@ export default function ReturnCreate() {
                         <div className="shrink-0 w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-900 flex items-center justify-center text-lg">📦</div>
                         <div className="min-w-0 flex-1">
                           <div className="font-medium text-slate-800 dark:text-slate-100 truncate group-hover:text-blue-700 dark:group-hover:text-blue-400">{s.product_name || "Producto"}</div>
-                          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 dark:text-slate-400">
+                          {/* Fecha DESTACADA: es lo que usa el cajero para saber de qué venta es. */}
+                          <div className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-500/30 px-2 py-1">
+                            <span className="text-sm">📅</span>
+                            <span className="text-sm font-bold text-blue-700 dark:text-blue-300 tabular-nums">{fmtWhen(s.date)}</span>
+                            <span className="text-[11px] text-blue-500/80 dark:text-blue-300/70">· {relDays(s.date)}</span>
+                          </div>
+                          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 dark:text-slate-400">
                             <span className="font-mono text-[11px] bg-slate-100 dark:bg-slate-900 rounded px-1.5 py-0.5 text-slate-600 dark:text-slate-300">{s.folio}</span>
-                            <span>{new Date(s.date).toLocaleDateString("es-GT")}</span>
                             <span>· {s.customer || "Consumidor final"}</span>
                           </div>
                         </div>
