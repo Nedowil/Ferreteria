@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
@@ -101,28 +101,47 @@ export default function ReturnCreate() {
     }
   };
 
-  const searchProduct = async (q) => {
+  // Búsqueda por producto robusta al ESCANEO:
+  // - `prodSeq` descarta respuestas viejas (evita mostrar un producto que no es,
+  //   cuando el lector teclea rápido y llegan respuestas fuera de orden).
+  // - `prodTimer` hace un pequeño debounce, así el lector no dispara ~13
+  //   consultas seguidas (evita que se trabe).
+  const prodTimer = useRef(null);
+  const prodSeq = useRef(0);
+  const runProductSearch = async (q) => {
+    const seq = ++prodSeq.current;
+    try {
+      const { data } = await api.get("/returns/search-by-product/", { params: { q } });
+      if (seq !== prodSeq.current) return null;   // respuesta vieja: ignorar
+      const sales = data.sales || [];
+      setProdSales(sales);
+      return sales;
+    } catch {
+      if (seq === prodSeq.current) setProdSales([]);
+      return null;
+    }
+  };
+  const searchProduct = (q) => {
     setProdQuery(q);
-    if (q.length < 2) { setProdSales([]); return; }
-    const { data } = await api.get("/returns/search-by-product/", { params: { q } });
-    setProdSales(data.sales || []);
+    if (prodTimer.current) clearTimeout(prodTimer.current);
+    if (q.trim().length < 2) { prodSeq.current++; setProdSales([]); return; }
+    prodTimer.current = setTimeout(() => runProductSearch(q.trim()), 300);
   };
 
-  // Escaneo en "Por producto": el lector teclea el código y manda Enter. Se hace
-  // una búsqueda fresca (evita la carrera del onChange) y SOLO se muestra la
-  // lista de ventas; el cajero elige la venta correcta (no se carga automática,
-  // para no ligar la devolución a una venta equivocada).
+  // Escaneo en "Por producto": el lector teclea el código y manda Enter. Se lee
+  // el valor REAL del input (no el estado, que puede ir atrasado) y se hace UNA
+  // búsqueda autoritativa. SOLO se muestra la lista de ventas; el cajero elige la
+  // venta correcta (no se carga automática, para no ligarla a una venta equivocada).
   const onProdScan = async (e) => {
     if (e.key !== "Enter") return;
     e.preventDefault();
-    const q = prodQuery.trim();
+    const q = e.target.value.trim();
+    if (prodTimer.current) clearTimeout(prodTimer.current);
+    setProdQuery(q);
     if (q.length < 2) return;
-    try {
-      const { data } = await api.get("/returns/search-by-product/", { params: { q } });
-      const sales = data.sales || [];
-      setProdSales(sales);
-      if (sales.length === 0) setError("No se encontró una venta reciente con ese producto.");
-    } catch { /* la búsqueda por letra ya muestra el error si aplica */ }
+    setError("");
+    const sales = await runProductSearch(q);
+    if (sales && sales.length === 0) setError("No se encontró una venta reciente con ese producto.");
   };
 
   // Sin ticket: buscar productos
@@ -150,7 +169,7 @@ export default function ReturnCreate() {
   const onSinTicketScan = async (e) => {
     if (e.key !== "Enter") return;
     e.preventDefault();
-    const q = search.trim();
+    const q = e.target.value.trim();   // valor real del input (no el estado, que puede ir atrasado)
     if (q.length < 2) return;
     try {
       const { data } = await api.get("/inventory/products/", { params: { search: q, page_size: 8 } });
