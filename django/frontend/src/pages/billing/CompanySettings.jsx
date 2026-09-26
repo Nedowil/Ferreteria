@@ -65,48 +65,55 @@ function ProfitTiers({ tiers, editable, onChange }) {
     return `Q${fmt(prev)} – Q${fmt(num(cur.max) - 0.01)}`;
   };
 
+  const inputCls = "border border-slate-300 dark:border-slate-600 rounded px-2 py-1.5 text-sm tabular-nums outline-none focus:ring-2 focus:ring-blue-500";
   return (
     <div className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
-      <table className="w-full text-sm">
-        <thead className="bg-slate-50 dark:bg-slate-700/40 text-slate-500 dark:text-slate-300 text-xs uppercase tracking-wide">
-          <tr>
-            <th className="text-left px-3 py-2 font-medium">Rango de precio</th>
-            <th className="text-left px-3 py-2 font-medium w-40">Precio hasta (Q)</th>
-            <th className="text-left px-3 py-2 font-medium w-32">% mínimo</th>
-            <th className="w-10"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((t, i) => (
-            <tr key={i} className="border-t border-slate-100 dark:border-slate-700">
-              <td className="px-3 py-2 text-slate-600 dark:text-slate-300">{rangeText(i)}</td>
-              <td className="px-3 py-2">
-                {t.max == null ? (
-                  <span className="text-xs text-slate-400 italic">en adelante</span>
-                ) : (
-                  <input type="number" min="0" step="1" disabled={!editable} placeholder="0"
-                         className="w-full border border-slate-300 dark:border-slate-600 rounded px-2 py-1.5 text-sm tabular-nums"
-                         value={t.max ?? ""} onChange={(e) => setRow(i, "max", e.target.value)} onBlur={sortOnBlur} />
-                )}
-              </td>
-              <td className="px-3 py-2">
-                <div className="flex items-center gap-1">
-                  <input type="number" min="0" max="100" step="0.5" disabled={!editable} placeholder="0"
-                         className="w-full border border-slate-300 dark:border-slate-600 rounded px-2 py-1.5 text-sm tabular-nums"
-                         value={t.percent ?? ""} onChange={(e) => setRow(i, "percent", e.target.value)} />
-                  <span className="text-slate-400">%</span>
-                </div>
-              </td>
-              <td className="px-2 py-2 text-center">
-                {editable && rows.length > 1 && t.max != null && (
-                  <button type="button" onClick={() => rmRow(i)} title="Quitar rango"
-                          className="no-anim inline-flex items-center justify-center w-7 h-7 rounded-lg text-rose-500 hover:bg-rose-100 dark:text-rose-400 dark:hover:bg-rose-900/30 font-bold transition">✕</button>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {/* Encabezado solo en escritorio */}
+      <div className="hidden sm:flex items-center gap-3 bg-slate-50 dark:bg-slate-700/40 text-slate-500 dark:text-slate-300 text-xs uppercase tracking-wide px-3 py-2 font-medium">
+        <div className="flex-1">Rango de precio</div>
+        <div className="w-36">Precio hasta (Q)</div>
+        <div className="w-28">% mínimo</div>
+        <div className="w-8"></div>
+      </div>
+      {rows.map((t, i) => {
+        const canRemove = editable && rows.length > 1 && t.max != null;
+        return (
+          <div key={i} className="border-t border-slate-100 dark:border-slate-700 px-3 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+            <div className="flex items-center justify-between gap-2 sm:flex-1">
+              <span className="font-medium text-slate-700 dark:text-slate-200">{rangeText(i)}</span>
+              {canRemove && (
+                <button type="button" onClick={() => rmRow(i)} title="Quitar rango"
+                        className="no-anim sm:hidden inline-flex items-center justify-center w-7 h-7 rounded-lg text-rose-500 hover:bg-rose-100 dark:text-rose-400 dark:hover:bg-rose-900/30 font-bold transition">✕</button>
+              )}
+            </div>
+            <div className="flex items-center justify-between gap-2 sm:justify-start sm:w-36">
+              <span className="text-xs text-slate-400 sm:hidden">Precio hasta (Q)</span>
+              {t.max == null ? (
+                <span className="text-xs text-slate-400 italic">en adelante</span>
+              ) : (
+                <input type="number" min="0" step="1" disabled={!editable} placeholder="0"
+                       className={"w-32 sm:w-full " + inputCls}
+                       value={t.max ?? ""} onChange={(e) => setRow(i, "max", e.target.value)} onBlur={sortOnBlur} />
+              )}
+            </div>
+            <div className="flex items-center justify-between gap-2 sm:justify-start sm:w-28">
+              <span className="text-xs text-slate-400 sm:hidden">% mínimo</span>
+              <div className="flex items-center gap-1">
+                <input type="number" min="0" max="100" step="0.5" disabled={!editable} placeholder="0"
+                       className={"w-24 sm:w-full " + inputCls}
+                       value={t.percent ?? ""} onChange={(e) => setRow(i, "percent", e.target.value)} />
+                <span className="text-slate-400">%</span>
+              </div>
+            </div>
+            <div className="hidden sm:flex sm:w-8 sm:justify-center">
+              {canRemove && (
+                <button type="button" onClick={() => rmRow(i)} title="Quitar rango"
+                        className="no-anim inline-flex items-center justify-center w-7 h-7 rounded-lg text-rose-500 hover:bg-rose-100 dark:text-rose-400 dark:hover:bg-rose-900/30 font-bold transition">✕</button>
+              )}
+            </div>
+          </div>
+        );
+      })}
       {editable && (
         <div className="px-3 py-2 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/30">
           <button type="button" onClick={addRow}
