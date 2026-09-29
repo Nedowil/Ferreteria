@@ -49,6 +49,15 @@ class CashSessionViewSet(PermissionByActionMixin, viewsets.ReadOnlyModelViewSet)
             # abierta por otro, p. ej. el admin).
             from django.db.models import Q
             qs = qs.filter(Q(user=user) | Q(branch__in=user.branches.all()))
+        # Filtro por fecha de APERTURA (para buscar la caja de un día específico).
+        from django.utils.dateparse import parse_date
+        params = self.request.query_params
+        d_from = parse_date(params.get("from") or "")
+        d_to = parse_date(params.get("to") or "")
+        if d_from:
+            qs = qs.filter(opened_at__date__gte=d_from)
+        if d_to:
+            qs = qs.filter(opened_at__date__lte=d_to)
         return qs
 
     def get_serializer_class(self):

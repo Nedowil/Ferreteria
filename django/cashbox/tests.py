@@ -241,3 +241,44 @@ class CashPermissionTests(TestCase):
         r_admin = admin_c.post(f"/api/cashbox/cash-sessions/{s.id}/close/",
                                {"counted_cash": "150"}, format="json")
         self.assertEqual(r_admin.status_code, 200)
+
+
+class CashHistoryFilterTests(TestCase):
+    """Historial de caja: filtro por fecha de apertura y movimientos por sesión."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        self.User = get_user_model()
+        self.branch = Branch.objects.create(name="Matriz", code="M", is_main=True)
+        self.admin = self.User.objects.create_user(username="a", email="a@t.com", password="x123", is_superuser=True)
+
+    def _c(self):
+        from rest_framework.test import APIClient
+        c = APIClient()
+        r = c.post("/api/auth/token/", {"email": "a@t.com", "password": "x123"}, format="json")
+        c.credentials(HTTP_AUTHORIZATION=f"Bearer {r.json()['access']}", HTTP_X_BRANCH_ID=str(self.branch.id))
+        return c
+
+    def test_filtro_por_fecha_y_movimientos(self):
+        from django.utils import timezone
+        from datetime import timedelta
+        # Caja "vieja" (hace 3 días) y caja de hoy.
+        s_old = open_session(self.admin, 100, branch=self.branch)
+        s_old.opened_at = timezone.now() - timedelta(days=3)
+        s_old.save(update_fields=["opened_at"])
+        s_old = close_session(s_old, 100)
+        # una venta en efectivo en la caja vieja (movimiento)
+        CashMovement.objects.create(session=s_old, type=CashMovement.VENTA, payment_method="efectivo", amount=Decimal("50"), description="Venta X")
+        s_new = open_session(self.admin, 200, branch=self.branch)
+
+        c = self._c()
+        d_old = (timezone.now() - timedelta(days=3)).date().isoformat()
+        # Filtrando por la fecha vieja, solo aparece la caja vieja.
+        r = c.get("/api/cashbox/cash-sessions/", {"from": d_old, "to": d_old}).json()
+        ids = [x["id"] for x in (r.get("results", r))]
+        self.assertIn(s_old.id, ids)
+        self.assertNotIn(s_new.id, ids)
+        # Movimientos de la caja vieja (incluye la venta), aunque esté cerrada.
+        m = c.get(f"/api/cashbox/cash-sessions/{s_old.id}/movements/").json()
+        rows = m.get("results", m)
+        self.assertTrue(any(x["description"] == "Venta X" for x in rows))
