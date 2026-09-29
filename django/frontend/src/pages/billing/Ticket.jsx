@@ -393,13 +393,16 @@ export default function Ticket() {
       <style>{`
         #printable, #printable * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
         @media print {
+          html, body { margin: 0 !important; padding: 0 !important; }
           body * { visibility: hidden !important; }
           #printable, #printable * { visibility: visible !important; }
-          #printable { position: absolute; left: 0; top: 0; width: 100%; }
+          #printable { position: absolute; left: 0; top: 0; width: 100%; margin: 0 !important; }
           #printable * { box-shadow: none !important; border-radius: 0 !important; }
           /* La Epson de 80mm solo imprime ~72mm; centramos el ticket en ese
-             ancho para que no se corten los bordes izquierdo/derecho. */
-          .ticket-paper { width: 72mm !important; box-shadow: none !important; padding: 1.5mm 2mm !important; margin: 0 auto !important; }
+             ancho para que no se corten los bordes izquierdo/derecho. Sin margen
+             superior para no desperdiciar papel al inicio. */
+          .ticket-paper { width: 72mm !important; box-shadow: none !important; padding: 0 2mm 1.5mm !important; margin: 0 auto !important; }
+          .ticket-paper img { margin-top: 0 !important; }
           /* La impresora térmica saca el texto PÁLIDO cuando la letra es delgada.
              Para el ticket (no el formato carta) se fuerza NEGRO PURO, se sube el
              peso y se engrosa un poco cada letra (text-stroke), así imprime más
