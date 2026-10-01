@@ -1,0 +1,182 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Evita que los navegadores de celular "inflen" el texto (text boosting), lo
+   que desalineaba las letras al generar el PDF en el teléfono. */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+/* Modo oscuro: color base del fondo y del texto. */
+html.dark body { background-color: #0f172a; color: #e2e8f0; }
+
+/* Modo oscuro: le dice al navegador que los controles nativos (campos, selects,
+   barras de scroll) usen su estilo oscuro. Sin esto, los campos quedaban con
+   fondo blanco y texto claro heredado => las letras no se veían al escribir. */
+html.dark { color-scheme: dark; }
+
+/* Estilo consistente (paleta slate) para campos que no traen su propio fondo
+   oscuro. Las clases dark:bg-* de Tailwind, cuando existen, tienen prioridad. */
+html.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+html.dark select,
+html.dark textarea {
+  background-color: #1e293b;   /* slate-800 */
+  border-color: #475569;       /* slate-600 */
+  color: #f1f5f9;              /* slate-100 */
+}
+html.dark input::placeholder,
+html.dark textarea::placeholder { color: #94a3b8; }  /* slate-400 */
+
+/* Ocultar las flechitas (spinners) de los campos numéricos en toda la app. */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* Responsive: en pantallas chicas, las tablas anchas hacen scroll horizontal
+   dentro de su tarjeta (en vez de desbordar la página). Se aplica al div que
+   contiene directamente una <table> — típicamente la tarjeta del listado. */
+@media (max-width: 1023px) {
+  /* Cualquier contenedor (div, section, …) que envuelva directamente una tabla
+     permite scroll horizontal, para que la tabla no desborde la página. */
+  main :has(> table) {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  main table {
+    min-width: max-content;
+  }
+}
+
+/* Al imprimir un comprobante, solo se muestra el ticket (#ticket). */
+@media print {
+  body * { visibility: hidden; }
+  #ticket, #ticket * { visibility: visible; }
+  #ticket {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    box-shadow: none;
+  }
+}
+
+/* ============================================================
+   Pulido de usabilidad (accesibilidad y "se siente que responde").
+   - Manita del mouse en TODO lo que se puede tocar/clickear.
+   - Cursor "prohibido" en lo deshabilitado (comunica que no se puede).
+   - Aro de foco visible y consistente al navegar con teclado/Tab, para
+     quien no usa bien el mouse. Se limita a botones/enlaces/selects para
+     no duplicar el aro que los campos de texto ya traen (focus:ring de
+     Tailwind). Pensado para cajeros que batallan con la compu.
+   ============================================================ */
+button:not(:disabled),
+[role="button"],
+summary,
+label:has(input[type="checkbox"]),
+label:has(input[type="radio"]),
+select:not(:disabled) {
+  cursor: pointer;
+}
+button:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+select:focus-visible,
+summary:focus-visible {
+  outline: 2px solid #3b82f6;   /* blue-500 */
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+html.dark button:focus-visible,
+html.dark a:focus-visible,
+html.dark [role="button"]:focus-visible,
+html.dark select:focus-visible,
+html.dark summary:focus-visible {
+  outline-color: #60a5fa;       /* blue-400: más visible en modo oscuro */
+}
+
+/* ============================================================
+   Contraste en modo oscuro (legibilidad).
+   Los grises secundarios "sueltos" (slate-500/600 sin una variante dark:
+   propia) se aclaran para que se lean bien sobre el fondo oscuro y cumplan
+   contraste AA. El :where() mantiene la especificidad baja: si un elemento ya
+   trae su propio dark:text-slate-*, ese sigue mandando y no se pisa.
+   ============================================================ */
+html.dark :where(.text-slate-500),
+html.dark :where(.text-slate-600) {
+  color: #94a3b8;   /* slate-400: cumple contraste AA sobre el fondo oscuro */
+}
+
+/* ============================================================
+   Tamaños tocables: en pantallas táctiles (tablet/celular), los campos de
+   captura tienen una altura mínima cómoda para el dedo. No aplica en escritorio
+   (pointer fino), donde no hace falta y podría estirar controles compactos.
+   ============================================================ */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]),
+  select,
+  textarea {
+    min-height: 40px;
+  }
+}
+
+/* ============================================================
+   Realce de botones al pasar el mouse: el botón se levanta un poco y proyecta
+   una sombra suave. (Se quitó el brillo deslizante que había antes.)
+   - Solo con mouse real (hover:hover): en pantallas táctiles el :hover se
+     "pega", así que ahí no se anima.
+   - Para excluir un botón puntual, agregarle la clase `no-anim`.
+   ============================================================ */
+@media (hover: hover) {
+  button:not(:disabled):not(.no-anim) {
+    transition: transform .18s ease, box-shadow .25s ease;
+  }
+  button:not(:disabled):not(.no-anim):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(2, 6, 23, .18);
+  }
+  button:not(:disabled):not(.no-anim):active { transform: translateY(0); }
+
+  /* En modo oscuro una sombra oscura se nota poco: se usa una más marcada. */
+  html.dark button:not(:disabled):not(.no-anim):hover {
+    box-shadow: 0 10px 24px rgba(0, 0, 0, .55);
+  }
+}
+
+@media (hover: hover) and (prefers-reduced-motion: reduce) {
+  button:not(:disabled):not(.no-anim),
+  button:not(:disabled):not(.no-anim):hover { transition: none; transform: none; box-shadow: none; }
+}
+
+/* Animación de entrada de los avisos (toast) desde arriba. */
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(-12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Entrada de los perfiles (pantalla estilo Netflix): suben con un pequeño fade. */
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(18px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Parpadeo para llamar la atención (p. ej. el banner de cambio de responsable):
+   pulsa un halo ámbar unas pocas veces y se detiene solo (~5 s). */
+@keyframes flashAttention {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+  50%      { box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.55); }
+}
+.flash-attention {
+  animation: flashAttention 0.85s ease-in-out 0s 6;
+}
+@media (prefers-reduced-motion: reduce) {
+  .flash-attention { animation: none; }
+}

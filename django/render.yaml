@@ -1,0 +1,38 @@
+# Blueprint de Render.com para la app de Ferretería (Django + SPA en un solo servicio).
+# Cómo usarlo:
+#   1) Subí el repo a GitHub.
+#   2) En Render → "New" → "Blueprint" → elegí este repo.
+#      (Si el repo tiene la app en la subcarpeta /django, configurá el Root Directory = django.)
+#   3) Render crea el servicio web + la base PostgreSQL y pide la contraseña del admin.
+services:
+  - type: web
+    name: ferreteria
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter            # ~US$7/mes (podés empezar en free para probar)
+    healthCheckPath: /healthz
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true            # Render genera una clave segura
+      - key: DEBUG
+        value: "false"
+      - key: ALLOWED_HOSTS
+        value: ".onrender.com"         # agregá tu dominio aquí cuando lo conectes
+      - key: CSRF_TRUSTED_ORIGINS
+        value: "https://*.onrender.com"
+      - key: SECURE_SSL_REDIRECT
+        value: "true"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ferreteria-db
+          property: connectionString
+      - key: DJANGO_SUPERUSER_EMAIL
+        sync: false                    # Render te lo pide al desplegar
+      - key: DJANGO_SUPERUSER_PASSWORD
+        sync: false                    # contraseña del primer admin (escribila fuerte)
+
+databases:
+  - name: ferreteria-db
+    plan: basic-256mb                  # plan pago de Postgres; hay opción free para probar
+    databaseName: ferreteria
+    user: ferreteria

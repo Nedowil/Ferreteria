@@ -1,0 +1,191 @@
+"""API de Ventas (POS)."""
+
+from decimal import Decimal
+
+from django.db.models import F, Sum
+from django.utils.dateparse import parse_date
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
+
+from cashbox import services as cash
+from core.api_utils import BranchContextMixin
+from core.permissions import PermissionByActionMixin
+from .models import Sale
+from .serializers import (
+    PaymentWriteSerializer,
+    SaleDetailSerializer,
+    SaleListSerializer,
+    SalePaymentSerializer,
+    SaleWriteSerializer,
+)
+from . import services
+
+
+class SaleViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.ModelViewSet):
+    perms_map = {
+        "list": "ventas.ver", "retrieve": "ventas.ver", "receivable": "cuentas_cobrar.ver",
+        # Las tarjetas de resumen (ingresos totales) son info sensible: solo quien
+        # pueda ver reportes. El vendedor no tiene 'reportes.ver'.
+        "summary": "reportes.ver",
+        "create": "ventas.crear",
+        "sync_offline": "ventas.crear",
+        "cancel": "ventas.cancelar",
+        "payments": {"GET": "ventas.ver", "POST": "ventas.crear"},
+    }
+    queryset = (
+        Sale.objects.select_related("customer", "branch", "user")
+        .prefetch_related("items__product", "payments")
+        # Orden por momento de REGISTRO (no por la fecha del documento): así una
+        # venta creada hoy con fecha anterior o adelantada aparece igual arriba,
+        # en el orden en que realmente se hizo.
+        .order_by("-created_at", "-id")
+    )
+    http_method_names = ["get", "post", "head", "options"]  # sin PUT/DELETE: las ventas no se editan
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ["status", "payment_status", "customer"]
+    search_fields = ["folio", "customer__name"]
+    ordering_fields = ["date", "total", "folio"]
+
+    def get_serializer_class(self):
+        if self.action == "list":
+            return SaleListSerializer
+        if self.action == "create":
+            return SaleWriteSerializer
+        return SaleDetailSerializer
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        params = self.request.query_params
+        if params.get("from"):
+            d = parse_date(params["from"])
+            if d:
+                qs = qs.filter(date__date__gte=d)
+        if params.get("to"):
+            d = parse_date(params["to"])
+            if d:
+                qs = qs.filter(date__date__lte=d)
+        return qs
+
+    def create(self, request, *args, **kwargs):
+        ser = SaleWriteSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        data = ser.validated_data
+        # Regla de negocio: una venta de contado necesita una caja abierta (el
+        # efectivo debe registrarse en la caja del turno). Las ventas al crédito
+        # quedan exentas porque no entra dinero al momento. El sync offline
+        # también queda exento: esas ventas ya ocurrieron con la caja abierta.
+        is_credit = (data.get("payment_status") == Sale.PAY_CREDITO
+                     or data.get("payment_method") == "credito")
+        if not is_credit and cash.active_session(branch=self.branch, user=request.user) is None:
+            return Response(
+                {"detail": "No hay una caja abierta. Abrí la caja antes de registrar una venta de contado."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        # Anti-fraude: ¿este usuario puede autorizar descuentos altos / precios
+        # bajo el costo? Solo el supervisor/admin (o superusuario) lo puede.
+        from core.permissions import user_permission_codenames
+        special = "ventas.autorizar_especial" in user_permission_codenames(request.user)
+        # ¿La empresa obliga a ingresar el efectivo recibido en ventas de contado?
+        from core.models import CompanySetting
+        require_cash = bool(CompanySetting.current().pos_require_cash_received)
+        try:
+            sale = services.create_sale(data, data["items"], user=request.user,
+                                        branch=self.branch, special_authorized=special,
+                                        require_cash_received=require_cash)
+        except services.SaleError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(SaleDetailSerializer(sale).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=["post"], url_path="sync-offline")
+    def sync_offline(self, request):
+        """Sincroniza un lote de ventas creadas OFFLINE. Idempotente por
+        offline_uuid: cada venta se crea una sola vez aunque se reintente.
+
+        Body: {"sales": [ {offline_uuid, date, customer_id, payment_method,
+                payment_status, paid_amount, discount, items:[...]}, ... ]}
+        Respuesta: {"results": [ {uuid, ok, id?, folio?, duplicate?, error?} ]}
+        """
+        sales = request.data.get("sales")
+        if not isinstance(sales, list):
+            return Response({"detail": "Se espera 'sales' como lista."}, status=status.HTTP_400_BAD_REQUEST)
+        results = [
+            services.sync_offline_sale(entry, user=request.user, branch=self.branch)
+            for entry in sales
+        ]
+        return Response({"results": results})
+
+    @action(detail=True, methods=["post"])
+    def cancel(self, request, pk=None):
+        sale = self.get_object()
+        try:
+            sale = services.cancel_sale(sale, user=request.user)
+        except services.SaleError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        sale = self.get_queryset().get(pk=sale.pk)
+        return Response(SaleDetailSerializer(sale).data)
+
+    @action(detail=True, methods=["get", "post"])
+    def payments(self, request, pk=None):
+        sale = self.get_object()
+        if request.method == "GET":
+            return Response(SalePaymentSerializer(sale.payments.all(), many=True).data)
+        ser = PaymentWriteSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        d = ser.validated_data
+        try:
+            payment = services.register_payment(
+                sale, d["amount"], date=d.get("date"),
+                method=d.get("payment_method", "efectivo"),
+                reference=d.get("reference"), notes=d.get("notes"), user=request.user,
+            )
+        except services.SaleError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(SalePaymentSerializer(payment).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=["get"])
+    def summary(self, request):
+        """Totales del filtro actual (para las tarjetas de la lista de ventas):
+        cantidad de ventas, ingresos, ganancia (ingresos − costo) y cuántas
+        completadas. La ganancia usa el costo histórico guardado en cada línea
+        (``unit_cost``), no el costo actual del producto."""
+        from django.db.models import DecimalField, F
+        from django.db.models.functions import Coalesce
+        from .models import SaleItem
+
+        qs = self.filter_queryset(self.get_queryset())
+        completadas = qs.filter(status=Sale.STATUS_COMPLETADA)
+        income = completadas.aggregate(t=Sum("total"))["t"] or Decimal("0")
+        # Costo de lo vendido: suma de (costo por unidad de venta × cantidad) de
+        # las líneas de las ventas completadas. Si una línea no tiene costo
+        # (dato viejo), cuenta como 0 para no romper el cálculo.
+        cost = (SaleItem.objects
+                .filter(sale__in=completadas.values("pk"))
+                .aggregate(c=Sum(
+                    Coalesce(F("unit_cost"), Decimal("0")) * F("quantity"),
+                    output_field=DecimalField(max_digits=18, decimal_places=2)))["c"]
+                or Decimal("0"))
+        return Response({
+            "count": qs.count(),
+            "completed_count": completadas.count(),
+            "total_income": income,
+            "total_cost": cost,
+            "total_profit": income - cost,
+        })
+
+    @action(detail=False, methods=["get"], url_path="receivable")
+    def receivable(self, request):
+        """Cuentas por cobrar: ventas completadas al crédito con saldo."""
+        qs = (self.get_queryset()
+              .filter(status=Sale.STATUS_COMPLETADA)
+              .exclude(payment_status=Sale.PAY_PAGADA))
+        agg = qs.aggregate(total=Sum(F("total") - F("paid_amount") + F("change_amount")))
+        total_balance = agg["total"] or Decimal("0")
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            ser = SaleListSerializer(page, many=True)
+            resp = self.get_paginated_response(ser.data)
+            resp.data["total_balance"] = total_balance
+            return resp
+        return Response({"results": SaleListSerializer(qs, many=True).data, "total_balance": total_balance})

@@ -1,0 +1,16 @@
+# Entorno y artefactos locales que NO deben entrar a la imagen
+.venv/
+**/__pycache__/
+*.pyc
+.env
+db.sqlite3
+staticfiles/
+media/
+backups/
+frontend/node_modules/
+frontend/dist/
+.git/
+.gitignore
+*.md
+.pytest_cache/
+.DS_Store
