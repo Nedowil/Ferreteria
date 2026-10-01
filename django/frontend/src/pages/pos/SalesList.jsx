@@ -26,6 +26,21 @@ const avColor = (seed) => {
 // Color de la franja de estado (verde = completada, rojo = cancelada).
 const stripeColor = (status) => (status === "completada" ? "#22c55e" : "#ef4444");
 
+// Rangos rápidos de fecha (en hora local) para las tarjetas y la lista.
+const _pad = (n) => String(n).padStart(2, "0");
+const _ymd = (d) => `${d.getFullYear()}-${_pad(d.getMonth() + 1)}-${_pad(d.getDate())}`;
+const RANGES = {
+  hoy: () => { const d = new Date(); return { from: _ymd(d), to: _ymd(d) }; },
+  mes: () => {
+    const d = new Date();
+    return { from: _ymd(new Date(d.getFullYear(), d.getMonth(), 1)),
+             to: _ymd(new Date(d.getFullYear(), d.getMonth() + 1, 0)) };
+  },
+  anio: () => { const y = new Date().getFullYear(); return { from: `${y}-01-01`, to: `${y}-12-31` }; },
+  todo: () => ({ from: "", to: "" }),
+};
+const PERIOD_BTNS = [["hoy", "Hoy"], ["mes", "Este mes"], ["anio", "Este año"], ["todo", "Todo"]];
+
 export default function SalesList() {
   const { user, can } = useAuth();
   const isAdmin = !!user && (user.is_superuser || (user.roles || []).includes("admin"));
@@ -41,12 +56,20 @@ export default function SalesList() {
   const [summary, setSummary] = useState({ count: 0, completed_count: 0, total_income: 0, total_profit: 0, total_cost: 0 });
   // Los filtros pueden venir por URL (ej. desde el Dashboard: ?from=…&to=…),
   // así al hacer clic en una tarjeta se abre la lista ya filtrada.
+  // Por defecto, las tarjetas y la lista muestran el MES ACTUAL (se "reinician"
+  // solos cada mes). Si vienen fechas por URL (ej. desde el Dashboard), se
+  // respetan. Los botones rápidos de abajo cambian el periodo con un clic.
+  const _urlFrom = searchParams.get("from");
+  const _urlTo = searchParams.get("to");
+  const _urlHasDates = !!(_urlFrom || _urlTo);
+  const _defMonth = RANGES.mes();
   const [filters, setFilters] = useState({
     search: searchParams.get("search") || "",
     status: searchParams.get("status") || "",
-    from: searchParams.get("from") || "",
-    to: searchParams.get("to") || "",
+    from: _urlHasDates ? (_urlFrom || "") : _defMonth.from,
+    to: _urlHasDates ? (_urlTo || "") : _defMonth.to,
   });
+  const [period, setPeriod] = useState(_urlHasDates ? "custom" : "mes");
   const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState(false);
   // Venta abierta en el modal flotante (null = cerrado). Al ver una venta ya no
@@ -56,13 +79,20 @@ export default function SalesList() {
 
   // Carga la página `p`. La tabla se pagina (15 por página); el resumen cuenta
   // TODO el filtro (por eso no lleva `page`).
-  const load = (p = page) => {
+  const load = (p = page, fl = filters) => {
     const f = {};
-    Object.entries(filters).forEach(([k, v]) => { if (v) f[k] = v; });
+    Object.entries(fl).forEach(([k, v]) => { if (v) f[k] = v; });
     api.get("/sales/", { params: { ...f, page: p } }).then((r) => setData(r.data));
     if (canSeeSummary) api.get("/sales/summary/", { params: f }).then((r) => setSummary(r.data)).catch(() => {});
   };
   const goPage = (p) => { setPage(p); load(p); };
+
+  // Botones rápidos de periodo: fijan el rango de fechas y recargan al instante.
+  const applyPeriod = (key) => {
+    const r = RANGES[key]();
+    const next = { ...filters, from: r.from, to: r.to };
+    setFilters(next); setPeriod(key); setPage(1); load(1, next);
+  };
   const money = (n) => "Q" + Number(n || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   // Ganancia de la venta: null en canceladas (se muestra «—»). Color según signo.
   const profitText = (p) => (p == null || p === "") ? "—" : money(p);
@@ -119,6 +149,22 @@ export default function SalesList() {
           <Link to="/pos" className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">Ir al POS</Link>
         </div>
       </div>
+      {/* Botones rápidos de periodo: cambian el rango con un clic. Por defecto
+          "Este mes" (las tarjetas se reinician solas cada mes). */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <span className="text-xs text-slate-500 dark:text-slate-400 mr-1">Periodo:</span>
+        {PERIOD_BTNS.map(([key, label]) => (
+          <button key={key} type="button" onClick={() => applyPeriod(key)}
+                  className={"rounded-lg px-3 py-1.5 text-sm font-medium border transition " +
+                    (period === key
+                      ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                      : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700")}>
+            {label}
+          </button>
+        ))}
+        {period === "custom" && <span className="text-xs text-slate-400">· rango personalizado</span>}
+      </div>
+
       {/* Tarjetas de resumen (respetan el filtro actual). Solo para el admin
           (permiso 'reportes.ver'); el vendedor no las ve. */}
       {canSeeSummary && (
@@ -151,8 +197,8 @@ export default function SalesList() {
                 className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
           <option value="">Todos</option><option value="completada">Completada</option><option value="cancelada">Cancelada</option>
         </select>
-        <input type="date" value={filters.from} onChange={(e) => setFilters({ ...filters, from: e.target.value })} className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
-        <input type="date" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+        <input type="date" value={filters.from} onChange={(e) => { setFilters({ ...filters, from: e.target.value }); setPeriod("custom"); }} className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+        <input type="date" value={filters.to} onChange={(e) => { setFilters({ ...filters, to: e.target.value }); setPeriod("custom"); }} className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
         <button className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition">Buscar</button>
       </form>
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
