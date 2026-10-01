@@ -57,7 +57,7 @@ export default function CashSessions() {
   const [exporting, setExporting] = useState(false);
   const [expanded, setExpanded] = useState(null);   // id de la caja expandida
   const [details, setDetails] = useState({});        // detalle (con relevos) por id
-  const [movs, setMovs] = useState({});              // movimientos por id de caja
+  const [movModal, setMovModal] = useState(null);    // ventana flotante de movimientos: { session, rows, count, page, loading }
 
   const params = (p) => {
     const o = { page: p };
@@ -71,8 +71,7 @@ export default function CashSessions() {
   const clearFilter = () => { setFrom(""); setTo(""); setPage(1); setExpanded(null); api.get("/cashbox/cash-sessions/", { params: { page: 1 } }).then((r) => setData(r.data)); };
   useEffect(() => { load(1); }, []);
 
-  // Al abrir una fila, se pide el detalle (relevos) y los MOVIMIENTOS de esa
-  // caja (sirve para revisar cajas de días pasados, incluso cerradas).
+  // Al abrir una fila, se pide el detalle (relevos) de esa caja.
   const toggle = async (s) => {
     if (expanded === s.id) { setExpanded(null); return; }
     setExpanded(s.id);
@@ -82,11 +81,31 @@ export default function CashSessions() {
         setDetails((prev) => ({ ...prev, [s.id]: d }));
       } catch { setDetails((prev) => ({ ...prev, [s.id]: { handovers: [] } })); }
     }
-    if (!movs[s.id]) {
-      try {
-        const { data: m } = await api.get(`/cashbox/cash-sessions/${s.id}/movements/`, { params: { page_size: 200 } });
-        setMovs((prev) => ({ ...prev, [s.id]: { rows: m.results || m, count: m.count ?? (m.results ? m.results.length : m.length) } }));
-      } catch { setMovs((prev) => ({ ...prev, [s.id]: { rows: [], count: 0 } })); }
+  };
+
+  // Ventana flotante con TODOS los movimientos de una caja (ventas, ingresos,
+  // egresos, devoluciones). Carga por páginas para no traer todo de golpe.
+  const PAGE_SIZE = 100;
+  const openMovs = async (s) => {
+    setMovModal({ session: s, rows: [], count: 0, page: 0, loading: true });
+    try {
+      const { data: m } = await api.get(`/cashbox/cash-sessions/${s.id}/movements/`, { params: { page: 1, page_size: PAGE_SIZE } });
+      const rows = m.results || m;
+      setMovModal({ session: s, rows, count: m.count ?? rows.length, page: 1, loading: false });
+    } catch {
+      setMovModal({ session: s, rows: [], count: 0, page: 1, loading: false });
+    }
+  };
+  const loadMoreMovs = async () => {
+    if (!movModal) return;
+    const next = movModal.page + 1;
+    setMovModal((prev) => ({ ...prev, loading: true }));
+    try {
+      const { data: m } = await api.get(`/cashbox/cash-sessions/${movModal.session.id}/movements/`, { params: { page: next, page_size: PAGE_SIZE } });
+      const rows = m.results || m;
+      setMovModal((prev) => ({ ...prev, rows: [...prev.rows, ...rows], count: m.count ?? prev.count, page: next, loading: false }));
+    } catch {
+      setMovModal((prev) => ({ ...prev, loading: false }));
     }
   };
 
@@ -235,31 +254,13 @@ export default function CashSessions() {
                       </ul>
                     )}
 
-                    {/* Movimientos de la caja (ventas, ingresos, egresos, devoluciones). */}
-                    <div className="text-xs font-bold text-slate-600 dark:text-slate-300 mt-4 mb-2 flex items-center gap-1.5">🧾 Movimientos de la caja</div>
-                    {!movs[s.id] ? (
-                      <div className="text-xs text-slate-400">Cargando…</div>
-                    ) : movs[s.id].rows.length === 0 ? (
-                      <div className="text-xs text-slate-400 italic">Sin movimientos en este turno.</div>
-                    ) : (
-                      <div className="rounded-xl border border-slate-100 dark:border-slate-700 overflow-hidden bg-white dark:bg-slate-800">
-                        <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-700">
-                          {movs[s.id].rows.map((m) => (
-                            <div key={m.id} className="flex items-center gap-3 px-3 py-2">
-                              <span className="text-[11px] text-slate-400 tabular-nums w-20 shrink-0">{new Date(m.created_at).toLocaleTimeString("es-GT", { hour: "2-digit", minute: "2-digit" })}</span>
-                              <span className={"shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium " + (MOV_CHIP[m.type] || "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300")}>{m.type_display}</span>
-                              <span className="min-w-0 flex-1 truncate text-xs text-slate-600 dark:text-slate-300">{m.description || "—"}{m.user_name ? <span className="text-slate-400"> · {m.user_name}</span> : ""}</span>
-                              <span className={"shrink-0 text-sm font-bold tabular-nums " + (movOut(m.type) ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400")}>{movOut(m.type) ? "−" : "+"}{money(m.amount)}</span>
-                            </div>
-                          ))}
-                        </div>
-                        {movs[s.id].count > movs[s.id].rows.length && (
-                          <div className="px-3 py-1.5 text-[11px] text-slate-400 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40">
-                            Mostrando {movs[s.id].rows.length} de {movs[s.id].count}. Exportá a Excel para el detalle completo.
-                          </div>
-                        )}
-                      </div>
-                    )}
+                    {/* Botón que abre la ventana flotante con todos los movimientos. */}
+                    <div className="mt-4">
+                      <button onClick={(e) => { e.stopPropagation(); openMovs(s); }}
+                              className="inline-flex items-center gap-2 rounded-lg bg-slate-700 text-white px-4 py-2 text-sm font-medium hover:bg-slate-800 transition shadow-sm">
+                        🧾 Ver movimientos de la caja
+                      </button>
+                    </div>
                   </td>
                 </tr>
               )}
@@ -272,6 +273,77 @@ export default function CashSessions() {
         </div>
       </div>
       <Pagination page={page} count={data.count} onPage={goPage} label="cajas" />
+
+      {/* Ventana flotante con todos los movimientos de la caja seleccionada. */}
+      {movModal && (() => {
+        const rows = movModal.rows;
+        const ingresos = rows.filter((m) => !movOut(m.type)).reduce((a, m) => a + Number(m.amount || 0), 0);
+        const egresos = rows.filter((m) => movOut(m.type)).reduce((a, m) => a + Number(m.amount || 0), 0);
+        return (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4" onClick={() => setMovModal(null)}>
+          <div className="bg-white dark:bg-slate-800 w-full sm:max-w-2xl sm:rounded-2xl rounded-t-2xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            {/* Encabezado */}
+            <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-700 text-white flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-base font-bold flex items-center gap-2">🧾 Movimientos de la caja</div>
+                <div className="text-xs text-slate-300 mt-0.5 truncate">
+                  Caja #{movModal.session.id} · {movModal.session.user_name || "—"}
+                  {movModal.session.opened_at ? " · " + new Date(movModal.session.opened_at).toLocaleDateString("es-GT", { day: "2-digit", month: "short", year: "numeric" }) : ""}
+                </div>
+              </div>
+              <button onClick={() => setMovModal(null)} className="shrink-0 rounded-lg bg-white/10 hover:bg-white/20 w-8 h-8 flex items-center justify-center text-lg leading-none transition">✕</button>
+            </div>
+
+            {/* Resumen de ingresos/egresos de lo cargado */}
+            <div className="px-5 py-3 grid grid-cols-3 gap-2 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 text-center">
+              <div>
+                <div className="text-[11px] uppercase tracking-wide text-slate-400">Entradas</div>
+                <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">+{money(ingresos)}</div>
+              </div>
+              <div>
+                <div className="text-[11px] uppercase tracking-wide text-slate-400">Salidas</div>
+                <div className="text-sm font-bold text-rose-600 dark:text-rose-400 tabular-nums">−{money(egresos)}</div>
+              </div>
+              <div>
+                <div className="text-[11px] uppercase tracking-wide text-slate-400">Movimientos</div>
+                <div className="text-sm font-bold text-slate-700 dark:text-slate-200 tabular-nums">{movModal.count}</div>
+              </div>
+            </div>
+
+            {/* Lista */}
+            <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-700">
+              {movModal.loading && rows.length === 0 ? (
+                <div className="px-5 py-12 text-center text-sm text-slate-400">Cargando…</div>
+              ) : rows.length === 0 ? (
+                <div className="px-5 py-12 text-center text-sm text-slate-400 italic">Sin movimientos en este turno.</div>
+              ) : (
+                rows.map((m) => (
+                  <div key={m.id} className="flex items-center gap-3 px-4 sm:px-5 py-2.5">
+                    <span className="text-[11px] text-slate-400 tabular-nums w-11 shrink-0">{new Date(m.created_at).toLocaleTimeString("es-GT", { hour: "2-digit", minute: "2-digit" })}</span>
+                    <span className={"shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium " + (MOV_CHIP[m.type] || "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300")}>{m.type_display}</span>
+                    <span className="min-w-0 flex-1 truncate text-xs text-slate-600 dark:text-slate-300">{m.description || "—"}{m.user_name ? <span className="text-slate-400"> · {m.user_name}</span> : ""}</span>
+                    <span className={"shrink-0 text-sm font-bold tabular-nums " + (movOut(m.type) ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400")}>{movOut(m.type) ? "−" : "+"}{money(m.amount)}</span>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Pie: cargar más / contador */}
+            <div className="px-5 py-3 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 flex items-center justify-between gap-3">
+              <span className="text-[11px] text-slate-400 tabular-nums">Mostrando {rows.length} de {movModal.count}</span>
+              {movModal.count > rows.length ? (
+                <button onClick={loadMoreMovs} disabled={movModal.loading}
+                        className="rounded-lg bg-slate-700 text-white px-3 py-1.5 text-xs font-medium hover:bg-slate-800 transition disabled:opacity-50">
+                  {movModal.loading ? "Cargando…" : "Cargar más"}
+                </button>
+              ) : (
+                <button onClick={() => setMovModal(null)} className="rounded-lg border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 px-3 py-1.5 text-xs font-medium hover:bg-white dark:hover:bg-slate-700 transition">Cerrar</button>
+              )}
+            </div>
+          </div>
+        </div>
+        );
+      })()}
     </div>
   );
 }

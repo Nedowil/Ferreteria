@@ -877,7 +877,7 @@ export default function ProductList() {
         <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">📦 Productos
           {autoRefreshOn && <span className="text-[11px] font-normal text-emerald-600 dark:text-emerald-400 flex items-center gap-1" title="La lista se actualiza sola cada pocos segundos">🔄 se actualiza sola</span>}
         </h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {can("productos.editar") && <button onClick={() => setBulkLoc({ ids: null })} className="border border-teal-300 text-teal-700 bg-teal-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-teal-100 transition">📍 Asignar ubicación</button>}
           {/* Botón "Recuperar ubicaciones" oculto: fue una herramienta puntual
               para deshacer una asignación masiva equivocada. El código y el
