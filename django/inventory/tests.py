@@ -752,3 +752,43 @@ class MergeProductsTests(TestCase):
         p = Product.objects.create(sku="X-1", name="x")
         with self.assertRaises(InventoryError):
             self.merge(source=p, target=p)
+
+
+class SimilarProductsTests(TestCase):
+    """Aviso de posible duplicado al registrar (endpoint /similar/)."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        self.User = get_user_model()
+        self.branch = Branch.objects.create(name="Matriz", code="M", is_main=True)
+        self.admin = self.User.objects.create_user(
+            username="a", email="a@test.com", password="x123", is_superuser=True)
+
+    def _client(self):
+        from rest_framework.test import APIClient
+        c = APIClient()
+        r = c.post("/api/auth/token/", {"email": "a@test.com", "password": "x123"}, format="json")
+        c.credentials(HTTP_AUTHORIZATION=f"Bearer {r.json()['access']}",
+                      HTTP_X_BRANCH_ID=str(self.branch.id))
+        return c
+
+    def test_detecta_nombre_parecido(self):
+        Product.objects.create(sku="C-1", name="carreta niño", stock=Decimal("7"))
+        r = self._client().get("/api/inventory/products/similar/", {"name": "carreta pequeño"})
+        self.assertEqual(r.status_code, 200)
+        names = [p["name"] for p in r.json()["results"]]
+        self.assertIn("carreta niño", names)
+
+    def test_nombre_distinto_no_avisa(self):
+        Product.objects.create(sku="C-2", name="Martillo de uña", stock=Decimal("3"))
+        r = self._client().get("/api/inventory/products/similar/", {"name": "Cemento gris"})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["results"], [])
+
+    def test_excluye_el_mismo_producto(self):
+        p = Product.objects.create(sku="C-3", name="Clavo 2 pulgadas", stock=Decimal("1"))
+        r = self._client().get("/api/inventory/products/similar/",
+                               {"name": "Clavo 2 pulgadas", "exclude": p.id})
+        self.assertEqual(r.status_code, 200)
+        ids = [x["id"] for x in r.json()["results"]]
+        self.assertNotIn(p.id, ids)

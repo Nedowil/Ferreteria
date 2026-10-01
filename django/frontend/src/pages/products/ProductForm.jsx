@@ -197,6 +197,8 @@ export default function ProductForm() {
   const [ubicaciones, setUbicaciones] = useState([]);
   const [errors, setErrors] = useState({});
   const [busy, setBusy] = useState(false);
+  const [dupes, setDupes] = useState([]);   // posibles duplicados por nombre parecido
+  const dupTimer = useRef(null);
   // Estado del selector de precio base/empaque
   const [purchaseRaw, setPurchaseRaw] = useState("");
   // Por defecto el precio de COMPRA se ingresa por empaque (uno compra por caja);
@@ -242,6 +244,21 @@ export default function ProductForm() {
   }, [id]);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  // Aviso de posible duplicado: al escribir el nombre, buscamos productos con
+  // nombre parecido para que no se registre dos veces el mismo artículo
+  // (ej. "carreta pequeño" vs "carreta niño"). Es solo un aviso, no bloquea.
+  useEffect(() => {
+    const n = (form.name || "").trim();
+    if (dupTimer.current) clearTimeout(dupTimer.current);
+    if (n.length < 3) { setDupes([]); return undefined; }
+    dupTimer.current = setTimeout(() => {
+      api.get("/inventory/products/similar/", { params: { name: n, exclude: id || undefined } })
+        .then((r) => setDupes(r.data.results || []))
+        .catch(() => setDupes([]));
+    }, 500);
+    return () => { if (dupTimer.current) clearTimeout(dupTimer.current); };
+  }, [form.name, id]);
 
   const factor = parseFrac(form.container_factor);
   const baseUnit = form.base_unit_label || "unidad";
@@ -425,6 +442,30 @@ export default function ProductForm() {
           <TextField label="Código de barras" name="barcode" form={form} errors={errors} onChange={set} hint="EAN-13 automático si lo dejas vacío" />
         </div>
         <div className="mt-4"><TextField label="Nombre" name="name" form={form} errors={errors} onChange={set} /></div>
+
+        {/* Aviso de posible duplicado (no bloquea, solo avisa). */}
+        {dupes.length > 0 && (
+          <div className="mt-2 rounded-xl border border-amber-300 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-900/20 p-3">
+            <div className="text-sm font-semibold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">⚠️ ¿No será un producto que ya existe?</div>
+            <div className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+              Encontramos {dupes.length} producto{dupes.length === 1 ? "" : "s"} con nombre parecido. Revisá antes de registrar uno repetido:
+            </div>
+            <ul className="mt-2 space-y-1">
+              {dupes.map((p) => (
+                <li key={p.id} className="flex items-center justify-between gap-2 rounded-lg bg-white dark:bg-slate-800 border border-amber-200/70 dark:border-amber-500/20 px-2.5 py-1.5 text-xs">
+                  <span className="min-w-0 truncate">
+                    <b className="text-slate-800 dark:text-slate-100">{p.name}</b> <span className="text-slate-400 font-mono">{p.sku}</span>
+                    {p.exact && <span className="ml-1 rounded bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300 px-1.5 py-0.5 text-[10px] font-bold align-middle">mismo nombre</span>}
+                  </span>
+                  <span className="shrink-0 text-slate-500 dark:text-slate-400">{p.stock_display}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="text-[11px] text-amber-600 dark:text-amber-400 mt-1.5">
+              Si es el mismo, cancelá y usá <b>“🔗 Combinar duplicados”</b> en la lista de productos. Si de verdad es distinto, podés continuar.
+            </div>
+          </div>
+        )}
         <div className="mt-4">
           <label className="block text-sm font-medium mb-1">Descripción</label>
           <textarea value={form.description ?? ""} onChange={(e) => set("description", e.target.value)} rows="2"

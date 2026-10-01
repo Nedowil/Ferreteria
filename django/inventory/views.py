@@ -155,6 +155,7 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
         # Papelera de productos: ver, restaurar y borrar definitivamente.
         "trash": "productos.eliminar", "restore": "productos.eliminar",
         "purge": "productos.eliminar", "merge": "productos.eliminar",
+        "similar": ("productos.crear", "productos.editar"),
         # El kardex (ver e insertar movimientos) es para quien gestiona
         # inventario, no para cualquiera que pueda ver productos.
         "movements": {"GET": "inventario.ajustar", "POST": "inventario.ajustar"},
@@ -304,6 +305,56 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
         except InvErr as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"status": "ok", **result})
+
+    @action(detail=False, methods=["get"])
+    def similar(self, request):
+        """Busca productos con NOMBRE parecido al dado, para avisar de posibles
+        duplicados al registrar (ej. al escribir 'carreta pequeño' avisa que ya
+        existe 'carreta niño'). Query: ?name=<nombre>&exclude=<id a ignorar>."""
+        from difflib import SequenceMatcher
+        from django.db.models import Q
+        from core.textsearch import search_norm
+
+        name = (request.query_params.get("name") or "").strip()
+        exclude_id = request.query_params.get("exclude")
+        norm = search_norm(name)
+        if len(norm) < 3:
+            return Response({"results": []})
+
+        tokens = [t for t in norm.split() if len(t) >= 3] or norm.split()
+        cond = Q()
+        for t in tokens:
+            cond |= Q(search_index__contains=t)
+        qs = Product.objects.filter(deleted_at__isnull=True).filter(cond)
+        if exclude_id:
+            qs = qs.exclude(pk=exclude_id)
+        qs = qs.prefetch_related("stocks")[:40]
+
+        new_tokens = set(tokens)
+        new_first = tokens[0]  # palabra principal (ej. "carreta", "martillo")
+        scored = []
+        for p in qs:
+            pnorm = p.search_index or search_norm(p.name)
+            ratio = SequenceMatcher(None, norm, pnorm).ratio()
+            plist = [w for w in pnorm.split() if len(w) >= 3] or pnorm.split()
+            ptokens = set(plist)
+            subset = new_tokens <= ptokens or ptokens <= new_tokens
+            same = pnorm == norm
+            # Señal fuerte para una ferretería: comparten la palabra principal
+            # (ej. "carreta pequeño" y "carreta niño" → ambas empiezan con carreta).
+            same_first = bool(plist) and plist[0] == new_first
+            if same or subset or same_first or ratio >= 0.72:
+                scored.append((same, ratio, p))
+
+        scored.sort(key=lambda x: (x[0], x[1]), reverse=True)
+        top = scored[:6]
+        products = [p for (_, _, p) in top]
+        exact_ids = {p.id for (same, _, p) in top if same}
+        ser = ProductListSerializer(products, many=True, context=self.get_serializer_context())
+        results = ser.data
+        for r in results:
+            r["exact"] = r["id"] in exact_ids
+        return Response({"results": results})
 
     # ---- Acciones de inventario ----
 
