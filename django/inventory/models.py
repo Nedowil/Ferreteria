@@ -305,6 +305,27 @@ class ProductStock(models.Model):
         return f"{self.product.sku} @ {self.branch.code}: {self.stock}"
 
 
+class ProductBarcode(models.Model):
+    """Código de barras ADICIONAL de un producto (además del principal).
+
+    Sirve sobre todo al COMBINAR duplicados: el código del producto eliminado se
+    conserva como código adicional del que se queda, para que la etiqueta YA
+    impresa del eliminado siga encontrando el producto al escanear."""
+
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="extra_barcodes")
+    code = models.CharField("código de barras", max_length=60, unique=True, db_index=True)
+    note = models.CharField("nota", max_length=120, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "código de barras adicional"
+        verbose_name_plural = "códigos de barras adicionales"
+        ordering = ["id"]
+
+    def __str__(self):
+        return self.code
+
+
 class ProductPresentation(models.Model):
     """Presentación de venta de un producto (Libra, Media libra, Caja, Rollo)."""
 

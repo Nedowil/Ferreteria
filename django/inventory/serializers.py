@@ -75,17 +75,23 @@ class ProductListSerializer(serializers.ModelSerializer):
     ubicacion_name = serializers.CharField(source="ubicacion.name", read_only=True, default=None)
     presentations = ProductPresentationSerializer(many=True, read_only=True)
     price_code = serializers.SerializerMethodField()
+    barcodes = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
         fields = [
-            "id", "sku", "barcode", "name", "category_name", "brand_name",
+            "id", "sku", "barcode", "barcodes", "name", "category_name", "brand_name",
             "purchase_price", "sale_price", "wholesale_price", "wholesale_min_quantity",
             "tax_type", "sells_by_measure", "measure_step",
             "base_unit_label", "container_label", "container_factor", "container_price",
             "stock", "branch_stock", "ubicacion", "ubicacion_name", "min_stock",
             "stock_display", "is_low_stock", "active", "image", "presentations", "price_code",
         ]
+
+    def get_barcodes(self, obj):
+        """Códigos de barras ADICIONALES (además del principal), para que el POS
+        encuentre el producto al escanear una etiqueta heredada de un duplicado."""
+        return [b.code for b in obj.extra_barcodes.all()]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -151,6 +157,7 @@ class ProductSerializer(serializers.ModelSerializer):
     stock_display = serializers.CharField(source="format_stock_mixed", read_only=True)
     is_low_stock = serializers.BooleanField(read_only=True)
     presentations = ProductPresentationSerializer(many=True, read_only=True)
+    barcodes = serializers.SerializerMethodField()
     # Entrada de presentaciones: lista [{label, units_factor, price}]. El factor
     # puede venir como decimal ("0.5") o fracción ("1/16"); se parsea en la vista.
     presentations_input = serializers.ListField(
@@ -180,13 +187,16 @@ class ProductSerializer(serializers.ModelSerializer):
             "sells_by_measure", "measure_step",
             "image", "active", "public_visible",
             "presentations", "presentations_input",
-            "initial_stock", "stock_input_mode",
+            "initial_stock", "stock_input_mode", "barcodes",
         ]
         read_only_fields = ["stock"]
         extra_kwargs = {
             "sku": {"required": False, "allow_blank": True},
             "barcode": {"required": False, "allow_blank": True, "allow_null": True},
         }
+
+    def get_barcodes(self, obj):
+        return [b.code for b in obj.extra_barcodes.all()]
 
     def validate_barcode(self, value):
         # Un código de barras NO se puede repetir entre productos: al escanear
@@ -199,6 +209,13 @@ class ProductSerializer(serializers.ModelSerializer):
         if self.instance:
             qs = qs.exclude(pk=self.instance.pk)
         other = qs.first()
+        # También si el código está usado como código ADICIONAL de otro producto.
+        if other is None:
+            from .models import ProductBarcode
+            alias = (ProductBarcode.objects.select_related("product")
+                     .filter(code__iexact=code, product__deleted_at__isnull=True).first())
+            if alias and (not self.instance or alias.product_id != self.instance.pk):
+                other = alias.product
         if other:
             raise serializers.ValidationError(
                 f"Este código de barras ya lo tiene el producto «{other.name}» ({other.sku}). "

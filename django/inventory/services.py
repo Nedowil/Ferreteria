@@ -206,12 +206,32 @@ def merge_products(*, source, target, user=None):
     ProductSubstitute.objects.filter(substitute=source).delete()
     ProductSubstitute.objects.filter(product=target, substitute=target).delete()
 
-    # 4) Veces vendido + heredar el código de barras si al que se queda le falta.
+    # 4) Veces vendido.
     target.times_sold = (target.times_sold or 0) + (source.times_sold or 0)
-    if not target.barcode and source.barcode:
-        target.barcode = source.barcode
+
+    # 4b) CONSERVAR los códigos de barras del duplicado para que su etiqueta YA
+    # impresa siga sirviendo al escanear: pasan a ser códigos ADICIONALES del
+    # producto que se queda (o el principal, si a este le faltaba).
+    from .models import ProductBarcode
+    source_codes = [c for c in (
+        [source.barcode] + list(source.extra_barcodes.values_list("code", flat=True))
+    ) if c]
+    # Liberar los códigos del duplicado (unique) antes de asignarlos al que queda.
+    source.extra_barcodes.all().delete()
+    if source.barcode:
         source.barcode = None
         source.save(update_fields=["barcode"])
+
+    if not target.barcode and source_codes:
+        target.barcode = source_codes[0]
+    existing = set(target.extra_barcodes.values_list("code", flat=True))
+    for code in source_codes:
+        if not code or code == target.barcode or code in existing:
+            continue
+        if ProductBarcode.objects.filter(code=code).exists():
+            continue
+        ProductBarcode.objects.create(product=target, code=code, note=f"De «{source.name}» (combinado)")
+        existing.add(code)
 
     # 5) Recalcular el stock global del producto que se queda.
     if target.stocks.exists():

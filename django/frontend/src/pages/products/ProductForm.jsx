@@ -486,6 +486,20 @@ export default function ProductForm() {
             </ul>
           </div>
         )}
+
+        {/* Códigos de barras ADICIONALES (heredados al combinar duplicados). Al
+            escanear cualquiera de ellos también encuentra este producto. */}
+        {Array.isArray(form.barcodes) && form.barcodes.length > 0 && (
+          <div className="mt-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-3">
+            <div className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5">🏷️ También responde a estos códigos</div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Códigos heredados al combinar productos. Al escanear cualquiera, encuentra este producto (sirve para las etiquetas ya impresas).</div>
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {form.barcodes.map((c) => (
+                <span key={c} className="font-mono text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-md px-2 py-1 text-slate-700 dark:text-slate-200">{c}</span>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="mt-4"><TextField label="Nombre" name="name" form={form} errors={errors} onChange={set} /></div>
 
         {/* Aviso de posible duplicado (no bloquea, solo avisa). */}

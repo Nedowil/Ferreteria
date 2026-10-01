@@ -868,3 +868,51 @@ class BarcodeUniqueTests(TestCase):
         r = self._client().patch(f"/api/inventory/products/{self.existing.id}/",
                                  {"barcode": "7501234567890"}, format="json")
         self.assertEqual(r.status_code, 200)
+
+
+class MergeKeepsBarcodeTests(TestCase):
+    """Al combinar, el código del eliminado se conserva como adicional para que
+    su etiqueta ya impresa siga encontrando el producto."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        self.User = get_user_model()
+        self.branch = Branch.objects.create(name="Matriz", code="M", is_main=True)
+        self.admin = self.User.objects.create_user(
+            username="a", email="a@test.com", password="x123", is_superuser=True)
+        from .services import merge_products
+        self.merge = merge_products
+
+    def _client(self):
+        from rest_framework.test import APIClient
+        c = APIClient()
+        r = c.post("/api/auth/token/", {"email": "a@test.com", "password": "x123"}, format="json")
+        c.credentials(HTTP_AUTHORIZATION=f"Bearer {r.json()['access']}",
+                      HTTP_X_BRANCH_ID=str(self.branch.id))
+        return c
+
+    def test_codigo_del_eliminado_se_conserva_y_escanea(self):
+        from .models import ProductBarcode
+        keep = Product.objects.create(sku="K", name="carreta niño", barcode="111AAA")
+        dup = Product.objects.create(sku="D", name="carreta pequeño", barcode="222BBB")
+
+        self.merge(source=dup, target=keep)
+
+        # El código del eliminado quedó como adicional del que se queda.
+        self.assertTrue(ProductBarcode.objects.filter(product=keep, code="222BBB").exists())
+        # Al escanear el código viejo (del eliminado), el buscador encuentra al que quedó.
+        r = self._client().get("/api/inventory/products/", {"search": "222BBB"})
+        results = r.json()["results"]
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["id"], keep.id)
+        self.assertIn("222BBB", results[0]["barcodes"])
+
+    def test_no_se_puede_registrar_con_un_codigo_adicional_existente(self):
+        keep = Product.objects.create(sku="K", name="A", barcode="111AAA")
+        dup = Product.objects.create(sku="D", name="B", barcode="222BBB")
+        self.merge(source=dup, target=keep)
+        # Intentar crear un producto con el código heredado debe fallar.
+        r = self._client().post("/api/inventory/products/",
+                                {"name": "Nuevo", "barcode": "222BBB", "sale_price": "5"}, format="json")
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("barcode", r.json())

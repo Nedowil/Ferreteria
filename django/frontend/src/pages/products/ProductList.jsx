@@ -867,6 +867,9 @@ function MergeProductsModal({ onClose, onDone }) {
               {barcode && (
                 <div className="text-[11px] text-slate-500 dark:text-slate-400">Código de barras: <span className="font-mono">{barcode}</span></div>
               )}
+              {source.barcode && target.barcode && source.barcode !== target.barcode && (
+                <div className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-1">✓ La etiqueta ya impresa de <b>{source.name}</b> (<span className="font-mono">{source.barcode}</span>) seguirá funcionando: se guarda como código adicional.</div>
+              )}
               <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Las ventas, compras, cotizaciones y todo el historial del duplicado quedarán bajo <b>{target.name}</b>.</div>
             </div>
             );

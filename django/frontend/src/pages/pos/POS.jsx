@@ -100,11 +100,14 @@ const norm = (s) => {
 function findByScan(list, code) {
   const q = String(code || "").trim().toLowerCase();
   if (!q) return null;
-  let hit = (list || []).find((p) => (p.barcode || "").toLowerCase() === q || (p.sku || "").toLowerCase() === q);
+  // Códigos del producto: el principal + los ADICIONALES (heredados al combinar
+  // duplicados), para que una etiqueta vieja siga encontrando el producto.
+  const codesOf = (p) => [p.barcode, ...(p.barcodes || [])].filter(Boolean).map((c) => String(c).toLowerCase());
+  let hit = (list || []).find((p) => (p.sku || "").toLowerCase() === q || codesOf(p).includes(q));
   if (hit) return hit;
   if (/^\d{13}$/.test(q)) {
     const first12 = q.slice(0, 12);
-    hit = (list || []).find((p) => /^\d{13}$/.test(p.barcode || "") && p.barcode.slice(0, 12) === first12);
+    hit = (list || []).find((p) => codesOf(p).some((c) => /^\d{13}$/.test(c) && c.slice(0, 12) === first12));
   }
   return hit || null;
 }
@@ -321,9 +324,7 @@ export default function POS() {
     api.get("/inventory/products/", { params: { search: code, active: 1, page_size: 10 } })
       .then((r) => {
         const list = r.data.results || r.data;
-        const q = code.toLowerCase();
-        const exact = list.find((p) =>
-          (p.barcode || "").toLowerCase() === q || (p.sku || "").toLowerCase() === q)
+        const exact = findByScan(list, code)
           || (list.length === 1 ? list[0] : null);
         if (exact) setPicking(exact);
         else setSearch(code);   // sin coincidencia exacta: deja el código en la barra
@@ -459,7 +460,8 @@ export default function POS() {
     return products.filter((p) =>
       norm(p.name).includes(q) ||
       norm(p.sku).includes(q) ||
-      norm(p.barcode).includes(q));
+      norm(p.barcode).includes(q) ||
+      (p.barcodes || []).some((c) => norm(c).includes(q)));
   }, [products, search, serverHits]);
 
   // Rendimiento: con catálogos grandes (miles de productos) dibujar TODAS las

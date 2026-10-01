@@ -165,13 +165,14 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
     queryset = (
         Product.objects.filter(deleted_at__isnull=True)
         .select_related("category", "brand", "unit", "ubicacion")
-        .prefetch_related("presentations", "stocks")
+        .prefetch_related("presentations", "stocks", "extra_barcodes")
         .order_by("-created_at")
     )
     filter_backends = [DjangoFilterBackend, TolerantSearchFilter, filters.OrderingFilter]
-    # Campos de coincidencia EXACTA para el escaneo (código de barras / SKU): así
-    # un código con dígitos repetidos siempre encuentra su producto.
-    exact_search_fields = ["barcode", "sku"]
+    # Campos de coincidencia EXACTA para el escaneo (código de barras / SKU, y los
+    # códigos ADICIONALES heredados al combinar duplicados): así un código con
+    # dígitos repetidos —o una etiqueta vieja— siempre encuentra su producto.
+    exact_search_fields = ["barcode", "sku", "extra_barcodes__code"]
     filterset_fields = ["category", "brand", "active", "ubicacion"]
     ordering_fields = ["name", "sale_price", "stock", "created_at", "times_sold"]
 
@@ -365,10 +366,12 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
         exclude_id = request.query_params.get("exclude")
         if not code:
             return Response({"results": []})
-        qs = Product.objects.filter(deleted_at__isnull=True, barcode__iexact=code)
+        from django.db.models import Q
+        qs = (Product.objects.filter(deleted_at__isnull=True)
+              .filter(Q(barcode__iexact=code) | Q(extra_barcodes__code__iexact=code)))
         if exclude_id:
             qs = qs.exclude(pk=exclude_id)
-        qs = qs.prefetch_related("stocks")[:5]
+        qs = qs.distinct().prefetch_related("stocks", "extra_barcodes")[:5]
         ser = ProductListSerializer(qs, many=True, context=self.get_serializer_context())
         return Response({"results": ser.data})
 
