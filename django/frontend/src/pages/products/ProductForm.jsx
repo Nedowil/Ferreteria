@@ -199,6 +199,8 @@ export default function ProductForm() {
   const [busy, setBusy] = useState(false);
   const [dupes, setDupes] = useState([]);   // posibles duplicados por nombre parecido
   const dupTimer = useRef(null);
+  const [barcodeDupes, setBarcodeDupes] = useState([]);  // otro producto con el mismo código
+  const bcTimer = useRef(null);
   // Estado del selector de precio base/empaque
   const [purchaseRaw, setPurchaseRaw] = useState("");
   // Por defecto el precio de COMPRA se ingresa por empaque (uno compra por caja);
@@ -259,6 +261,20 @@ export default function ProductForm() {
     }, 500);
     return () => { if (dupTimer.current) clearTimeout(dupTimer.current); };
   }, [form.name, id]);
+
+  // Aviso si el CÓDIGO DE BARRAS ya lo tiene otro producto (para no repetirlo
+  // al usar el código que viene impreso en la caja).
+  useEffect(() => {
+    const code = (form.barcode || "").trim();
+    if (bcTimer.current) clearTimeout(bcTimer.current);
+    if (code.length < 3) { setBarcodeDupes([]); return undefined; }
+    bcTimer.current = setTimeout(() => {
+      api.get("/inventory/products/barcode-check/", { params: { code, exclude: id || undefined } })
+        .then((r) => setBarcodeDupes(r.data.results || []))
+        .catch(() => setBarcodeDupes([]));
+    }, 500);
+    return () => { if (bcTimer.current) clearTimeout(bcTimer.current); };
+  }, [form.barcode, id]);
 
   const factor = parseFrac(form.container_factor);
   const baseUnit = form.base_unit_label || "unidad";
@@ -441,6 +457,24 @@ export default function ProductForm() {
           <TextField label="SKU" name="sku" form={form} errors={errors} onChange={set} hint="Se autogenera si lo dejas vacío" />
           <TextField label="Código de barras" name="barcode" form={form} errors={errors} onChange={set} hint="EAN-13 automático si lo dejas vacío" />
         </div>
+
+        {/* Aviso: el código de barras ya lo usa otro producto. */}
+        {barcodeDupes.length > 0 && (
+          <div className="mt-3 rounded-xl border border-rose-300 dark:border-rose-500/40 bg-rose-50 dark:bg-rose-900/20 p-3">
+            <div className="text-sm font-semibold text-rose-700 dark:text-rose-300 flex items-center gap-1.5">⛔ Este código de barras ya está en uso</div>
+            <div className="text-xs text-rose-600 dark:text-rose-400 mt-0.5">
+              Ya lo tiene {barcodeDupes.length === 1 ? "este producto" : "estos productos"}. Si usás el mismo código, al escanear no se sabrá cuál es. Usá el código de la caja en un solo producto:
+            </div>
+            <ul className="mt-2 space-y-1">
+              {barcodeDupes.map((p) => (
+                <li key={p.id} className="flex items-center justify-between gap-2 rounded-lg bg-white dark:bg-slate-800 border border-rose-200/70 dark:border-rose-500/20 px-2.5 py-1.5 text-xs">
+                  <span className="min-w-0 truncate"><b className="text-slate-800 dark:text-slate-100">{p.name}</b> <span className="text-slate-400 font-mono">{p.sku}</span></span>
+                  <span className="shrink-0 text-slate-500 dark:text-slate-400">{p.stock_display}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <div className="mt-4"><TextField label="Nombre" name="name" form={form} errors={errors} onChange={set} /></div>
 
         {/* Aviso de posible duplicado (no bloquea, solo avisa). */}

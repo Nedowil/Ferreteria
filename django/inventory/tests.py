@@ -792,3 +792,39 @@ class SimilarProductsTests(TestCase):
         self.assertEqual(r.status_code, 200)
         ids = [x["id"] for x in r.json()["results"]]
         self.assertNotIn(p.id, ids)
+
+
+class BarcodeCheckTests(TestCase):
+    """Aviso de código de barras ya usado al registrar."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        self.User = get_user_model()
+        self.branch = Branch.objects.create(name="Matriz", code="M", is_main=True)
+        self.admin = self.User.objects.create_user(
+            username="a", email="a@test.com", password="x123", is_superuser=True)
+
+    def _client(self):
+        from rest_framework.test import APIClient
+        c = APIClient()
+        r = c.post("/api/auth/token/", {"email": "a@test.com", "password": "x123"}, format="json")
+        c.credentials(HTTP_AUTHORIZATION=f"Bearer {r.json()['access']}",
+                      HTTP_X_BRANCH_ID=str(self.branch.id))
+        return c
+
+    def test_detecta_codigo_en_uso(self):
+        Product.objects.create(sku="A-1", name="Taladro", barcode="7501234567890")
+        r = self._client().get("/api/inventory/products/barcode-check/", {"code": "7501234567890"})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(len(r.json()["results"]), 1)
+
+    def test_codigo_libre_no_avisa(self):
+        Product.objects.create(sku="A-2", name="Taladro", barcode="7501234567890")
+        r = self._client().get("/api/inventory/products/barcode-check/", {"code": "0000000000000"})
+        self.assertEqual(r.json()["results"], [])
+
+    def test_excluye_el_mismo(self):
+        p = Product.objects.create(sku="A-3", name="Taladro", barcode="7501234567890")
+        r = self._client().get("/api/inventory/products/barcode-check/",
+                               {"code": "7501234567890", "exclude": p.id})
+        self.assertEqual(r.json()["results"], [])

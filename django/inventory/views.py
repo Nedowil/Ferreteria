@@ -156,6 +156,7 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
         "trash": "productos.eliminar", "restore": "productos.eliminar",
         "purge": "productos.eliminar", "merge": "productos.eliminar",
         "similar": ("productos.crear", "productos.editar"),
+        "barcode_check": ("productos.crear", "productos.editar"),
         # El kardex (ver e insertar movimientos) es para quien gestiona
         # inventario, no para cualquiera que pueda ver productos.
         "movements": {"GET": "inventario.ajustar", "POST": "inventario.ajustar"},
@@ -355,6 +356,21 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
         for r in results:
             r["exact"] = r["id"] in exact_ids
         return Response({"results": results})
+
+    @action(detail=False, methods=["get"], url_path="barcode-check")
+    def barcode_check(self, request):
+        """Avisa si un código de barras YA lo tiene otro producto (para no
+        repetirlo al registrar). Query: ?code=<código>&exclude=<id a ignorar>."""
+        code = (request.query_params.get("code") or "").strip()
+        exclude_id = request.query_params.get("exclude")
+        if not code:
+            return Response({"results": []})
+        qs = Product.objects.filter(deleted_at__isnull=True, barcode__iexact=code)
+        if exclude_id:
+            qs = qs.exclude(pk=exclude_id)
+        qs = qs.prefetch_related("stocks")[:5]
+        ser = ProductListSerializer(qs, many=True, context=self.get_serializer_context())
+        return Response({"results": ser.data})
 
     # ---- Acciones de inventario ----
 
