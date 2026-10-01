@@ -132,7 +132,7 @@ export default function StockCountHistory() {
               </select>
             </div>
             <button onClick={compare} disabled={!a || !b || cmpBusy || a === b}
-                    className="bg-gradient-to-r from-violet-600 to-purple-700 text-white rounded-lg px-5 py-2 text-sm font-semibold shadow hover:from-violet-700 hover:to-purple-800 transition disabled:opacity-50 whitespace-nowrap">
+                    className="w-full sm:w-auto bg-gradient-to-r from-violet-600 to-purple-700 text-white rounded-lg px-5 py-2.5 text-sm font-semibold shadow hover:from-violet-700 hover:to-purple-800 transition disabled:opacity-50 whitespace-nowrap">
               {cmpBusy ? "Comparando…" : "Comparar"}
             </button>
           </div>
@@ -144,12 +144,12 @@ export default function StockCountHistory() {
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
                 <div className="rounded-xl border border-slate-100 dark:border-slate-700 p-3">
                   <div className="text-xs text-slate-500 dark:text-slate-400">Unidades</div>
-                  <div className="text-sm text-slate-600 dark:text-slate-300 tabular-nums">{qty(cmp.totals.units_a)} → {qty(cmp.totals.units_b)}</div>
+                  <div className="text-sm text-slate-600 dark:text-slate-300 tabular-nums break-words">{qty(cmp.totals.units_a)} → {qty(cmp.totals.units_b)}</div>
                   <Delta v={cmp.totals.units_delta} />
                 </div>
                 <div className="rounded-xl border border-slate-100 dark:border-slate-700 p-3">
                   <div className="text-xs text-slate-500 dark:text-slate-400">Valor a costo</div>
-                  <div className="text-sm text-slate-600 dark:text-slate-300 tabular-nums">{money(cmp.totals.value_a)} → {money(cmp.totals.value_b)}</div>
+                  <div className="text-sm text-slate-600 dark:text-slate-300 tabular-nums break-words">{money(cmp.totals.value_a)} → {money(cmp.totals.value_b)}</div>
                   <Delta v={cmp.totals.value_delta} money />
                 </div>
                 <div className="rounded-xl border border-slate-100 dark:border-slate-700 p-3">
@@ -167,7 +167,8 @@ export default function StockCountHistory() {
                 Mostrar solo los que cambiaron
               </label>
 
-              <div className="overflow-x-auto rounded-xl border border-slate-100 dark:border-slate-700">
+              {/* Escritorio: tabla */}
+              <div className="hidden md:block overflow-x-auto rounded-xl border border-slate-100 dark:border-slate-700">
                 <table className="w-full text-sm">
                   <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
                     <tr><th className="px-4 py-2.5">Producto</th><th className="px-4 py-2.5 text-right">Antes</th><th className="px-4 py-2.5 text-right">Ahora</th>
@@ -187,6 +188,28 @@ export default function StockCountHistory() {
                     {rows.length === 0 && <tr><td colSpan="6" className="px-5 py-8 text-center text-slate-400">Sin diferencias.</td></tr>}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Celular: tarjetas (la tabla de 6 columnas no cabe) */}
+              <div className="md:hidden space-y-2">
+                {rows.map((r, i) => (
+                  <div key={i} className="rounded-xl border border-slate-100 dark:border-slate-700 p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="font-medium text-slate-800 dark:text-slate-100 break-words">{r.name}</div>
+                        <div className="text-xs font-mono text-slate-400">{r.sku}</div>
+                      </div>
+                      <span className={"shrink-0 inline-block rounded-full px-2 py-0.5 text-[11px] font-medium " + (ESTADO[r.estado]?.c || "")}>{ESTADO[r.estado]?.t || r.estado}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 mt-2.5 text-xs">
+                      <div className="flex justify-between gap-2 border-r border-slate-100 dark:border-slate-700 pr-3"><span className="text-slate-400">Antes</span><span className="tabular-nums text-slate-600 dark:text-slate-300">{qty(r.qty_a)}</span></div>
+                      <div className="flex justify-between gap-2"><span className="text-slate-400">Ahora</span><span className="tabular-nums font-medium text-slate-800 dark:text-slate-100">{qty(r.qty_b)}</span></div>
+                      <div className="flex justify-between gap-2 border-r border-slate-100 dark:border-slate-700 pr-3"><span className="text-slate-400">Cambio</span><Delta v={r.delta} /></div>
+                      <div className="flex justify-between gap-2"><span className="text-slate-400">Valor</span><Delta v={r.value_delta} money /></div>
+                    </div>
+                  </div>
+                ))}
+                {rows.length === 0 && <div className="px-5 py-8 text-center text-slate-400">Sin diferencias.</div>}
               </div>
             </div>
           )}
