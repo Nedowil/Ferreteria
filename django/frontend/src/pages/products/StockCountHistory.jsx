@@ -1,7 +1,32 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import api from "../../api/client";
 import Pagination from "../../components/Pagination";
 import { fetchAll } from "../../utils/exportExcel";
+import { Avatar } from "../../utils/ui";
+
+// Pastilla de estadística (etiqueta arriba, valor grande) con color por tono.
+const STAT_TONE = {
+  blue: "bg-blue-50 dark:bg-blue-900/25 text-blue-700 dark:text-blue-300 border-blue-200/70 dark:border-blue-500/30",
+  emerald: "bg-emerald-50 dark:bg-emerald-900/25 text-emerald-700 dark:text-emerald-300 border-emerald-200/70 dark:border-emerald-500/30",
+  rose: "bg-rose-50 dark:bg-rose-900/25 text-rose-700 dark:text-rose-300 border-rose-200/70 dark:border-rose-500/30",
+  slate: "bg-slate-50 dark:bg-slate-700/40 text-slate-600 dark:text-slate-300 border-slate-200/70 dark:border-slate-600/40",
+};
+function Stat({ label, value, tone = "slate" }) {
+  return (
+    <div className={"rounded-lg border px-2.5 py-1.5 min-w-[84px] " + (STAT_TONE[tone] || STAT_TONE.slate)}>
+      <div className="text-[10px] uppercase tracking-wide opacity-70 leading-none">{label}</div>
+      <div className="text-sm font-bold tabular-nums leading-tight mt-0.5">{value}</div>
+    </div>
+  );
+}
+
+// Chip de color según el tipo de conteo (masivo, parcial, etc.).
+const modeChip = (mode) => {
+  const m = String(mode || "").toLowerCase();
+  if (m.includes("masiv") || m.includes("total") || m.includes("complet")) return "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300";
+  if (m.includes("parcial") || m.includes("sección") || m.includes("seccion")) return "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300";
+  return "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300";
+};
 
 const money = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const qty = (v) => Number(v || 0).toLocaleString("es-GT", { maximumFractionDigits: 2 });
@@ -168,67 +193,77 @@ export default function StockCountHistory() {
         </div>
       </section>
 
-      {/* Lista de inventarios */}
-      <section className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700"><h3 className="font-semibold">Inventarios registrados</h3></div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 dark:bg-slate-900/60 text-slate-400 text-left text-xs uppercase tracking-wide">
-              <tr><th className="px-4 py-2.5 w-8"></th><th className="px-4 py-2.5">Fecha</th><th className="px-4 py-2.5">Motivo</th><th className="px-4 py-2.5">Tipo</th>
-                  <th className="px-4 py-2.5 text-right">Productos</th><th className="px-4 py-2.5 text-right">Discrepancias</th>
-                  <th className="px-4 py-2.5 text-right">Valor</th><th className="px-4 py-2.5">Por</th></tr>
-            </thead>
-            <tbody>
-              {sessions.map((s) => {
-                const open = expanded === s.id;
-                const d = details[s.id];
-                return (
-                  <Fragment key={s.id}>
-                    <tr onClick={() => toggle(s)} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700/40 cursor-pointer">
-                      <td className="px-4 py-2 text-slate-400"><span className={"inline-block transition-transform " + (open ? "rotate-90" : "")}>▸</span></td>
-                      <td className="px-4 py-2 text-slate-700 dark:text-slate-200">{dt(s.created_at)}</td>
-                      <td className="px-4 py-2 text-slate-600 dark:text-slate-300">{s.reason || "—"}</td>
-                      <td className="px-4 py-2 text-xs">{s.mode_display}</td>
-                      <td className="px-4 py-2 text-right tabular-nums">{s.products_count}</td>
-                      <td className="px-4 py-2 text-right tabular-nums">{s.discrepancy_count > 0 ? <span className="text-rose-600 dark:text-rose-400 font-medium">{s.discrepancy_count}</span> : <span className="text-slate-400">0</span>}</td>
-                      <td className="px-4 py-2 text-right tabular-nums">{money(s.value_final)}</td>
-                      <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{s.user_name || "—"}</td>
-                    </tr>
-                    {open && (
-                      <tr className="bg-slate-50/60 dark:bg-slate-900/30">
-                        <td></td>
-                        <td colSpan="7" className="px-4 py-3">
-                          {!d ? <div className="text-xs text-slate-400">Cargando…</div> : (
-                            <div className="overflow-x-auto rounded-lg border border-slate-100 dark:border-slate-700">
-                              <table className="w-full text-xs">
-                                <thead className="bg-slate-100 dark:bg-slate-800 text-slate-500 text-left uppercase">
-                                  <tr><th className="px-3 py-1.5">Producto</th><th className="px-3 py-1.5 text-right">Sistema</th><th className="px-3 py-1.5 text-right">Contado</th><th className="px-3 py-1.5 text-right">Diferencia</th><th className="px-3 py-1.5 text-right">Valor</th></tr>
-                                </thead>
-                                <tbody>
-                                  {d.lines.map((l) => (
-                                    <tr key={l.id} className="border-t border-slate-100 dark:border-slate-700">
-                                      <td className="px-3 py-1.5"><span className="font-medium text-slate-700 dark:text-slate-200">{l.name}</span> <span className="text-slate-400 font-mono">{l.sku}</span></td>
-                                      <td className="px-3 py-1.5 text-right tabular-nums text-slate-500">{qty(l.system_qty)} {l.base_unit_label}</td>
-                                      <td className="px-3 py-1.5 text-right tabular-nums font-medium">{qty(l.final_qty)} {l.base_unit_label}</td>
-                                      <td className="px-3 py-1.5 text-right"><Delta v={l.difference} /></td>
-                                      <td className="px-3 py-1.5 text-right tabular-nums text-slate-500">{money(l.value_final)}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    )}
-                  </Fragment>
-                );
-              })}
-              {sessions.length === 0 && <tr><td colSpan="8" className="px-5 py-10 text-center text-slate-400">Todavía no hay inventarios guardados. Aplicá un conteo físico para empezar.</td></tr>}
-            </tbody>
-          </table>
+      {/* Lista de inventarios (tarjetas con color, se ven bien en celular) */}
+      <section className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 border-l-4 overflow-hidden" style={{ borderLeftColor: "#0d9488" }}>
+        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between gap-2" style={{ background: "#0d948812" }}>
+          <h3 className="font-semibold flex items-center gap-2" style={{ color: "#0d9488" }}>📋 Inventarios registrados</h3>
+          {count > 0 && <span className="text-xs font-medium text-teal-700 dark:text-teal-300 bg-teal-100 dark:bg-teal-900/40 rounded-full px-2.5 py-0.5">{count} en total</span>}
         </div>
-        {count > 15 && <div className="px-5 pb-4"><Pagination page={page} count={count} onPage={goPage} label="inventarios" /></div>}
+
+        <div className="p-4 space-y-3">
+          {sessions.map((s) => {
+            const open = expanded === s.id;
+            const d = details[s.id];
+            const disc = Number(s.discrepancy_count) || 0;
+            return (
+              <div key={s.id} className={"rounded-xl border transition overflow-hidden " + (open ? "border-teal-300 dark:border-teal-500/40 shadow-sm" : "border-slate-200/70 dark:border-slate-700")}>
+                <button onClick={() => toggle(s)} className="w-full text-left hover:bg-slate-50/70 dark:hover:bg-slate-700/30 transition">
+                  <div className="flex items-start gap-3 p-3.5">
+                    <div className="shrink-0 h-11 w-11 rounded-xl bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 flex items-center justify-center text-xl">📦</div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-slate-800 dark:text-slate-100 text-sm">{dt(s.created_at)}</span>
+                        <span className={"rounded-full px-2 py-0.5 text-[11px] font-medium " + modeChip(s.mode_display)}>{s.mode_display}</span>
+                      </div>
+                      {s.reason && <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">{s.reason}</div>}
+                      <div className="flex flex-wrap gap-2 mt-2.5">
+                        <Stat label="Productos" value={s.products_count} tone="blue" />
+                        <Stat label="Discrepancias" value={disc} tone={disc > 0 ? "rose" : "emerald"} />
+                        <Stat label="Valor" value={money(s.value_final)} tone="emerald" />
+                      </div>
+                    </div>
+                    <div className="shrink-0 flex flex-col items-end gap-2">
+                      <div className="flex items-center gap-1.5" title={s.user_name || "—"}>
+                        <Avatar name={s.user_name || "—"} size={26} />
+                        <span className="text-xs text-slate-500 dark:text-slate-400 hidden sm:block max-w-[90px] truncate">{s.user_name || "—"}</span>
+                      </div>
+                      <span className={"text-teal-500 transition-transform text-lg leading-none " + (open ? "rotate-90" : "")}>▸</span>
+                    </div>
+                  </div>
+                </button>
+
+                {open && (
+                  <div className="border-t border-slate-100 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/30 p-3.5">
+                    {!d ? <div className="text-xs text-slate-400">Cargando…</div> : (
+                      <div className="overflow-x-auto rounded-lg border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800">
+                        <table className="w-full text-xs">
+                          <thead className="bg-slate-700 text-slate-100 text-left uppercase tracking-wide">
+                            <tr><th className="px-3 py-2">Producto</th><th className="px-3 py-2 text-right">Sistema</th><th className="px-3 py-2 text-right">Contado</th><th className="px-3 py-2 text-right">Diferencia</th><th className="px-3 py-2 text-right">Valor</th></tr>
+                          </thead>
+                          <tbody>
+                            {d.lines.map((l) => (
+                              <tr key={l.id} className="border-t border-slate-100 dark:border-slate-700">
+                                <td className="px-3 py-1.5"><span className="font-medium text-slate-700 dark:text-slate-200">{l.name}</span> <span className="text-slate-400 font-mono">{l.sku}</span></td>
+                                <td className="px-3 py-1.5 text-right tabular-nums text-slate-500">{qty(l.system_qty)} {l.base_unit_label}</td>
+                                <td className="px-3 py-1.5 text-right tabular-nums font-medium">{qty(l.final_qty)} {l.base_unit_label}</td>
+                                <td className="px-3 py-1.5 text-right"><Delta v={l.difference} /></td>
+                                <td className="px-3 py-1.5 text-right tabular-nums text-slate-500">{money(l.value_final)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {sessions.length === 0 && (
+            <div className="px-5 py-10 text-center text-slate-400">Todavía no hay inventarios guardados. Aplicá un conteo físico para empezar.</div>
+          )}
+          {count > 15 && <Pagination page={page} count={count} onPage={goPage} label="inventarios" />}
+        </div>
       </section>
     </div>
   );
