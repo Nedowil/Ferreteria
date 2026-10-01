@@ -190,7 +190,7 @@ export default function Layout({ children }) {
         </div>
       </aside>
 
-      <div className="flex-1 lg:ml-60 flex flex-col min-h-screen min-w-0">
+      <div className="flex-1 lg:ml-60 flex flex-col min-h-screen min-w-0 overflow-x-clip">
         <header className="bg-white/80 dark:bg-slate-800/80 backdrop-blur border-b border-slate-200 dark:border-slate-700 px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-20">
           <div className="flex items-center gap-3 min-w-0">
             <button onClick={() => setOpen(true)} aria-label="Abrir menú"
@@ -224,7 +224,7 @@ export default function Layout({ children }) {
             </button>
           </div>
         </header>
-        <main className="p-4 sm:p-6 flex-1 min-w-0">{children}</main>
+        <main className="p-4 sm:p-6 flex-1 min-w-0 overflow-x-clip">{children}</main>
       </div>
     </div>
   );
