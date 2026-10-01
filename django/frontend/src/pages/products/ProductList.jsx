@@ -744,6 +744,126 @@ function RestoreLocationsModal({ onClose, onDone }) {
   );
 }
 
+// Buscador de un producto (por nombre/SKU/código) para elegirlo en la
+// combinación de duplicados. Muestra un desplegable con resultados.
+function ProductPicker({ label, accent, value, onChange, excludeId }) {
+  const [term, setTerm] = useState("");
+  const [results, setResults] = useState([]);
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const timer = useRef(null);
+
+  const search = (q) => {
+    setTerm(q);
+    if (timer.current) clearTimeout(timer.current);
+    if (!q.trim()) { setResults([]); setOpen(false); return; }
+    timer.current = setTimeout(async () => {
+      setBusy(true);
+      try {
+        const { data } = await api.get("/inventory/products/", { params: { search: q, page_size: 8 } });
+        setResults((data.results || data).filter((p) => p.id !== excludeId));
+        setOpen(true);
+      } finally { setBusy(false); }
+    }, 300);
+  };
+
+  if (value) {
+    return (
+      <div>
+        <label className={"block text-xs font-semibold mb-1 " + accent}>{label}</label>
+        <div className="flex items-center gap-2 rounded-lg border-2 border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/40 px-3 py-2">
+          <div className="min-w-0 flex-1">
+            <div className="font-medium text-slate-800 dark:text-slate-100 truncate">{value.name}</div>
+            <div className="text-xs text-slate-400 font-mono">{value.sku} · {value.stock_display}</div>
+          </div>
+          <button type="button" onClick={() => onChange(null)} className="shrink-0 w-7 h-7 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 transition">✕</button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="relative">
+      <label className={"block text-xs font-semibold mb-1 " + accent}>{label}</label>
+      <input value={term} onChange={(e) => search(e.target.value)} placeholder="Buscar por nombre, SKU o código…"
+             className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-fuchsia-400" />
+      {open && (
+        <div className="absolute z-20 mt-1 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg max-h-56 overflow-y-auto">
+          {busy && <div className="px-3 py-2 text-xs text-slate-400">Buscando…</div>}
+          {!busy && results.length === 0 && <div className="px-3 py-2 text-xs text-slate-400">Sin resultados.</div>}
+          {results.map((p) => (
+            <button type="button" key={p.id} onClick={() => { onChange(p); setOpen(false); setTerm(""); }}
+                    className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-700 last:border-0">
+              <div className="font-medium text-sm text-slate-800 dark:text-slate-100 truncate">{p.name}</div>
+              <div className="text-xs text-slate-400 font-mono">{p.sku} · {p.stock_display}</div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Combina (fusiona) dos registros del mismo producto: pasa el stock y el
+// historial del DUPLICADO al producto correcto y manda el duplicado a la papelera.
+function MergeProductsModal({ onClose, onDone }) {
+  const [target, setTarget] = useState(null); // el que se queda (correcto)
+  const [source, setSource] = useState(null); // el duplicado (se elimina)
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const doMerge = async () => {
+    if (!source || !target) { setErr("Elegí los dos productos."); return; }
+    if (source.id === target.id) { setErr("Elegí dos productos distintos."); return; }
+    if (!(await dialog.confirm(
+      `Se pasará el stock y el historial de "${source.name}" a "${target.name}", y "${source.name}" irá a la papelera. Esta acción no se deshace fácilmente. ¿Continuar?`,
+      { okText: "Sí, combinar", danger: true }))) return;
+    setBusy(true); setErr("");
+    try {
+      await api.post("/inventory/products/merge/", { source: source.id, target: target.id });
+      await dialog.alert(`Listo. "${source.name}" se combinó dentro de "${target.name}". El stock y el historial quedaron juntos.`);
+      onDone();
+    } catch (e) {
+      setErr(e.response?.data?.detail || "No se pudo combinar los productos.");
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-gradient-to-r from-fuchsia-600 to-purple-600 text-white px-5 py-4">
+          <div className="text-lg font-bold">🔗 Combinar productos duplicados</div>
+          <div className="text-xs text-fuchsia-100">Juntá dos registros del mismo producto (ej. "carreta pequeño" y "carreta niño") en uno solo.</div>
+        </div>
+        <div className="p-5 space-y-4">
+          {err && <div className="bg-red-600 text-white font-semibold text-sm rounded-lg px-3 py-2">{err}</div>}
+          <ProductPicker label="✅ Producto que se QUEDA (el correcto)" accent="text-emerald-600 dark:text-emerald-400"
+                         value={target} onChange={setTarget} excludeId={source?.id} />
+          <div className="text-center text-slate-400 text-xs">⬆️ recibe todo el stock e historial &nbsp;·&nbsp; ⬇️ se manda a la papelera</div>
+          <ProductPicker label="🗑️ Producto DUPLICADO (se elimina)" accent="text-rose-600 dark:text-rose-400"
+                         value={source} onChange={setSource} excludeId={target?.id} />
+
+          {source && target && (
+            <div className="rounded-xl bg-fuchsia-50 dark:bg-fuchsia-900/15 border border-fuchsia-200 dark:border-fuchsia-500/30 p-3 text-sm">
+              <div className="text-slate-700 dark:text-slate-200">
+                Se sumará el stock de <b>{source.name}</b> <span className="text-slate-400">({source.stock_display})</span> al de <b>{target.name}</b> <span className="text-slate-400">({target.stock_display})</span>.
+              </div>
+              <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Las ventas, compras, cotizaciones y todo el historial del duplicado quedarán registrados bajo <b>{target.name}</b>.</div>
+            </div>
+          )}
+
+          <div className="flex gap-2 pt-1">
+            <button onClick={onClose} className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition">Cancelar</button>
+            <button onClick={doMerge} disabled={busy || !source || !target}
+                    className="flex-1 bg-gradient-to-r from-fuchsia-600 to-purple-600 text-white rounded-lg py-2.5 text-sm font-semibold shadow hover:from-fuchsia-700 hover:to-purple-700 transition disabled:opacity-50">
+              {busy ? "Combinando…" : "🔗 Combinar"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ProductList() {
   const [searchParams] = useSearchParams();
   const [data, setData] = useState({ results: [], count: 0 });
@@ -763,6 +883,7 @@ export default function ProductList() {
   const [priceTag, setPriceTag] = useState(null); // {single?} para etiquetas de precio
   const [bulkLoc, setBulkLoc] = useState(null);   // {ids:[...]|null} con el modal abierto
   const [restoreLoc, setRestoreLoc] = useState(false); // modal de recuperar ubicaciones
+  const [mergeOpen, setMergeOpen] = useState(false);   // modal de combinar duplicados
   const [selected, setSelected] = useState(new Set()); // ids marcados con casillas
   const [companyName, setCompanyName] = useState("Ferretería Central");
   const { can } = useAuth();
@@ -879,6 +1000,7 @@ export default function ProductList() {
         </h1>
         <div className="flex flex-wrap gap-2">
           {can("productos.editar") && <button onClick={() => setBulkLoc({ ids: null })} className="border border-teal-300 text-teal-700 bg-teal-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-teal-100 transition">📍 Asignar ubicación</button>}
+          {can("productos.eliminar") && <button onClick={() => setMergeOpen(true)} className="border border-fuchsia-300 text-fuchsia-700 bg-fuchsia-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-fuchsia-100 transition" title="Juntar dos registros del mismo producto en uno solo">🔗 Combinar duplicados</button>}
           {/* Botón "Recuperar ubicaciones" oculto: fue una herramienta puntual
               para deshacer una asignación masiva equivocada. El código y el
               endpoint siguen disponibles; para volver a mostrarlo, descomentá
@@ -1041,6 +1163,7 @@ export default function ProductList() {
                     onClose={() => setBulkLoc(null)}
                     onDone={() => { setBulkLoc(null); setSelected(new Set()); load(); }} />}
       {restoreLoc && <RestoreLocationsModal onClose={() => setRestoreLoc(false)} onDone={() => load()} />}
+      {mergeOpen && <MergeProductsModal onClose={() => setMergeOpen(false)} onDone={() => { setMergeOpen(false); setSelected(new Set()); load(); }} />}
     </div>
   );
 }

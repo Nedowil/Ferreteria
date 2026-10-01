@@ -704,3 +704,51 @@ class StockCountHistoryTests(TestCase):
         self.assertEqual(Decimal(str(cmp["totals"]["units_delta"])), Decimal("20.00"))
         # Valor: (120*2+40*1) - (90*2+50*1) = 280 - 230 = 50
         self.assertEqual(Decimal(str(cmp["totals"]["value_delta"])), Decimal("50.00"))
+
+
+class MergeProductsTests(TestCase):
+    """Combinar (fusionar) productos duplicados."""
+
+    def setUp(self):
+        from .services import merge_products
+        self.merge = merge_products
+        self.b1 = Branch.objects.create(name="Matriz", code="M", is_main=True)
+
+    def test_merge_suma_stock_y_envia_duplicado_a_papelera(self):
+        # "carreta pequeño": 0 en stock. "carreta niño": 7 en stock. Son el mismo.
+        dup = Product.objects.create(sku="CARR-P", name="carreta pequeño", stock=Decimal("0"))
+        keep = Product.objects.create(sku="CARR-N", name="carreta niño", stock=Decimal("0"))
+        apply_movement(keep, InventoryMovement.ENTRADA, 7, branch=self.b1)
+        keep.refresh_from_db()
+        self.assertEqual(keep.stock, Decimal("7.00"))
+
+        self.merge(source=dup, target=keep)
+
+        dup.refresh_from_db(); keep.refresh_from_db()
+        # El duplicado quedó en la papelera
+        self.assertIsNotNone(dup.deleted_at)
+        self.assertFalse(dup.active)
+        # El que se queda conserva su stock (0 del duplicado + 7)
+        self.assertEqual(keep.stock, Decimal("7.00"))
+
+    def test_merge_reasigna_stock_de_ambas_sucursales(self):
+        b2 = Branch.objects.create(name="Sucursal 2", code="S2")
+        dup = Product.objects.create(sku="D-1", name="dup", stock=Decimal("0"))
+        keep = Product.objects.create(sku="K-1", name="keep", stock=Decimal("0"))
+        apply_movement(dup, InventoryMovement.ENTRADA, 5, branch=self.b1)
+        apply_movement(dup, InventoryMovement.ENTRADA, 3, branch=b2)
+        apply_movement(keep, InventoryMovement.ENTRADA, 10, branch=self.b1)
+
+        self.merge(source=dup, target=keep)
+
+        keep.refresh_from_db()
+        self.assertEqual(ProductStock.objects.get(product=keep, branch=self.b1).stock, Decimal("15.00"))
+        self.assertEqual(ProductStock.objects.get(product=keep, branch=b2).stock, Decimal("3.00"))
+        self.assertEqual(keep.stock, Decimal("18.00"))
+        # El duplicado ya no tiene filas de stock
+        self.assertFalse(ProductStock.objects.filter(product=dup).exists())
+
+    def test_merge_mismo_producto_falla(self):
+        p = Product.objects.create(sku="X-1", name="x")
+        with self.assertRaises(InventoryError):
+            self.merge(source=p, target=p)

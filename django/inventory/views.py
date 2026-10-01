@@ -154,7 +154,7 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
         "partial_update": "productos.editar", "destroy": "productos.eliminar",
         # Papelera de productos: ver, restaurar y borrar definitivamente.
         "trash": "productos.eliminar", "restore": "productos.eliminar",
-        "purge": "productos.eliminar",
+        "purge": "productos.eliminar", "merge": "productos.eliminar",
         # El kardex (ver e insertar movimientos) es para quien gestiona
         # inventario, no para cualquiera que pueda ver productos.
         "movements": {"GET": "inventario.ajustar", "POST": "inventario.ajustar"},
@@ -279,6 +279,31 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
                 status=status.HTTP_409_CONFLICT,
             )
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=False, methods=["post"])
+    def merge(self, request):
+        """Combina un producto DUPLICADO dentro del producto correcto: junta el
+        stock, reasigna el historial y manda el duplicado a la papelera.
+        Body: { source: <id duplicado>, target: <id que se queda> }."""
+        from .services import merge_products, InventoryError as InvErr
+        src_id = request.data.get("source")
+        tgt_id = request.data.get("target")
+        if not src_id or not tgt_id:
+            return Response({"detail": "Indicá el producto duplicado y el que se queda."},
+                            status=status.HTTP_400_BAD_REQUEST)
+        if str(src_id) == str(tgt_id):
+            return Response({"detail": "Elegí dos productos distintos."},
+                            status=status.HTTP_400_BAD_REQUEST)
+        source = Product.objects.filter(pk=src_id, deleted_at__isnull=True).first()
+        target = Product.objects.filter(pk=tgt_id, deleted_at__isnull=True).first()
+        if not source or not target:
+            return Response({"detail": "Producto no encontrado."},
+                            status=status.HTTP_404_NOT_FOUND)
+        try:
+            result = merge_products(source=source, target=target, user=request.user)
+        except InvErr as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"status": "ok", **result})
 
     # ---- Acciones de inventario ----
 

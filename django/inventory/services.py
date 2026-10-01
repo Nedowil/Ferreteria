@@ -146,3 +146,81 @@ def reject_damage_report(report, *, user=None, note=None):
     report.review_note = note or None
     report.save(update_fields=["status", "reviewed_by", "reviewed_at", "review_note", "updated_at"])
     return report
+
+
+@transaction.atomic
+def merge_products(*, source, target, user=None):
+    """Combina un producto DUPLICADO (`source`) dentro del producto que se queda
+    (`target`): junta el stock por sucursal, reasigna TODO el historial (ventas,
+    compras, cotizaciones, devoluciones, traslados, kardex, daños, conteos) al
+    producto correcto y manda el duplicado a la papelera.
+
+    Resuelve el caso de un mismo artículo registrado dos veces con nombres
+    distintos (ej. "carreta pequeño" y "carreta niño"), donde el stock quedó en
+    uno solo y el otro aparecía en cero.
+    """
+    from django.utils import timezone
+    from .models import ProductSubstitute
+
+    if source.pk == target.pk:
+        raise InventoryError("Elegí dos productos distintos.")
+
+    # Bloqueo de ambas filas para evitar carreras.
+    source = Product.objects.select_for_update().get(pk=source.pk)
+    target = Product.objects.select_for_update().get(pk=target.pk)
+
+    # 1) Stock por sucursal: sumar el del duplicado al del producto que se queda.
+    src_rows = list(source.stocks.all())
+    if src_rows:
+        for row in src_rows:
+            trow, _ = ProductStock.objects.get_or_create(
+                product=target, branch_id=row.branch_id,
+                defaults={"stock": Decimal("0")},
+            )
+            trow.stock = Decimal(trow.stock) + Decimal(row.stock)
+            if (not trow.min_stock or Decimal(trow.min_stock) == 0) and row.min_stock:
+                trow.min_stock = row.min_stock
+            if not trow.location and row.location:
+                trow.location = row.location
+            trow.save(update_fields=["stock", "min_stock", "location", "updated_at"])
+        ProductStock.objects.filter(product=source).delete()
+    elif Decimal(source.stock or 0) != 0:
+        # El duplicado solo tenía stock global (sin filas por sucursal).
+        trow = target.stocks.first()
+        if trow is not None:
+            trow.stock = Decimal(trow.stock) + Decimal(source.stock)
+            trow.save(update_fields=["stock", "updated_at"])
+        else:
+            target.stock = Decimal(target.stock or 0) + Decimal(source.stock)
+
+    # 2) Reasignar todos los documentos e historial al producto que se queda.
+    moved = {}
+    for rel in ("sale_items", "quotation_items", "return_items", "transfer_items",
+                "purchase_items", "movements", "damage_reports", "count_lines"):
+        mgr = getattr(source, rel)
+        moved[rel] = mgr.count()
+        mgr.update(product=target)
+
+    # 3) Sustitutos: limpiar los del duplicado y cualquier auto-referencia.
+    ProductSubstitute.objects.filter(product=source).delete()
+    ProductSubstitute.objects.filter(substitute=source).delete()
+    ProductSubstitute.objects.filter(product=target, substitute=target).delete()
+
+    # 4) Veces vendido + heredar el código de barras si al que se queda le falta.
+    target.times_sold = (target.times_sold or 0) + (source.times_sold or 0)
+    if not target.barcode and source.barcode:
+        target.barcode = source.barcode
+        source.barcode = None
+        source.save(update_fields=["barcode"])
+
+    # 5) Recalcular el stock global del producto que se queda.
+    if target.stocks.exists():
+        target.stock = target.stocks.aggregate(t=Sum("stock"))["t"] or Decimal("0")
+    target.save()
+
+    # 6) Enviar el duplicado a la papelera (ya sin historial propio).
+    source.deleted_at = timezone.now()
+    source.active = False
+    source.save(update_fields=["deleted_at", "active", "updated_at"])
+
+    return {"moved": moved, "target_stock": str(target.stock)}
