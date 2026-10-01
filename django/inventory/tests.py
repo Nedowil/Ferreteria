@@ -828,3 +828,43 @@ class BarcodeCheckTests(TestCase):
         r = self._client().get("/api/inventory/products/barcode-check/",
                                {"code": "7501234567890", "exclude": p.id})
         self.assertEqual(r.json()["results"], [])
+
+
+class BarcodeUniqueTests(TestCase):
+    """El código de barras no se puede repetir (bloqueo al guardar)."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        self.User = get_user_model()
+        self.branch = Branch.objects.create(name="Matriz", code="M", is_main=True)
+        self.admin = self.User.objects.create_user(
+            username="a", email="a@test.com", password="x123", is_superuser=True)
+        self.existing = Product.objects.create(sku="EX-1", name="Taladro", barcode="7501234567890")
+
+    def _client(self):
+        from rest_framework.test import APIClient
+        c = APIClient()
+        r = c.post("/api/auth/token/", {"email": "a@test.com", "password": "x123"}, format="json")
+        c.credentials(HTTP_AUTHORIZATION=f"Bearer {r.json()['access']}",
+                      HTTP_X_BRANCH_ID=str(self.branch.id))
+        return c
+
+    def test_crear_con_codigo_repetido_falla(self):
+        r = self._client().post("/api/inventory/products/", {
+            "name": "Otro producto", "barcode": "7501234567890",
+            "sale_price": "10", "purchase_price": "5",
+        }, format="json")
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("barcode", r.json())
+
+    def test_crear_con_codigo_libre_ok(self):
+        r = self._client().post("/api/inventory/products/", {
+            "name": "Producto nuevo", "barcode": "7509999999990",
+            "sale_price": "10", "purchase_price": "5",
+        }, format="json")
+        self.assertEqual(r.status_code, 201)
+
+    def test_editar_su_propio_codigo_ok(self):
+        r = self._client().patch(f"/api/inventory/products/{self.existing.id}/",
+                                 {"barcode": "7501234567890"}, format="json")
+        self.assertEqual(r.status_code, 200)

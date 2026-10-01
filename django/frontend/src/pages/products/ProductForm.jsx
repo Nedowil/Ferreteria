@@ -327,6 +327,17 @@ export default function ProductForm() {
 
   const submit = async (e) => {
     e.preventDefault();
+    // Bloqueo: el código de barras no se puede repetir (al escanear sería
+    // ambiguo). Si ya lo tiene otro producto, no se guarda.
+    if (barcodeDupes.length > 0) {
+      const o = barcodeDupes[0];
+      await dialog.alert(
+        `⛔ No se puede guardar: el código de barras ya lo tiene «${o.name}» (${o.sku}).\n\n` +
+        `Un código no se puede repetir, porque al escanear no se sabría cuál de los dos es. ` +
+        `Cambiá el código, o dejá el campo vacío para que el sistema genere uno interno.`
+      );
+      return;
+    }
     // NO permitir vender a PÉRDIDA: bloquea si la COMPRA es mayor que la VENTA.
     // Se RECALCULAN ambos precios por unidad base con el factor ACTUAL (a partir
     // de lo que se escribió y su medida), por si se cambió el empaque/factor
@@ -461,9 +472,9 @@ export default function ProductForm() {
         {/* Aviso: el código de barras ya lo usa otro producto. */}
         {barcodeDupes.length > 0 && (
           <div className="mt-3 rounded-xl border border-rose-300 dark:border-rose-500/40 bg-rose-50 dark:bg-rose-900/20 p-3">
-            <div className="text-sm font-semibold text-rose-700 dark:text-rose-300 flex items-center gap-1.5">⛔ Este código de barras ya está en uso</div>
+            <div className="text-sm font-semibold text-rose-700 dark:text-rose-300 flex items-center gap-1.5">⛔ No se puede guardar: código de barras repetido</div>
             <div className="text-xs text-rose-600 dark:text-rose-400 mt-0.5">
-              Ya lo tiene {barcodeDupes.length === 1 ? "este producto" : "estos productos"}. Si usás el mismo código, al escanear no se sabrá cuál es. Usá el código de la caja en un solo producto:
+              Ya lo tiene {barcodeDupes.length === 1 ? "este producto" : "estos productos"}. Un código no se puede repetir, porque al escanear no se sabría cuál es. Cambiá el código (o dejalo vacío para generar uno interno):
             </div>
             <ul className="mt-2 space-y-1">
               {barcodeDupes.map((p) => (
@@ -660,8 +671,10 @@ export default function ProductForm() {
       </section>
 
       <div className="flex gap-2">
-        <button disabled={busy} className="bg-blue-600 text-white rounded px-6 py-2 font-medium disabled:opacity-50">
-          {busy ? "Guardando…" : "Guardar"}
+        <button disabled={busy || barcodeDupes.length > 0}
+                title={barcodeDupes.length > 0 ? "El código de barras ya está en uso por otro producto" : undefined}
+                className="bg-blue-600 text-white rounded px-6 py-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed">
+          {busy ? "Guardando…" : barcodeDupes.length > 0 ? "Código repetido" : "Guardar"}
         </button>
         <button type="button" onClick={() => navigate("/productos")} className="px-6 py-2 text-slate-500 dark:text-slate-400">Cancelar</button>
       </div>

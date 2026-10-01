@@ -188,6 +188,25 @@ class ProductSerializer(serializers.ModelSerializer):
             "barcode": {"required": False, "allow_blank": True, "allow_null": True},
         }
 
+    def validate_barcode(self, value):
+        # Un código de barras NO se puede repetir entre productos: al escanear
+        # sería ambiguo (no se sabría cuál de los dos es). Si ya lo tiene otro
+        # producto, se bloquea el guardado con un mensaje claro.
+        code = (value or "").strip()
+        if not code:
+            return value
+        qs = Product.objects.filter(deleted_at__isnull=True, barcode__iexact=code)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        other = qs.first()
+        if other:
+            raise serializers.ValidationError(
+                f"Este código de barras ya lo tiene el producto «{other.name}» ({other.sku}). "
+                "No se puede repetir: al escanear no se sabría cuál de los dos es. "
+                "Usá otro código, o dejá el campo vacío para que el sistema genere uno interno."
+            )
+        return value
+
     def validate(self, attrs):
         # Si falta etiqueta o factor de empaque, limpiar campos de empaque
         if not attrs.get("container_label") or not attrs.get("container_factor"):
