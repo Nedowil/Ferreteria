@@ -191,7 +191,7 @@ export default function ReturnCreate() {
       const { data } = await api.get("/inventory/products/", { params: { search: q, page_size: 8 } });
       const list = data.results || data;
       const ql = q.toLowerCase();
-      const hit = list.find((p) => (p.barcode || "").toLowerCase() === ql || (p.sku || "").toLowerCase() === ql) || list[0];
+      const hit = list.find((p) => (p.barcode || "").toLowerCase() === ql || (p.sku || "").toLowerCase() === ql || (p.barcodes || []).some((c) => String(c).toLowerCase() === ql)) || list[0];
       if (hit) addItem(hit);
       else setError("No se encontró un producto con ese código.");
     } catch { /* ignora: el buscador por letra ya refleja el estado */ }

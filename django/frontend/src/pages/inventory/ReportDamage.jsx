@@ -52,7 +52,7 @@ export default function ReportDamage() {
       const { data } = await api.get("/inventory/products/", { params: { search: q, active: 1, page_size: 8 } });
       const list = data.results || data;
       const ql = q.toLowerCase();
-      const hit = list.find((p) => (p.barcode || "").toLowerCase() === ql || (p.sku || "").toLowerCase() === ql) || list[0];
+      const hit = list.find((p) => (p.barcode || "").toLowerCase() === ql || (p.sku || "").toLowerCase() === ql || (p.barcodes || []).some((c) => String(c).toLowerCase() === ql)) || list[0];
       if (hit) pick(hit);
       else setErr("No se encontró un producto con ese código.");
     } catch { /* la búsqueda por letra ya refleja el estado */ }

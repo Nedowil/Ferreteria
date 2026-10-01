@@ -81,7 +81,8 @@ export default function StockCount() {
     if (!onlyUncounted || !all) return [];
     const q = norm(search);
     return all.filter((p) => !counted.has(Number(p.id)) &&
-      (!q || norm(p.name).includes(q) || norm(p.sku).includes(q) || norm(p.barcode).includes(q)));
+      (!q || norm(p.name).includes(q) || norm(p.sku).includes(q) || norm(p.barcode).includes(q)
+        || (p.barcodes || []).some((c) => norm(c).includes(q))));
   }, [onlyUncounted, all, search, counted]);
 
   const clientPages = Math.max(1, Math.ceil(filteredAll.length / PAGE_SIZE));
@@ -113,7 +114,7 @@ export default function StockCount() {
       const { data } = await api.get("/inventory/products/", { params: { search: code, page_size: 8 } });
       const list = data.results || data;
       const ql = code.toLowerCase();
-      const hit = list.find((p) => (p.barcode || "").toLowerCase() === ql || (p.sku || "").toLowerCase() === ql) || list[0];
+      const hit = list.find((p) => (p.barcode || "").toLowerCase() === ql || (p.sku || "").toLowerCase() === ql || (p.barcodes || []).some((c) => String(c).toLowerCase() === ql)) || list[0];
       if (!hit) { setScanMsg(`No se encontró un producto con «${code}».`); return; }
       const factor = Number(hit.container_factor) || 0;
       setScan({ product: hit, qty: "", unit: factor > 0 && hit.container_label ? "base" : "base" });
