@@ -133,6 +133,61 @@ export default function CashSessions() {
     }
   };
 
+  // Contenido del detalle expandido de una caja (relevos + botón de movimientos).
+  // Se reutiliza tanto en la tabla de escritorio como en las tarjetas de celular.
+  const DetailBody = ({ s }) => {
+    const d = details[s.id];
+    const relevos = d?.handovers || [];
+    return (
+      <>
+        <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-slate-600 dark:text-slate-300 mb-3">
+          <span><b className="text-slate-500 dark:text-slate-400">Abrió:</b> {s.user_name || "—"}</span>
+          {d?.responsible_name && <span><b className="text-slate-500 dark:text-slate-400">Responsable al cierre:</b> {d.responsible_name}</span>}
+        </div>
+        <div className="text-xs font-bold text-amber-700 dark:text-amber-300 mb-2 flex items-center gap-1.5">🔄 Cambios de responsable</div>
+        {!d ? (
+          <div className="text-xs text-slate-400">Cargando…</div>
+        ) : relevos.length === 0 ? (
+          <div className="text-xs text-slate-400 italic">Sin cambios de responsable en este turno.</div>
+        ) : (
+          <ul className="space-y-2">
+            {relevos.map((h) => (
+              <li key={h.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-white dark:bg-slate-800 border border-amber-200/70 dark:border-amber-500/20 px-3 py-2">
+                <span className="tabular-nums text-xs font-semibold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/40 rounded-md px-2 py-0.5">
+                  {new Date(h.handed_at).toLocaleString("es-GT", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                </span>
+                <span className="flex items-center gap-2 text-sm font-medium text-slate-800 dark:text-slate-100">
+                  <Avatar name={h.from_name || "—"} size={24} /> {h.from_name || "—"}
+                  <span className="text-amber-500">→</span>
+                  {h.to_name ? <><Avatar name={h.to_name} size={24} /> {h.to_name}</> : <span className="italic text-slate-400">en espera</span>}
+                </span>
+                {h.difference != null && (
+                  <span className={"text-xs font-bold rounded-full px-2.5 py-0.5 tabular-nums " +
+                    (Number(h.difference) < 0
+                      ? "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300"
+                      : Number(h.difference) > 0
+                        ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+                        : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300")}>
+                    contó {money(h.counted_cash)} · esperado {money(h.expected_cash)} · dif {money(h.difference)}
+                  </span>
+                )}
+                {h.notes && <span className="text-xs text-slate-500 dark:text-slate-400 italic">· {h.notes}</span>}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {/* Botón que abre la ventana flotante con todos los movimientos. */}
+        <div className="mt-4">
+          <button onClick={(e) => { e.stopPropagation(); openMovs(s); }}
+                  className="inline-flex items-center gap-2 rounded-lg bg-slate-700 text-white px-4 py-2 text-sm font-medium hover:bg-slate-800 transition shadow-sm">
+            🧾 Ver movimientos de la caja
+          </button>
+        </div>
+      </>
+    );
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
@@ -162,7 +217,8 @@ export default function CashSessions() {
       </div>
 
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Escritorio: tabla */}
+        <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
             <tr>
@@ -181,8 +237,6 @@ export default function CashSessions() {
           <tbody>
             {data.results.map((s) => {
               const isOpen = expanded === s.id;
-              const d = details[s.id];
-              const relevos = d?.handovers || [];
               return (
               <Fragment key={s.id}>
               <tr onClick={() => toggle(s)}
@@ -217,50 +271,7 @@ export default function CashSessions() {
                 <tr className="bg-amber-50/40 dark:bg-amber-900/10">
                   <td className="p-0" style={{ borderLeft: `3px solid ${stripeColor(s.status_display)}` }}></td>
                   <td colSpan="9" className="px-4 py-4">
-                    <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-slate-600 dark:text-slate-300 mb-3">
-                      <span><b className="text-slate-500 dark:text-slate-400">Abrió:</b> {s.user_name || "—"}</span>
-                      {d?.responsible_name && <span><b className="text-slate-500 dark:text-slate-400">Responsable al cierre:</b> {d.responsible_name}</span>}
-                    </div>
-                    <div className="text-xs font-bold text-amber-700 dark:text-amber-300 mb-2 flex items-center gap-1.5">🔄 Cambios de responsable</div>
-                    {!d ? (
-                      <div className="text-xs text-slate-400">Cargando…</div>
-                    ) : relevos.length === 0 ? (
-                      <div className="text-xs text-slate-400 italic">Sin cambios de responsable en este turno.</div>
-                    ) : (
-                      <ul className="space-y-2">
-                        {relevos.map((h) => (
-                          <li key={h.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-white dark:bg-slate-800 border border-amber-200/70 dark:border-amber-500/20 px-3 py-2">
-                            <span className="tabular-nums text-xs font-semibold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/40 rounded-md px-2 py-0.5">
-                              {new Date(h.handed_at).toLocaleString("es-GT", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
-                            </span>
-                            <span className="flex items-center gap-2 text-sm font-medium text-slate-800 dark:text-slate-100">
-                              <Avatar name={h.from_name || "—"} size={24} /> {h.from_name || "—"}
-                              <span className="text-amber-500">→</span>
-                              {h.to_name ? <><Avatar name={h.to_name} size={24} /> {h.to_name}</> : <span className="italic text-slate-400">en espera</span>}
-                            </span>
-                            {h.difference != null && (
-                              <span className={"text-xs font-bold rounded-full px-2.5 py-0.5 tabular-nums " +
-                                (Number(h.difference) < 0
-                                  ? "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300"
-                                  : Number(h.difference) > 0
-                                    ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
-                                    : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300")}>
-                                contó {money(h.counted_cash)} · esperado {money(h.expected_cash)} · dif {money(h.difference)}
-                              </span>
-                            )}
-                            {h.notes && <span className="text-xs text-slate-500 dark:text-slate-400 italic">· {h.notes}</span>}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-
-                    {/* Botón que abre la ventana flotante con todos los movimientos. */}
-                    <div className="mt-4">
-                      <button onClick={(e) => { e.stopPropagation(); openMovs(s); }}
-                              className="inline-flex items-center gap-2 rounded-lg bg-slate-700 text-white px-4 py-2 text-sm font-medium hover:bg-slate-800 transition shadow-sm">
-                        🧾 Ver movimientos de la caja
-                      </button>
-                    </div>
+                    <DetailBody s={s} />
                   </td>
                 </tr>
               )}
@@ -270,6 +281,55 @@ export default function CashSessions() {
             {data.results.length === 0 && <tr><td colSpan="10" className="px-5 py-12 text-center text-slate-400">Sin sesiones de caja.</td></tr>}
           </tbody>
         </table>
+        </div>
+
+        {/* Celular: tarjetas (la tabla de 10 columnas no cabe) */}
+        <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-700">
+          {data.results.map((s) => {
+            const isOpen = expanded === s.id;
+            return (
+              <div key={s.id}>
+                <button onClick={() => toggle(s)} className="w-full text-left p-4 flex gap-3 hover:bg-slate-50/70 dark:hover:bg-slate-700/40 transition">
+                  <span className="w-1.5 self-stretch rounded-full shrink-0" style={{ background: stripeColor(s.status_display) }} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Avatar name={s.user_name || "—"} size={30} />
+                        <div className="min-w-0">
+                          <div className="font-medium text-slate-800 dark:text-slate-100 truncate">{s.user_name || "—"} <span className="text-slate-400 text-xs font-normal">#{s.id}</span></div>
+                          {s.handover_count > 0 && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 px-1.5 py-0.5 text-[11px] font-medium mt-0.5">🔄 {s.handover_count} relevo{s.handover_count === 1 ? "" : "s"}</span>
+                          )}
+                        </div>
+                      </div>
+                      <StatusPill label={s.status_display} />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 mt-3 text-xs">
+                      <div><div className="text-slate-400 uppercase text-[10px] tracking-wide">Fondo</div><div className="text-slate-600 dark:text-slate-300">{cash(s.opening_amount)}</div></div>
+                      <div><div className="text-slate-400 uppercase text-[10px] tracking-wide">Esperado</div><div className="text-slate-600 dark:text-slate-300">{cash(s.expected_cash)}</div></div>
+                      <div><div className="text-slate-400 uppercase text-[10px] tracking-wide">Contado</div><div className="font-semibold text-slate-800 dark:text-slate-100">{cash(s.counted_cash)}</div></div>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 mt-3">
+                      <div className="text-[11px] text-slate-400 leading-tight">
+                        <div>Abrió: {s.opened_at ? new Date(s.opened_at).toLocaleString("es-GT", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "—"}</div>
+                        {s.closed_at && <div>Cerró: {new Date(s.closed_at).toLocaleString("es-GT", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</div>}
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <DiffPill status={s.status} difference={s.difference} />
+                        <span className={"text-slate-400 transition-transform " + (isOpen ? "rotate-90" : "")}>▸</span>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+                {isOpen && (
+                  <div className="px-4 pb-4 bg-amber-50/40 dark:bg-amber-900/10 border-l-4" style={{ borderLeftColor: stripeColor(s.status_display) }}>
+                    <div className="pt-3"><DetailBody s={s} /></div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {data.results.length === 0 && <div className="px-5 py-12 text-center text-slate-400">Sin sesiones de caja.</div>}
         </div>
       </div>
       <Pagination page={page} count={data.count} onPage={goPage} label="cajas" />
