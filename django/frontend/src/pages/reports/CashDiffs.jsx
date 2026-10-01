@@ -35,8 +35,10 @@ export default function CashDiffs() {
       <DateRangeBar from={from} setFrom={setFrom} to={to} setTo={setTo} onApply={reload} />
       {data && (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
             <KpiCard label="Cierres" value={data.count} />
+            <KpiCard label="Esperado (total)" value={Q(data.total_expected)} accent="text-sky-600" icon="🧮" />
+            <KpiCard label="Contado (total en caja)" value={Q(data.total_counted)} accent="text-blue-600" icon="💵" />
             <KpiCard label="Faltantes (total)" value={Q(data.total_faltante)} accent="text-red-600" />
             <KpiCard label="Sobrantes (total)" value={Q(data.total_sobrante)} accent="text-emerald-600" />
             <KpiCard label="Diferencia neta" value={Q(data.total_difference)}
