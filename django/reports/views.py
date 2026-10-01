@@ -414,12 +414,24 @@ def cash_diffs(request):
         "difference": a["diff"] or Decimal("0"),
     } for a in (sessions.values("user__name")
                 .annotate(n=Count("id"), diff=Sum("difference")).order_by("diff"))]
+
+    # Ganancia (utilidad bruta) de las ventas del periodo: ingreso − costo.
+    # Mismo criterio que el reporte de Ganancias (ventas completadas, por fecha
+    # de venta). Sirve para ver la ganancia junto a los descuadres del periodo.
+    pagg = _completed_items(f, t).aggregate(revenue=Sum("subtotal"), cost=Sum(COST_ITEM))
+    total_revenue = pagg["revenue"] or Decimal("0")
+    total_cost = pagg["cost"] or Decimal("0")
+    total_profit = total_revenue - total_cost
     return Response({
         "from": f, "to": t, "rows": rows, "by_user": by_user, "count": len(rows),
         "total_expected": agg["expected"] or Decimal("0"),
         "total_counted": agg["counted"] or Decimal("0"),
         "total_difference": agg["difference"] or Decimal("0"),
         "total_faltante": faltante, "total_sobrante": sobrante,
+        # Ganancia del periodo (por fecha de venta).
+        "total_revenue": total_revenue, "total_cost": total_cost,
+        "total_profit": total_profit,
+        "margin_pct": (total_profit / total_revenue * 100) if total_revenue else 0,
     })
 
 
