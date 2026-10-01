@@ -63,7 +63,7 @@ export function KpiCard({ label, value, accent = "", icon }) {
         <div className="text-sm text-slate-500 dark:text-slate-400">{label}</div>
         {icon && <span className="text-lg opacity-80">{icon}</span>}
       </div>
-      <div className={`text-2xl font-extrabold mt-1 tabular-nums ${accent || "text-slate-800 dark:text-slate-100"}`}>{value}</div>
+      <div className={`text-2xl font-extrabold mt-1 tabular-nums break-words ${accent || "text-slate-800 dark:text-slate-100"}`}>{value}</div>
     </div>
   );
 }

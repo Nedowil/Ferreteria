@@ -42,17 +42,17 @@ export default function InventoryValue() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
         <div className="rounded-2xl p-5 text-white shadow-md bg-gradient-to-br from-blue-600 to-indigo-600">
           <div className="flex items-center justify-between"><span className="text-sm font-medium text-white/85">Valor a costo</span><span className="text-xl">📦</span></div>
-          <div className="text-3xl font-extrabold mt-1 drop-shadow-sm tabular-nums">{Q(data.total_cost_value)}</div>
+          <div className="text-3xl font-extrabold mt-1 drop-shadow-sm tabular-nums break-words">{Q(data.total_cost_value)}</div>
           <div className="text-xs text-white/75 mt-1">Lo que te costó la mercadería en stock.</div>
         </div>
         <div className="rounded-2xl p-5 text-white shadow-md bg-gradient-to-br from-sky-600 to-cyan-600">
           <div className="flex items-center justify-between"><span className="text-sm font-medium text-white/85">Valor a precio de venta</span><span className="text-xl">🏷️</span></div>
-          <div className="text-3xl font-extrabold mt-1 drop-shadow-sm tabular-nums">{Q(data.total_sale_value)}</div>
+          <div className="text-3xl font-extrabold mt-1 drop-shadow-sm tabular-nums break-words">{Q(data.total_sale_value)}</div>
           <div className="text-xs text-white/75 mt-1">Si vendieras todo al precio actual.</div>
         </div>
         <div className="rounded-2xl p-5 text-white shadow-md bg-gradient-to-br from-emerald-600 to-green-700">
           <div className="flex items-center justify-between"><span className="text-sm font-medium text-white/85">Utilidad potencial</span><span className="text-xl">📈</span></div>
-          <div className="text-3xl font-extrabold mt-1 drop-shadow-sm tabular-nums">{Q(data.potential_profit)}</div>
+          <div className="text-3xl font-extrabold mt-1 drop-shadow-sm tabular-nums break-words">{Q(data.potential_profit)}</div>
           <div className="text-xs text-white/85 mt-1">Margen sobre costo: <b>{margin.toFixed(1)}%</b></div>
         </div>
       </div>
