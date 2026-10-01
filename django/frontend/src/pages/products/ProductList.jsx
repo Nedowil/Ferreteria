@@ -842,14 +842,35 @@ function MergeProductsModal({ onClose, onDone }) {
           <ProductPicker label="🗑️ Producto DUPLICADO (se elimina)" accent="text-rose-600 dark:text-rose-400"
                          value={source} onChange={setSource} excludeId={target?.id} />
 
-          {source && target && (
-            <div className="rounded-xl bg-fuchsia-50 dark:bg-fuchsia-900/15 border border-fuchsia-200 dark:border-fuchsia-500/30 p-3 text-sm">
-              <div className="text-slate-700 dark:text-slate-200">
-                Se sumará el stock de <b>{source.name}</b> <span className="text-slate-400">({source.stock_display})</span> al de <b>{target.name}</b> <span className="text-slate-400">({target.stock_display})</span>.
+          {source && target && (() => {
+            const stockNum = (p) => Number(p.branch_stock ?? p.stock ?? 0);
+            const finalStock = stockNum(source) + stockNum(target);
+            const unit = target.base_unit_label || "unidad";
+            const fmtN = (n) => Number(n).toLocaleString("es-GT", { maximumFractionDigits: 2 });
+            const fmtQ = (n) => "Q" + Number(n || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const barcode = target.barcode || source.barcode || null;
+            return (
+            <div className="rounded-xl bg-fuchsia-50 dark:bg-fuchsia-900/15 border border-fuchsia-200 dark:border-fuchsia-500/30 p-3.5">
+              <div className="text-xs font-semibold text-fuchsia-700 dark:text-fuchsia-300 mb-2">👁️ Así quedará «{target.name}»</div>
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <div className="rounded-lg bg-white dark:bg-slate-800 border border-fuchsia-200/70 dark:border-fuchsia-500/20 px-3 py-2">
+                  <div className="text-[10px] uppercase tracking-wide text-slate-400">Stock final</div>
+                  <div className="text-base font-bold text-slate-800 dark:text-slate-100 tabular-nums">{fmtN(finalStock)} <span className="text-xs font-normal text-slate-500">{unit}</span></div>
+                  <div className="text-[11px] text-slate-400">{fmtN(stockNum(target))} + {fmtN(stockNum(source))}</div>
+                </div>
+                <div className="rounded-lg bg-white dark:bg-slate-800 border border-fuchsia-200/70 dark:border-fuchsia-500/20 px-3 py-2">
+                  <div className="text-[10px] uppercase tracking-wide text-slate-400">Precio que queda</div>
+                  <div className="text-base font-bold text-slate-800 dark:text-slate-100 tabular-nums">{fmtQ(target.sale_price)}</div>
+                  <div className="text-[11px] text-slate-400">el del que se queda</div>
+                </div>
               </div>
-              <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Las ventas, compras, cotizaciones y todo el historial del duplicado quedarán registrados bajo <b>{target.name}</b>.</div>
+              {barcode && (
+                <div className="text-[11px] text-slate-500 dark:text-slate-400">Código de barras: <span className="font-mono">{barcode}</span></div>
+              )}
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Las ventas, compras, cotizaciones y todo el historial del duplicado quedarán bajo <b>{target.name}</b>.</div>
             </div>
-          )}
+            );
+          })()}
 
           <div className="flex gap-2 pt-1">
             <button onClick={onClose} className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition">Cancelar</button>
