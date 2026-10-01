@@ -1,5 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import api from "../../api/client";
+import Pagination from "../../components/Pagination";
+import { fetchAll } from "../../utils/exportExcel";
 
 const money = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const qty = (v) => Number(v || 0).toLocaleString("es-GT", { maximumFractionDigits: 2 });
@@ -21,7 +23,10 @@ const Delta = ({ v, money: asMoney }) => {
 };
 
 export default function StockCountHistory() {
-  const [sessions, setSessions] = useState([]);
+  const [sessions, setSessions] = useState([]);   // página actual de la tabla
+  const [count, setCount] = useState(0);          // total de inventarios
+  const [page, setPage] = useState(1);
+  const [optSessions, setOptSessions] = useState([]); // TODOS, para los menús de comparación
   const [expanded, setExpanded] = useState(null);
   const [details, setDetails] = useState({});
   const [a, setA] = useState("");
@@ -30,13 +35,20 @@ export default function StockCountHistory() {
   const [cmpBusy, setCmpBusy] = useState(false);
   const [onlyChanged, setOnlyChanged] = useState(false);
 
+  // Tabla "Inventarios registrados": paginada (15 por página).
+  const loadPage = (p = page) => api.get("/inventory/stock-counts/", { params: { page: p } })
+    .then((r) => { setSessions(r.data.results || r.data); setCount(r.data.count ?? (r.data.results ? r.data.results.length : r.data.length)); });
+  const goPage = (p) => { setPage(p); loadPage(p); setExpanded(null); };
+  useEffect(() => { loadPage(1); }, []);
+
+  // Menús de comparación: se cargan TODOS los inventarios (no solo 15), para
+  // poder comparar cualquiera, incluso de hace un año.
   useEffect(() => {
-    api.get("/inventory/stock-counts/").then((r) => {
-      const list = r.data.results || r.data;
-      setSessions(list);
+    fetchAll("/inventory/stock-counts/").then((list) => {
+      setOptSessions(list);
       if (list.length >= 2) { setA(String(list[1].id)); setB(String(list[0].id)); }
       else if (list.length === 1) { setB(String(list[0].id)); }
-    });
+    }).catch(() => {});
   }, []);
 
   const toggle = async (s) => {
@@ -83,7 +95,7 @@ export default function StockCountHistory() {
               <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Inventario anterior</label>
               <select value={a} onChange={(e) => setA(e.target.value)} className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-800">
                 <option value="">— Elegir —</option>
-                {sessions.map((s) => <option key={s.id} value={s.id}>{dt(s.created_at)} · {s.reason || s.mode_display}</option>)}
+                {optSessions.map((s) => <option key={s.id} value={s.id}>{dt(s.created_at)} · {s.reason || s.mode_display}</option>)}
               </select>
             </div>
             <span className="hidden sm:block text-slate-400 pb-2">→</span>
@@ -91,7 +103,7 @@ export default function StockCountHistory() {
               <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Inventario actual</label>
               <select value={b} onChange={(e) => setB(e.target.value)} className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-800">
                 <option value="">— Elegir —</option>
-                {sessions.map((s) => <option key={s.id} value={s.id}>{dt(s.created_at)} · {s.reason || s.mode_display}</option>)}
+                {optSessions.map((s) => <option key={s.id} value={s.id}>{dt(s.created_at)} · {s.reason || s.mode_display}</option>)}
               </select>
             </div>
             <button onClick={compare} disabled={!a || !b || cmpBusy || a === b}
@@ -216,6 +228,7 @@ export default function StockCountHistory() {
             </tbody>
           </table>
         </div>
+        {count > 15 && <div className="px-5 pb-4"><Pagination page={page} count={count} onPage={goPage} label="inventarios" /></div>}
       </section>
     </div>
   );
