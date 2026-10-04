@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { toast } from "../../components/Toast";
 import { PageTitle } from "../../components/PageTitle";
 import { Link } from "react-router-dom";
 import api from "../../api/client";
@@ -45,7 +46,7 @@ export default function ProductTrash() {
       await api.delete(`/inventory/products/${p.id}/purge/`);
       load(page);
     } catch (e) {
-      await dialog.alert(e.response?.data?.detail || "No se pudo borrar el producto.");
+      toast.apiError(e, "No se pudo borrar el producto.");
     } finally { setBusy(null); }
   };
 

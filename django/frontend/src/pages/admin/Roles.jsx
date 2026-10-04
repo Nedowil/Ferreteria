@@ -45,13 +45,13 @@ export default function Roles() {
       else await api.post("/roles/", { name: editing.name, permissions: editing.permissions });
       toast.success("Guardado correctamente.");
       setEditing(null); load();
-    } catch (err) { setError(JSON.stringify(err.response?.data) || "Error"); toast.error(JSON.stringify(err.response?.data) || "Error"); }
+    } catch (err) { const m = err.response?.data?.detail || "No se pudo guardar el rol. Revisá el nombre e intentá de nuevo."; setError(m); toast.error(m); }
   };
 
   const remove = async (id) => {
-    if (!(await dialog.confirm("¿Estás seguro de que deseas eliminar este rol?", { danger: true, okText: "Eliminar" }))) return;
+    if (!(await dialog.confirm("¿Eliminar este rol? Los usuarios que lo tengan perderán esos permisos.", { danger: true, okText: "Eliminar" }))) return;
     try { await api.delete(`/roles/${id}/`); toast.success("Eliminado correctamente."); load(); }
-    catch (err) { await dialog.alert(err.response?.data?.detail || "No se pudo eliminar."); toast.error(err.response?.data?.detail || "No se pudo eliminar."); }
+    catch (err) { toast.error(err.response?.data?.detail || "No se pudo eliminar."); }
   };
 
   const toggle = (code) => setEditing((e) => ({

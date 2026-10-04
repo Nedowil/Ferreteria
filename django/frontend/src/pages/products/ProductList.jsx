@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { toast } from "../../components/Toast";
 import { PageTitle } from "../../components/PageTitle";
 import { Link, useSearchParams } from "react-router-dom";
 import JsBarcode from "jsbarcode";
@@ -322,7 +323,7 @@ async function printPriceTags(products, companyName, copiesEach = 1, labelW = 51
       </div>`;
     for (let i = 0; i < Math.max(1, Number(copiesEach) || 1); i++) tags.push(one);
   });
-  if (!tags.length) { await dialog.alert("Los productos seleccionados no tienen precio para etiquetar."); return; }
+  if (!tags.length) { toast.error("Los productos seleccionados no tienen precio para etiquetar."); return; }
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>Etiquetas de precio</title>
     <style>
       @page { size: ${labelW}mm ${labelH}mm; margin: 0; }
@@ -434,7 +435,7 @@ function LabelPrintModal({ product, companyName, onClose }) {
     try {
       const { data } = await api.post(`/inventory/products/${product.id}/label/`,
                                       { copies: Number(copies), mode });
-      if (data.status === "sent") { await dialog.alert("Etiqueta(s) enviada(s) a la Zebra ZD421T."); onClose(); return; }
+      if (data.status === "sent") { toast.success("Etiqueta(s) enviada(s) a la Zebra ZD421T."); onClose(); return; }
       const bytes = Uint8Array.from(atob(data.zpl_base64), (c) => c.charCodeAt(0));
       const url = URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" }));
       const a = document.createElement("a");
@@ -465,7 +466,7 @@ function LabelPrintModal({ product, companyName, onClose }) {
       } catch { /* usa los valores por defecto */ }
       const zpl = buildLabelImageZpl(product, companyName, Number(copies), dims);
       await printZpl(zpl);
-      await dialog.alert(`Se enviaron ${copies} etiqueta(s) a la Zebra.`);
+      toast.success(`Se enviaron ${copies} etiqueta(s) a la Zebra.`);
       onClose();
     } catch (e) {
       if (e.code === "NO_BP") {
@@ -616,7 +617,7 @@ function BulkLocationModal({ filters, count, ids, onClose, onDone }) {
         ({ data } = await api.post("/inventory/products/bulk-location/",
           { ubicacion, only_empty: onlyEmpty }, { params }));
       }
-      await dialog.alert(`Listo. Se asignó la ubicación a ${data.updated} producto(s).`);
+      toast.success(`Listo. Se asignó la ubicación a ${data.updated} producto(s).`);
       onDone();
     } catch (e) {
       setErr(e.response?.data?.detail || "No se pudo asignar la ubicación.");
@@ -823,7 +824,7 @@ function MergeProductsModal({ onClose, onDone }) {
     setBusy(true); setErr("");
     try {
       await api.post("/inventory/products/merge/", { source: source.id, target: target.id });
-      await dialog.alert(`Listo. "${source.name}" se combinó dentro de "${target.name}". El stock y el historial quedaron juntos.`);
+      toast.success(`Listo. "${source.name}" se combinó dentro de "${target.name}". El stock y el historial quedaron juntos.`);
       onDone();
     } catch (e) {
       setErr(e.response?.data?.detail || "No se pudo combinar los productos.");

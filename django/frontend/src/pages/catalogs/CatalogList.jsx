@@ -49,13 +49,13 @@ export default function CatalogList({ kind }) {
   };
 
   const remove = async (id) => {
-    if (!(await dialog.confirm("¿Estás seguro de que deseas eliminar este registro?", { danger: true, okText: "Eliminar" }))) return;
+    if (!(await dialog.confirm("¿Eliminar este registro? Esta acción no se puede deshacer.", { danger: true, okText: "Eliminar" }))) return;
     try {
       await api.delete(`${cfg.endpoint}${id}/`);
       toast.success("Eliminado correctamente.");
       load();
     } catch (err) {
-      await dialog.alert(err.response?.data?.detail || "No se pudo eliminar.");
+      toast.apiError(err, "No se pudo eliminar.");
       toast.error(err.response?.data?.detail || "No se pudo eliminar.");
     }
   };

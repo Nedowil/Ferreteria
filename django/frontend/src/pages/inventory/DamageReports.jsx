@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { toast } from "../../components/Toast";
 import { PageTitle } from "../../components/PageTitle";
 import api from "../../api/client";
 import { dialog } from "../../components/Dialog";
@@ -38,7 +39,7 @@ export default function DamageReports() {
     if (!ok) return;
     setBusy(r.id);
     try { await api.post(`/inventory/damage-reports/${r.id}/approve/`); load(); }
-    catch (e) { await dialog.alert(e.response?.data?.detail || "No se pudo aprobar."); }
+    catch (e) { toast.apiError(e, "No se pudo aprobar."); }
     finally { setBusy(null); }
   };
 
@@ -47,7 +48,7 @@ export default function DamageReports() {
     if (note === null) return;  // canceló
     setBusy(r.id);
     try { await api.post(`/inventory/damage-reports/${r.id}/reject/`, { note }); load(); }
-    catch (e) { await dialog.alert(e.response?.data?.detail || "No se pudo rechazar."); }
+    catch (e) { toast.apiError(e, "No se pudo rechazar."); }
     finally { setBusy(null); }
   };
 

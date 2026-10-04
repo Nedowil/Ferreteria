@@ -27,9 +27,9 @@ export default function Branches() {
     } catch (err) { setError(JSON.stringify(err.response?.data) || "Error"); toast.error(JSON.stringify(err.response?.data) || "Error"); }
   };
   const remove = async (id) => {
-    if (!(await dialog.confirm("¿Estás seguro de que deseas eliminar esta sucursal?", { danger: true, okText: "Eliminar" }))) return;
+    if (!(await dialog.confirm("¿Eliminar esta sucursal? Solo se puede si no tiene movimientos registrados.", { danger: true, okText: "Eliminar" }))) return;
     try { await api.delete(`/branches/${id}/`); toast.success("Eliminado correctamente."); load(); }
-    catch (err) { await dialog.alert(err.response?.data?.detail || "No se pudo eliminar."); toast.error(err.response?.data?.detail || "No se pudo eliminar."); }
+    catch (err) { toast.error(err.response?.data?.detail || "No se pudo eliminar."); }
   };
 
   return (

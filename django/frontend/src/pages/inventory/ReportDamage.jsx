@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { toast } from "../../components/Toast";
 import api from "../../api/client";
 import { dialog } from "../../components/Dialog";
 
@@ -67,7 +68,7 @@ export default function ReportDamage() {
       await api.post("/inventory/damage-reports/", {
         product: picked.id, quantity: Number(qty) || 1, reason: reason.trim(),
       });
-      await dialog.alert("Reporte enviado. El administrador lo revisará para descontar el producto.");
+      toast.success("Reporte enviado. El administrador lo revisará para descontar el producto.");
       reset(); loadMine();
     } catch (e) {
       setErr(e.response?.data?.detail || "No se pudo enviar el reporte.");

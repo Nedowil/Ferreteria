@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { toast } from "../../components/Toast";
 import { Link } from "react-router-dom";
 import api from "../../api/client";
 import { SkeletonKpis, SkeletonBlock } from "../../components/Skeleton";
@@ -126,7 +127,7 @@ export default function CashBox() {
         counted_cash: handover.counted_cash,
         notes: handover.notes || null,
       });
-      await dialog.alert("Caja entregada. Queda abierta; el que la reciba quedará registrado cuando entre con su usuario.");
+      toast.success("Caja entregada. Queda abierta; el que la reciba quedará registrado cuando entre con su usuario.");
       setHandover({ counted_cash: "", notes: "" });
       load();
     } catch (err) { setError(err.response?.data?.detail || "No se pudo registrar la entrega."); }

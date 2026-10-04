@@ -28,7 +28,7 @@ export default function QuotationDetail() {
   useEffect(() => { api.get("/company-settings/").then((r) => setCompany(r.data)).catch(() => {}); }, []);
 
   const cancel = async () => {
-    if (!(await dialog.confirm("¿Estás seguro de que deseas cancelar esta cotización?", { danger: true, okText: "Sí, cancelar" }))) return;
+    if (!(await dialog.confirm("¿Cancelar esta cotización? Ya no se podrá convertir en venta.", { danger: true, okText: "Sí, cancelar" }))) return;
     setError("");
     try { await api.post(`/quotations/${id}/cancel/`, {}); load(); }
     catch (err) { setError(err.response?.data?.detail || "Error"); }

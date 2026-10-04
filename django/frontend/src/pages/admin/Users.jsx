@@ -93,9 +93,9 @@ export default function Users() {
   };
 
   const remove = async (id) => {
-    if (!(await dialog.confirm("¿Estás seguro de que deseas eliminar este usuario?", { danger: true, okText: "Eliminar" }))) return;
+    if (!(await dialog.confirm("¿Eliminar este usuario? No podrá volver a iniciar sesión.", { danger: true, okText: "Eliminar" }))) return;
     try { await api.delete(`/users/${id}/`); toast.success("Eliminado correctamente."); load(); loadStats(); }
-    catch (err) { await dialog.alert(err.response?.data?.detail || "No se pudo eliminar."); toast.error(err.response?.data?.detail || "No se pudo eliminar."); }
+    catch (err) { toast.error(err.response?.data?.detail || "No se pudo eliminar."); }
   };
 
   const toggleBranch = (id) => setEditing((e) => ({

@@ -12,6 +12,20 @@ export const toast = {
   success(m, ms) { this.show(m, "success", ms); },
   error(m, ms) { this.show(m, "error", ms); },
   info(m, ms) { this.show(m, "info", ms); },
+  // Muestra el mejor mensaje de error de una respuesta del backend (DRF):
+  // `detail`, el primer error de campo, o el texto plano; si no, el fallback.
+  apiError(err, fallback = "Ocurrió un error. Intentá de nuevo.") {
+    const d = err?.response?.data;
+    let msg = fallback;
+    if (typeof d === "string" && d.trim()) msg = d;
+    else if (d?.detail) msg = d.detail;
+    else if (d && typeof d === "object") {
+      const vals = Object.values(d);
+      const first = vals.flat ? vals.flat()[0] : vals[0];
+      if (first) msg = String(first);
+    }
+    this.error(msg || fallback);
+  },
 };
 
 const STYLE = { success: "bg-green-600", error: "bg-red-600", info: "bg-slate-800" };
