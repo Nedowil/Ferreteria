@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { PageTitle } from "../../components/PageTitle";
 
 // [slug, título, descripción, icono, color]
 const REPORTS = [
@@ -25,7 +26,7 @@ export default function ReportsIndex() {
   return (
     <div>
       <div className="mb-4">
-        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">📊 Reportes</h1>
+        <PageTitle icon="📊" title="Reportes" color="#6366f1" />
         <p className="text-sm text-slate-500 dark:text-slate-400">Elegí un reporte para ver los números de tu negocio.</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

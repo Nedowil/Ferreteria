@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { PageTitle } from "../../components/PageTitle";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import api from "../../api/client";
 import { publishDisplay, openCustomerDisplay } from "../../pos/customerDisplay";
@@ -878,7 +879,7 @@ export default function POS() {
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">🛒 Punto de venta</h1>
+        <PageTitle icon="🛒" title="Punto de venta" color="#059669" />
         <div className="flex flex-wrap items-center gap-2">
           {!serverOnline
             ? <span className="text-sm text-white bg-red-500 rounded-full px-3 py-1 font-medium">● OFFLINE</span>

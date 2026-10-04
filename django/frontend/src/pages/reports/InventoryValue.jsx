@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { PageTitle } from "../../components/PageTitle";
 import api from "../../api/client";
 import { Q, ExcelButton, ReportSkeleton } from "./common";
 import { exportToExcel } from "../../utils/exportExcel";
@@ -32,7 +33,7 @@ export default function InventoryValue() {
     <div>
       <div className="flex items-center justify-between gap-3 mb-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">💰 Valor de inventario</h1>
+          <PageTitle icon="💰" title="Valor de inventario" color="#0ea5e9" />
           <p className="text-sm text-slate-500 dark:text-slate-400">Cuánto vale tu mercadería a costo y a precio de venta.</p>
         </div>
         <ExcelButton onClick={exportXls} disabled={!data.rows.length} />

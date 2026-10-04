@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { PageTitle } from "../../components/PageTitle";
 import { Link } from "react-router-dom";
 import api from "../../api/client";
 import Pagination from "../../components/Pagination";
@@ -30,7 +31,7 @@ export default function Transfers() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">🔄 Transferencias</h1>
+        <PageTitle icon="🔄" title="Transferencias" color="#0891b2" />
         <Link to="/transferencias/nueva" className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nueva transferencia</Link>
       </div>
       <form onSubmit={(e) => { e.preventDefault(); setPage(1); load(1); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex gap-2 items-end">

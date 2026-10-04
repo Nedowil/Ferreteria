@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { PageTitle } from "../../components/PageTitle";
 import api from "../../api/client";
 import { SkeletonBlock } from "../../components/Skeleton";
 import { useAuth } from "../../auth/AuthContext";
@@ -221,7 +222,7 @@ export default function CompanySettings() {
     <form onSubmit={save} className="max-w-4xl space-y-5">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">⚙️ Configuración de la empresa</h1>
+          <PageTitle icon="⚙️" title="Configuración de la empresa" color="#0891b2" />
           <p className="text-sm text-slate-500 dark:text-slate-400">Datos del negocio, impuestos, impresoras y seguridad.</p>
         </div>
         {editable && (

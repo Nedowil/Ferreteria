@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { PageTitle } from "../../components/PageTitle";
 import { Link } from "react-router-dom";
 import api from "../../api/client";
 import { SkeletonRows } from "../../components/Skeleton";
@@ -64,7 +65,7 @@ export default function ProductTrash() {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">🗑️ Papelera de productos</h1>
+        <PageTitle icon="🗑️" title="Papelera de productos" color="#e11d48" />
         <Link to="/productos" className="text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 hover:bg-blue-100 transition">← Volver a productos</Link>
       </div>
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">

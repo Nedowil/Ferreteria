@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { PageTitle } from "../../components/PageTitle";
 import api from "../../api/client";
 import { dialog } from "../../components/Dialog";
 import Pagination from "../../components/Pagination";
@@ -55,7 +56,7 @@ export default function DamageReports() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
-        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">🛠️ Reportes de daño</h1>
+        <PageTitle icon="🛠️" title="Reportes de daño" color="#dc2626" />
         <div className="flex rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden text-sm">
           {TABS.map(([v, t]) => (
             <button key={v} onClick={() => setFilter(v)}

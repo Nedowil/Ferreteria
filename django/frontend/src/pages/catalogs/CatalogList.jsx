@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { PageTitle } from "../../components/PageTitle";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { dialog } from "../../components/Dialog";
@@ -64,7 +65,7 @@ export default function CatalogList({ kind }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">🗂️ {cfg.title}</h1>
+        <PageTitle icon="🗂️" title={cfg.title} color="#8b5cf6" />
         {can("catalogos.gestionar") && <button onClick={() => setEditing(blank)} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nuevo</button>}
       </div>
 

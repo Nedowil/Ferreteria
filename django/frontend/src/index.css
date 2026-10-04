@@ -247,3 +247,7 @@ html.dark .sk::after { background: linear-gradient(90deg, transparent, rgba(255,
 @media (prefers-reduced-motion: reduce) {
   .sk::after { animation: none; }
 }
+
+/* Títulos de página con color de módulo: en modo oscuro se aclaran un poco los
+   acentos (chip + título) para que resalten sobre el fondo oscuro. */
+html.dark .page-accent { filter: brightness(1.4) saturate(1.05); }

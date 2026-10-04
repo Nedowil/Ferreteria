@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { PageTitle } from "../../components/PageTitle";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import api from "../../api/client";
 import { SkeletonRows, SkeletonCards } from "../../components/Skeleton";
@@ -26,9 +27,7 @@ export default function CustomerHistory() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-          🧾 Historial de {cliente?.name || "cliente"}
-        </h1>
+        <PageTitle icon="🧾" title={`Historial de ${cliente?.name || "cliente"}`} color="#0ea5e9" />
         <button onClick={() => navigate("/clientes")} className="inline-flex items-center gap-1 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-slate-400 transition">← Volver</button>
       </div>
 

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { PageTitle } from "../../components/PageTitle";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
@@ -133,7 +134,7 @@ export default function Invoices() {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">📑 Facturación electrónica (FEL)</h1>
+        <PageTitle icon="📑" title="Facturación electrónica (FEL)" color="#2563eb" />
         <div className="flex items-center gap-2">
           {cfg?.is_stub ? (
             <span className="text-xs bg-indigo-100 text-indigo-700 rounded px-2 py-1">

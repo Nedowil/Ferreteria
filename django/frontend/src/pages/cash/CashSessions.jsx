@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useState } from "react";
+import { PageTitle } from "../../components/PageTitle";
 import api from "../../api/client";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 import Pagination from "../../components/Pagination";
@@ -195,7 +196,7 @@ export default function CashSessions() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">💵 Historial de caja</h1>
+          <PageTitle icon="💵" title="Historial de caja" color="#0d9488" />
           <p className="text-sm text-slate-500 dark:text-slate-400">Aperturas, cierres y cambios de responsable. Tocá una fila para ver el detalle.</p>
         </div>
         <button onClick={exportExcel} disabled={exporting} className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-100 transition">{exporting ? "Exportando…" : "⬇️ Excel"}</button>

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { PageTitle } from "../../components/PageTitle";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import PasswordInput from "../../components/PasswordInput";
@@ -105,7 +106,7 @@ export default function Users() {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">👤 Usuarios</h1>
+          <PageTitle icon="👤" title="Usuarios" color="#db2777" />
           <p className="text-sm text-slate-500 dark:text-slate-400">Gestioná el acceso y los roles de tu equipo.</p>
         </div>
         {can("usuarios.crear") && <button onClick={() => setEditing(blank)} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nuevo usuario</button>}

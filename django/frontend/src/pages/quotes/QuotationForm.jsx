@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { PageTitle } from "../../components/PageTitle";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/client";
 import QuickCustomerModal from "../../components/QuickCustomerModal";
@@ -100,7 +101,7 @@ export default function QuotationForm() {
   return (
     <form onSubmit={submit}>
       <div className="mb-4">
-        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">🧾 Nueva cotización</h1>
+        <PageTitle icon="🧾" title="Nueva cotización" color="#7c3aed" />
         <p className="text-sm text-slate-500 dark:text-slate-400">Completá los datos y agregá los productos.</p>
       </div>
       {error && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm mb-4">{error}</div>}

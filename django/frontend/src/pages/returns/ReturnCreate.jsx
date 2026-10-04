@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { PageTitle } from "../../components/PageTitle";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
@@ -291,7 +292,7 @@ export default function ReturnCreate() {
   return (
     <div>
       <div className="mb-4">
-        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">↩️ Nueva devolución</h1>
+        <PageTitle icon="↩️" title="Nueva devolución" color="#be123c" />
         <p className="text-sm text-slate-500 dark:text-slate-400">Elegí cómo devolver, indicá los productos y el reembolso.</p>
       </div>
       {error && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm mb-4">{error}</div>}

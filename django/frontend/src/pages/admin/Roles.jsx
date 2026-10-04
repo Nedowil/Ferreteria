@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { PageTitle } from "../../components/PageTitle";
 import api from "../../api/client";
 import { SkeletonRows } from "../../components/Skeleton";
 import { dialog } from "../../components/Dialog";
@@ -70,7 +71,7 @@ export default function Roles() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">🛡️ Roles</h1>
+        <PageTitle icon="🛡️" title="Roles" color="#9333ea" />
         <button onClick={() => setEditing({ name: "", permissions: [] })} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nuevo rol</button>
       </div>
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">

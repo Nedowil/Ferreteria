@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { PageTitle } from "../../components/PageTitle";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
@@ -59,7 +60,7 @@ export default function LowStock() {
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">⚠️ Productos con stock bajo</h1>
+        <PageTitle icon="⚠️" title="Productos con stock bajo" color="#d97706" />
         <div className="flex flex-wrap gap-2 items-center">
           <select value={ubicacion} onChange={(e) => setUbicacion(e.target.value)}
                   className="flex-1 min-w-[10rem] border border-slate-300 dark:border-slate-600 dark:bg-slate-800 rounded-lg px-3 py-2 text-sm"

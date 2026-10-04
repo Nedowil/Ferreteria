@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useState } from "react";
+import { PageTitle } from "../../components/PageTitle";
 import { useSearchParams } from "react-router-dom";
 import api from "../../api/client";
 import { SkeletonRows } from "../../components/Skeleton";
@@ -110,7 +111,7 @@ export default function AuditLog() {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">🕵️ Auditoría</h1>
+        <PageTitle icon="🕵️" title="Auditoría" color="#64748b" />
         <div className="flex gap-2">
           <button onClick={exportExcel} disabled={!!exporting}
                   className="text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg px-3 py-2 font-medium transition disabled:opacity-50">

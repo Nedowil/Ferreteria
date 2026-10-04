@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { PageTitle } from "../../components/PageTitle";
 import { Link } from "react-router-dom";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
@@ -63,7 +64,7 @@ export default function PurchaseList() {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">📥 Compras</h1>
+        <PageTitle icon="📥" title="Compras" color="#d97706" />
         <div className="flex gap-2">
           <button onClick={exportExcel} disabled={exporting} className="border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-100 transition">{exporting ? "Exportando…" : "⬇️ Excel"}</button>
           {can("compras.crear") && <Link to="/compras/nueva" className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nueva compra</Link>}

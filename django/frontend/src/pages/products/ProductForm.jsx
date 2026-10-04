@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { PageTitle } from "../../components/PageTitle";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../api/client";
 import { dialog } from "../../components/Dialog";
@@ -447,7 +448,7 @@ export default function ProductForm() {
   return (
     <form onSubmit={submit} className="max-w-4xl space-y-5">
       <div>
-        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">📦 {editing ? "Editar producto" : "Nuevo producto"}</h1>
+        <PageTitle icon="📦" title={editing ? "Editar producto" : "Nuevo producto"} color="#4f46e5" />
         <p className="text-sm text-slate-500 dark:text-slate-400">Completá los datos del producto.</p>
       </div>
       {errors.detail && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm">{errors.detail}</div>}
