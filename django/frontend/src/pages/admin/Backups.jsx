@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
 import { SkeletonRows } from "../../components/Skeleton";
+import { EmptyRow } from "../../components/EmptyState";
 import { dialog } from "../../components/Dialog";
 
 const fmtDate = (epoch) => new Date(epoch * 1000).toLocaleString();
@@ -80,7 +81,7 @@ export default function Backups() {
               </tr>
             ))}
             {!loaded && items.length === 0 && <SkeletonRows rows={5} cols={4} />}
-            {loaded && items.length === 0 && <tr><td colSpan="4" className="px-4 py-6 text-center text-slate-400">No hay respaldos aún.</td></tr>}
+            {loaded && items.length === 0 && <EmptyRow colSpan={4} icon="💾" title="No hay respaldos aún" hint="Generá un respaldo para resguardar tus datos." />}
           </tbody>
         </table>
         </div>

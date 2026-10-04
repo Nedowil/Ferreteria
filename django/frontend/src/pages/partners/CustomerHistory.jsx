@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import api from "../../api/client";
 import { SkeletonRows, SkeletonCards } from "../../components/Skeleton";
+import { EmptyState, EmptyRow } from "../../components/EmptyState";
 
 const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -65,7 +66,7 @@ export default function CustomerHistory() {
             </Link>
           ))}
           {loading && <SkeletonCards count={5} />}
-          {!loading && sales.length === 0 && <div className="px-5 py-10 text-center text-slate-400">Este cliente no tiene compras.</div>}
+          {!loading && sales.length === 0 && <EmptyState icon="🛍️" title="Sin compras" hint="Este cliente todavía no tiene compras registradas." />}
         </div>
 
         {/* Escritorio: tabla */}
@@ -89,7 +90,7 @@ export default function CustomerHistory() {
               </tr>
             ))}
             {loading && <SkeletonRows rows={6} cols={7} />}
-            {!loading && sales.length === 0 && <tr><td colSpan="7" className="px-5 py-10 text-center text-slate-400">Este cliente no tiene compras.</td></tr>}
+            {!loading && sales.length === 0 && <EmptyRow colSpan={7} icon="🛍️" title="Sin compras" hint="Este cliente todavía no tiene compras registradas." />}
           </tbody>
         </table>
         </div>

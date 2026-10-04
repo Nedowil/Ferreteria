@@ -8,6 +8,7 @@ import { toast } from "../../components/Toast";
 import Pagination from "../../components/Pagination";
 import { Avatar } from "../../utils/ui";
 import { SkeletonRows, SkeletonCards } from "../../components/Skeleton";
+import { EmptyState, EmptyRow } from "../../components/EmptyState";
 
 const BLANK = { name: "", tax_id: "", email: "", phone: "", address: "", notes: "",
   active: true, customer_type: "retail", wholesale_discount_percent: "", credit_limit: "", credit_enabled: false };
@@ -140,7 +141,7 @@ export default function CustomerList() {
             </div>
           ))}
           {!loaded && items.length === 0 && <SkeletonCards count={6} />}
-          {loaded && items.length === 0 && <div className="px-5 py-8 text-center text-slate-400">Sin clientes.</div>}
+          {loaded && items.length === 0 && <EmptyState icon="🧑" title="Sin clientes" hint="Agregá tus clientes para asociarlos a ventas y cuentas." />}
         </div>
 
         {/* Escritorio: tabla */}
@@ -168,7 +169,7 @@ export default function CustomerList() {
               </tr>
             ))}
             {!loaded && items.length === 0 && <SkeletonRows rows={8} cols={6} />}
-            {loaded && items.length === 0 && <tr><td colSpan="6" className="px-5 py-8 text-center text-slate-400">Sin clientes.</td></tr>}
+            {loaded && items.length === 0 && <EmptyRow colSpan={6} icon="🧑" title="Sin clientes" hint="Agregá tus clientes para asociarlos a ventas y cuentas." />}
           </tbody>
         </table>
         </div>

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import api from "../../api/client";
 import Pagination from "../../components/Pagination";
 import { SkeletonCards } from "../../components/Skeleton";
+import { EmptyState } from "../../components/EmptyState";
 import { fetchAll } from "../../utils/exportExcel";
 import { Avatar } from "../../utils/ui";
 
@@ -286,7 +287,7 @@ export default function StockCountHistory() {
           })}
           {!loaded && sessions.length === 0 && <SkeletonCards count={5} />}
           {loaded && sessions.length === 0 && (
-            <div className="px-5 py-10 text-center text-slate-400">Todavía no hay inventarios guardados. Aplicá un conteo físico para empezar.</div>
+            <EmptyState icon="📋" title="Todavía no hay inventarios" hint="Aplicá un conteo físico para guardar tu primer inventario." />
           )}
           {count > 15 && <Pagination page={page} count={count} onPage={goPage} label="inventarios" />}
         </div>

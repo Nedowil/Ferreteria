@@ -5,6 +5,7 @@ import { dialog } from "../../components/Dialog";
 import { toast } from "../../components/Toast";
 import Pagination from "../../components/Pagination";
 import { SkeletonRows } from "../../components/Skeleton";
+import { EmptyRow } from "../../components/EmptyState";
 import { Avatar } from "../../utils/ui";
 
 const CONFIG = {
@@ -103,7 +104,7 @@ export default function CatalogList({ kind }) {
               </tr>
             ))}
             {!loaded && items.length === 0 && <SkeletonRows rows={8} cols={5} />}
-            {loaded && items.length === 0 && <tr><td colSpan="5" className="px-5 py-8 text-center text-slate-400">Sin registros.</td></tr>}
+            {loaded && items.length === 0 && <EmptyRow colSpan={5} icon="🗂️" title="Sin registros" hint="Agregá el primero para empezar." />}
           </tbody>
         </table>
         </div>

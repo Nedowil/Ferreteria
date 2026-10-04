@@ -6,6 +6,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 import { dialog } from "../../components/Dialog";
 import { SkeletonRows, SkeletonCards } from "../../components/Skeleton";
+import { EmptyState, EmptyRow } from "../../components/EmptyState";
 import { printZpl } from "../../utils/zebraBrowserPrint";
 
 // Enlace a la auditoría del producto (quién lo creó, editó o eliminó).
@@ -1116,7 +1117,7 @@ export default function ProductList() {
           ))}
           {loading && data.results.length === 0 && <SkeletonCards count={6} />}
           {!loading && data.results.length === 0 && (
-            <div className="px-5 py-10 text-center text-slate-400">No hay productos.</div>
+            <EmptyState icon="📦" title="No hay productos" hint="Registrá tu primer producto para empezar a vender." cta={can("productos.crear") ? { to: "/productos/nuevo", label: "+ Nuevo producto" } : undefined} />
           )}
         </div>
 
@@ -1169,7 +1170,7 @@ export default function ProductList() {
             ))}
             {loading && data.results.length === 0 && <SkeletonRows rows={8} cols={can("productos.editar") ? 8 : 7} />}
             {!loading && data.results.length === 0 && (
-              <tr><td colSpan={can("productos.editar") ? 8 : 7} className="px-5 py-10 text-center text-slate-400">No hay productos.</td></tr>
+              <EmptyRow colSpan={can("productos.editar") ? 8 : 7} icon="📦" title="No hay productos" hint="Registrá tu primer producto para empezar a vender." cta={can("productos.crear") ? { to: "/productos/nuevo", label: "+ Nuevo producto" } : undefined} />
             )}
           </tbody>
         </table>

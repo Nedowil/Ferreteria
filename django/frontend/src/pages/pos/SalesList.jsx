@@ -5,6 +5,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 import Pagination from "../../components/Pagination";
 import { SkeletonRows, SkeletonCards } from "../../components/Skeleton";
+import { EmptyState, EmptyRow } from "../../components/EmptyState";
 import SaleDetailView from "./SaleDetailView";
 
 const STATUS_BADGE = {
@@ -227,7 +228,7 @@ export default function SalesList() {
             </button>
           ))}
           {!loaded && data.results.length === 0 && <SkeletonCards count={6} />}
-          {loaded && data.results.length === 0 && <div className="px-5 py-10 text-center text-slate-400">No hay ventas.</div>}
+          {loaded && data.results.length === 0 && <EmptyState icon="🧾" title="No hay ventas" hint="No hubo ventas en el periodo elegido. Probá otro rango o registrá una nueva." cta={{ to: "/pos", label: "Ir al POS" }} />}
         </div>
 
         {/* Escritorio: tabla con franja de estado; canceladas resaltadas (Opción B) */}
@@ -266,7 +267,7 @@ export default function SalesList() {
                   );
                 })}
                 {!loaded && data.results.length === 0 && <SkeletonRows rows={8} cols={6 + (canSeeTotal ? 1 : 0) + (isAdmin ? 2 : 0)} />}
-                {loaded && data.results.length === 0 && <tr><td colSpan={6 + (canSeeTotal ? 1 : 0) + (isAdmin ? 2 : 0)} className="px-5 py-10 text-center text-slate-400">No hay ventas.</td></tr>}
+                {loaded && data.results.length === 0 && <EmptyRow colSpan={6 + (canSeeTotal ? 1 : 0) + (isAdmin ? 2 : 0)} icon="🧾" title="No hay ventas" hint="No hubo ventas en el periodo elegido. Probá otro rango o registrá una nueva." cta={{ to: "/pos", label: "Ir al POS" }} />}
               </tbody>
             </table>
           </div>

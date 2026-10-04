@@ -5,6 +5,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 import Pagination from "../../components/Pagination";
 import { SkeletonRows } from "../../components/Skeleton";
+import { EmptyRow } from "../../components/EmptyState";
 import { StatusPill, stripeColor } from "../../utils/ui";
 
 const STATUS_BADGE = {
@@ -103,7 +104,7 @@ export default function PurchaseList() {
               </tr>
             ))}
             {!loaded && data.results.length === 0 && <SkeletonRows rows={8} cols={7} />}
-            {loaded && data.results.length === 0 && <tr><td colSpan="7" className="px-5 py-10 text-center text-slate-400">No hay compras.</td></tr>}
+            {loaded && data.results.length === 0 && <EmptyRow colSpan={7} icon="🛒" title="No hay compras" hint="Registrá una compra para sumar stock e historial." />}
           </tbody>
         </table>
         </div>

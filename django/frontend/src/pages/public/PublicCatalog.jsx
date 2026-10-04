@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
 import { Skeleton } from "../../components/Skeleton";
+import { EmptyState } from "../../components/EmptyState";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 import logo from "../../assets/logo.jpg";
 
@@ -198,7 +199,7 @@ export default function PublicCatalog() {
             ))}
           </div>
         ) : products.length === 0 ? (
-          <div className="text-slate-400">No se encontraron productos.</div>
+          <EmptyState icon="🔍" title="No se encontraron productos" hint="Probá con otra búsqueda o categoría." />
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {products.map((p) => (

@@ -2,6 +2,7 @@ import { Fragment, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import api from "../../api/client";
 import { SkeletonRows } from "../../components/Skeleton";
+import { EmptyRow } from "../../components/EmptyState";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 import Pagination from "../../components/Pagination";
 
@@ -175,7 +176,7 @@ export default function AuditLog() {
               </Fragment>
             ))}
             {!loaded && data.results.length === 0 && <SkeletonRows rows={8} cols={6} />}
-            {loaded && data.results.length === 0 && <tr><td colSpan="6" className="px-5 py-10 text-center text-slate-400">Sin registros.</td></tr>}
+            {loaded && data.results.length === 0 && <EmptyRow colSpan={6} icon="🕵️" title="Sin registros" hint="No hay actividad para los filtros elegidos." />}
           </tbody>
         </table>
         </div>

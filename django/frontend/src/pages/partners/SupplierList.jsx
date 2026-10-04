@@ -7,6 +7,7 @@ import { toast } from "../../components/Toast";
 import Pagination from "../../components/Pagination";
 import { Avatar } from "../../utils/ui";
 import { SkeletonRows } from "../../components/Skeleton";
+import { EmptyRow } from "../../components/EmptyState";
 
 const BLANK = { name: "", tax_id: "", contact_name: "", email: "", phone: "", address: "", notes: "", active: true };
 
@@ -122,7 +123,7 @@ export default function SupplierList() {
               </tr>
             ))}
             {!loaded && items.length === 0 && <SkeletonRows rows={8} cols={6} />}
-            {loaded && items.length === 0 && <tr><td colSpan="6" className="px-5 py-8 text-center text-slate-400">Sin proveedores.</td></tr>}
+            {loaded && items.length === 0 && <EmptyRow colSpan={6} icon="🚚" title="Sin proveedores" hint="Agregá proveedores para registrar compras y pagos." />}
           </tbody>
         </table>
         </div>

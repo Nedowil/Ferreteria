@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import api from "../../api/client";
 import Pagination from "../../components/Pagination";
 import { SkeletonRows } from "../../components/Skeleton";
+import { EmptyRow } from "../../components/EmptyState";
 import { StatusPill, stripeColor } from "../../utils/ui";
 
 const BADGE = {
@@ -58,7 +59,7 @@ export default function Transfers() {
               </tr>
             ))}
             {!loaded && data.results.length === 0 && <SkeletonRows rows={8} cols={6} />}
-            {loaded && data.results.length === 0 && <tr><td colSpan="6" className="px-5 py-10 text-center text-slate-400">No hay transferencias.</td></tr>}
+            {loaded && data.results.length === 0 && <EmptyRow colSpan={6} icon="🔄" title="No hay transferencias" hint="Creá una transferencia para mover stock entre sucursales." />}
           </tbody>
         </table>
         </div>

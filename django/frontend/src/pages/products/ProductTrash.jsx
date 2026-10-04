@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../../api/client";
 import { SkeletonRows } from "../../components/Skeleton";
+import { EmptyRow } from "../../components/EmptyState";
 import { dialog } from "../../components/Dialog";
 import Pagination from "../../components/Pagination";
 
@@ -84,7 +85,7 @@ export default function ProductTrash() {
             {loading ? (
               <SkeletonRows rows={6} cols={4} />
             ) : rows.length === 0 ? (
-              <tr><td colSpan="4" className="px-5 py-10 text-center text-slate-400">La papelera está vacía.</td></tr>
+              <EmptyRow colSpan={4} icon="🗑️" title="La papelera está vacía" hint="Los productos que elimines quedarán acá por un tiempo." />
             ) : rows.map((p) => (
               <tr key={p.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700/40 transition">
                 <td className="px-4 py-3">

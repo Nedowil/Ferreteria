@@ -3,6 +3,7 @@ import api from "../../api/client";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 import Pagination from "../../components/Pagination";
 import { SkeletonRows, SkeletonCards } from "../../components/Skeleton";
+import { EmptyState, EmptyRow } from "../../components/EmptyState";
 import { Avatar, StatusPill, stripeColor } from "../../utils/ui";
 
 const money = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -281,7 +282,7 @@ export default function CashSessions() {
               );
             })}
             {!loaded && data.results.length === 0 && <SkeletonRows rows={8} cols={10} />}
-            {loaded && data.results.length === 0 && <tr><td colSpan="10" className="px-5 py-12 text-center text-slate-400">Sin sesiones de caja.</td></tr>}
+            {loaded && data.results.length === 0 && <EmptyRow colSpan={10} icon="💵" title="Sin sesiones de caja" hint="No hay cajas en el rango elegido. Probá otras fechas." />}
           </tbody>
         </table>
         </div>
@@ -333,7 +334,7 @@ export default function CashSessions() {
             );
           })}
           {!loaded && data.results.length === 0 && <SkeletonCards count={6} />}
-          {loaded && data.results.length === 0 && <div className="px-5 py-12 text-center text-slate-400">Sin sesiones de caja.</div>}
+          {loaded && data.results.length === 0 && <EmptyState icon="💵" title="Sin sesiones de caja" hint="No hay cajas en el rango elegido. Probá otras fechas." />}
         </div>
       </div>
       <Pagination page={page} count={data.count} onPage={goPage} label="cajas" />

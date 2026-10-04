@@ -4,6 +4,7 @@ import api from "../../api/client";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 import Pagination from "../../components/Pagination";
 import { SkeletonRows } from "../../components/Skeleton";
+import { EmptyRow } from "../../components/EmptyState";
 
 export default function Payable() {
   const [data, setData] = useState({ results: [], total_balance: 0 });
@@ -81,7 +82,7 @@ export default function Payable() {
               </tr>
             ))}
             {!loaded && data.results.length === 0 && <SkeletonRows rows={8} cols={7} />}
-            {loaded && data.results.length === 0 && <tr><td colSpan="7" className="px-5 py-10 text-center text-slate-400">Sin cuentas por pagar 🎉</td></tr>}
+            {loaded && data.results.length === 0 && <EmptyRow colSpan={7} icon="🎉" title="Sin cuentas por pagar" hint="No tenés saldos pendientes con proveedores." />}
           </tbody>
         </table>
         </div>

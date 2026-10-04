@@ -7,6 +7,7 @@ import { toast } from "../../components/Toast";
 import Pagination from "../../components/Pagination";
 import { Avatar, avColor } from "../../utils/ui";
 import { SkeletonRows, SkeletonCards } from "../../components/Skeleton";
+import { EmptyState, EmptyRow } from "../../components/EmptyState";
 
 // Chip de rol con color propio derivado del nombre (para distinguirlos).
 const RoleChip = ({ role }) => {
@@ -163,7 +164,7 @@ export default function Users() {
             </div>
           ))}
           {!loaded && users.length === 0 && <SkeletonCards count={6} />}
-          {loaded && users.length === 0 && <div className="px-5 py-8 text-center text-slate-400">Sin usuarios.</div>}
+          {loaded && users.length === 0 && <EmptyState icon="👥" title="Sin usuarios" hint="Agregá usuarios y asignales un rol." />}
         </div>
 
         {/* Escritorio: tabla */}
@@ -202,7 +203,7 @@ export default function Users() {
               </tr>
             ))}
             {!loaded && users.length === 0 && <SkeletonRows rows={8} cols={7} />}
-            {loaded && users.length === 0 && <tr><td colSpan="7" className="px-5 py-8 text-center text-slate-400">Sin usuarios.</td></tr>}
+            {loaded && users.length === 0 && <EmptyRow colSpan={7} icon="👥" title="Sin usuarios" hint="Agregá usuarios y asignales un rol." />}
           </tbody>
         </table>
         </div>
