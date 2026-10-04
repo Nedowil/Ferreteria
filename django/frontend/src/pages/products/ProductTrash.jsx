@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../../api/client";
+import { SkeletonRows } from "../../components/Skeleton";
 import { dialog } from "../../components/Dialog";
 import Pagination from "../../components/Pagination";
 
@@ -81,7 +82,7 @@ export default function ProductTrash() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan="4" className="px-5 py-10 text-center text-slate-400">Cargando…</td></tr>
+              <SkeletonRows rows={6} cols={4} />
             ) : rows.length === 0 ? (
               <tr><td colSpan="4" className="px-5 py-10 text-center text-slate-400">La papelera está vacía.</td></tr>
             ) : rows.map((p) => (

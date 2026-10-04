@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
+import { SkeletonBlock } from "../../components/Skeleton";
 import { useAuth } from "../../auth/AuthContext";
 import { sendEposPrint, resolveEposUrl, getLocalEpos, setLocalEpos, eposCodeMessage, EPOS_HELP } from "../../utils/epos";
 
@@ -214,7 +215,7 @@ export default function CompanySettings() {
     }
   };
 
-  if (!c) return <div className="text-slate-400">Cargando…</div>;
+  if (!c) return <div className="max-w-4xl space-y-4"><SkeletonBlock lines={5} /><SkeletonBlock lines={5} /></div>;
 
   return (
     <form onSubmit={save} className="max-w-4xl space-y-5">

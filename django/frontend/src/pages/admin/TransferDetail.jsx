@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../api/client";
+import { SkeletonBlock } from "../../components/Skeleton";
 import { dialog } from "../../components/Dialog";
 
 const BADGE = {
@@ -29,7 +30,7 @@ export default function TransferDetail() {
     catch (err) { setError(err.response?.data?.detail || "Error"); }
   };
 
-  if (!t) return <div className="text-slate-400">Cargando…</div>;
+  if (!t) return <SkeletonBlock lines={8} className="max-w-3xl" />;
 
   return (
     <div className="max-w-3xl">

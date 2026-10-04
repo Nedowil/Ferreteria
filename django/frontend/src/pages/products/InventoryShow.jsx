@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import api from "../../api/client";
+import { SkeletonBlock } from "../../components/Skeleton";
 import { exportToExcel } from "../../utils/exportExcel";
 
 const TYPE_BADGE = {
@@ -37,7 +38,7 @@ export default function InventoryShow() {
     }
   };
 
-  if (!product) return <div className="text-slate-400">Cargando…</div>;
+  if (!product) return <SkeletonBlock lines={8} className="max-w-3xl" />;
 
   // Totales del kardex (en unidad base, según el saldo antes/después).
   const entradas = movements.reduce((a, m) => a + Math.max(0, Number(m.new_stock) - Number(m.previous_stock)), 0);

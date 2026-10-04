@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../api/client";
+import { SkeletonBlock } from "../../components/Skeleton";
 import { useAuth } from "../../auth/AuthContext";
 import logo from "../../assets/logo.jpg";
 import { dialog } from "../../components/Dialog";
@@ -66,7 +67,7 @@ export default function QuotationDetail() {
     window.open(`${base}?text=${encodeURIComponent(text)}`, "_blank");
   };
 
-  if (!q) return <div className="text-slate-400">Cargando…</div>;
+  if (!q) return <SkeletonBlock lines={8} className="max-w-3xl" />;
   const canConvert = ["vigente", "aceptada"].includes(q.status);
 
   return (

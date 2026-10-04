@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import api from "../../api/client";
+import { SkeletonBlock } from "../../components/Skeleton";
 import { useAuth } from "../../auth/AuthContext";
 import { dialog } from "../../components/Dialog";
 
@@ -61,7 +62,7 @@ export default function SaleDetailView({ id, onClose, onChanged }) {
     } catch (err) { setError(err.response?.data?.detail || "Error al registrar el abono"); }
   };
 
-  if (!s) return <div className="text-slate-400 py-8 text-center">Cargando…</div>;
+  if (!s) return <div className="py-4"><SkeletonBlock lines={7} /></div>;
   const hasBalance = Number(s.balance) > 0;
 
   return (

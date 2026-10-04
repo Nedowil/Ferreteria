@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
+import { SkeletonRows } from "../../components/Skeleton";
 import { dialog } from "../../components/Dialog";
 import { toast } from "../../components/Toast";
 import { Avatar } from "../../utils/ui";
@@ -25,11 +26,12 @@ const groupMeta = (name) => GROUP_META[name] || { icon: "🔧", color: "#64748b"
 
 export default function Roles() {
   const [roles, setRoles] = useState([]);
+  const [loaded, setLoaded] = useState(false);
   const [catalog, setCatalog] = useState([]);
   const [editing, setEditing] = useState(null);
   const [error, setError] = useState("");
 
-  const load = () => api.get("/roles/").then((r) => setRoles(r.data.results || r.data));
+  const load = () => api.get("/roles/").then((r) => { setRoles(r.data.results || r.data); setLoaded(true); });
   useEffect(() => {
     load();
     api.get("/permissions/").then((r) => setCatalog(r.data));
@@ -91,6 +93,7 @@ export default function Roles() {
                 </td>
               </tr>
             ))}
+            {!loaded && roles.length === 0 && <SkeletonRows rows={4} cols={4} />}
           </tbody>
         </table>
         </div>

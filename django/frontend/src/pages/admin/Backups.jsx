@@ -1,16 +1,18 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
+import { SkeletonRows } from "../../components/Skeleton";
 import { dialog } from "../../components/Dialog";
 
 const fmtDate = (epoch) => new Date(epoch * 1000).toLocaleString();
 
 export default function Backups() {
   const [items, setItems] = useState([]);
+  const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
 
-  const load = () => { api.get("/backups/").then((r) => setItems(r.data)); };
+  const load = () => { api.get("/backups/").then((r) => { setItems(r.data); setLoaded(true); }); };
   useEffect(load, []);
 
   const run = async () => {
@@ -77,7 +79,8 @@ export default function Backups() {
                 </td>
               </tr>
             ))}
-            {items.length === 0 && <tr><td colSpan="4" className="px-4 py-6 text-center text-slate-400">No hay respaldos aún.</td></tr>}
+            {!loaded && items.length === 0 && <SkeletonRows rows={5} cols={4} />}
+            {loaded && items.length === 0 && <tr><td colSpan="4" className="px-4 py-6 text-center text-slate-400">No hay respaldos aún.</td></tr>}
           </tbody>
         </table>
         </div>

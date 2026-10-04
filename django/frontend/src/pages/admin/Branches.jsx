@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
+import { SkeletonRows } from "../../components/Skeleton";
 import { dialog } from "../../components/Dialog";
 import { toast } from "../../components/Toast";
 import { Avatar } from "../../utils/ui";
@@ -8,10 +9,11 @@ const BLANK = { name: "", code: "", address: "", phone: "", email: "", is_main: 
 
 export default function Branches() {
   const [items, setItems] = useState([]);
+  const [loaded, setLoaded] = useState(false);
   const [editing, setEditing] = useState(null);
   const [error, setError] = useState("");
 
-  const load = () => { api.get("/branches/").then((r) => setItems(r.data.results || r.data)); };
+  const load = () => { api.get("/branches/").then((r) => { setItems(r.data.results || r.data); setLoaded(true); }); };
   useEffect(load, []);
 
   const save = async (e) => {
@@ -58,6 +60,7 @@ export default function Branches() {
                 </td>
               </tr>
             ))}
+            {!loaded && items.length === 0 && <SkeletonRows rows={4} cols={6} />}
           </tbody>
         </table>
         </div>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
+import { Skeleton } from "../../components/Skeleton";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 import logo from "../../assets/logo.jpg";
 
@@ -185,7 +186,17 @@ export default function PublicCatalog() {
         </form>
 
         {loading ? (
-          <div className="text-slate-400">Cargando…</div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-lg shadow overflow-hidden">
+                <Skeleton className="w-full aspect-square" />
+                <div className="p-3 space-y-2">
+                  <Skeleton className="h-4 w-3/4 rounded-md" />
+                  <Skeleton className="h-4 w-1/2 rounded-md" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : products.length === 0 ? (
           <div className="text-slate-400">No se encontraron productos.</div>
         ) : (

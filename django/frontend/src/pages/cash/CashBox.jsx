@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../../api/client";
+import { SkeletonKpis, SkeletonBlock } from "../../components/Skeleton";
 import { useAuth } from "../../auth/AuthContext";
 import { dialog } from "../../components/Dialog";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
@@ -153,7 +154,7 @@ export default function CashBox() {
     catch (err) { setError(err.response?.data?.detail || "Error al cerrar"); }
   };
 
-  if (loading) return <div className="text-slate-400">Cargando…</div>;
+  if (loading) return <div><SkeletonKpis count={3} /><div className="grid grid-cols-1 lg:grid-cols-3 gap-5"><SkeletonBlock lines={5} /><div className="lg:col-span-2"><SkeletonBlock lines={6} /></div></div></div>;
 
   // Cuadre a ciegas: si el backend NO envía el efectivo esperado, este usuario
   // (cajero) no puede verlo; declara su conteo sin saber cuánto "debería" haber.

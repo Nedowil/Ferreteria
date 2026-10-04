@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../api/client";
+import { SkeletonKpis, SkeletonBlock } from "../components/Skeleton";
 import { BarChart, HBars } from "../components/Charts";
 
 const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -39,7 +40,15 @@ export default function Dashboard() {
   const [rango, setRango] = useState(14); // 7 | 14 | 30 días del gráfico
   const navigate = useNavigate();
   useEffect(() => { api.get("/dashboard/").then((r) => setData(r.data)); }, []);
-  if (!data) return <div className="text-slate-400">Cargando…</div>;
+  if (!data) return (
+    <div>
+      <SkeletonKpis count={4} />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <SkeletonBlock lines={6} />
+        <SkeletonBlock lines={6} />
+      </div>
+    </div>
+  );
 
   // Rangos de fecha para los enlaces de las tarjetas de ventas.
   const hoy = new Date();

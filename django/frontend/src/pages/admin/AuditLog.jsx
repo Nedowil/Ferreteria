@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import api from "../../api/client";
+import { SkeletonRows } from "../../components/Skeleton";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 import Pagination from "../../components/Pagination";
 
@@ -39,6 +40,7 @@ const resourceLabel = (t) => RESOURCE_LABEL[t] || t;
 export default function AuditLog() {
   const [searchParams] = useSearchParams();
   const [data, setData] = useState({ results: [] });
+  const [loaded, setLoaded] = useState(false);
   const [summary, setSummary] = useState(null);
   // Filtros iniciales tomados de la URL (permite abrir la auditoría ya filtrada
   // a un recurso, p. ej. un producto: ?type=inventory.Product&q=<id>).
@@ -57,7 +59,7 @@ export default function AuditLog() {
   };
 
   const load = (p = page) => {
-    api.get("/audit-logs/", { params: { ...activeParams(), page: p } }).then((r) => setData(r.data));
+    api.get("/audit-logs/", { params: { ...activeParams(), page: p } }).then((r) => { setData(r.data); setLoaded(true); });
   };
   const goPage = (p) => { setPage(p); load(p); };
   useEffect(() => {
@@ -172,7 +174,8 @@ export default function AuditLog() {
                 )}
               </Fragment>
             ))}
-            {data.results.length === 0 && <tr><td colSpan="6" className="px-5 py-10 text-center text-slate-400">Sin registros.</td></tr>}
+            {!loaded && data.results.length === 0 && <SkeletonRows rows={8} cols={6} />}
+            {loaded && data.results.length === 0 && <tr><td colSpan="6" className="px-5 py-10 text-center text-slate-400">Sin registros.</td></tr>}
           </tbody>
         </table>
         </div>
