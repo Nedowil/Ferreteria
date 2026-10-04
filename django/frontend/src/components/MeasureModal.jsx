@@ -21,7 +21,7 @@ export default function MeasureModal({ product, measures, available, onAdd, onCl
   const confirm = () => { if (!n || n <= 0) return; onAdd(sel, n); };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+    <div className="no-anim fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-4">
           <div className="text-xs uppercase tracking-wide text-blue-100">{title}</div>

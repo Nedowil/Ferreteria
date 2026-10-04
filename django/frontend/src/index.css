@@ -135,15 +135,22 @@ html.dark :where(.text-slate-600) {
      "pega", así que ahí no se anima.
    - Para excluir un botón puntual, agregarle la clase `no-anim`.
    ============================================================ */
+/* Feedback al PRESIONAR: el botón se "hunde" un poco. Funciona en CUALQUIER
+   dispositivo (también táctil), que es donde más se nota la respuesta. */
+button:not(:disabled):not(.no-anim) {
+  transition: transform .13s cubic-bezier(0.23, 1, 0.32, 1), box-shadow .25s ease;
+}
+button:not(:disabled):not(.no-anim):active {
+  transform: scale(0.97);
+}
+
 @media (hover: hover) {
-  button:not(:disabled):not(.no-anim) {
-    transition: transform .18s ease, box-shadow .25s ease;
-  }
   button:not(:disabled):not(.no-anim):hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 20px rgba(2, 6, 23, .18);
   }
-  button:not(:disabled):not(.no-anim):active { transform: translateY(0); }
+  /* Presionar gana sobre el "levantarse" del hover. */
+  button:not(:disabled):not(.no-anim):active { transform: scale(0.97); }
 
   /* En modo oscuro una sombra oscura se nota poco: se usa una más marcada. */
   html.dark button:not(:disabled):not(.no-anim):hover {
@@ -151,9 +158,10 @@ html.dark :where(.text-slate-600) {
   }
 }
 
-@media (hover: hover) and (prefers-reduced-motion: reduce) {
+@media (prefers-reduced-motion: reduce) {
   button:not(:disabled):not(.no-anim),
-  button:not(:disabled):not(.no-anim):hover { transition: none; transform: none; box-shadow: none; }
+  button:not(:disabled):not(.no-anim):hover,
+  button:not(:disabled):not(.no-anim):active { transition: none; transform: none; box-shadow: none; }
 }
 
 /* Animación de entrada de los avisos (toast) desde arriba. */
@@ -179,4 +187,31 @@ html.dark :where(.text-slate-600) {
 }
 @media (prefers-reduced-motion: reduce) {
   .flash-attention { animation: none; }
+}
+
+/* ============================================================
+   Entrada suave de VENTANAS/MODALES: el fondo hace un fundido y la tarjeta
+   entra con una escala sutil (scale 0.96 -> 1), ~200ms ease-out. Se aplica
+   SOLO a overlays centrados (patrón de los modales: inset-0 + justify-center +
+   items-*), no al menú lateral ni a otros overlays. Para excluir un modal
+   puntual (p. ej. el de medida del POS, que se abre en cada venta y debe ser
+   instantáneo), agregarle la clase `no-anim` al overlay.
+   ============================================================ */
+@keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sheetIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+
+.fixed.inset-0.justify-center.items-center:not(.no-anim),
+.fixed.inset-0.justify-center.items-start:not(.no-anim),
+.fixed.inset-0.justify-center.items-end:not(.no-anim) {
+  animation: overlayIn .18s ease-out both;
+}
+.fixed.inset-0.justify-center.items-center:not(.no-anim) > *,
+.fixed.inset-0.justify-center.items-start:not(.no-anim) > *,
+.fixed.inset-0.justify-center.items-end:not(.no-anim) > * {
+  animation: sheetIn .2s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fixed.inset-0:not(.no-anim),
+  .fixed.inset-0:not(.no-anim) > * { animation: none !important; }
 }
