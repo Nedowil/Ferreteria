@@ -6,6 +6,7 @@ import { dialog } from "../../components/Dialog";
 import { toast } from "../../components/Toast";
 import Pagination from "../../components/Pagination";
 import { Avatar, avColor } from "../../utils/ui";
+import { SkeletonRows, SkeletonCards } from "../../components/Skeleton";
 
 // Chip de rol con color propio derivado del nombre (para distinguirlos).
 const RoleChip = ({ role }) => {
@@ -17,6 +18,7 @@ const RoleChip = ({ role }) => {
 export default function Users() {
   const { can } = useAuth();
   const [users, setUsers] = useState([]);
+  const [loaded, setLoaded] = useState(false);
   const [count, setCount] = useState(0);
   const [stats, setStats] = useState({ total: 0, active: 0, devices: 0 });
   const [page, setPage] = useState(1);
@@ -31,7 +33,7 @@ export default function Users() {
     const params = { page: p };
     if (search) params.search = search;
     api.get("/users/", { params }).then((r) => {
-      setUsers(r.data.results || r.data);
+      setUsers(r.data.results || r.data); setLoaded(true);
       setCount(r.data.count ?? (r.data.results ? r.data.results.length : r.data.length));
     });
   };
@@ -160,7 +162,8 @@ export default function Users() {
               </div>
             </div>
           ))}
-          {users.length === 0 && <div className="px-5 py-8 text-center text-slate-400">Sin usuarios.</div>}
+          {!loaded && users.length === 0 && <SkeletonCards count={6} />}
+          {loaded && users.length === 0 && <div className="px-5 py-8 text-center text-slate-400">Sin usuarios.</div>}
         </div>
 
         {/* Escritorio: tabla */}
@@ -198,7 +201,8 @@ export default function Users() {
                 </td>
               </tr>
             ))}
-            {users.length === 0 && <tr><td colSpan="7" className="px-5 py-8 text-center text-slate-400">Sin usuarios.</td></tr>}
+            {!loaded && users.length === 0 && <SkeletonRows rows={8} cols={7} />}
+            {loaded && users.length === 0 && <tr><td colSpan="7" className="px-5 py-8 text-center text-slate-400">Sin usuarios.</td></tr>}
           </tbody>
         </table>
         </div>

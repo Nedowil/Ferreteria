@@ -5,6 +5,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 import Pagination from "../../components/Pagination";
 import { StatusPill, stripeColor } from "../../utils/ui";
+import { SkeletonRows, SkeletonCards } from "../../components/Skeleton";
 
 const BADGE = {
   vigente: "bg-blue-100 text-blue-700",
@@ -17,6 +18,7 @@ const BADGE = {
 export default function QuotationList() {
   const { can } = useAuth();
   const [data, setData] = useState({ results: [] });
+  const [loaded, setLoaded] = useState(false);
   const [filters, setFilters] = useState({ search: "", status: "", from: "", to: "" });
   const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState(false);
@@ -101,7 +103,8 @@ export default function QuotationList() {
               </div>
             </Link>
           ))}
-          {data.results.length === 0 && <div className="px-5 py-10 text-center text-slate-400">No hay cotizaciones.</div>}
+          {!loaded && data.results.length === 0 && <SkeletonCards count={6} />}
+          {loaded && data.results.length === 0 && <div className="px-5 py-10 text-center text-slate-400">No hay cotizaciones.</div>}
         </div>
 
         {/* Escritorio: tabla */}
@@ -123,7 +126,8 @@ export default function QuotationList() {
                 <td className="px-4 py-2 text-right"><Link to={`/cotizaciones/${q.id}`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-slate-700 hover:bg-slate-800 text-white">Ver</Link></td>
               </tr>
             ))}
-            {data.results.length === 0 && <tr><td colSpan="7" className="px-5 py-10 text-center text-slate-400">No hay cotizaciones.</td></tr>}
+            {!loaded && data.results.length === 0 && <SkeletonRows rows={8} cols={7} />}
+            {loaded && data.results.length === 0 && <tr><td colSpan="7" className="px-5 py-10 text-center text-slate-400">No hay cotizaciones.</td></tr>}
           </tbody>
         </table>
         </div>

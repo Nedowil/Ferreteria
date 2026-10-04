@@ -220,3 +220,30 @@ button:not(:disabled):not(.no-anim):active {
    Más rápida que la entrada: el sistema responde rápido cuando el usuario cierra. */
 @keyframes overlayOut { from { opacity: 1; } to { opacity: 0; } }
 @keyframes sheetOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.97); } }
+
+/* ============================================================
+   Esqueletos de carga (.sk): bloque gris con un "brillo" que recorre de
+   izquierda a derecha mientras cargan los datos. Da sensación de rapidez.
+   El tamaño/redondeo se pone con clases de Tailwind en el componente.
+   ============================================================ */
+.sk {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  background: rgba(148, 163, 184, .22);   /* slate-400 ~22% */
+}
+.sk::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .45), transparent);
+  animation: skShimmer 1.4s ease-in-out infinite;
+}
+html.dark .sk { background: rgba(148, 163, 184, .16); }
+html.dark .sk::after { background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .08), transparent); }
+@keyframes skShimmer { 100% { transform: translateX(100%); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .sk::after { animation: none; }
+}

@@ -6,6 +6,7 @@ import { exportToExcel } from "../../utils/exportExcel";
 import { dialog } from "../../components/Dialog";
 import Pagination from "../../components/Pagination";
 import { StatusPill, stripeColor } from "../../utils/ui";
+import { SkeletonRows, SkeletonCards } from "../../components/Skeleton";
 
 const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -21,10 +22,12 @@ export default function Invoices() {
   const navigate = useNavigate();
   const [tab, setTab] = useState("emitidas");
   const [invoices, setInvoices] = useState([]);
+  const [invLoaded, setInvLoaded] = useState(false);
   const [invCount, setInvCount] = useState(0);
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 15;
   const [pending, setPending] = useState([]);
+  const [pendLoaded, setPendLoaded] = useState(false);
   const [quota, setQuota] = useState(null);
   const [cfg, setCfg] = useState(null);
   const [err, setErr] = useState("");
@@ -40,11 +43,12 @@ export default function Invoices() {
   const loadInvoices = (p = page) => api.get("/invoices/", { params: { ...invParams(), page: p } }).then((r) => {
     setInvoices(r.data.results || r.data);
     setInvCount(r.data.count ?? (r.data.results ? r.data.results.length : r.data.length));
+    setInvLoaded(true);
   });
   const goPage = (p) => { setPage(p); loadInvoices(p); };
   const load = () => {
     loadInvoices(1);
-    api.get("/invoices/pending/").then((r) => setPending(r.data));
+    api.get("/invoices/pending/").then((r) => { setPending(r.data); setPendLoaded(true); });
     api.get("/invoices/quota/").then((r) => setQuota(r.data));
     api.get("/fel/config/").then((r) => setCfg(r.data));
   };
@@ -222,7 +226,8 @@ export default function Invoices() {
                 </div>
               </div>
             ))}
-            {invoices.length === 0 && <div className="px-5 py-8 text-center text-slate-400">Sin facturas emitidas.</div>}
+            {!invLoaded && invoices.length === 0 && <SkeletonCards count={5} />}
+            {invLoaded && invoices.length === 0 && <div className="px-5 py-8 text-center text-slate-400">Sin facturas emitidas.</div>}
           </div>
 
           {/* Escritorio: tabla */}
@@ -258,7 +263,8 @@ export default function Invoices() {
                   </td>
                 </tr>
               ))}
-              {invoices.length === 0 && <tr><td colSpan="8" className="px-4 py-6 text-center text-slate-400">Sin facturas emitidas.</td></tr>}
+              {!invLoaded && invoices.length === 0 && <SkeletonRows rows={6} cols={8} />}
+              {invLoaded && invoices.length === 0 && <tr><td colSpan="8" className="px-4 py-6 text-center text-slate-400">Sin facturas emitidas.</td></tr>}
             </tbody>
           </table>
           </div>
@@ -286,7 +292,8 @@ export default function Invoices() {
                 )}
               </div>
             ))}
-            {pending.length === 0 && <div className="px-5 py-8 text-center text-slate-400">No hay ventas pendientes de facturar.</div>}
+            {!pendLoaded && pending.length === 0 && <SkeletonCards count={3} />}
+            {pendLoaded && pending.length === 0 && <div className="px-5 py-8 text-center text-slate-400">No hay ventas pendientes de facturar.</div>}
           </div>
 
           {/* Escritorio: tabla */}
@@ -313,7 +320,8 @@ export default function Invoices() {
                   </td>
                 </tr>
               ))}
-              {pending.length === 0 && <tr><td colSpan="5" className="px-4 py-6 text-center text-slate-400">No hay ventas pendientes de facturar.</td></tr>}
+              {!pendLoaded && pending.length === 0 && <SkeletonRows rows={4} cols={5} />}
+              {pendLoaded && pending.length === 0 && <tr><td colSpan="5" className="px-4 py-6 text-center text-slate-400">No hay ventas pendientes de facturar.</td></tr>}
             </tbody>
           </table>
           </div>

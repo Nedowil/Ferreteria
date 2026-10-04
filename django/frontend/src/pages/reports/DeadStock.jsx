@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
-import { Q, ExcelButton } from "./common";
+import { Q, ExcelButton, ReportSkeleton } from "./common";
 import { exportToExcel } from "../../utils/exportExcel";
 import Pagination from "../../components/Pagination";
 
@@ -33,6 +33,7 @@ export default function DeadStock() {
         </div>
         <button className="bg-slate-700 text-white rounded px-4 py-2 text-sm">Aplicar</button>
       </form>
+      {!data && <ReportSkeleton />}
       {data && (
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
           <div className="overflow-x-auto">

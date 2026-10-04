@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import api from "../../api/client";
-import { Q, ExcelButton } from "./common";
+import { Q, ExcelButton, ReportSkeleton } from "./common";
 import { exportToExcel } from "../../utils/exportExcel";
 import Pagination from "../../components/Pagination";
 
@@ -23,7 +23,7 @@ export default function InventoryValue() {
   ], data?.rows || []);
 
   const maxCost = useMemo(() => Math.max(1, ...((data?.rows || []).map((r) => Number(r.cost_value) || 0))), [data]);
-  if (!data) return <div className="text-slate-400">Cargando…</div>;
+  if (!data) return <ReportSkeleton kpis={3} />;
 
   const margin = Number(data.total_cost_value) > 0 ? (Number(data.potential_profit) / Number(data.total_cost_value)) * 100 : 0;
   const rows = data.rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);

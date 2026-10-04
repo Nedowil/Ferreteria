@@ -6,12 +6,14 @@ import { dialog } from "../../components/Dialog";
 import { toast } from "../../components/Toast";
 import Pagination from "../../components/Pagination";
 import { Avatar } from "../../utils/ui";
+import { SkeletonRows } from "../../components/Skeleton";
 
 const BLANK = { name: "", tax_id: "", contact_name: "", email: "", phone: "", address: "", notes: "", active: true };
 
 export default function SupplierList() {
   const { can } = useAuth();
   const [items, setItems] = useState([]);
+  const [loaded, setLoaded] = useState(false);
   const [count, setCount] = useState(0);
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 15;
@@ -42,7 +44,7 @@ export default function SupplierList() {
     const params = { page: p };
     if (search) params.search = search;
     api.get("/suppliers/", { params }).then((r) => {
-      setItems(r.data.results || r.data);
+      setItems(r.data.results || r.data); setLoaded(true);
       setCount(r.data.count ?? (r.data.results ? r.data.results.length : r.data.length));
     });
   };
@@ -119,7 +121,8 @@ export default function SupplierList() {
                 </td>
               </tr>
             ))}
-            {items.length === 0 && <tr><td colSpan="6" className="px-5 py-8 text-center text-slate-400">Sin proveedores.</td></tr>}
+            {!loaded && items.length === 0 && <SkeletonRows rows={8} cols={6} />}
+            {loaded && items.length === 0 && <tr><td colSpan="6" className="px-5 py-8 text-center text-slate-400">Sin proveedores.</td></tr>}
           </tbody>
         </table>
         </div>

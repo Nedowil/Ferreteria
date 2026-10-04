@@ -5,6 +5,7 @@ import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 import { dialog } from "../../components/Dialog";
+import { SkeletonRows, SkeletonCards } from "../../components/Skeleton";
 import { printZpl } from "../../utils/zebraBrowserPrint";
 
 // Enlace a la auditoría del producto (quién lo creó, editó o eliminó).
@@ -1113,6 +1114,7 @@ export default function ProductList() {
               </div>
             </div>
           ))}
+          {loading && data.results.length === 0 && <SkeletonCards count={6} />}
           {!loading && data.results.length === 0 && (
             <div className="px-5 py-10 text-center text-slate-400">No hay productos.</div>
           )}
@@ -1165,6 +1167,7 @@ export default function ProductList() {
                 </td>
               </tr>
             ))}
+            {loading && data.results.length === 0 && <SkeletonRows rows={8} cols={can("productos.editar") ? 8 : 7} />}
             {!loading && data.results.length === 0 && (
               <tr><td colSpan={can("productos.editar") ? 8 : 7} className="px-5 py-10 text-center text-slate-400">No hay productos.</td></tr>
             )}

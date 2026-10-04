@@ -4,6 +4,7 @@ import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 import Pagination from "../../components/Pagination";
+import { SkeletonRows, SkeletonCards } from "../../components/Skeleton";
 import SaleDetailView from "./SaleDetailView";
 
 const STATUS_BADGE = {
@@ -53,6 +54,7 @@ export default function SalesList() {
   const canSeeTotal = can("ventas.ver_total_lista");
   const [searchParams] = useSearchParams();
   const [data, setData] = useState({ results: [], count: 0 });
+  const [loaded, setLoaded] = useState(false);
   const [summary, setSummary] = useState({ count: 0, completed_count: 0, total_income: 0, total_profit: 0, total_cost: 0 });
   // Los filtros pueden venir por URL (ej. desde el Dashboard: ?from=…&to=…),
   // así al hacer clic en una tarjeta se abre la lista ya filtrada.
@@ -82,7 +84,7 @@ export default function SalesList() {
   const load = (p = page, fl = filters) => {
     const f = {};
     Object.entries(fl).forEach(([k, v]) => { if (v) f[k] = v; });
-    api.get("/sales/", { params: { ...f, page: p } }).then((r) => setData(r.data));
+    api.get("/sales/", { params: { ...f, page: p } }).then((r) => { setData(r.data); setLoaded(true); });
     if (canSeeSummary) api.get("/sales/summary/", { params: f }).then((r) => setSummary(r.data)).catch(() => {});
   };
   const goPage = (p) => { setPage(p); load(p); };
@@ -224,7 +226,8 @@ export default function SalesList() {
               </div>
             </button>
           ))}
-          {data.results.length === 0 && <div className="px-5 py-10 text-center text-slate-400">No hay ventas.</div>}
+          {!loaded && data.results.length === 0 && <SkeletonCards count={6} />}
+          {loaded && data.results.length === 0 && <div className="px-5 py-10 text-center text-slate-400">No hay ventas.</div>}
         </div>
 
         {/* Escritorio: tabla con franja de estado; canceladas resaltadas (Opción B) */}
@@ -262,7 +265,8 @@ export default function SalesList() {
                   </tr>
                   );
                 })}
-                {data.results.length === 0 && <tr><td colSpan={6 + (canSeeTotal ? 1 : 0) + (isAdmin ? 2 : 0)} className="px-5 py-10 text-center text-slate-400">No hay ventas.</td></tr>}
+                {!loaded && data.results.length === 0 && <SkeletonRows rows={8} cols={6 + (canSeeTotal ? 1 : 0) + (isAdmin ? 2 : 0)} />}
+                {loaded && data.results.length === 0 && <tr><td colSpan={6 + (canSeeTotal ? 1 : 0) + (isAdmin ? 2 : 0)} className="px-5 py-10 text-center text-slate-400">No hay ventas.</td></tr>}
               </tbody>
             </table>
           </div>

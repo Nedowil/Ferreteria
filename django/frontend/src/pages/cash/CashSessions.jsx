@@ -2,6 +2,7 @@ import { Fragment, useEffect, useState } from "react";
 import api from "../../api/client";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 import Pagination from "../../components/Pagination";
+import { SkeletonRows, SkeletonCards } from "../../components/Skeleton";
 import { Avatar, StatusPill, stripeColor } from "../../utils/ui";
 
 const money = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -51,6 +52,7 @@ const movOut = (t) => ["egreso", "devolucion"].includes(t);
 
 export default function CashSessions() {
   const [data, setData] = useState({ results: [] });
+  const [loaded, setLoaded] = useState(false);
   const [page, setPage] = useState(1);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -65,7 +67,7 @@ export default function CashSessions() {
     if (to) o.to = to;
     return o;
   };
-  const load = (p = page) => api.get("/cashbox/cash-sessions/", { params: params(p) }).then((r) => setData(r.data));
+  const load = (p = page) => api.get("/cashbox/cash-sessions/", { params: params(p) }).then((r) => { setData(r.data); setLoaded(true); });
   const goPage = (p) => { setPage(p); load(p); setExpanded(null); };
   const applyFilter = () => { setPage(1); setExpanded(null); load(1); };
   const clearFilter = () => { setFrom(""); setTo(""); setPage(1); setExpanded(null); api.get("/cashbox/cash-sessions/", { params: { page: 1 } }).then((r) => setData(r.data)); };
@@ -278,7 +280,8 @@ export default function CashSessions() {
               </Fragment>
               );
             })}
-            {data.results.length === 0 && <tr><td colSpan="10" className="px-5 py-12 text-center text-slate-400">Sin sesiones de caja.</td></tr>}
+            {!loaded && data.results.length === 0 && <SkeletonRows rows={8} cols={10} />}
+            {loaded && data.results.length === 0 && <tr><td colSpan="10" className="px-5 py-12 text-center text-slate-400">Sin sesiones de caja.</td></tr>}
           </tbody>
         </table>
         </div>
@@ -329,7 +332,8 @@ export default function CashSessions() {
               </div>
             );
           })}
-          {data.results.length === 0 && <div className="px-5 py-12 text-center text-slate-400">Sin sesiones de caja.</div>}
+          {!loaded && data.results.length === 0 && <SkeletonCards count={6} />}
+          {loaded && data.results.length === 0 && <div className="px-5 py-12 text-center text-slate-400">Sin sesiones de caja.</div>}
         </div>
       </div>
       <Pagination page={page} count={data.count} onPage={goPage} label="cajas" />

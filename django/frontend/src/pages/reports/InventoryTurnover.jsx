@@ -1,4 +1,4 @@
-import { Q, useDateReport, DateRangeBar, KpiCard, ExcelButton } from "./common";
+import { Q, useDateReport, DateRangeBar, KpiCard, ExcelButton, ReportSkeleton } from "./common";
 import { exportToExcel } from "../../utils/exportExcel";
 import Pagination from "../../components/Pagination";
 import { useEffect, useState } from "react";
@@ -58,6 +58,7 @@ export default function InventoryTurnover() {
           </select>
         </div>
       </DateRangeBar>
+      {!data && <ReportSkeleton />}
       {data && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-2">

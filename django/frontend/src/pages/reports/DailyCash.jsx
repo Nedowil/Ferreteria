@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
-import { Q, KpiCard, ExcelButton } from "./common";
+import { Q, KpiCard, ExcelButton, ReportSkeleton } from "./common";
 import { exportToExcel } from "../../utils/exportExcel";
 
 export default function DailyCash() {
@@ -32,6 +32,7 @@ export default function DailyCash() {
         </div>
         <button className="bg-slate-700 text-white rounded px-4 py-2 text-sm">Aplicar</button>
       </form>
+      {!data && <ReportSkeleton />}
       {data && (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">

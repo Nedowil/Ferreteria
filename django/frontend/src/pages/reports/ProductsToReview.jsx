@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../../api/client";
-import { Q, ExcelButton } from "./common";
+import { Q, ExcelButton, ReportSkeleton } from "./common";
 import { exportToExcel } from "../../utils/exportExcel";
 import Pagination from "../../components/Pagination";
 
@@ -29,7 +29,7 @@ export default function ProductsToReview() {
     { header: "Stock", value: (r) => Number(r.stock) },
   ], data?.rows || []);
 
-  if (!data) return <div className="text-slate-400">Cargando…</div>;
+  if (!data) return <ReportSkeleton kpis={3} />;
 
   return (
     <div>

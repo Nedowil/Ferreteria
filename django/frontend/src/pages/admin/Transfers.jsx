@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../../api/client";
 import Pagination from "../../components/Pagination";
+import { SkeletonRows } from "../../components/Skeleton";
 import { StatusPill, stripeColor } from "../../utils/ui";
 
 const BADGE = {
@@ -13,13 +14,14 @@ const BADGE = {
 
 export default function Transfers() {
   const [data, setData] = useState({ results: [] });
+  const [loaded, setLoaded] = useState(false);
   const [statusF, setStatusF] = useState("");
   const [page, setPage] = useState(1);
 
   const load = (p = page) => {
     const params = { page: p };
     if (statusF) params.status = statusF;
-    api.get("/transfers/", { params }).then((r) => setData(r.data));
+    api.get("/transfers/", { params }).then((r) => { setData(r.data); setLoaded(true); });
   };
   const goPage = (p) => { setPage(p); load(p); };
   useEffect(() => { load(1); }, []);
@@ -55,7 +57,8 @@ export default function Transfers() {
                 <td className="px-4 py-2 text-right"><Link to={`/transferencias/${t.id}`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-slate-700 hover:bg-slate-800 text-white">Ver</Link></td>
               </tr>
             ))}
-            {data.results.length === 0 && <tr><td colSpan="6" className="px-5 py-10 text-center text-slate-400">No hay transferencias.</td></tr>}
+            {!loaded && data.results.length === 0 && <SkeletonRows rows={8} cols={6} />}
+            {loaded && data.results.length === 0 && <tr><td colSpan="6" className="px-5 py-10 text-center text-slate-400">No hay transferencias.</td></tr>}
           </tbody>
         </table>
         </div>

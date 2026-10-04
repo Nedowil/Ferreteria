@@ -1,5 +1,16 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
+import { SkeletonKpis, SkeletonBlock } from "../../components/Skeleton";
+
+// Esqueleto de carga para los reportes: fila de KPIs + bloque de tabla.
+export function ReportSkeleton({ kpis = 4 }) {
+  return (
+    <div>
+      <SkeletonKpis count={kpis} />
+      <SkeletonBlock lines={6} />
+    </div>
+  );
+}
 
 export const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 

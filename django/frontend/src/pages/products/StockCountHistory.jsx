@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import api from "../../api/client";
 import Pagination from "../../components/Pagination";
+import { SkeletonCards } from "../../components/Skeleton";
 import { fetchAll } from "../../utils/exportExcel";
 import { Avatar } from "../../utils/ui";
 
@@ -50,6 +51,7 @@ const Delta = ({ v, money: asMoney }) => {
 export default function StockCountHistory() {
   const [sessions, setSessions] = useState([]);   // página actual de la tabla
   const [count, setCount] = useState(0);          // total de inventarios
+  const [loaded, setLoaded] = useState(false);
   const [page, setPage] = useState(1);
   const [optSessions, setOptSessions] = useState([]); // TODOS, para los menús de comparación
   const [expanded, setExpanded] = useState(null);
@@ -62,7 +64,7 @@ export default function StockCountHistory() {
 
   // Tabla "Inventarios registrados": paginada (15 por página).
   const loadPage = (p = page) => api.get("/inventory/stock-counts/", { params: { page: p } })
-    .then((r) => { setSessions(r.data.results || r.data); setCount(r.data.count ?? (r.data.results ? r.data.results.length : r.data.length)); });
+    .then((r) => { setSessions(r.data.results || r.data); setCount(r.data.count ?? (r.data.results ? r.data.results.length : r.data.length)); setLoaded(true); });
   const goPage = (p) => { setPage(p); loadPage(p); setExpanded(null); };
   useEffect(() => { loadPage(1); }, []);
 
@@ -282,7 +284,8 @@ export default function StockCountHistory() {
               </div>
             );
           })}
-          {sessions.length === 0 && (
+          {!loaded && sessions.length === 0 && <SkeletonCards count={5} />}
+          {loaded && sessions.length === 0 && (
             <div className="px-5 py-10 text-center text-slate-400">Todavía no hay inventarios guardados. Aplicá un conteo físico para empezar.</div>
           )}
           {count > 15 && <Pagination page={page} count={count} onPage={goPage} label="inventarios" />}

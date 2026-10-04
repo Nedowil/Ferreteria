@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
-import { KpiCard, ExcelButton, DateRangeBar } from "./common";
+import { KpiCard, ExcelButton, DateRangeBar, ReportSkeleton } from "./common";
 import { exportToExcel } from "../../utils/exportExcel";
 import Pagination from "../../components/Pagination";
 
@@ -24,7 +24,7 @@ export default function SupplierPayments() {
     api.get("/supplier-report/", { params }).then((r) => { setD(r.data); setPage(1); }).catch(() => {});
   };
   useEffect(() => { loadReport(); }, []); // eslint-disable-line
-  if (!d) return <div className="text-slate-400">Cargando…</div>;
+  if (!d) return <ReportSkeleton kpis={3} />;
 
   const exportFunds = () => exportToExcel("fondos-proveedor", [
     { header: "Abierto", value: (f) => dt(f.opened_at) },

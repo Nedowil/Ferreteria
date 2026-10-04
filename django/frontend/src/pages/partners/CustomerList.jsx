@@ -7,6 +7,7 @@ import { dialog } from "../../components/Dialog";
 import { toast } from "../../components/Toast";
 import Pagination from "../../components/Pagination";
 import { Avatar } from "../../utils/ui";
+import { SkeletonRows, SkeletonCards } from "../../components/Skeleton";
 
 const BLANK = { name: "", tax_id: "", email: "", phone: "", address: "", notes: "",
   active: true, customer_type: "retail", wholesale_discount_percent: "", credit_limit: "", credit_enabled: false };
@@ -18,6 +19,7 @@ const TYPES = [["retail", "Público"], ["wholesale", "Mayorista"]];
 export default function CustomerList() {
   const { can } = useAuth();
   const [items, setItems] = useState([]);
+  const [loaded, setLoaded] = useState(false);
   const [count, setCount] = useState(0);
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 15;
@@ -64,7 +66,7 @@ export default function CustomerList() {
     if (search) params.search = search;
     if (type) params.customer_type = type;
     api.get("/customers/", { params }).then((r) => {
-      setItems(r.data.results || r.data);
+      setItems(r.data.results || r.data); setLoaded(true);
       setCount(r.data.count ?? (r.data.results ? r.data.results.length : r.data.length));
     });
   };
@@ -137,7 +139,8 @@ export default function CustomerList() {
               </div>
             </div>
           ))}
-          {items.length === 0 && <div className="px-5 py-8 text-center text-slate-400">Sin clientes.</div>}
+          {!loaded && items.length === 0 && <SkeletonCards count={6} />}
+          {loaded && items.length === 0 && <div className="px-5 py-8 text-center text-slate-400">Sin clientes.</div>}
         </div>
 
         {/* Escritorio: tabla */}
@@ -164,7 +167,8 @@ export default function CustomerList() {
                 </td>
               </tr>
             ))}
-            {items.length === 0 && <tr><td colSpan="6" className="px-5 py-8 text-center text-slate-400">Sin clientes.</td></tr>}
+            {!loaded && items.length === 0 && <SkeletonRows rows={8} cols={6} />}
+            {loaded && items.length === 0 && <tr><td colSpan="6" className="px-5 py-8 text-center text-slate-400">Sin clientes.</td></tr>}
           </tbody>
         </table>
         </div>

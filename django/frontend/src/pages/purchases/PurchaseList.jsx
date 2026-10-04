@@ -4,6 +4,7 @@ import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 import Pagination from "../../components/Pagination";
+import { SkeletonRows } from "../../components/Skeleton";
 import { StatusPill, stripeColor } from "../../utils/ui";
 
 const STATUS_BADGE = {
@@ -15,6 +16,7 @@ const STATUS_BADGE = {
 export default function PurchaseList() {
   const { can } = useAuth();
   const [data, setData] = useState({ results: [], count: 0 });
+  const [loaded, setLoaded] = useState(false);
   const [status, setStatus] = useState("");
   const [search, setSearch] = useState("");
   const [from, setFrom] = useState("");
@@ -46,7 +48,7 @@ export default function PurchaseList() {
   };
 
   const load = (p = page) => {
-    api.get("/purchases/", { params: { ...buildParams(), page: p } }).then((r) => setData(r.data));
+    api.get("/purchases/", { params: { ...buildParams(), page: p } }).then((r) => { setData(r.data); setLoaded(true); });
   };
   const goPage = (p) => { setPage(p); load(p); };
   useEffect(() => { load(1); }, []);
@@ -100,7 +102,8 @@ export default function PurchaseList() {
                 <td className="px-4 py-2 text-right"><Link to={`/compras/${p.id}`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-slate-700 hover:bg-slate-800 text-white">Ver</Link></td>
               </tr>
             ))}
-            {data.results.length === 0 && <tr><td colSpan="7" className="px-5 py-10 text-center text-slate-400">No hay compras.</td></tr>}
+            {!loaded && data.results.length === 0 && <SkeletonRows rows={8} cols={7} />}
+            {loaded && data.results.length === 0 && <tr><td colSpan="7" className="px-5 py-10 text-center text-slate-400">No hay compras.</td></tr>}
           </tbody>
         </table>
         </div>

@@ -4,6 +4,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { dialog } from "../../components/Dialog";
 import { toast } from "../../components/Toast";
 import Pagination from "../../components/Pagination";
+import { SkeletonRows } from "../../components/Skeleton";
 import { Avatar } from "../../utils/ui";
 
 const CONFIG = {
@@ -17,6 +18,7 @@ export default function CatalogList({ kind }) {
   const { can } = useAuth();
   const cfg = CONFIG[kind];
   const [items, setItems] = useState([]);
+  const [loaded, setLoaded] = useState(false);
   const [count, setCount] = useState(0);
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 15;
@@ -27,7 +29,7 @@ export default function CatalogList({ kind }) {
     const params = { page: p };
     if (search) params.search = search;
     api.get(cfg.endpoint, { params }).then((r) => {
-      setItems(r.data.results || r.data);
+      setItems(r.data.results || r.data); setLoaded(true);
       setCount(r.data.count ?? (r.data.results ? r.data.results.length : r.data.length));
     });
   };
@@ -100,7 +102,8 @@ export default function CatalogList({ kind }) {
                 </td>
               </tr>
             ))}
-            {items.length === 0 && <tr><td colSpan="5" className="px-5 py-8 text-center text-slate-400">Sin registros.</td></tr>}
+            {!loaded && items.length === 0 && <SkeletonRows rows={8} cols={5} />}
+            {loaded && items.length === 0 && <tr><td colSpan="5" className="px-5 py-8 text-center text-slate-400">Sin registros.</td></tr>}
           </tbody>
         </table>
         </div>

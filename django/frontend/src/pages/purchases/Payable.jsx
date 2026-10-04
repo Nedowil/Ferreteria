@@ -3,9 +3,11 @@ import { Link } from "react-router-dom";
 import api from "../../api/client";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 import Pagination from "../../components/Pagination";
+import { SkeletonRows } from "../../components/Skeleton";
 
 export default function Payable() {
   const [data, setData] = useState({ results: [], total_balance: 0 });
+  const [loaded, setLoaded] = useState(false);
   const [filters, setFilters] = useState({ from: "", to: "" });
   const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState(false);
@@ -15,7 +17,7 @@ export default function Payable() {
     Object.entries(filters).forEach(([k, v]) => { if (v) params[k] = v; });
     return params;
   };
-  const load = (p = page) => api.get("/purchases/payable/", { params: { ...buildParams(), page: p } }).then((r) => setData(r.data));
+  const load = (p = page) => api.get("/purchases/payable/", { params: { ...buildParams(), page: p } }).then((r) => { setData(r.data); setLoaded(true); });
   const goPage = (p) => { setPage(p); load(p); };
   useEffect(() => { load(1); }, []);
 
@@ -53,7 +55,7 @@ export default function Payable() {
         <div><label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">Hasta</label>
           <input type="date" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" /></div>
         <button className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition">Buscar</button>
-        {(filters.from || filters.to) && <button type="button" onClick={() => { setFilters({ from: "", to: "" }); setPage(1); api.get("/purchases/payable/", { params: { page: 1 } }).then((r) => setData(r.data)); }} className="text-sm text-slate-500 dark:text-slate-400 px-2 py-2 hover:underline">Limpiar</button>}
+        {(filters.from || filters.to) && <button type="button" onClick={() => { setFilters({ from: "", to: "" }); setPage(1); api.get("/purchases/payable/", { params: { page: 1 } }).then((r) => { setData(r.data); setLoaded(true); }); }} className="text-sm text-slate-500 dark:text-slate-400 px-2 py-2 hover:underline">Limpiar</button>}
       </form>
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-5 mb-4 inline-block">
         <div className="text-sm text-slate-500 dark:text-slate-400">Saldo total pendiente</div>
@@ -78,7 +80,8 @@ export default function Payable() {
                 <td className="px-4 py-2 text-right"><Link to={`/compras/${p.id}`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-blue-600 hover:bg-blue-700 text-white">Abonar</Link></td>
               </tr>
             ))}
-            {data.results.length === 0 && <tr><td colSpan="7" className="px-5 py-10 text-center text-slate-400">Sin cuentas por pagar 🎉</td></tr>}
+            {!loaded && data.results.length === 0 && <SkeletonRows rows={8} cols={7} />}
+            {loaded && data.results.length === 0 && <tr><td colSpan="7" className="px-5 py-10 text-center text-slate-400">Sin cuentas por pagar 🎉</td></tr>}
           </tbody>
         </table>
         </div>

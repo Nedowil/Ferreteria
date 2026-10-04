@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Q, useDateReport, DateRangeBar, ExcelButton, KpiCard } from "./common";
+import { Q, useDateReport, DateRangeBar, ExcelButton, KpiCard, ReportSkeleton } from "./common";
 import { exportToExcel } from "../../utils/exportExcel";
 import Pagination from "../../components/Pagination";
 
@@ -52,6 +52,7 @@ function RankingTable({ title, path, columns, filter }) {
           </div>
         )}
       </DateRangeBar>
+      {!data && <ReportSkeleton kpis={3} />}
       {data && (
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
           <div className="overflow-x-auto">
@@ -149,6 +150,7 @@ export function BySeller() {
           </div>
         )}
       </DateRangeBar>
+      {!data && <ReportSkeleton kpis={3} />}
       {data && (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">

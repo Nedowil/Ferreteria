@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Q, useDateReport, DateRangeBar, KpiCard, ExcelButton } from "./common";
+import { Q, useDateReport, DateRangeBar, KpiCard, ExcelButton, ReportSkeleton } from "./common";
 import { exportToExcel } from "../../utils/exportExcel";
 import { BarChart } from "../../components/Charts";
 import Pagination from "../../components/Pagination";
@@ -37,6 +37,7 @@ export default function ProfitReport() {
         <ExcelButton onClick={exportXls} disabled={!data || !data.rows.length} />
       </div>
       <DateRangeBar from={from} setFrom={setFrom} to={to} setTo={setTo} onApply={reload} />
+      {!data && <ReportSkeleton />}
       {data && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-5">
