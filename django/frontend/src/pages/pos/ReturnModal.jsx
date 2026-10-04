@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { ErrorBanner } from "../../components/ErrorBanner";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/client";
 
@@ -96,7 +97,7 @@ export default function ReturnModal({ onClose, initialFolio = "" }) {
           </div>
         ) : (
           <div className="p-5 space-y-4 overflow-auto">
-            {error && <div className="bg-red-600 border border-red-700 text-white font-semibold text-sm rounded-lg px-3 py-2">{error}</div>}
+            {error && <ErrorBanner message={error} />}
 
             <form onSubmit={find} className="flex gap-2">
               <input ref={folioRef} value={folio} onChange={(e) => setFolio(e.target.value)}

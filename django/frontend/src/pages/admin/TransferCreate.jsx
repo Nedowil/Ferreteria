@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ErrorBanner } from "../../components/ErrorBanner";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/client";
 
@@ -48,7 +49,7 @@ export default function TransferCreate() {
   return (
     <form onSubmit={submit} className="max-w-3xl space-y-5">
       <h1 className="text-lg font-semibold">Nueva transferencia</h1>
-      {error && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm">{error}</div>}
+      {error && <ErrorBanner message={error} />}
       <section className="bg-white dark:bg-slate-800 rounded-lg shadow p-5 grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Sucursal origen</label>

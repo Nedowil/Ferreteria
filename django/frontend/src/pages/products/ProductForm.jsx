@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { ErrorBanner } from "../../components/ErrorBanner";
 import { PageTitle } from "../../components/PageTitle";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../api/client";
@@ -451,7 +452,7 @@ export default function ProductForm() {
         <PageTitle icon="📦" title={editing ? "Editar producto" : "Nuevo producto"} color="#4f46e5" />
         <p className="text-sm text-slate-500 dark:text-slate-400">Completá los datos del producto.</p>
       </div>
-      {errors.detail && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm">{errors.detail}</div>}
+      {errors.detail && <ErrorBanner message={errors.detail} />}
       {!errors.detail && Object.keys(errors).length > 0 && (
         <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm">
           No se pudo guardar. Revisá los campos marcados:

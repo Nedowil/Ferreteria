@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ErrorBanner } from "../../components/ErrorBanner";
 import { PageTitle } from "../../components/PageTitle";
 import api from "../../api/client";
 import { SkeletonBlock } from "../../components/Skeleton";
@@ -233,7 +234,7 @@ export default function CompanySettings() {
       </div>
       {!editable && <div className="bg-amber-100 text-amber-800 rounded px-4 py-2 text-sm">Solo lectura — no tienes permiso para editar.</div>}
       {msg && <div className="bg-green-100 text-green-800 rounded px-4 py-2 text-sm">{msg}</div>}
-      {err && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm">{err}</div>}
+      {err && <ErrorBanner message={err} />}
 
       <fieldset disabled={!editable} className="space-y-5">
         <Section title="Datos fiscales (emisor)" icon="🏢" color="#3b82f6" subtitle="Datos del negocio que salen en las facturas.">

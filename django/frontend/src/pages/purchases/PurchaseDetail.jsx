@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ErrorBanner } from "../../components/ErrorBanner";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../api/client";
 import { SkeletonBlock } from "../../components/Skeleton";
@@ -57,7 +58,7 @@ export default function PurchaseDetail() {
         </h1>
         <button onClick={() => navigate("/compras")} className="inline-flex items-center gap-1 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-slate-400 transition">← Volver</button>
       </div>
-      {error && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm mb-4">{error}</div>}
+      {error && <ErrorBanner message={error} className="mb-4" />}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2 space-y-5">

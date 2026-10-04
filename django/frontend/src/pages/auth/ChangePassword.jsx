@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ErrorBanner } from "../../components/ErrorBanner";
 import api from "../../api/client";
 import PasswordInput from "../../components/PasswordInput";
 
@@ -31,7 +32,7 @@ export default function ChangePassword() {
       <h1 className="text-lg font-semibold mb-4">Cambiar contraseña</h1>
       <form onSubmit={submit} className="bg-white dark:bg-slate-800 rounded-lg shadow p-5 space-y-4">
         {msg && <div className="bg-green-100 text-green-800 text-sm rounded px-3 py-2">{msg}</div>}
-        {error && <div className="bg-red-600 text-white font-semibold text-sm rounded px-3 py-2">{error}</div>}
+        {error && <ErrorBanner message={error} />}
         <div>
           <label className="block text-sm font-medium mb-1">Contraseña actual</label>
           <PasswordInput value={current} onChange={(e) => setCurrent(e.target.value)} required

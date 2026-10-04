@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { ErrorBanner } from "../../components/ErrorBanner";
 import { toast } from "../../components/Toast";
 import { PageTitle } from "../../components/PageTitle";
 import api from "../../api/client";
@@ -170,7 +171,7 @@ export default function SupplierBills() {
             <h2 className="font-semibold text-slate-700 dark:text-slate-200">{editing ? "Editar factura" : "Registrar factura pagada"}</h2>
             {editing && <button type="button" onClick={cancelEdit} className="text-sm text-slate-500 dark:text-slate-400">Cancelar edición</button>}
           </div>
-          {error && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm mb-3">{error}</div>}
+          {error && <ErrorBanner message={error} className="mb-3" />}
           <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
             <div className="md:col-span-2">
               <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Proveedor *</label>

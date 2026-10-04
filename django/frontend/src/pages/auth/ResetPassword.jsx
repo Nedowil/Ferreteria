@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ErrorBanner } from "../../components/ErrorBanner";
 import { Link, useSearchParams } from "react-router-dom";
 import api from "../../api/client";
 import PasswordInput from "../../components/PasswordInput";
@@ -44,7 +45,7 @@ export default function ResetPassword() {
           <div className="text-sm text-red-700">Enlace inválido o incompleto.</div>
         ) : (
           <form onSubmit={submit}>
-            {error && <div className="mb-4 bg-red-600 text-white font-semibold text-sm rounded px-3 py-2">{error}</div>}
+            {error && <ErrorBanner message={error} className="mb-4" />}
             <label className="block text-sm font-medium mb-1">Nueva contraseña</label>
             <div className="mb-4"><PasswordInput value={pw} onChange={(e) => setPw(e.target.value)} required
                    className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2" /></div>

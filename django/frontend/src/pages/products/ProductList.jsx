@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { ErrorBanner } from "../../components/ErrorBanner";
 import { toast } from "../../components/Toast";
 import { PageTitle } from "../../components/PageTitle";
 import { Link, useSearchParams } from "react-router-dom";
@@ -382,7 +383,7 @@ function PriceTagsModal({ single, filters, companyName, count, onClose }) {
           </div>
         </div>
         <div className="p-5 space-y-4">
-          {err && <div className="bg-red-600 text-white font-semibold text-sm rounded-lg px-3 py-2">{err}</div>}
+          {err && <ErrorBanner message={err} />}
           <div>
             <label className="block text-sm font-medium mb-1">Copias por producto</label>
             <input type="number" min="1" value={copies} onChange={(e) => setCopies(e.target.value)}
@@ -506,7 +507,7 @@ function LabelPrintModal({ product, companyName, onClose }) {
           <div className="text-xs text-blue-100 truncate">{product.name} · {product.sku}</div>
         </div>
         <div className="p-5 space-y-4">
-          {err && <div className="bg-red-600 border border-red-700 text-white font-semibold text-sm rounded-lg px-3 py-2">{err}</div>}
+          {err && <ErrorBanner message={err} />}
 
           {step === "qty" ? (
             <>
@@ -632,7 +633,7 @@ function BulkLocationModal({ filters, count, ids, onClose, onDone }) {
           <div className="text-xs text-teal-100">{isSelection ? `${ids.length} producto(s) seleccionados` : "A varios productos de una sola vez"}</div>
         </div>
         <div className="p-5 space-y-4">
-          {err && <div className="bg-red-600 text-white font-semibold text-sm rounded-lg px-3 py-2">{err}</div>}
+          {err && <ErrorBanner message={err} />}
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Ubicación</label>
             <select value={ubicacion} onChange={(e) => setUbicacion(e.target.value)}
@@ -706,7 +707,7 @@ function RestoreLocationsModal({ onClose, onDone }) {
           <div className="text-xs text-amber-100">Restaura la ubicación de cada producto a como estaba antes de un error, usando la auditoría.</div>
         </div>
         <div className="p-5 space-y-4">
-          {err && <div className="bg-red-600 text-white text-sm rounded-lg px-3 py-2">{err}</div>}
+          {err && <ErrorBanner message={err} />}
           {done != null ? (
             <div className="text-center py-4">
               <div className="text-4xl mb-2">✅</div>
@@ -839,7 +840,7 @@ function MergeProductsModal({ onClose, onDone }) {
           <div className="text-xs text-fuchsia-100">Juntá dos registros del mismo producto (ej. "carreta pequeño" y "carreta niño") en uno solo.</div>
         </div>
         <div className="p-5 space-y-4">
-          {err && <div className="bg-red-600 text-white font-semibold text-sm rounded-lg px-3 py-2">{err}</div>}
+          {err && <ErrorBanner message={err} />}
           <ProductPicker label="✅ Producto que se QUEDA (el correcto)" accent="text-emerald-600 dark:text-emerald-400"
                          value={target} onChange={setTarget} excludeId={source?.id} />
           <div className="text-center text-slate-400 text-xs">⬆️ recibe todo el stock e historial &nbsp;·&nbsp; ⬇️ se manda a la papelera</div>

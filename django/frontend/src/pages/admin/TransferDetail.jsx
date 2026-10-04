@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ErrorBanner } from "../../components/ErrorBanner";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../api/client";
 import { SkeletonBlock } from "../../components/Skeleton";
@@ -40,7 +41,7 @@ export default function TransferDetail() {
         </h1>
         <button onClick={() => navigate("/transferencias")} className="inline-flex items-center gap-1 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-slate-400 transition">← Volver</button>
       </div>
-      {error && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm mb-4">{error}</div>}
+      {error && <ErrorBanner message={error} className="mb-4" />}
 
       <section className="bg-white dark:bg-slate-800 rounded-lg shadow p-5 text-sm grid grid-cols-2 gap-2 mb-5">
         <div><span className="text-slate-500 dark:text-slate-400">Origen:</span> <b>{t.from_branch_name}</b></div>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ErrorBanner } from "../../components/ErrorBanner";
 import { toast } from "../../components/Toast";
 import api from "../../api/client";
 import { dialog } from "../../components/Dialog";
@@ -81,7 +82,7 @@ export default function ReportDamage() {
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Buscá el producto, poné cuántos se dañaron y qué pasó. <b>No se descuenta todavía</b>: el administrador lo aprueba.</p>
 
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-5 space-y-4">
-        {err && <div className="bg-red-600 text-white font-semibold text-sm rounded-lg px-3 py-2">{err}</div>}
+        {err && <ErrorBanner message={err} />}
 
         <div className="relative">
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Producto</label>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ErrorBanner } from "./ErrorBanner";
 import api from "../api/client";
 
 // Alta rápida de producto (solo el nombre es obligatorio; SKU y código de barras
@@ -48,7 +49,7 @@ export default function QuickProductModal({ onClose, onCreated, submitLabel = "G
           <div className="text-xs text-blue-100">El SKU y el código de barras se generan solos.</div>
         </div>
         <div className="p-5 space-y-3">
-          {err && <div className="bg-red-600 border border-red-700 text-white font-semibold text-sm rounded-lg px-3 py-2">{err}</div>}
+          {err && <ErrorBanner message={err} />}
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Nombre *</label>
             <input autoFocus value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}

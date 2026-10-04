@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ErrorBanner } from "../../components/ErrorBanner";
 import { useParams } from "react-router-dom";
 import api from "../../api/client";
 import { SkeletonBlock } from "../../components/Skeleton";
@@ -64,7 +65,7 @@ export default function InventoryShow() {
           </div>
           <form onSubmit={submit} className="bg-white dark:bg-slate-800 rounded-lg shadow p-5 space-y-3">
             <h3 className="font-semibold">Registrar movimiento</h3>
-            {error && <div className="bg-red-600 text-white font-semibold rounded px-3 py-2 text-sm">{error}</div>}
+            {error && <ErrorBanner message={error} />}
             <div>
               <label className="block text-sm font-medium mb-1">Tipo</label>
               <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}

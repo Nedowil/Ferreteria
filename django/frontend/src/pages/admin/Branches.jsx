@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ErrorBanner } from "../../components/ErrorBanner";
 import { PageTitle } from "../../components/PageTitle";
 import api from "../../api/client";
 import { SkeletonRows } from "../../components/Skeleton";
@@ -71,7 +72,7 @@ export default function Branches() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4" onClick={() => setEditing(null)}>
           <form onClick={(e) => e.stopPropagation()} onSubmit={save} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 w-full max-w-md">
             <h3 className="font-semibold mb-4">{editing.id ? "Editar" : "Nueva"} sucursal</h3>
-            {error && <div className="bg-red-600 text-white font-semibold rounded px-3 py-2 text-xs mb-3">{error}</div>}
+            {error && <ErrorBanner message={error} className="mb-3" />}
             <div className="grid grid-cols-2 gap-3">
               {[["name", "Nombre", true], ["code", "Código", true], ["phone", "Teléfono"], ["email", "Correo"], ["address", "Dirección", false, true]].map(([k, label, req, full]) => (
                 <div key={k} className={full ? "col-span-2" : ""}>

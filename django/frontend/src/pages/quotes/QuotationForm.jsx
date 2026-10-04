@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ErrorBanner } from "../../components/ErrorBanner";
 import { PageTitle } from "../../components/PageTitle";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/client";
@@ -104,7 +105,7 @@ export default function QuotationForm() {
         <PageTitle icon="🧾" title="Nueva cotización" color="#7c3aed" />
         <p className="text-sm text-slate-500 dark:text-slate-400">Completá los datos y agregá los productos.</p>
       </div>
-      {error && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm mb-4">{error}</div>}
+      {error && <ErrorBanner message={error} className="mb-4" />}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
         <div className="lg:col-span-2 space-y-5">

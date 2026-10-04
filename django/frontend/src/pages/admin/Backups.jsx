@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ErrorBanner } from "../../components/ErrorBanner";
 import api from "../../api/client";
 import { SkeletonRows } from "../../components/Skeleton";
 import { EmptyRow } from "../../components/EmptyState";
@@ -57,7 +58,7 @@ export default function Backups() {
         Programa <code className="bg-slate-100 dark:bg-slate-700 px-1 rounded">manage.py backup_run</code> con cron para respaldos automáticos.
       </p>
       {msg && <div className="bg-green-100 text-green-800 rounded px-4 py-2 text-sm mb-4">{msg}</div>}
-      {error && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm mb-4">{error}</div>}
+      {error && <ErrorBanner message={error} className="mb-4" />}
 
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ErrorBanner } from "../components/ErrorBanner";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import Keypad from "../components/Keypad";
@@ -143,7 +144,7 @@ export default function Profiles() {
               </div>
             </div>
 
-            {error && <div className="mb-3 bg-red-600 text-white font-semibold text-sm rounded-lg px-3 py-2">{error}</div>}
+            {error && <ErrorBanner message={error} className="mb-3" />}
 
             <label className="block text-sm text-slate-400 mb-1">Marcá tu PIN</label>
             <input type="password" inputMode="numeric" pattern="[0-9]*" maxLength={6} autoFocus autoComplete="off"

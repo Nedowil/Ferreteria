@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ErrorBanner } from "../../components/ErrorBanner";
 import { toast } from "../../components/Toast";
 import { Link } from "react-router-dom";
 import api from "../../api/client";
@@ -176,7 +177,7 @@ export default function CashBox() {
           <Link to="/caja/historial" className="inline-flex items-center gap-1 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 hover:bg-blue-100 hover:border-blue-300 transition">🕘 Ver historial</Link>
         )}
       </div>
-      {error && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm mb-4">{error}</div>}
+      {error && <ErrorBanner message={error} className="mb-4" />}
 
       {!session ? (
         can("caja.abrir") ? (

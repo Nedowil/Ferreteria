@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { ErrorBanner } from "../../components/ErrorBanner";
 import { PageTitle } from "../../components/PageTitle";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../../api/client";
@@ -166,7 +167,7 @@ export default function Invoices() {
         </div>
       )}
 
-      {err && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm mb-4">{err}</div>}
+      {err && <ErrorBanner message={err} className="mb-4" />}
 
       <div className="flex gap-2 mb-4 text-sm">
         <button onClick={() => setTab("emitidas")} className={"px-4 py-2 rounded " + (tab === "emitidas" ? "bg-slate-700 text-white" : "bg-white dark:bg-slate-800 border")}>

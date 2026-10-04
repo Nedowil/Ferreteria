@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { ErrorBanner } from "../../components/ErrorBanner";
 import { PageTitle } from "../../components/PageTitle";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/client";
@@ -295,7 +296,7 @@ export default function ReturnCreate() {
         <PageTitle icon="↩️" title="Nueva devolución" color="#be123c" />
         <p className="text-sm text-slate-500 dark:text-slate-400">Elegí cómo devolver, indicá los productos y el reembolso.</p>
       </div>
-      {error && <div className="bg-red-600 text-white font-semibold rounded px-4 py-2 text-sm mb-4">{error}</div>}
+      {error && <ErrorBanner message={error} className="mb-4" />}
 
       {/* Pestañas tipo segmento */}
       <div className="inline-flex flex-wrap gap-1 rounded-xl bg-slate-100 dark:bg-slate-800 p-1 mb-5">

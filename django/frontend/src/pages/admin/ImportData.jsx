@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ErrorBanner } from "../../components/ErrorBanner";
 import api from "../../api/client";
 
 const TYPES = [
@@ -67,7 +68,7 @@ function ImportCard({ type }) {
           {busy ? "Importando…" : "Importar"}
         </button>
       </form>
-      {error && <div className="bg-red-600 text-white font-semibold rounded px-3 py-2 text-sm mt-3">{error}</div>}
+      {error && <ErrorBanner message={error} className="mt-3" />}
       {result && (
         <div className="bg-green-50 dark:bg-emerald-500/15 border border-green-200 dark:border-emerald-500/30 dark:text-emerald-300 rounded px-3 py-2 text-sm mt-3">
           {"imported" in result
