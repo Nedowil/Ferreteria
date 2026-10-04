@@ -215,3 +215,8 @@ button:not(:disabled):not(.no-anim):active {
   .fixed.inset-0:not(.no-anim),
   .fixed.inset-0:not(.no-anim) > * { animation: none !important; }
 }
+
+/* Salida de los modales (la maneja modalExit.js reinsertando una copia inerte).
+   Más rápida que la entrada: el sistema responde rápido cuando el usuario cierra. */
+@keyframes overlayOut { from { opacity: 1; } to { opacity: 0; } }
+@keyframes sheetOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.97); } }

@@ -4,6 +4,10 @@ import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthContext";
 import App from "./App";
 import "./index.css";
+import { installModalExit } from "./modalExit";
+
+// Anima la salida de los modales (sin tocar cada componente).
+installModalExit();
 
 // Aplica el tema (claro/oscuro) guardado antes de renderizar, para evitar
 // el parpadeo al cargar.
