@@ -135,26 +135,44 @@ def import_products(rows, *, branch=None, user=None):
     created = updated = 0
     errors = []
 
+    # Rendimiento: con miles de filas, consultar categoría/marca/unidad y el SKU
+    # UNA VEZ por fila es lento. Se normalizan los encabezados una sola vez, se
+    # cachean los catálogos (una consulta por nombre distinto) y se precargan de
+    # un golpe los productos existentes por SKU (una sola consulta).
+    norm_rows = [_with_product_aliases(r) for r in rows]
+    _cat_cache, _brand_cache, _unit_cache = {}, {}, {}
+
+    def _cat(n):
+        if n not in _cat_cache:
+            _cat_cache[n] = Category.objects.get_or_create(name=n)[0]
+        return _cat_cache[n]
+
+    def _brand(n):
+        if n not in _brand_cache:
+            _brand_cache[n] = Brand.objects.get_or_create(name=n)[0]
+        return _brand_cache[n]
+
+    def _unit(n):
+        if n not in _unit_cache:
+            _unit_cache[n] = Unit.objects.get_or_create(name=n, defaults={"abbreviation": n[:10]})[0]
+        return _unit_cache[n]
+
+    _skus = [s for s in (r.get("sku", "") for r in norm_rows) if s]
+    by_sku = {p.sku: p for p in Product.objects.filter(sku__in=_skus)} if _skus else {}
+
     with transaction.atomic():
-        for i, row in enumerate(rows, start=2):  # fila 1 = encabezados
-            row = _with_product_aliases(row)   # acepta encabezados en español
+        for i, row in enumerate(norm_rows, start=2):  # fila 1 = encabezados
             name = row.get("name", "")
             if not name:
                 errors.append(f"Fila {i}: el nombre es obligatorio.")
                 continue
 
-            category = brand = unit = None
-            if row.get("category"):
-                category, _ = Category.objects.get_or_create(name=row["category"])
-            if row.get("brand"):
-                brand, _ = Brand.objects.get_or_create(name=row["brand"])
-            if row.get("unit"):
-                unit, _ = Unit.objects.get_or_create(
-                    name=row["unit"], defaults={"abbreviation": row["unit"][:10]}
-                )
+            category = _cat(row["category"]) if row.get("category") else None
+            brand = _brand(row["brand"]) if row.get("brand") else None
+            unit = _unit(row["unit"]) if row.get("unit") else None
 
             sku = row.get("sku", "")
-            product = Product.objects.filter(sku=sku).first() if sku else None
+            product = by_sku.get(sku) if sku else None
             stock_val = _dec(row.get("stock"))
             min_stock_val = _dec(row.get("min_stock"))
 
@@ -188,6 +206,7 @@ def import_products(rows, *, branch=None, user=None):
                     **fields,
                 )
                 product.save()
+                by_sku[product.sku] = product   # por si el archivo repite el SKU
                 created += 1
 
             # Stock por sucursal (si hay sucursal activa)
@@ -207,6 +226,11 @@ def import_customers(rows):
     created = updated = 0
     errors = []
 
+    # Precarga de clientes existentes por nombre (una sola consulta) para no
+    # consultar por fila al importar listas grandes.
+    _names = [n for n in (r.get("name", "") for r in rows) if n]
+    by_name = {c.name: c for c in Customer.objects.filter(name__in=_names)} if _names else {}
+
     with transaction.atomic():
         for i, row in enumerate(rows, start=2):
             name = row.get("name", "")
@@ -220,14 +244,14 @@ def import_customers(rows):
                 "address": row.get("address") or None,
                 "active": True,
             }
-            obj = Customer.objects.filter(name=name).first()
+            obj = by_name.get(name)
             if obj:
                 for k, v in defaults.items():
                     setattr(obj, k, v)
                 obj.save()
                 updated += 1
             else:
-                Customer.objects.create(name=name, **defaults)
+                by_name[name] = Customer.objects.create(name=name, **defaults)
                 created += 1
 
     return {"created": created, "updated": updated, "errors": errors}

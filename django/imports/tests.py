@@ -180,3 +180,39 @@ class ImportApiTests(TestCase):
     def test_rechaza_sin_archivo(self):
         r = self._client("a@test.com").post("/api/imports/products/", {}, format="multipart")
         self.assertEqual(r.status_code, 400)
+
+
+class ImportPerfCorrectnessTests(TestCase):
+    """La optimización (caché de catálogos + precarga de SKU/nombre) no debe
+    crear duplicados ni alterar los conteos."""
+
+    def setUp(self):
+        self.branch = Branch.objects.create(name="Matriz", code="M", is_main=True)
+
+    def test_categoria_marca_se_crean_una_sola_vez_y_sku_actualiza(self):
+        from inventory.models import Category, Brand
+        rows = [
+            {"name": "Martillo A", "sku": "M-1", "category": "Herramientas", "brand": "Truper", "sale_price": "50"},
+            {"name": "Martillo B", "sku": "M-2", "category": "Herramientas", "brand": "Truper", "sale_price": "60"},
+            {"name": "Martillo A v2", "sku": "M-1", "category": "Herramientas", "brand": "Truper", "sale_price": "55"},
+        ]
+        res = services.import_products(rows, branch=self.branch)
+        # M-1 se crea una vez y luego se actualiza (mismo SKU en el archivo).
+        self.assertEqual(res["created"], 2)   # M-1 y M-2
+        self.assertEqual(res["updated"], 1)   # M-1 otra vez
+        self.assertEqual(Category.objects.filter(name="Herramientas").count(), 1)
+        self.assertEqual(Brand.objects.filter(name="Truper").count(), 1)
+        self.assertEqual(Product.objects.filter(sku="M-1").count(), 1)
+        self.assertEqual(Product.objects.get(sku="M-1").sale_price, Decimal("55"))
+
+    def test_clientes_precarga_sin_duplicar(self):
+        rows = [
+            {"name": "Juan Pérez", "phone": "111"},
+            {"name": "Juan Pérez", "phone": "222"},   # mismo nombre -> actualiza
+            {"name": "Ana López", "phone": "333"},
+        ]
+        res = services.import_customers(rows)
+        self.assertEqual(res["created"], 2)
+        self.assertEqual(res["updated"], 1)
+        self.assertEqual(Customer.objects.filter(name="Juan Pérez").count(), 1)
+        self.assertEqual(Customer.objects.get(name="Juan Pérez").phone, "222")

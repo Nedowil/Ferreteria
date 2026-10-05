@@ -33,12 +33,29 @@ export async function fetchAll(url, params = {}) {
   const first = (await api.get(url, { params: { ...params, page: 1, page_size: pageSize } })).data;
   // Endpoints que no paginan (devuelven un arreglo): se devuelven tal cual.
   if (Array.isArray(first)) return first;
-  let rows = first.results || [];
-  const total = Math.min(first.count ?? rows.length, FETCH_ALL_MAX);
+  const page1 = first.results || [];
+  const total = Math.min(first.count ?? page1.length, FETCH_ALL_MAX);
   const pages = Math.ceil(total / pageSize);
-  for (let p = 2; p <= pages && rows.length < FETCH_ALL_MAX; p++) {
-    const { data } = await api.get(url, { params: { ...params, page: p, page_size: pageSize } });
-    rows = rows.concat(data.results || []);
+  if (pages <= 1) return page1.slice(0, FETCH_ALL_MAX);
+
+  // Rendimiento: las páginas 2..N se piden EN PARALELO (en tandas para no
+  // saturar el servidor/navegador), en vez de una por una. Acelera mucho las
+  // exportaciones grandes. Se arman en ORDEN de página al final.
+  const CONCURRENCY = 6;
+  const byPage = { 1: page1 };
+  const pending = [];
+  for (let p = 2; p <= pages; p++) pending.push(p);
+  for (let i = 0; i < pending.length; i += CONCURRENCY) {
+    const batch = pending.slice(i, i + CONCURRENCY);
+    const datas = await Promise.all(batch.map((p) =>
+      api.get(url, { params: { ...params, page: p, page_size: pageSize } })
+        .then((r) => ({ p, rows: r.data.results || [] }))));
+    datas.forEach(({ p, rows }) => { byPage[p] = rows; });
+  }
+
+  let rows = [];
+  for (let p = 1; p <= pages && rows.length < FETCH_ALL_MAX; p++) {
+    rows = rows.concat(byPage[p] || []);
   }
   if ((first.count ?? 0) > FETCH_ALL_MAX) {
     // Aviso para el desarrollador; el usuario debería filtrar por fecha.
