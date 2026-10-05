@@ -24,10 +24,18 @@ def _read_upload(request):
         return None, Response({"detail": "El archivo supera el límite de 5 MB."},
                               status=status.HTTP_400_BAD_REQUEST)
     name = (f.name or "").lower()
-    if not (name.endswith(".csv") or name.endswith(".txt")):
-        return None, Response({"detail": "El archivo debe ser .csv o .txt."},
+    data = f.read()
+    if name.endswith(".xlsx"):
+        try:
+            rows = services.parse_xlsx(data)
+        except Exception:
+            return None, Response({"detail": "No se pudo leer el Excel. Guardalo como .xlsx o .csv e intentá de nuevo."},
+                                  status=status.HTTP_400_BAD_REQUEST)
+    elif name.endswith(".csv") or name.endswith(".txt"):
+        rows = services.parse_csv(data)
+    else:
+        return None, Response({"detail": "El archivo debe ser .xlsx, .csv o .txt."},
                               status=status.HTTP_400_BAD_REQUEST)
-    rows = services.parse_csv(f.read())
     if not rows:
         return None, Response({"detail": "El archivo no contiene filas."},
                               status=status.HTTP_400_BAD_REQUEST)
@@ -37,9 +45,17 @@ def _read_upload(request):
 @api_view(["GET"])
 @permission_classes([_PERM])
 def template(request, kind):
-    """Descarga la plantilla CSV (kind: productos|clientes|ventas)."""
+    """Descarga la plantilla (kind: productos|clientes|ventas). Por defecto .xlsx
+    con hoja de instrucciones; ?fmt=csv devuelve el CSV."""
     if kind not in services.TEMPLATES:
         return Response({"detail": "Tipo de plantilla desconocido."}, status=status.HTTP_404_NOT_FOUND)
+    if request.query_params.get("fmt") != "csv":
+        resp = HttpResponse(
+            services.template_xlsx(kind),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        resp["Content-Disposition"] = f'attachment; filename="plantilla-{kind}.xlsx"'
+        return resp
     content = services.template_csv(kind)
     # BOM UTF-8: hace que Excel en Windows abra el CSV como UTF-8 y muestre bien
     # los acentos (sin él, Excel lo lee como Windows-1252 y sale "uÃ±a").

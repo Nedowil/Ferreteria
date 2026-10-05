@@ -153,12 +153,15 @@ class ImportApiTests(TestCase):
         return f
 
     def test_template_descargable(self):
+        # Por defecto: Excel (.xlsx) con la plantilla.
         r = self._client("a@test.com").get("/api/imports/template/productos/")
         self.assertEqual(r.status_code, 200)
-        self.assertIn("text/csv", r["Content-Type"])
-        # Debe iniciar con BOM UTF-8 para que Excel muestre bien los acentos.
-        self.assertTrue(r.content.startswith(b"\xef\xbb\xbf"))
-        self.assertIn("sale_price", r.content.decode("utf-8-sig"))
+        self.assertIn("spreadsheetml.sheet", r["Content-Type"])
+        self.assertTrue(r.content[:2] == b"PK")   # un .xlsx es un zip (empieza con PK)
+        # ?format=csv sigue devolviendo el CSV con BOM.
+        rc = self._client("a@test.com").get("/api/imports/template/productos/?fmt=csv")
+        self.assertIn("text/csv", rc["Content-Type"])
+        self.assertTrue(rc.content.startswith(b"\xef\xbb\xbf"))
 
     def test_import_productos_via_api(self):
         r = self._client("a@test.com").post(
@@ -216,3 +219,36 @@ class ImportPerfCorrectnessTests(TestCase):
         self.assertEqual(res["updated"], 1)
         self.assertEqual(Customer.objects.filter(name="Juan Pérez").count(), 1)
         self.assertEqual(Customer.objects.get(name="Juan Pérez").phone, "222")
+
+
+class XlsxTemplateTests(TestCase):
+    """Plantilla .xlsx + lectura de .xlsx + encabezados en español."""
+
+    def setUp(self):
+        self.branch = Branch.objects.create(name="Matriz", code="M", is_main=True)
+
+    def test_plantilla_productos_roundtrip_importa(self):
+        xb = services.template_xlsx("productos")
+        self.assertGreater(len(xb), 100)
+        rows = services.parse_xlsx(xb)
+        self.assertEqual(len(rows), 2)
+        res = services.import_products(rows, branch=self.branch)
+        self.assertEqual(res["created"], 2)
+        self.assertTrue(Product.objects.filter(name="Martillo de uña 16oz").exists())
+        self.assertTrue(Product.objects.filter(sku="CEM-0001").exists())
+
+    def test_encabezados_en_espanol_clientes(self):
+        rows = [{"nombre": "Ana", "nit": "CF", "teléfono": "123"}]
+        res = services.import_customers(rows)
+        self.assertEqual(res["created"], 1)
+        self.assertEqual(Customer.objects.get(name="Ana").phone, "123")
+
+    def test_codigo_barras_conserva_ceros_en_xlsx(self):
+        # Un código con ceros a la izquierda, puesto como TEXTO, no se pierde.
+        import openpyxl, io
+        wb = openpyxl.Workbook(); ws = wb.active
+        ws.append(["Nombre", "Código"])
+        ws.append(["Tornillo", "007500123456"])
+        buf = io.BytesIO(); wb.save(buf)
+        rows = services.parse_xlsx(buf.getvalue())
+        self.assertEqual(rows[0]["código"], "007500123456")

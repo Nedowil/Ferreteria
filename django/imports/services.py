@@ -11,25 +11,54 @@ import io
 from decimal import Decimal, InvalidOperation
 
 
-# Encabezados esperados y filas de ejemplo para las plantillas descargables.
+# Plantillas descargables: encabezados EN ESPAÑOL (el importador los reconoce por
+# alias), filas de ejemplo e instrucción por columna (para la hoja "Instrucciones"
+# del Excel). `obl` = obligatorio.
 TEMPLATES = {
     "productos": {
-        "headers": ["name", "sku", "barcode", "category", "brand", "unit",
-                    "purchase_price", "sale_price", "stock", "min_stock"],
+        "headers": ["Nombre", "Código SKU", "Código", "Categoría", "Marca", "Unidad",
+                    "Precio de compra", "Precio de venta", "Existencia", "Stock mínimo"],
+        "hints": [
+            "Obligatorio. Nombre del producto.",
+            "Opcional. Si lo dejás vacío, el sistema genera uno.",
+            "Opcional. Código de barras. Si lo dejás vacío, se genera un EAN-13.",
+            "Opcional. Se crea sola si no existe.",
+            "Opcional. Se crea sola si no existe.",
+            "Opcional. Ej.: Unidad, Libra, Caja.",
+            "Opcional. Costo (número). Ej.: 45.00",
+            "Opcional. Precio de venta (número). Ej.: 75.00",
+            "Opcional. Stock inicial (número).",
+            "Opcional. Aviso de reposición (número).",
+        ],
         "examples": [
             ["Martillo de uña 16oz", "", "", "Herramientas", "Truper", "Unidad", "45.00", "75.00", "20", "5"],
             ["Cemento gris 42.5kg", "CEM-0001", "", "Construcción", "Cementos Progreso", "Bolsa", "78.00", "92.00", "100", "20"],
         ],
     },
     "clientes": {
-        "headers": ["name", "tax_id", "phone", "email", "address"],
+        "headers": ["Nombre", "NIT", "Teléfono", "Correo", "Dirección"],
+        "hints": [
+            "Obligatorio. Nombre o razón social.",
+            "Opcional. Poné CF para consumidor final.",
+            "Opcional.",
+            "Opcional.",
+            "Opcional.",
+        ],
         "examples": [
             ["Constructora El Roble, S.A.", "1234567K", "5555-1234", "compras@elroble.com", "Zona 1, Ciudad"],
             ["Juan Pérez", "CF", "4444-9876", "", "Aldea El Naranjo"],
         ],
     },
     "ventas": {
-        "headers": ["date", "customer_tax_id", "product_sku", "quantity", "unit_price", "payment_method"],
+        "headers": ["Fecha", "NIT cliente", "SKU producto", "Cantidad", "Precio unitario", "Método de pago"],
+        "hints": [
+            "Obligatorio. Formato AAAA-MM-DD. Ej.: 2026-01-15.",
+            "Opcional. CF para consumidor final.",
+            "Obligatorio. Debe existir en el catálogo.",
+            "Obligatorio. Número.",
+            "Obligatorio. Número.",
+            "Opcional. efectivo / tarjeta / transferencia.",
+        ],
         "examples": [
             ["2026-01-15", "1234567K", "CEM-0001", "10", "92.00", "efectivo"],
             ["2026-01-15", "1234567K", "MAR-0001", "2", "75.00", "efectivo"],
@@ -51,6 +80,90 @@ def template_csv(kind: str) -> str:
     for row in tpl["examples"]:
         writer.writerow(row)
     return "sep=,\r\n" + buf.getvalue()
+
+
+def _cell_str(v):
+    """Convierte una celda de Excel a texto sin notación científica ni '.0',
+    preservando códigos (de barras/NIT) y fechas como AAAA-MM-DD."""
+    import datetime as _dt
+    if v is None:
+        return ""
+    if isinstance(v, bool):
+        return "1" if v else "0"
+    if isinstance(v, (_dt.datetime, _dt.date)):
+        return v.strftime("%Y-%m-%d")
+    if isinstance(v, float):
+        return str(int(v)) if v.is_integer() else repr(v)
+    return str(v)
+
+
+def parse_xlsx(file_bytes: bytes) -> list[dict]:
+    """Lee un .xlsx (primera hoja; encabezados en la 1ª fila) → lista de dicts
+    con llaves normalizadas (minúsculas, sin espacios). Todo se lee como TEXTO
+    para no perder los ceros a la izquierda de códigos de barras / NIT."""
+    import openpyxl
+    wb = openpyxl.load_workbook(io.BytesIO(file_bytes), read_only=True, data_only=True)
+    ws = wb.active
+    it = ws.iter_rows(values_only=True)
+    try:
+        header = next(it)
+    except StopIteration:
+        return []
+    keys = [_cell_str(h).strip().lower() for h in header]
+    out = []
+    for raw in it:
+        if raw is None or all(c is None or _cell_str(c).strip() == "" for c in raw):
+            continue
+        d = {}
+        for k, v in zip(keys, raw):
+            if k:
+                d[k] = _cell_str(v).strip()
+        out.append(d)
+    return out
+
+
+def template_xlsx(kind: str) -> bytes:
+    """Genera la plantilla como .xlsx: hoja 'Plantilla' (encabezados en español +
+    ejemplos) y hoja 'Instrucciones' (qué poner en cada columna)."""
+    import openpyxl
+    from openpyxl.styles import Alignment, Font, PatternFill
+
+    tpl = TEMPLATES[kind]
+    head_fill = PatternFill("solid", fgColor="334155")
+    head_font = Font(bold=True, color="FFFFFF")
+    text_cols = {"código", "codigo", "código sku", "codigo sku", "nit", "nit cliente", "sku producto"}
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Plantilla"
+    ws.append(tpl["headers"])
+    for c in ws[1]:
+        c.font = head_font
+        c.fill = head_fill
+        c.alignment = Alignment(vertical="center")
+    for ex in tpl["examples"]:
+        ws.append(ex)
+    for i, h in enumerate(tpl["headers"], start=1):
+        letter = ws.cell(row=1, column=i).column_letter
+        ws.column_dimensions[letter].width = max(12, min(len(h) + 6, 34))
+        if h.strip().lower() in text_cols:   # forzar TEXTO para no perder ceros
+            for r in range(2, ws.max_row + 1):
+                ws.cell(row=r, column=i).number_format = "@"
+    ws.freeze_panes = "A2"
+
+    ws2 = wb.create_sheet("Instrucciones")
+    ws2.append(["Columna", "Qué poner"])
+    for c in ws2[1]:
+        c.font = head_font
+        c.fill = head_fill
+    for h, hint in zip(tpl["headers"], tpl.get("hints", [])):
+        ws2.append([h, hint])
+    ws2.column_dimensions["A"].width = 22
+    ws2.column_dimensions["B"].width = 72
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
 
 
 def parse_csv(file_bytes: bytes) -> list[dict]:
@@ -113,11 +226,29 @@ _PRODUCT_ALIASES = {
 }
 
 
-def _with_product_aliases(row):
-    """Rellena las llaves canónicas (name, sku, …) desde sus alias en español si
-    no vienen ya con el nombre técnico. No pisa un valor técnico existente."""
+_CUSTOMER_ALIASES = {
+    "name": ["nombre", "cliente", "razón social", "razon social"],
+    "tax_id": ["nit", "identificación", "identificacion"],
+    "phone": ["teléfono", "telefono", "tel"],
+    "email": ["correo", "e-mail", "mail"],
+    "address": ["dirección", "direccion"],
+}
+
+_SALE_ALIASES = {
+    "date": ["fecha"],
+    "customer_tax_id": ["nit cliente", "nit", "nit del cliente"],
+    "product_sku": ["sku producto", "sku", "código sku", "codigo sku"],
+    "quantity": ["cantidad"],
+    "unit_price": ["precio unitario", "precio", "precio de venta"],
+    "payment_method": ["método de pago", "metodo de pago", "pago"],
+}
+
+
+def _with_aliases(row, aliases):
+    """Rellena las llaves canónicas desde sus alias en español si no vienen ya
+    con el nombre técnico. No pisa un valor técnico existente."""
     out = dict(row)
-    for canon, names in _PRODUCT_ALIASES.items():
+    for canon, names in aliases.items():
         if out.get(canon):
             continue
         for n in names:
@@ -125,6 +256,10 @@ def _with_product_aliases(row):
                 out[canon] = row[n]
                 break
     return out
+
+
+def _with_product_aliases(row):
+    return _with_aliases(row, _PRODUCT_ALIASES)
 
 
 def import_products(rows, *, branch=None, user=None):
@@ -226,6 +361,7 @@ def import_customers(rows):
     created = updated = 0
     errors = []
 
+    rows = [_with_aliases(r, _CUSTOMER_ALIASES) for r in rows]
     # Precarga de clientes existentes por nombre (una sola consulta) para no
     # consultar por fila al importar listas grandes.
     _names = [n for n in (r.get("name", "") for r in rows) if n]
@@ -278,6 +414,7 @@ def import_sales(rows, *, branch=None, user=None):
     # Agrupar por (fecha | nit cliente | método)
     groups = {}
     for i, row in enumerate(rows, start=2):
+        row = _with_aliases(row, _SALE_ALIASES)
         date_str = row.get("date", "")
         sku = row.get("product_sku", "")
         if not date_str or not sku:

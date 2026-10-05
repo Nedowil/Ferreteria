@@ -5,17 +5,17 @@ import api from "../../api/client";
 const TYPES = [
   {
     key: "products", kind: "productos", label: "Productos",
-    columns: "name, sku, barcode, category, brand, unit, purchase_price, sale_price, stock, min_stock",
+    columns: "Nombre, Código SKU, Código, Categoría, Marca, Unidad, Precio de compra, Precio de venta, Existencia, Stock mínimo",
     help: "Se busca por SKU: si existe se actualiza (sin tocar el stock global), si no, se crea. SKU/código de barras se autogeneran si van vacíos.",
   },
   {
     key: "customers", kind: "clientes", label: "Clientes",
-    columns: "name, tax_id, phone, email, address",
+    columns: "Nombre, NIT, Teléfono, Correo, Dirección",
     help: "Se busca por nombre: si existe se actualiza, si no, se crea.",
   },
   {
     key: "sales", kind: "ventas", label: "Ventas históricas",
-    columns: "date, customer_tax_id, product_sku, quantity, unit_price, payment_method",
+    columns: "Fecha, NIT cliente, SKU producto, Cantidad, Precio unitario, Método de pago",
     help: "Solo para reportes: NO afecta inventario ni caja. Las filas con misma fecha + cliente + método se agrupan en una venta.",
   },
 ];
@@ -30,7 +30,7 @@ function ImportCard({ type }) {
     const r = await api.get(`/imports/template/${type.kind}/`, { responseType: "blob" });
     const url = URL.createObjectURL(r.data);
     const a = document.createElement("a");
-    a.href = url; a.download = `plantilla-${type.kind}.csv`;
+    a.href = url; a.download = `plantilla-${type.kind}.xlsx`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -62,7 +62,7 @@ function ImportCard({ type }) {
       <p className="text-xs text-slate-500 dark:text-slate-400 mb-1"><b>Columnas:</b> {type.columns}</p>
       <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">{type.help}</p>
       <form onSubmit={submit} className="flex flex-wrap items-center gap-2">
-        <input type="file" accept=".csv,.txt" onChange={(e) => setFile(e.target.files[0])}
+        <input type="file" accept=".xlsx,.csv,.txt" onChange={(e) => setFile(e.target.files[0])}
                className="text-sm border border-slate-300 dark:border-slate-600 rounded px-2 py-1" />
         <button disabled={!file || busy} className="bg-blue-600 text-white rounded px-4 py-2 text-sm font-medium disabled:opacity-50">
           {busy ? "Importando…" : "Importar"}
@@ -91,9 +91,10 @@ function ImportCard({ type }) {
 export default function ImportData() {
   return (
     <div className="max-w-3xl space-y-5">
-      <h1 className="text-lg font-semibold">Importar datos (CSV)</h1>
+      <h1 className="text-lg font-semibold">Importar datos</h1>
       <p className="text-sm text-slate-500 dark:text-slate-400">
-        Sube archivos CSV (codificación UTF-8). Descarga la plantilla de cada tipo para ver el formato exacto.
+        Descargá la plantilla de cada tipo (Excel con una hoja de instrucciones), completala y subila.
+        Se aceptan archivos <b>.xlsx</b> o <b>.csv</b>.
       </p>
       {TYPES.map((t) => <ImportCard key={t.key} type={t} />)}
     </div>
