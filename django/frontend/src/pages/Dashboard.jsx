@@ -24,9 +24,9 @@ function Kpi({ label, value, sub, icon, gradient, to }) {
   const inner = (
     <>
       <div className="text-sm opacity-90">{label}</div>
-      <div className="text-3xl sm:text-4xl font-extrabold mt-1 drop-shadow-sm break-words leading-tight pr-12">{value}</div>
+      <div className="text-2xl sm:text-3xl font-extrabold mt-1 drop-shadow-sm leading-tight tabular-nums whitespace-nowrap">{value}</div>
       {sub && <div className="text-xs opacity-90 mt-1 break-words pr-12">{sub}</div>}
-      <div className="absolute right-4 top-1/2 -translate-y-1/2 text-5xl opacity-30 select-none">{icon}</div>
+      <div className="absolute right-4 bottom-3 text-4xl opacity-25 select-none pointer-events-none">{icon}</div>
       {to && <div className="absolute right-3 bottom-2 text-xs font-semibold opacity-0 group-hover:opacity-90 transition">Ver →</div>}
     </>
   );
