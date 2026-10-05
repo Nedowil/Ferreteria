@@ -32,7 +32,9 @@ export default function QuotationList() {
   };
 
   const load = (p = page) => {
-    api.get("/quotations/", { params: { ...buildParams(), page: p } }).then((r) => setData(r.data));
+    api.get("/quotations/", { params: { ...buildParams(), page: p } })
+      .then((r) => setData(r.data))
+      .finally(() => setLoaded(true));
   };
   const goPage = (p) => { setPage(p); load(p); };
   useEffect(() => { load(1); }, []);
