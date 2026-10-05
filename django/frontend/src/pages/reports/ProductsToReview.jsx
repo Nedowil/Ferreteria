@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../../api/client";
 import { Q, ExcelButton, ReportSkeleton } from "./common";
+import { ErrorBanner } from "../../components/ErrorBanner";
 import { exportToExcel } from "../../utils/exportExcel";
 import Pagination from "../../components/Pagination";
 
@@ -15,8 +16,9 @@ const REASON_BADGE = {
 };
 export default function ProductsToReview() {
   const [data, setData] = useState(null);
+  const [error, setError] = useState(false);
   const [page, setPage] = useState(1);
-  useEffect(() => { api.get("/reports/products-to-review/").then((r) => setData(r.data)); }, []);
+  useEffect(() => { setError(false); api.get("/reports/products-to-review/").then((r) => setData(r.data)).catch(() => setError(true)); }, []);
 
   const exportXls = () => exportToExcel("productos-a-revisar", [
     { header: "SKU", value: (r) => r.sku },
@@ -29,6 +31,7 @@ export default function ProductsToReview() {
     { header: "Stock", value: (r) => Number(r.stock) },
   ], data?.rows || []);
 
+  if (error) return <ErrorBanner message="No se pudo cargar el reporte. Revisá tu conexión e intentá de nuevo." />;
   if (!data) return <ReportSkeleton kpis={3} />;
 
   return (

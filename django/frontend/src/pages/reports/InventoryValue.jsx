@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { PageTitle } from "../../components/PageTitle";
 import api from "../../api/client";
 import { Q, ExcelButton, ReportSkeleton } from "./common";
+import { ErrorBanner } from "../../components/ErrorBanner";
 import { exportToExcel } from "../../utils/exportExcel";
 import Pagination from "../../components/Pagination";
 
@@ -9,8 +10,9 @@ const PAGE_SIZE = 15;
 
 export default function InventoryValue() {
   const [data, setData] = useState(null);
+  const [error, setError] = useState(false);
   const [page, setPage] = useState(1);
-  useEffect(() => { api.get("/reports/inventory-value/").then((r) => setData(r.data)); }, []);
+  useEffect(() => { setError(false); api.get("/reports/inventory-value/").then((r) => setData(r.data)).catch(() => setError(true)); }, []);
 
   const exportXls = () => exportToExcel("valor-inventario", [
     { header: "SKU", value: (r) => r.sku },
@@ -24,6 +26,7 @@ export default function InventoryValue() {
   ], data?.rows || []);
 
   const maxCost = useMemo(() => Math.max(1, ...((data?.rows || []).map((r) => Number(r.cost_value) || 0))), [data]);
+  if (error) return <ErrorBanner message="No se pudo cargar el reporte. Revisá tu conexión e intentá de nuevo." />;
   if (!data) return <ReportSkeleton kpis={3} />;
 
   const margin = Number(data.total_cost_value) > 0 ? (Number(data.potential_profit) / Number(data.total_cost_value)) * 100 : 0;

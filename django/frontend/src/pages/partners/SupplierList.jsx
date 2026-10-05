@@ -46,9 +46,9 @@ export default function SupplierList() {
     const params = { page: p };
     if (search) params.search = search;
     api.get("/suppliers/", { params }).then((r) => {
-      setItems(r.data.results || r.data); setLoaded(true);
+      setItems(r.data.results || r.data);
       setCount(r.data.count ?? (r.data.results ? r.data.results.length : r.data.length));
-    });
+    }).finally(() => setLoaded(true));
   };
   const goPage = (p) => { setPage(p); load(p); };
   useEffect(() => { load(1); }, []);

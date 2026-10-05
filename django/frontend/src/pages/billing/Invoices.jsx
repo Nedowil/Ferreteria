@@ -46,12 +46,11 @@ export default function Invoices() {
   const loadInvoices = (p = page) => api.get("/invoices/", { params: { ...invParams(), page: p } }).then((r) => {
     setInvoices(r.data.results || r.data);
     setInvCount(r.data.count ?? (r.data.results ? r.data.results.length : r.data.length));
-    setInvLoaded(true);
-  });
+  }).finally(() => setInvLoaded(true));
   const goPage = (p) => { setPage(p); loadInvoices(p); };
   const load = () => {
     loadInvoices(1);
-    api.get("/invoices/pending/").then((r) => { setPending(r.data); setPendLoaded(true); });
+    api.get("/invoices/pending/").then((r) => setPending(r.data)).finally(() => setPendLoaded(true));
     api.get("/invoices/quota/").then((r) => setQuota(r.data));
     api.get("/fel/config/").then((r) => setCfg(r.data));
   };

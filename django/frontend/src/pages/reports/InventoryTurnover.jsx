@@ -1,4 +1,4 @@
-import { Q, useDateReport, DateRangeBar, KpiCard, ExcelButton, ReportSkeleton } from "./common";
+import { Q, useDateReport, DateRangeBar, KpiCard, ExcelButton, ReportSkeleton, ReportError } from "./common";
 import { exportToExcel } from "../../utils/exportExcel";
 import Pagination from "../../components/Pagination";
 import { useEffect, useState } from "react";
@@ -8,7 +8,7 @@ const num = (n) => Number(n || 0).toLocaleString("es-GT", { maximumFractionDigit
 
 // Rotación de inventario: qué tan rápido se vende cada producto.
 export default function InventoryTurnover() {
-  const { from, setFrom, to, setTo, data, reload } = useDateReport("/reports/inventory-turnover/");
+  const { from, setFrom, to, setTo, data, error, reload } = useDateReport("/reports/inventory-turnover/");
   const [page, setPage] = useState(1);
   const [order, setOrder] = useState("sold"); // sold | slow
   useEffect(() => { setPage(1); }, [data, order]);
@@ -58,7 +58,8 @@ export default function InventoryTurnover() {
           </select>
         </div>
       </DateRangeBar>
-      {!data && <ReportSkeleton />}
+      {!data && !error && <ReportSkeleton />}
+      {error && <ReportError onRetry={reload} />}
       {data && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-2">

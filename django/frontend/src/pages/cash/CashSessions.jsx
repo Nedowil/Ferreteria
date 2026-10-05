@@ -69,7 +69,7 @@ export default function CashSessions() {
     if (to) o.to = to;
     return o;
   };
-  const load = (p = page) => api.get("/cashbox/cash-sessions/", { params: params(p) }).then((r) => { setData(r.data); setLoaded(true); });
+  const load = (p = page) => api.get("/cashbox/cash-sessions/", { params: params(p) }).then((r) => setData(r.data)).finally(() => setLoaded(true));
   const goPage = (p) => { setPage(p); load(p); setExpanded(null); };
   const applyFilter = () => { setPage(1); setExpanded(null); load(1); };
   const clearFilter = () => { setFrom(""); setTo(""); setPage(1); setExpanded(null); api.get("/cashbox/cash-sessions/", { params: { page: 1 } }).then((r) => setData(r.data)); };

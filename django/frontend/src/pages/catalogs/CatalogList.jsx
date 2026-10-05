@@ -31,9 +31,9 @@ export default function CatalogList({ kind }) {
     const params = { page: p };
     if (search) params.search = search;
     api.get(cfg.endpoint, { params }).then((r) => {
-      setItems(r.data.results || r.data); setLoaded(true);
+      setItems(r.data.results || r.data);
       setCount(r.data.count ?? (r.data.results ? r.data.results.length : r.data.length));
-    });
+    }).finally(() => setLoaded(true));
   };
   const goPage = (p) => { setPage(p); load(p); };
   // Al cambiar de catálogo (kind) se vuelve a la página 1.

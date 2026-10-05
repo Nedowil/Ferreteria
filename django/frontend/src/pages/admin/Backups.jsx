@@ -14,7 +14,7 @@ export default function Backups() {
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
 
-  const load = () => { api.get("/backups/").then((r) => { setItems(r.data); setLoaded(true); }); };
+  const load = () => { api.get("/backups/").then((r) => setItems(r.data)).finally(() => setLoaded(true)); };
   useEffect(load, []);
 
   const run = async () => {

@@ -15,8 +15,9 @@ export default function TransferDetail() {
   const navigate = useNavigate();
   const [t, setT] = useState(null);
   const [error, setError] = useState("");
+  const [loadErr, setLoadErr] = useState(false);
 
-  const load = () => { api.get(`/transfers/${id}/`).then((r) => setT(r.data)); };
+  const load = () => { setLoadErr(false); api.get(`/transfers/${id}/`).then((r) => setT(r.data)).catch(() => setLoadErr(true)); };
   useEffect(load, [id]);
 
   const act = async (action) => {
@@ -31,6 +32,7 @@ export default function TransferDetail() {
     catch (err) { setError(err.response?.data?.detail || "Error"); }
   };
 
+  if (loadErr) return <div className="max-w-3xl"><ErrorBanner message="No se pudo cargar la información. Revisá tu conexión e intentá de nuevo." /></div>;
   if (!t) return <SkeletonBlock lines={8} className="max-w-3xl" />;
 
   return (

@@ -65,7 +65,8 @@ export default function StockCountHistory() {
 
   // Tabla "Inventarios registrados": paginada (15 por página).
   const loadPage = (p = page) => api.get("/inventory/stock-counts/", { params: { page: p } })
-    .then((r) => { setSessions(r.data.results || r.data); setCount(r.data.count ?? (r.data.results ? r.data.results.length : r.data.length)); setLoaded(true); });
+    .then((r) => { setSessions(r.data.results || r.data); setCount(r.data.count ?? (r.data.results ? r.data.results.length : r.data.length)); })
+    .finally(() => setLoaded(true));
   const goPage = (p) => { setPage(p); loadPage(p); setExpanded(null); };
   useEffect(() => { loadPage(1); }, []);
 

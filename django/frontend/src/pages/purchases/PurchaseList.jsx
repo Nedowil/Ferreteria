@@ -50,7 +50,7 @@ export default function PurchaseList() {
   };
 
   const load = (p = page) => {
-    api.get("/purchases/", { params: { ...buildParams(), page: p } }).then((r) => { setData(r.data); setLoaded(true); });
+    api.get("/purchases/", { params: { ...buildParams(), page: p } }).then((r) => setData(r.data)).finally(() => setLoaded(true));
   };
   const goPage = (p) => { setPage(p); load(p); };
   useEffect(() => { load(1); }, []);

@@ -36,9 +36,9 @@ export default function Users() {
     const params = { page: p };
     if (search) params.search = search;
     api.get("/users/", { params }).then((r) => {
-      setUsers(r.data.results || r.data); setLoaded(true);
+      setUsers(r.data.results || r.data);
       setCount(r.data.count ?? (r.data.results ? r.data.results.length : r.data.length));
-    });
+    }).finally(() => setLoaded(true));
   };
   // Resumen (tarjetas): los usuarios son pocos, se traen todos para contar.
   const loadStats = () => {

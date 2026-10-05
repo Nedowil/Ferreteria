@@ -21,13 +21,15 @@ export default function SaleDetailView({ id, onClose, onChanged }) {
   const [invoice, setInvoice] = useState(null);
   const [pay, setPay] = useState({ amount: "", payment_method: "efectivo", reference: "" });
   const [error, setError] = useState("");
+  const [loadErr, setLoadErr] = useState(false);
   // La ganancia/costo viene OCULTA por defecto: se muestra solo cuando el admin
   // lo pide (para que el cliente frente a la pantalla no la vea sin querer).
   const [profitVisible, setProfitVisible] = useState(false);
   const showProfit = isAdmin && profitVisible;
 
   const load = () => {
-    api.get(`/sales/${id}/`).then((r) => setS(r.data));
+    setLoadErr(false);
+    api.get(`/sales/${id}/`).then((r) => setS(r.data)).catch(() => setLoadErr(true));
     api.get("/invoices/", { params: { sale: id } })
       .then((r) => {
         const list = r.data.results || r.data;
@@ -63,6 +65,7 @@ export default function SaleDetailView({ id, onClose, onChanged }) {
     } catch (err) { setError(err.response?.data?.detail || "Error al registrar el abono"); }
   };
 
+  if (loadErr) return <div className="py-4"><ErrorBanner message="No se pudo cargar la información. Revisá tu conexión e intentá de nuevo." /></div>;
   if (!s) return <div className="py-4"><SkeletonBlock lines={7} /></div>;
   const hasBalance = Number(s.balance) > 0;
 

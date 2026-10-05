@@ -33,7 +33,7 @@ export default function Roles() {
   const [editing, setEditing] = useState(null);
   const [error, setError] = useState("");
 
-  const load = () => api.get("/roles/").then((r) => { setRoles(r.data.results || r.data); setLoaded(true); });
+  const load = () => api.get("/roles/").then((r) => setRoles(r.data.results || r.data)).finally(() => setLoaded(true));
   useEffect(() => {
     load();
     api.get("/permissions/").then((r) => setCatalog(r.data));

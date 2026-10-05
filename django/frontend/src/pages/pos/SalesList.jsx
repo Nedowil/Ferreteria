@@ -86,7 +86,7 @@ export default function SalesList() {
   const load = (p = page, fl = filters) => {
     const f = {};
     Object.entries(fl).forEach(([k, v]) => { if (v) f[k] = v; });
-    api.get("/sales/", { params: { ...f, page: p } }).then((r) => { setData(r.data); setLoaded(true); });
+    api.get("/sales/", { params: { ...f, page: p } }).then((r) => setData(r.data)).finally(() => setLoaded(true));
     if (canSeeSummary) api.get("/sales/summary/", { params: f }).then((r) => setSummary(r.data)).catch(() => {});
   };
   const goPage = (p) => { setPage(p); load(p); };

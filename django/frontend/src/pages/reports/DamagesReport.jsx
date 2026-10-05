@@ -1,4 +1,4 @@
-import { Q, useDateReport, DateRangeBar, KpiCard, ExcelButton, ReportSkeleton } from "./common";
+import { Q, useDateReport, DateRangeBar, KpiCard, ExcelButton, ReportSkeleton, ReportError } from "./common";
 import { exportToExcel } from "../../utils/exportExcel";
 import Pagination from "../../components/Pagination";
 import { useEffect, useState } from "react";
@@ -13,7 +13,7 @@ const BADGE = {
 
 // Mermas / daños por periodo. El costo = cantidad × precio de compra.
 export default function DamagesReport() {
-  const { from, setFrom, to, setTo, data, reload, params, setParams } = useDateReport("/reports/damages/");
+  const { from, setFrom, to, setTo, data, error, reload, params, setParams } = useDateReport("/reports/damages/");
   const [page, setPage] = useState(1);
   useEffect(() => { setPage(1); }, [data]);
   const rows = data?.rows || [];
@@ -50,7 +50,8 @@ export default function DamagesReport() {
           </select>
         </div>
       </DateRangeBar>
-      {!data && <ReportSkeleton />}
+      {!data && !error && <ReportSkeleton />}
+      {error && <ReportError onRetry={reload} />}
       {data && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-5">

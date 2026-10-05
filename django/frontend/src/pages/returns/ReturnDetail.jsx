@@ -16,9 +16,10 @@ export default function ReturnDetail() {
   const [r, setR] = useState(null);
   const [company, setCompany] = useState(null);
   const [error, setError] = useState("");
+  const [loadErr, setLoadErr] = useState(false);
   const [emitting, setEmitting] = useState(false);
 
-  const load = () => { api.get(`/returns/${id}/`).then((res) => setR(res.data)); };
+  const load = () => { setLoadErr(false); api.get(`/returns/${id}/`).then((res) => setR(res.data)).catch(() => setLoadErr(true)); };
   useEffect(load, [id]);
   useEffect(() => { api.get("/company-settings/").then((res) => setCompany(res.data)).catch(() => {}); }, []);
 
@@ -59,6 +60,7 @@ export default function ReturnDetail() {
     } finally { setEmitting(false); }
   };
 
+  if (loadErr) return <div className="max-w-3xl"><ErrorBanner message="No se pudo cargar la información. Revisá tu conexión e intentá de nuevo." /></div>;
   if (!r) return <SkeletonBlock lines={8} className="max-w-3xl" />;
 
   return (

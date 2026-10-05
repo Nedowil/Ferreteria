@@ -22,9 +22,10 @@ export default function QuotationDetail() {
   const [q, setQ] = useState(null);
   const [company, setCompany] = useState(null);
   const [error, setError] = useState("");
+  const [loadErr, setLoadErr] = useState(false);
   const [pay, setPay] = useState({ payment_method: "efectivo", paid_amount: "", credit: false });
 
-  const load = () => { api.get(`/quotations/${id}/`).then((r) => setQ(r.data)); };
+  const load = () => { setLoadErr(false); api.get(`/quotations/${id}/`).then((r) => setQ(r.data)).catch(() => setLoadErr(true)); };
   useEffect(load, [id]);
   useEffect(() => { api.get("/company-settings/").then((r) => setCompany(r.data)).catch(() => {}); }, []);
 
@@ -68,6 +69,7 @@ export default function QuotationDetail() {
     window.open(`${base}?text=${encodeURIComponent(text)}`, "_blank");
   };
 
+  if (loadErr) return <div className="max-w-4xl"><ErrorBanner message="No se pudo cargar la información. Revisá tu conexión e intentá de nuevo." /></div>;
   if (!q) return <SkeletonBlock lines={8} className="max-w-3xl" />;
   const canConvert = ["vigente", "aceptada"].includes(q.status);
 

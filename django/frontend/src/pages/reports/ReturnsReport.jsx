@@ -1,4 +1,4 @@
-import { Q, useDateReport, DateRangeBar, KpiCard, ExcelButton, ReportSkeleton } from "./common";
+import { Q, useDateReport, DateRangeBar, KpiCard, ExcelButton, ReportSkeleton, ReportError } from "./common";
 import { exportToExcel } from "../../utils/exportExcel";
 import Pagination from "../../components/Pagination";
 import { useEffect, useState } from "react";
@@ -8,7 +8,7 @@ const PAGE_SIZE = 15;
 
 // Devoluciones por periodo: detalle, resumen por motivo y total reembolsado.
 export default function ReturnsReport() {
-  const { from, setFrom, to, setTo, data, reload } = useDateReport("/reports/returns/");
+  const { from, setFrom, to, setTo, data, error, reload } = useDateReport("/reports/returns/");
   const [page, setPage] = useState(1);
   useEffect(() => { setPage(1); }, [data]);
   const rows = data?.rows || [];
@@ -32,7 +32,8 @@ export default function ReturnsReport() {
         <ExcelButton onClick={exportXls} disabled={!rows.length} />
       </div>
       <DateRangeBar from={from} setFrom={setFrom} to={to} setTo={setTo} onApply={reload} />
-      {!data && <ReportSkeleton />}
+      {!data && !error && <ReportSkeleton />}
+      {error && <ReportError onRetry={reload} />}
       {data && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">

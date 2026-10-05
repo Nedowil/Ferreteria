@@ -133,6 +133,7 @@ export default function CompanySettings() {
   const [c, setC] = useState(null);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
+  const [loadErr, setLoadErr] = useState(false);
   const [saving, setSaving] = useState(false);
   // Impresora propia de ESTA computadora (se guarda en el navegador, no en el
   // servidor). Si está puesta, esta PC imprime en su propia impresora en red.
@@ -140,7 +141,8 @@ export default function CompanySettings() {
   const [localProto, setLocalProto] = useState("https");
 
   useEffect(() => {
-    api.get("/company-settings/").then((r) => setC(r.data));
+    setLoadErr(false);
+    api.get("/company-settings/").then((r) => setC(r.data)).catch(() => setLoadErr(true));
     const l = getLocalEpos();
     if (l) { setLocalIp(l.ip); setLocalProto(l.protocol); }
   }, []);
@@ -217,6 +219,7 @@ export default function CompanySettings() {
     }
   };
 
+  if (loadErr) return <div className="max-w-4xl"><ErrorBanner message="No se pudo cargar la información. Revisá tu conexión e intentá de nuevo." /></div>;
   if (!c) return <div className="max-w-4xl space-y-4"><SkeletonBlock lines={5} /><SkeletonBlock lines={5} /></div>;
 
   return (

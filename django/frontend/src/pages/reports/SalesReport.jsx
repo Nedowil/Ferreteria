@@ -1,8 +1,8 @@
-import { Q, useDateReport, DateRangeBar, KpiCard, ExcelButton, ReportSkeleton } from "./common";
+import { Q, useDateReport, DateRangeBar, KpiCard, ExcelButton, ReportSkeleton, ReportError } from "./common";
 import { exportToExcel } from "../../utils/exportExcel";
 
 export default function SalesReport() {
-  const { from, setFrom, to, setTo, data, reload } = useDateReport("/reports/sales/");
+  const { from, setFrom, to, setTo, data, error, reload } = useDateReport("/reports/sales/");
   const exportXls = () => exportToExcel("ventas-por-periodo",
     [{ header: "Día", value: (d) => d.day }, { header: "Ventas", value: (d) => d.count }, { header: "Total", value: (d) => Number(d.total) }],
     (data?.by_day || []).filter((d) => d.count > 0));
@@ -13,7 +13,8 @@ export default function SalesReport() {
         <ExcelButton onClick={exportXls} disabled={!data} />
       </div>
       <DateRangeBar from={from} setFrom={setFrom} to={to} setTo={setTo} onApply={reload} />
-      {!data && <ReportSkeleton />}
+      {!data && !error && <ReportSkeleton />}
+      {error && <ReportError onRetry={reload} />}
       {data && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">

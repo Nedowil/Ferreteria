@@ -19,7 +19,7 @@ export default function Payable() {
     Object.entries(filters).forEach(([k, v]) => { if (v) params[k] = v; });
     return params;
   };
-  const load = (p = page) => api.get("/purchases/payable/", { params: { ...buildParams(), page: p } }).then((r) => { setData(r.data); setLoaded(true); });
+  const load = (p = page) => api.get("/purchases/payable/", { params: { ...buildParams(), page: p } }).then((r) => setData(r.data)).finally(() => setLoaded(true));
   const goPage = (p) => { setPage(p); load(p); };
   useEffect(() => { load(1); }, []);
 

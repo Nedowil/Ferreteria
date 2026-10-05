@@ -15,7 +15,7 @@ export default function Branches() {
   const [editing, setEditing] = useState(null);
   const [error, setError] = useState("");
 
-  const load = () => { api.get("/branches/").then((r) => { setItems(r.data.results || r.data); setLoaded(true); }); };
+  const load = () => { api.get("/branches/").then((r) => setItems(r.data.results || r.data)).finally(() => setLoaded(true)); };
   useEffect(load, []);
 
   const save = async (e) => {

@@ -19,8 +19,9 @@ export default function PurchaseDetail() {
   const [p, setP] = useState(null);
   const [pay, setPay] = useState({ amount: "", payment_method: "efectivo", reference: "" });
   const [error, setError] = useState("");
+  const [loadErr, setLoadErr] = useState(false);
 
-  const load = () => { api.get(`/purchases/${id}/`).then((r) => setP(r.data)); };
+  const load = () => { setLoadErr(false); api.get(`/purchases/${id}/`).then((r) => setP(r.data)).catch(() => setLoadErr(true)); };
   useEffect(load, [id]);
 
   const act = async (action) => {
@@ -47,6 +48,7 @@ export default function PurchaseDetail() {
     catch (err) { setError(err.response?.data?.detail || "Error"); }
   };
 
+  if (loadErr) return <div className="max-w-4xl"><ErrorBanner message="No se pudo cargar la información. Revisá tu conexión e intentá de nuevo." /></div>;
   if (!p) return <SkeletonBlock lines={8} className="max-w-3xl" />;
   const hasBalance = Number(p.balance) > 0;
 

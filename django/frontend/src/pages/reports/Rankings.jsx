@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Q, useDateReport, DateRangeBar, ExcelButton, KpiCard, ReportSkeleton } from "./common";
+import { Q, useDateReport, DateRangeBar, ExcelButton, KpiCard, ReportSkeleton, ReportError } from "./common";
 import { exportToExcel } from "../../utils/exportExcel";
 import Pagination from "../../components/Pagination";
 
@@ -17,7 +17,7 @@ const PAGE_SIZE = 15;
 // `filter` (opcional) = { key, label }: agrega un selector para ver una sola
 // fila (ej. un vendedor), filtrando por el valor de esa columna.
 function RankingTable({ title, path, columns, filter }) {
-  const { from, setFrom, to, setTo, data, reload } = useDateReport(path);
+  const { from, setFrom, to, setTo, data, error, reload } = useDateReport(path);
   const [filterVal, setFilterVal] = useState("");
 
   const [page, setPage] = useState(1);
@@ -52,7 +52,8 @@ function RankingTable({ title, path, columns, filter }) {
           </div>
         )}
       </DateRangeBar>
-      {!data && <ReportSkeleton kpis={3} />}
+      {!data && !error && <ReportSkeleton kpis={3} />}
+      {error && <ReportError onRetry={reload} />}
       {data && (
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
           <div className="overflow-x-auto">
@@ -106,7 +107,7 @@ export function TopSuppliers() {
 // % de descuento, más tarjetas de resumen arriba. Componente propio porque
 // necesita KPIs y celdas con color, que la tabla genérica no da.
 export function BySeller() {
-  const { from, setFrom, to, setTo, data, reload } = useDateReport("/reports/by-seller/");
+  const { from, setFrom, to, setTo, data, error, reload } = useDateReport("/reports/by-seller/");
   const [filterVal, setFilterVal] = useState("");
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 15;
@@ -150,7 +151,8 @@ export function BySeller() {
           </div>
         )}
       </DateRangeBar>
-      {!data && <ReportSkeleton kpis={3} />}
+      {!data && !error && <ReportSkeleton kpis={3} />}
+      {error && <ReportError onRetry={reload} />}
       {data && (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">

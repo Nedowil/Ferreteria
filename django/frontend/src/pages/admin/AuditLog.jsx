@@ -61,7 +61,7 @@ export default function AuditLog() {
   };
 
   const load = (p = page) => {
-    api.get("/audit-logs/", { params: { ...activeParams(), page: p } }).then((r) => { setData(r.data); setLoaded(true); });
+    api.get("/audit-logs/", { params: { ...activeParams(), page: p } }).then((r) => setData(r.data)).finally(() => setLoaded(true));
   };
   const goPage = (p) => { setPage(p); load(p); };
   useEffect(() => {

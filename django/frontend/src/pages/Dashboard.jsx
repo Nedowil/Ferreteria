@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../api/client";
 import { SkeletonKpis, SkeletonBlock } from "../components/Skeleton";
+import { ErrorBanner } from "../components/ErrorBanner";
 import { BarChart, HBars } from "../components/Charts";
 
 const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -37,9 +38,11 @@ function Kpi({ label, value, sub, icon, gradient, to }) {
 
 export default function Dashboard() {
   const [data, setData] = useState(null);
+  const [loadErr, setLoadErr] = useState(false);
   const [rango, setRango] = useState(14); // 7 | 14 | 30 días del gráfico
   const navigate = useNavigate();
-  useEffect(() => { api.get("/dashboard/").then((r) => setData(r.data)); }, []);
+  useEffect(() => { setLoadErr(false); api.get("/dashboard/").then((r) => setData(r.data)).catch(() => setLoadErr(true)); }, []);
+  if (loadErr) return <div className="p-4"><ErrorBanner message="No se pudo cargar la información. Revisá tu conexión e intentá de nuevo." /></div>;
   if (!data) return (
     <div>
       <SkeletonKpis count={4} />

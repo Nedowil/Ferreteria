@@ -17,10 +17,12 @@ export default function InventoryShow() {
   const [movements, setMovements] = useState([]);
   const [form, setForm] = useState({ type: "entrada", quantity: "", input_mode: "base", reason: "" });
   const [error, setError] = useState("");
+  const [loadErr, setLoadErr] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const load = () => {
-    api.get(`/inventory/products/${id}/`).then((r) => setProduct(r.data));
+    setLoadErr(false);
+    api.get(`/inventory/products/${id}/`).then((r) => setProduct(r.data)).catch(() => setLoadErr(true));
     api.get(`/inventory/products/${id}/movements/`).then((r) => setMovements(r.data.results || r.data));
   };
   useEffect(load, [id]);
@@ -39,6 +41,7 @@ export default function InventoryShow() {
     }
   };
 
+  if (loadErr) return <div className="p-4"><ErrorBanner message="No se pudo cargar la información. Revisá tu conexión e intentá de nuevo." /></div>;
   if (!product) return <SkeletonBlock lines={8} className="max-w-3xl" />;
 
   // Totales del kardex (en unidad base, según el saldo antes/después).

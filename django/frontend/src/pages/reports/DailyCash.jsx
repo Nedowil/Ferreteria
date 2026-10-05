@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
 import { Q, KpiCard, ExcelButton, ReportSkeleton } from "./common";
+import { ErrorBanner } from "../../components/ErrorBanner";
 import { exportToExcel } from "../../utils/exportExcel";
 
 export default function DailyCash() {
   const [day, setDay] = useState(new Date().toISOString().slice(0, 10));
   const [data, setData] = useState(null);
-  const load = () => { api.get("/reports/daily-cash/", { params: { day } }).then((r) => setData(r.data)); };
+  const [error, setError] = useState(false);
+  const load = () => { setError(false); api.get("/reports/daily-cash/", { params: { day } }).then((r) => setData(r.data)).catch(() => setError(true)); };
   useEffect(load, []);
   // Cuadre a ciegas: si el backend no envía "esperado", este usuario no puede
   // ver fondo/esperado/diferencia (solo lo contado).
@@ -32,7 +34,8 @@ export default function DailyCash() {
         </div>
         <button className="bg-slate-700 text-white rounded px-4 py-2 text-sm">Aplicar</button>
       </form>
-      {!data && <ReportSkeleton />}
+      {!data && !error && <ReportSkeleton />}
+      {error && <ErrorBanner message="No se pudo cargar el reporte. Revisá tu conexión e intentá de nuevo." />}
       {data && (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">

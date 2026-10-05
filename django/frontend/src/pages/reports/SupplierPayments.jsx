@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
 import { KpiCard, ExcelButton, DateRangeBar, ReportSkeleton } from "./common";
+import { ErrorBanner } from "../../components/ErrorBanner";
 import { exportToExcel } from "../../utils/exportExcel";
 import Pagination from "../../components/Pagination";
 
@@ -13,6 +14,7 @@ const dt = (v) => (v ? new Date(v).toLocaleString("es-GT") : "—");
 // fechas, desglose por forma de pago e historial de fondos abiertos/cerrados.
 export default function SupplierPayments() {
   const [d, setD] = useState(null);
+  const [error, setError] = useState(false);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [page, setPage] = useState(1);
@@ -21,9 +23,11 @@ export default function SupplierPayments() {
     const params = {};
     if (from) params.from = from;
     if (to) params.to = to;
-    api.get("/supplier-report/", { params }).then((r) => { setD(r.data); setPage(1); }).catch(() => {});
+    setError(false);
+    api.get("/supplier-report/", { params }).then((r) => { setD(r.data); setPage(1); }).catch(() => setError(true));
   };
   useEffect(() => { loadReport(); }, []); // eslint-disable-line
+  if (error) return <ErrorBanner message="No se pudo cargar el reporte. Revisá tu conexión e intentá de nuevo." />;
   if (!d) return <ReportSkeleton kpis={3} />;
 
   const exportFunds = () => exportToExcel("fondos-proveedor", [

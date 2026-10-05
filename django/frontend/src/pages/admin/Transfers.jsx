@@ -23,7 +23,7 @@ export default function Transfers() {
   const load = (p = page) => {
     const params = { page: p };
     if (statusF) params.status = statusF;
-    api.get("/transfers/", { params }).then((r) => { setData(r.data); setLoaded(true); });
+    api.get("/transfers/", { params }).then((r) => setData(r.data)).finally(() => setLoaded(true));
   };
   const goPage = (p) => { setPage(p); load(p); };
   useEffect(() => { load(1); }, []);

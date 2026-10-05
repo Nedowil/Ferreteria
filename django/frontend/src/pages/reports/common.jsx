@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../../api/client";
 import { SkeletonKpis, SkeletonBlock } from "../../components/Skeleton";
+import { ErrorBanner } from "../../components/ErrorBanner";
 
 // Esqueleto de carga para los reportes: fila de KPIs + bloque de tabla.
 export function ReportSkeleton({ kpis = 4 }) {
@@ -12,6 +13,21 @@ export function ReportSkeleton({ kpis = 4 }) {
   );
 }
 
+// Aviso de error para los reportes: se muestra si la carga falla, para que el
+// skeleton no se quede girando para siempre. Permite reintentar.
+export function ReportError({ onRetry }) {
+  return (
+    <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-6">
+      <ErrorBanner message="No se pudo cargar el reporte. Revisá tu conexión e intentá de nuevo." />
+      {onRetry && (
+        <button onClick={onRetry} className="mt-3 bg-slate-700 text-white rounded px-4 py-2 text-sm hover:bg-slate-800 transition">
+          Reintentar
+        </button>
+      )}
+    </div>
+  );
+}
+
 export const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 // Hook: carga un reporte con rango de fechas (?from&to)
@@ -19,17 +35,21 @@ export function useDateReport(path, defaults = {}) {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [data, setData] = useState(null);
+  const [error, setError] = useState(false);
   const [params, setParams] = useState(defaults);
 
   const load = () => {
     const p = { ...params };
     if (from) p.from = from;
     if (to) p.to = to;
-    api.get(path, { params: p }).then((r) => setData(r.data));
+    setError(false);
+    // .catch marca el error para que el skeleton no se quede cargando para
+    // siempre si la petición falla (red/servidor); el reporte muestra el aviso.
+    api.get(path, { params: p }).then((r) => setData(r.data)).catch(() => setError(true));
   };
   useEffect(load, [params]);
 
-  return { from, setFrom, to, setTo, data, reload: load, params, setParams };
+  return { from, setFrom, to, setTo, data, error, reload: load, params, setParams };
 }
 
 export function DateRangeBar({ from, setFrom, to, setTo, onApply, children }) {
