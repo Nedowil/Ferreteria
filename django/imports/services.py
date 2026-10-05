@@ -262,13 +262,14 @@ def _with_product_aliases(row):
     return _with_aliases(row, _PRODUCT_ALIASES)
 
 
-def import_products(rows, *, branch=None, user=None):
+def import_products(rows, *, branch=None, user=None, dry_run=False):
     from django.db import transaction
     from inventory.models import Brand, Category, Product, ProductStock, Unit
     from inventory.utils import generate_barcode, generate_sku
 
     created = updated = 0
     errors = []
+    actions = []   # detalle por fila (crear/actualizar) para la vista previa
 
     # Rendimiento: con miles de filas, consultar categoría/marca/unidad y el SKU
     # UNA VEZ por fila es lento. Se normalizan los encabezados una sola vez, se
@@ -332,6 +333,7 @@ def import_products(rows, *, branch=None, user=None):
                     product.barcode = row["barcode"]
                 product.save()
                 updated += 1
+                actions.append({"row": i, "action": "actualizar", "name": name, "sku": product.sku})
             else:  # crear
                 product = Product(
                     sku=sku or generate_sku(name, Product),
@@ -343,6 +345,7 @@ def import_products(rows, *, branch=None, user=None):
                 product.save()
                 by_sku[product.sku] = product   # por si el archivo repite el SKU
                 created += 1
+                actions.append({"row": i, "action": "crear", "name": name, "sku": product.sku})
 
             # Stock por sucursal (si hay sucursal activa)
             if branch is not None:
@@ -351,15 +354,21 @@ def import_products(rows, *, branch=None, user=None):
                     defaults={"stock": stock_val, "min_stock": min_stock_val},
                 )
 
-    return {"created": created, "updated": updated, "errors": errors}
+        # Vista previa: deshace todo (no guarda nada), pero ya calculó el resumen.
+        if dry_run:
+            transaction.set_rollback(True)
+
+    return {"created": created, "updated": updated, "errors": errors,
+            "actions": actions[:100], "dry_run": dry_run}
 
 
-def import_customers(rows):
+def import_customers(rows, *, dry_run=False):
     from django.db import transaction
     from partners.models import Customer
 
     created = updated = 0
     errors = []
+    actions = []
 
     rows = [_with_aliases(r, _CUSTOMER_ALIASES) for r in rows]
     # Precarga de clientes existentes por nombre (una sola consulta) para no
@@ -386,14 +395,20 @@ def import_customers(rows):
                     setattr(obj, k, v)
                 obj.save()
                 updated += 1
+                actions.append({"row": i, "action": "actualizar", "name": name})
             else:
                 by_name[name] = Customer.objects.create(name=name, **defaults)
                 created += 1
+                actions.append({"row": i, "action": "crear", "name": name})
 
-    return {"created": created, "updated": updated, "errors": errors}
+        if dry_run:
+            transaction.set_rollback(True)
+
+    return {"created": created, "updated": updated, "errors": errors,
+            "actions": actions[:100], "dry_run": dry_run}
 
 
-def import_sales(rows, *, branch=None, user=None):
+def import_sales(rows, *, branch=None, user=None, dry_run=False):
     """Importa ventas históricas (solo para reportes; NO afecta inventario ni caja)."""
     from datetime import datetime, time
 
@@ -474,4 +489,7 @@ def import_sales(rows, *, branch=None, user=None):
                 )
             imported += 1
 
-    return {"imported": imported, "errors": errors}
+        if dry_run:
+            transaction.set_rollback(True)
+
+    return {"imported": imported, "errors": errors, "dry_run": dry_run}

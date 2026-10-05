@@ -14,6 +14,13 @@ MAX_SIZE = 5 * 1024 * 1024  # 5 MB
 _PERM = HasPermission.require("imports.gestionar")
 
 
+def _is_preview(request):
+    """Vista previa (dry-run): valida y cuenta pero NO guarda. Se activa con
+    ?preview=1 o el campo preview en el formulario."""
+    v = request.query_params.get("preview") or request.data.get("preview")
+    return str(v).lower() in ("1", "true", "yes", "si", "sí")
+
+
 def _read_upload(request):
     """Valida y devuelve (rows, error_response)."""
     f = request.FILES.get("file")
@@ -70,7 +77,8 @@ def import_products(request):
     rows, err = _read_upload(request)
     if err:
         return err
-    result = services.import_products(rows, branch=get_request_branch(request), user=request.user)
+    result = services.import_products(rows, branch=get_request_branch(request),
+                                      user=request.user, dry_run=_is_preview(request))
     return Response(result)
 
 
@@ -80,7 +88,7 @@ def import_customers(request):
     rows, err = _read_upload(request)
     if err:
         return err
-    return Response(services.import_customers(rows))
+    return Response(services.import_customers(rows, dry_run=_is_preview(request)))
 
 
 @api_view(["POST"])
@@ -89,5 +97,6 @@ def import_sales(request):
     rows, err = _read_upload(request)
     if err:
         return err
-    result = services.import_sales(rows, branch=get_request_branch(request), user=request.user)
+    result = services.import_sales(rows, branch=get_request_branch(request),
+                                   user=request.user, dry_run=_is_preview(request))
     return Response(result)

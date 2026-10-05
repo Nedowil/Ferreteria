@@ -252,3 +252,37 @@ class XlsxTemplateTests(TestCase):
         buf = io.BytesIO(); wb.save(buf)
         rows = services.parse_xlsx(buf.getvalue())
         self.assertEqual(rows[0]["código"], "007500123456")
+
+
+class ImportPreviewTests(TestCase):
+    """Vista previa (dry-run): calcula el resumen pero NO guarda nada."""
+
+    def setUp(self):
+        self.branch = Branch.objects.create(name="Matriz", code="M", is_main=True)
+
+    def test_preview_no_guarda_pero_cuenta(self):
+        rows = [
+            {"name": "Nuevo prod", "sku": "NP-1", "sale_price": "10"},
+            {"name": "Otro", "sku": "NP-2", "sale_price": "20"},
+        ]
+        before = Product.objects.count()
+        res = services.import_products(rows, branch=self.branch, dry_run=True)
+        self.assertTrue(res["dry_run"])
+        self.assertEqual(res["created"], 2)
+        self.assertEqual(len(res["actions"]), 2)
+        self.assertEqual(res["actions"][0]["action"], "crear")
+        # NADA se guardó
+        self.assertEqual(Product.objects.count(), before)
+
+    def test_preview_luego_real_si_guarda(self):
+        rows = [{"name": "Real", "sku": "R-1", "sale_price": "10"}]
+        services.import_products(rows, branch=self.branch, dry_run=True)
+        self.assertFalse(Product.objects.filter(sku="R-1").exists())
+        services.import_products(rows, branch=self.branch, dry_run=False)
+        self.assertTrue(Product.objects.filter(sku="R-1").exists())
+
+    def test_preview_clientes_no_guarda(self):
+        before = Customer.objects.count()
+        res = services.import_customers([{"name": "Pepe"}], dry_run=True)
+        self.assertEqual(res["created"], 1)
+        self.assertEqual(Customer.objects.count(), before)
