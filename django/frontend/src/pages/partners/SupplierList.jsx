@@ -14,16 +14,13 @@ import { EmptyRow, EmptyState } from "../../components/EmptyState";
 const BLANK = { name: "", tax_id: "", contact_name: "", email: "", phone: "", address: "", notes: "", active: true };
 const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-function Kpi({ label, value, sub, icon, bar, accent }) {
+function Kpi({ label, value, sub, icon, gradient }) {
   return (
-    <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-5 overflow-hidden">
-      <div className="absolute inset-x-0 top-0 h-1" style={{ background: bar }} />
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-slate-500 dark:text-slate-400">{label}</div>
-        <span className="text-lg opacity-80">{icon}</span>
-      </div>
-      <div className={`text-2xl font-extrabold mt-1 tabular-nums break-words ${accent}`}>{value}</div>
-      {sub && <div className="text-xs text-slate-400 mt-0.5">{sub}</div>}
+    <div className={`relative rounded-2xl p-5 text-white shadow-lg bg-gradient-to-br ${gradient} overflow-hidden`}>
+      <div className="text-sm opacity-90">{label}</div>
+      <div className="text-3xl font-extrabold mt-1 tabular-nums break-words drop-shadow-sm leading-tight">{value}</div>
+      {sub && <div className="text-xs opacity-90 mt-1">{sub}</div>}
+      <div className="absolute right-4 bottom-3 text-4xl opacity-25 select-none pointer-events-none">{icon}</div>
     </div>
   );
 }
@@ -151,11 +148,11 @@ export default function SupplierList() {
 
       {/* KPIs */}
       <div className={"grid grid-cols-1 gap-4 mb-4 " + (seeMoney ? "sm:grid-cols-3" : "sm:grid-cols-1 max-w-xs")}>
-        <Kpi label="Proveedores" value={count} icon="🚚" bar="#ea580c" accent="text-orange-600 dark:text-orange-400" sub="Registrados" />
-        {seeMoney && <Kpi label="Por pagar (total)" value={Q(summary.total_balance)} icon="💰" bar="#dc2626"
-             accent={Number(summary.total_balance) > 0 ? "text-rose-600 dark:text-rose-400" : "text-slate-400"} sub="Deuda con proveedores" />}
-        {seeMoney && <Kpi label="Vencido" value={Q(summary.overdue_balance)} icon="⏰" bar="#d97706"
-             accent={Number(summary.overdue_balance) > 0 ? "text-amber-600 dark:text-amber-400" : "text-slate-400"}
+        <Kpi label="Proveedores" value={count} icon="🚚" gradient="from-orange-500 to-amber-600" sub="Registrados" />
+        {seeMoney && <Kpi label="Por pagar (total)" value={Q(summary.total_balance)} icon="💰"
+             gradient={Number(summary.total_balance) > 0 ? "from-rose-500 to-red-600" : "from-emerald-500 to-green-600"} sub="Deuda con proveedores" />}
+        {seeMoney && <Kpi label="Vencido" value={Q(summary.overdue_balance)} icon="⏰"
+             gradient={Number(summary.overdue_balance) > 0 ? "from-amber-500 to-orange-600" : "from-slate-400 to-slate-500"}
              sub={Number(summary.overdue_balance) > 0 ? "Atención: ya venció" : "Nada vencido 🎉"} />}
       </div>
 

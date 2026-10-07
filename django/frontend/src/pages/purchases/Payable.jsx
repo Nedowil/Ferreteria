@@ -10,17 +10,14 @@ import { Avatar } from "../../utils/ui";
 
 const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-// Tarjeta KPI: franja de color arriba, ícono y número grande.
-function Kpi({ label, value, sub, icon, bar, accent }) {
+// Tarjeta KPI con color sólido (estilo tablero): se nota más que la blanca.
+function Kpi({ label, value, sub, icon, gradient }) {
   return (
-    <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-5 overflow-hidden">
-      <div className="absolute inset-x-0 top-0 h-1" style={{ background: bar }} />
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-slate-500 dark:text-slate-400">{label}</div>
-        <span className="text-lg opacity-80">{icon}</span>
-      </div>
-      <div className={`text-2xl font-extrabold mt-1 tabular-nums break-words ${accent}`}>{value}</div>
-      {sub && <div className="text-xs text-slate-400 mt-0.5">{sub}</div>}
+    <div className={`relative rounded-2xl p-5 text-white shadow-lg bg-gradient-to-br ${gradient} overflow-hidden`}>
+      <div className="text-sm opacity-90">{label}</div>
+      <div className="text-3xl font-extrabold mt-1 tabular-nums break-words drop-shadow-sm leading-tight">{value}</div>
+      {sub && <div className="text-xs opacity-90 mt-1">{sub}</div>}
+      <div className="absolute right-4 bottom-3 text-4xl opacity-25 select-none pointer-events-none">{icon}</div>
     </div>
   );
 }
@@ -110,11 +107,11 @@ export default function Payable() {
       {/* KPIs */}
       {!loaded ? <SkeletonKpis count={3} /> : (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-          <Kpi label="Saldo total pendiente" value={Q(totalDebt)} icon="🧾" bar="#dc2626" accent="text-rose-600 dark:text-rose-400"
+          <Kpi label="Saldo total pendiente" value={Q(totalDebt)} icon="🧾" gradient="from-rose-500 to-red-600"
                sub="Lo que debés a proveedores" />
-          <Kpi label="Cuentas pendientes" value={nCuentas} icon="📄" bar="#4f46e5" accent="text-indigo-600 dark:text-indigo-400"
+          <Kpi label="Cuentas pendientes" value={nCuentas} icon="📄" gradient="from-indigo-500 to-blue-600"
                sub="Compras al crédito sin saldar" />
-          <Kpi label="Vencido" value={Q(overdue)} icon="⏰" bar="#d97706" accent={overdue > 0 ? "text-amber-600 dark:text-amber-400" : "text-slate-400"}
+          <Kpi label="Vencido" value={Q(overdue)} icon="⏰" gradient={overdue > 0 ? "from-amber-500 to-orange-600" : "from-slate-400 to-slate-500"}
                sub={data.overdue_count > 0 ? `${data.overdue_count} cuenta(s) vencida(s)` : "Nada vencido 🎉"} />
         </div>
       )}
@@ -183,6 +180,15 @@ export default function Payable() {
             {!loaded && data.results.length === 0 && <SkeletonRows rows={8} cols={6} />}
             {loaded && data.results.length === 0 && <EmptyRow colSpan={6} icon="🎉" title="Sin cuentas por pagar" hint="No tenés saldos pendientes con proveedores." />}
           </tbody>
+          {data.results.length > 0 && (
+            <tfoot>
+              <tr className="border-t-2 border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/40">
+                <td colSpan={4} className="px-4 py-3 text-right font-semibold text-slate-600 dark:text-slate-300">Total en esta página</td>
+                <td className="px-4 py-3 text-center"><span className="inline-flex items-center rounded-full px-3 py-1 text-sm font-extrabold tabular-nums bg-rose-600 text-white">{Q(data.results.reduce((a, p) => a + Number(p.balance || 0), 0))}</span></td>
+                <td></td>
+              </tr>
+            </tfoot>
+          )}
         </table>
         </div>
       </div>
