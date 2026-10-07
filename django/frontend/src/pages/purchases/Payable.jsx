@@ -6,6 +6,7 @@ import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 import Pagination from "../../components/Pagination";
 import { SkeletonRows, SkeletonKpis } from "../../components/Skeleton";
 import { EmptyRow, EmptyState } from "../../components/EmptyState";
+import { Avatar } from "../../utils/ui";
 
 const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -33,6 +34,22 @@ function dueState(due) {
   if (days < 0) return { kind: "vencida", days: -days };
   if (days <= 7) return { kind: "pronto", days };
   return { kind: "ok", days };
+}
+
+// Barra de avance del pago (pagado / total).
+function PayProgress({ paid, total }) {
+  const t = Number(total) || 0, p = Number(paid) || 0;
+  const pct = t > 0 ? Math.min(100, Math.round((p / t) * 100)) : 0;
+  return (
+    <div className="min-w-[150px]">
+      <div className="flex justify-between text-[11px] text-slate-500 dark:text-slate-400 mb-1">
+        <span className="tabular-nums">{Q(p)}</span><span className="tabular-nums">de {Q(t)}</span>
+      </div>
+      <div className="h-1.5 w-full rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
+        <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-green-600 transition-all" style={{ width: pct + "%" }} />
+      </div>
+    </div>
+  );
 }
 
 function DuePill({ due }) {
@@ -115,20 +132,21 @@ export default function Payable() {
         {/* Móvil: tarjetas */}
         <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-700">
           {data.results.map((p) => (
-            <div key={p.id} className="p-4">
+            <div key={p.id} className={"p-4" + (dueState(p.due_date)?.kind === "vencida" ? " bg-rose-50/40 dark:bg-rose-900/10" : "")}>
               <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="font-medium text-slate-800 dark:text-slate-100 break-words">{p.supplier_name}</div>
-                  <div className="text-xs text-slate-400 font-mono">{p.folio}</div>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Avatar name={p.supplier_name} />
+                  <div className="min-w-0">
+                    <div className="font-medium text-slate-800 dark:text-slate-100 break-words">{p.supplier_name}</div>
+                    <div className="text-xs text-slate-400 font-mono">{p.folio}</div>
+                  </div>
                 </div>
-                <div className="text-right shrink-0">
-                  <div className="text-rose-600 dark:text-rose-400 font-bold tabular-nums">{Q(p.balance)}</div>
-                  <div className="text-[11px] text-slate-400">de {Q(p.total)}</div>
-                </div>
+                <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold tabular-nums bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300 shrink-0">{Q(p.balance)}</span>
               </div>
+              <div className="mt-2"><PayProgress paid={p.amount_paid} total={p.total} /></div>
               <div className="flex items-center justify-between mt-2">
                 <DuePill due={p.due_date} />
-                <Link to={`/compras/${p.id}`} className="inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-semibold shadow-sm transition bg-blue-600 hover:bg-blue-700 text-white">Abonar</Link>
+                <Link to={`/compras/${p.id}`} className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold shadow-sm transition bg-blue-600 hover:bg-blue-700 text-white">💵 Abonar</Link>
               </div>
             </div>
           ))}
@@ -140,26 +158,30 @@ export default function Payable() {
         <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
-            <tr><th className="px-4 py-2.5">Folio</th><th className="px-4 py-2.5">Proveedor</th><th className="px-4 py-2.5">Vence</th>
-                <th className="px-4 py-2.5 text-right">Total</th><th className="px-4 py-2.5 text-right">Pagado</th><th className="px-4 py-2.5 text-right">Saldo</th><th></th></tr>
+            <tr><th className="px-4 py-3">Folio</th><th className="px-4 py-3">Proveedor</th><th className="px-4 py-3">Vence</th>
+                <th className="px-4 py-3">Pago</th><th className="px-4 py-3 text-center">Saldo</th><th className="px-4 py-3 text-right">Acción</th></tr>
           </thead>
           <tbody>
             {data.results.map((p) => {
               const vencida = dueState(p.due_date)?.kind === "vencida";
               return (
               <tr key={p.id} className={"border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700/70 transition" + (vencida ? " bg-rose-50/40 dark:bg-rose-900/10" : "")}>
-                <td className="px-4 py-2 pl-5 font-mono text-xs" style={{ borderLeft: "4px solid " + (vencida ? "#e11d48" : "transparent") }}>{p.folio}</td>
-                <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">{p.supplier_name}</td>
-                <td className="px-4 py-2"><DuePill due={p.due_date} /></td>
-                <td className="px-4 py-2 text-right font-semibold text-slate-700 dark:text-slate-200 tabular-nums">{Q(p.total)}</td>
-                <td className="px-4 py-2 text-right text-slate-500 dark:text-slate-400 tabular-nums">{Q(p.amount_paid)}</td>
-                <td className="px-4 py-2 text-right text-rose-600 dark:text-rose-400 font-bold tabular-nums">{Q(p.balance)}</td>
-                <td className="px-4 py-2 text-right"><Link to={`/compras/${p.id}`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold shadow-sm transition bg-blue-600 hover:bg-blue-700 text-white">Abonar</Link></td>
+                <td className="px-4 py-3 pl-5 font-mono text-xs text-slate-500 dark:text-slate-400" style={{ borderLeft: "4px solid " + (vencida ? "#e11d48" : "transparent") }}>{p.folio}</td>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Avatar name={p.supplier_name} />
+                    <span className="font-semibold text-slate-800 dark:text-slate-100 truncate">{p.supplier_name}</span>
+                  </div>
+                </td>
+                <td className="px-4 py-3"><DuePill due={p.due_date} /></td>
+                <td className="px-4 py-3"><PayProgress paid={p.amount_paid} total={p.total} /></td>
+                <td className="px-4 py-3 text-center"><span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold tabular-nums bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">{Q(p.balance)}</span></td>
+                <td className="px-4 py-3 text-right"><Link to={`/compras/${p.id}`} className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold shadow-sm transition bg-blue-600 hover:bg-blue-700 text-white">💵 Abonar</Link></td>
               </tr>
               );
             })}
-            {!loaded && data.results.length === 0 && <SkeletonRows rows={8} cols={7} />}
-            {loaded && data.results.length === 0 && <EmptyRow colSpan={7} icon="🎉" title="Sin cuentas por pagar" hint="No tenés saldos pendientes con proveedores." />}
+            {!loaded && data.results.length === 0 && <SkeletonRows rows={8} cols={6} />}
+            {loaded && data.results.length === 0 && <EmptyRow colSpan={6} icon="🎉" title="Sin cuentas por pagar" hint="No tenés saldos pendientes con proveedores." />}
           </tbody>
         </table>
         </div>

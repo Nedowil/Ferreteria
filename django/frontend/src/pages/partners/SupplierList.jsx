@@ -117,16 +117,27 @@ export default function SupplierList() {
   const comprasCell = (s) => (
     can("compras.ver") && s.purchase_count > 0
       ? <button onClick={() => setVerCompras(s)} title="Ver las compras de este proveedor"
-                className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 font-semibold hover:underline">
-          {s.purchase_count} <span className="text-[11px]">📋 ver</span>
+                className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold shadow-sm transition bg-indigo-600 hover:bg-indigo-700 text-white">
+          📋 Ver {s.purchase_count} {s.purchase_count === 1 ? "compra" : "compras"}
         </button>
-      : <span className="text-slate-500 dark:text-slate-400">{s.purchase_count}</span>
+      : <span className="inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500">Sin compras</span>
   );
   const saldoCell = (s) => (
     Number(s.balance) > 0
-      ? <span className="font-bold text-rose-600 dark:text-rose-400 tabular-nums">{Q(s.balance)}</span>
-      : <span className="text-slate-400">—</span>
+      ? <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold tabular-nums bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">{Q(s.balance)}</span>
+      : <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300">Al día</span>
   );
+  // Resumen de contacto (contacto + teléfono + correo) para una sola columna.
+  const contactoCell = (s) => {
+    if (!s.contact_name && !s.phone && !s.email) return <span className="text-slate-400 text-xs">Sin datos</span>;
+    return (
+      <div className="text-xs leading-5">
+        {s.contact_name && <div className="text-slate-700 dark:text-slate-200 font-medium">{s.contact_name}</div>}
+        {s.phone && <div className="text-slate-500 dark:text-slate-400">📞 {s.phone}</div>}
+        {s.email && <div className="text-slate-500 dark:text-slate-400 truncate">✉ {s.email}</div>}
+      </div>
+    );
+  };
 
   return (
     <div>
@@ -186,28 +197,37 @@ export default function SupplierList() {
         <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
-            <tr><th className="px-4 py-2.5">Nombre</th><th className="px-4 py-2.5">NIT</th><th className="px-4 py-2.5">Contacto</th>
-                <th className="px-4 py-2.5">Teléfono</th><th className="px-4 py-2.5 text-right">Compras</th><th className="px-4 py-2.5 text-right">Saldo</th><th className="px-4 py-2.5 text-right">Acciones</th></tr>
+            <tr><th className="px-4 py-3">Proveedor</th><th className="px-4 py-3">Contacto</th>
+                <th className="px-4 py-3 text-center">Compras</th><th className="px-4 py-3 text-center">Saldo</th><th className="px-4 py-3 text-right">Acciones</th></tr>
           </thead>
           <tbody>
-            {items.map((s) => (
-              <tr key={s.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700 transition">
-                <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100"><div className="flex items-center gap-2.5 min-w-0"><Avatar name={s.name} /><span className="font-medium text-slate-800 dark:text-slate-100 truncate">{s.name}</span></div></td>
-                <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{s.tax_id || "—"}</td>
-                <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{s.contact_name || "—"}</td>
-                <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{s.phone || "—"}</td>
-                <td className="px-4 py-2 text-right">{comprasCell(s)}</td>
-                <td className="px-4 py-2 text-right">{saldoCell(s)}</td>
-                <td className="px-4 py-2 text-right">
+            {items.map((s) => {
+              const debe = Number(s.balance) > 0;
+              return (
+              <tr key={s.id} className={"border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700 transition" + (debe ? " bg-rose-50/30 dark:bg-rose-900/10" : "")}>
+                <td className="px-4 py-3 pl-5" style={{ borderLeft: "4px solid " + (debe ? "#f43f5e" : "transparent") }}>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Avatar name={s.name} />
+                    <div className="min-w-0">
+                      <div className="font-semibold text-slate-800 dark:text-slate-100 truncate">{s.name}</div>
+                      <div className="text-[11px] text-slate-400">{s.tax_id ? `NIT ${s.tax_id}` : "Sin NIT"}</div>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-4 py-3">{contactoCell(s)}</td>
+                <td className="px-4 py-3 text-center">{comprasCell(s)}</td>
+                <td className="px-4 py-3 text-center">{saldoCell(s)}</td>
+                <td className="px-4 py-3 text-right">
                   <div className="inline-flex flex-wrap gap-1.5 justify-end">
                     {can("proveedores.editar") && <button onClick={() => { setSatMsg(""); setEditing(s); }} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-blue-600 hover:bg-blue-700 text-white">Editar</button>}
                     {can("proveedores.eliminar") && <button onClick={() => remove(s.id)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-red-600 hover:bg-red-700 text-white">Eliminar</button>}
                   </div>
                 </td>
               </tr>
-            ))}
-            {!loaded && items.length === 0 && <SkeletonRows rows={8} cols={7} />}
-            {loaded && items.length === 0 && <EmptyRow colSpan={7} icon="🚚" title="Sin proveedores" hint="Agregá proveedores para registrar compras y pagos." />}
+              );
+            })}
+            {!loaded && items.length === 0 && <SkeletonRows rows={8} cols={5} />}
+            {loaded && items.length === 0 && <EmptyRow colSpan={5} icon="🚚" title="Sin proveedores" hint="Agregá proveedores para registrar compras y pagos." />}
           </tbody>
         </table>
         </div>
