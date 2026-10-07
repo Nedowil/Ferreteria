@@ -161,8 +161,22 @@ def _create_items_and_restock(sret, prepared, *, sale_folio, user):
 
 
 def _maybe_cash_refund(sret, user):
-    if sret.refund_method == "efectivo" and user is not None:
-        cash.register_return_cash(user, sret.total, description=f"Devolución {sret.folio}", branch=sret.branch)
+    """Reembolso en efectivo: exige una caja abierta.
+
+    Si se reembolsa en efectivo, el dinero SALE de la gaveta, así que tiene que
+    quedar registrado en la caja. Si no hay caja abierta se BLOQUEA la devolución
+    (como la transacción es atómica, se revierte todo: stock incluido). Así el
+    efectivo nunca sale sin registrarse y la caja no descuadra.
+    """
+    if sret.refund_method != "efectivo" or Decimal(sret.total) <= 0:
+        return
+    session = cash.active_session(branch=sret.branch, user=user)
+    if session is None:
+        raise ReturnError(
+            "No hay una caja abierta para pagar la devolución en efectivo. "
+            "Abrí la caja primero, o registrá la devolución con otro método de reembolso."
+        )
+    cash.register_return_cash(user, sret.total, description=f"Devolución {sret.folio}", branch=sret.branch)
 
 
 @transaction.atomic

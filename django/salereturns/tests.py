@@ -108,6 +108,33 @@ class SaleReturnServiceTests(TestCase):
         )
         self.assertEqual(compute_expected(self.session), esperado_antes)
 
+    def test_devolucion_efectivo_sin_caja_abierta_se_bloquea(self):
+        # Sin caja abierta, un reembolso EN EFECTIVO se bloquea y se revierte
+        # todo (no se crea la devolución ni se restituye el stock).
+        from cashbox.services import close_session
+        close_session(self.session, 0)
+        self.prod.refresh_from_db()
+        stock_antes = self.prod.stock  # 46
+        with self.assertRaises(ReturnError):
+            create_return(
+                {"sale_id": self.sale.id, "refund_method": "efectivo"},
+                [{"sale_item_id": self.sale_item.id, "quantity": "2"}], user=self.user,
+            )
+        self.prod.refresh_from_db()
+        self.assertEqual(self.prod.stock, stock_antes)   # no se restituyó (rollback)
+        self.assertFalse(SaleReturn.objects.exists())    # no se creó la devolución
+
+    def test_devolucion_tarjeta_sin_caja_abierta_si_procede(self):
+        # Con otro método de reembolso (tarjeta) NO se exige caja abierta.
+        from cashbox.services import close_session
+        close_session(self.session, 0)
+        ret = create_return(
+            {"sale_id": self.sale.id, "refund_method": "tarjeta"},
+            [{"sale_item_id": self.sale_item.id, "quantity": "2"}], user=self.user,
+        )
+        self.assertEqual(ret.total, Decimal("240.00"))
+        self.assertTrue(SaleReturn.objects.filter(pk=ret.pk).exists())
+
 
 class RefundAuthorizationAPITests(TestCase):
     """Anti-fraude: reembolsar EFECTIVO requiere permiso de supervisor."""
