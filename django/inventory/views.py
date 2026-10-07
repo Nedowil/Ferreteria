@@ -598,6 +598,8 @@ class StockCountView(APIView):
         ser.is_valid(raise_exception=True)
         reason = ser.validated_data.get("reason") or f"Conteo físico masivo {timezone.localdate()}"
         mode = ser.validated_data.get("mode", "set")  # "set" = fijar, "add" = sumar
+        # Solo en modo "add": dejar lo sumado "pendiente de asignar a proveedor".
+        mark_pending = mode == "add" and ser.validated_data.get("mark_pending", False)
         branch = get_request_branch(request)
 
         # Se guarda el inventario como REGISTRO (para comparar año contra año).
@@ -645,6 +647,12 @@ class StockCountView(APIView):
                         reason=f"{reason} (se sumaron {value}; era {current} → quedó {current + value})",
                         user=request.user, branch=branch,
                     )
+                    # Si es mercadería comprada, lo sumado queda pendiente de
+                    # asignar a un proveedor (para "Registrar entrada").
+                    if mark_pending:
+                        product.refresh_from_db()
+                        product.pending_entry_qty = (product.pending_entry_qty or Decimal("0")) + value
+                        product.save(update_fields=["pending_entry_qty", "updated_at"])
                     adjusted += 1
                 else:  # set / fijar
                     if abs(value - current) < Decimal("0.001"):

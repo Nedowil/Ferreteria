@@ -437,6 +437,37 @@ class StockCountEndpointTests(TestCase):
         self.p.refresh_from_db()
         self.assertEqual(self.p.stock, Decimal("480"))
 
+    def test_sumar_con_mark_pending_deja_pendiente(self):
+        # Mercadería comprada: suma 100 lb y queda pendiente de asignar a proveedor.
+        r = self.c.post("/api/inventory/stock-count/", {
+            "mode": "add", "mark_pending": True,
+            "counts": [{"product_id": self.p.id, "new_count": "100"}],
+        }, format="json")
+        self.assertEqual(r.status_code, 200)
+        self.p.refresh_from_db()
+        self.assertEqual(self.p.stock, Decimal("600"))             # 500 + 100
+        self.assertEqual(self.p.pending_entry_qty, Decimal("100"))  # pendiente
+
+    def test_sumar_sin_mark_pending_no_deja_pendiente(self):
+        # Corrección: suma pero NO deja pendiente (es el default).
+        r = self.c.post("/api/inventory/stock-count/", {
+            "mode": "add",
+            "counts": [{"product_id": self.p.id, "new_count": "100"}],
+        }, format="json")
+        self.assertEqual(r.status_code, 200)
+        self.p.refresh_from_db()
+        self.assertEqual(self.p.pending_entry_qty, Decimal("0"))
+
+    def test_fijar_con_mark_pending_no_aplica(self):
+        # En modo fijar, mark_pending se ignora (no es una entrada).
+        r = self.c.post("/api/inventory/stock-count/", {
+            "mode": "set", "mark_pending": True,
+            "counts": [{"product_id": self.p.id, "new_count": "700"}],
+        }, format="json")
+        self.assertEqual(r.status_code, 200)
+        self.p.refresh_from_db()
+        self.assertEqual(self.p.pending_entry_qty, Decimal("0"))
+
 
 class DamageReportTests(TestCase):
     """Flujo de reporte de daño con aprobación del admin."""

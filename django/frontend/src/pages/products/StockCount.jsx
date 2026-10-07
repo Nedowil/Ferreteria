@@ -21,6 +21,9 @@ export default function StockCount() {
     try { return new Set(JSON.parse(localStorage.getItem(CKEY) || "[]")); } catch { return new Set(); }
   });
   const [mode, setMode] = useState("set");
+  // Solo en modo "Sumar": si se marca, lo sumado queda pendiente de asignar a
+  // un proveedor (mercadería comprada), para registrarlo luego en la entrada.
+  const [markPending, setMarkPending] = useState(false);
   const [search, setSearch] = useState("");
   const [onlyUncounted, setOnlyUncounted] = useState(false);
   const [reason, setReason] = useState("");
@@ -141,10 +144,14 @@ export default function StockCount() {
     e.preventDefault();
     if (!changed.length) return;
     const verbo = mode === "add" ? "sumar lo encontrado" : "fijar la existencia";
-    if (!(await dialog.confirm(`¿Estás seguro de que deseas ${verbo} en ${changed.length} producto(s)?`, { okText: "Aplicar" }))) return;
+    const extra = (mode === "add" && markPending)
+      ? "\n\nLo sumado quedará PENDIENTE de asignar a un proveedor (para registrarlo al crédito en «Registrar entrada»)."
+      : "";
+    if (!(await dialog.confirm(`¿Estás seguro de que deseas ${verbo} en ${changed.length} producto(s)?${extra}`, { okText: "Aplicar" }))) return;
     setBusy(true);
     try {
-      const payload = { reason, mode, counts: changed.map(([product_id, new_count]) => ({
+      const payload = { reason, mode, mark_pending: mode === "add" ? markPending : false,
+        counts: changed.map(([product_id, new_count]) => ({
         product_id: Number(product_id), new_count: Number(new_count), unit: units[product_id] || "base" })) };
       const { data } = await api.post("/inventory/stock-count/", payload);
       await dialog.alert(`Se aplicaron ${data.adjusted} ajustes.` + (data.errors.length ? `\nErrores: ${data.errors.join(", ")}` : ""));
@@ -273,8 +280,21 @@ export default function StockCount() {
           </span>
         </div>
 
+        {/* Solo en modo Sumar: marcar si lo que se suma es mercadería comprada,
+            para que quede pendiente de asignar a un proveedor (y llegue a la
+            entrada al crédito). Si no, es solo una corrección. */}
+        {mode === "add" && (
+          <label className="w-full flex items-start gap-2 text-sm rounded-lg px-3 py-2 border border-sky-200 dark:border-sky-500/30 bg-sky-50 dark:bg-sky-900/15 text-sky-800 dark:text-sky-300 cursor-pointer">
+            <input type="checkbox" className="mt-0.5" checked={markPending} onChange={(e) => setMarkPending(e.target.checked)} />
+            <span>
+              <b>Es mercadería comprada</b> (dejar pendiente de asignar a proveedor).
+              <span className="block text-[11px] opacity-90">Márcalo si lo que estás sumando <b>llegó de un proveedor</b>: quedará como «pendiente» para registrarlo al crédito en «Registrar entrada». Si es solo una corrección de conteo, dejalo sin marcar.</span>
+            </span>
+          </label>
+        )}
+
         <p className="w-full text-[11px] text-slate-400">
-          ¿Llegó mercadería comprada? Es mejor usar <b>“📥 Registrar entrada”</b> desde Productos: también suma al stock y además deja registrada la compra (proveedor, costo y cuentas por pagar).
+          ¿Llegó mercadería comprada? También podés usar <b>“📥 Registrar entrada”</b> / <b>“➕ Ingresar”</b> desde Productos: suma al stock y deja la compra (proveedor, costo y cuentas por pagar).
         </p>
       </div>
 

@@ -286,6 +286,10 @@ class StockCountSerializer(serializers.Serializer):
     # "set" = fijar la existencia al valor contado (recuento total, ajuste).
     # "add" = sumar lo encontrado a la existencia actual (entrada).
     mode = serializers.ChoiceField(choices=["set", "add"], required=False, default="set")
+    # Solo aplica en modo "add": si es True, lo sumado queda "pendiente de
+    # asignar a un proveedor" (para registrarlo luego al crédito en la entrada).
+    # Marcarlo cuando lo que se suma es mercadería COMPRADA, no una corrección.
+    mark_pending = serializers.BooleanField(required=False, default=False)
     counts = StockCountItemSerializer(many=True)
 
 
