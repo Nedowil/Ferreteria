@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { PageTitle } from "../../components/PageTitle";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
@@ -21,6 +22,7 @@ export default function SupplierList() {
   const PAGE_SIZE = 15;
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState(null);
+  const [verCompras, setVerCompras] = useState(null); // proveedor cuyas compras se muestran (modal)
   const [satBusy, setSatBusy] = useState(false);
   const [satMsg, setSatMsg] = useState("");
   const [exporting, setExporting] = useState(false);
@@ -114,7 +116,14 @@ export default function SupplierList() {
                 <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{s.tax_id || "—"}</td>
                 <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{s.contact_name || "—"}</td>
                 <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{s.phone || "—"}</td>
-                <td className="px-4 py-2 text-right">{s.purchase_count}</td>
+                <td className="px-4 py-2 text-right">
+                  {can("compras.ver") && s.purchase_count > 0
+                    ? <button onClick={() => setVerCompras(s)} title="Ver las compras de este proveedor"
+                              className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 font-semibold hover:underline">
+                        {s.purchase_count} <span className="text-[11px]">📋 ver</span>
+                      </button>
+                    : <span className="text-slate-500 dark:text-slate-400">{s.purchase_count}</span>}
+                </td>
                 <td className="px-4 py-2 text-right">
                   <div className="inline-flex flex-wrap gap-1.5 justify-end">
                     {can("proveedores.editar") && <button onClick={() => { setSatMsg(""); setEditing(s); }} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-blue-600 hover:bg-blue-700 text-white">Editar</button>}
@@ -131,6 +140,8 @@ export default function SupplierList() {
       </div>
 
       <Pagination page={page} count={count} pageSize={PAGE_SIZE} onPage={goPage} label="proveedores" />
+
+      {verCompras && <SupplierPurchasesModal supplier={verCompras} onClose={() => setVerCompras(null)} />}
 
       {editing && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4" onClick={() => setEditing(null)}>
@@ -165,6 +176,73 @@ export default function SupplierList() {
           </form>
         </div>
       )}
+    </div>
+  );
+}
+
+// Ventana con las compras de un proveedor (folio, fecha, total, estado, saldo),
+// con enlace al detalle de cada compra.
+function SupplierPurchasesModal({ supplier, onClose }) {
+  const [rows, setRows] = useState(null);
+  const [total, setTotal] = useState(0);
+  const [err, setErr] = useState("");
+  const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const PAY = {
+    pagada: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+    al_credito: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+    parcial: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  };
+
+  useEffect(() => {
+    api.get("/purchases/", { params: { supplier: supplier.id, page_size: 100 } })
+      .then((r) => { setRows(r.data.results || r.data); setTotal(r.data.count ?? (r.data.results || r.data).length); })
+      .catch(() => setErr("No se pudieron cargar las compras."));
+  }, [supplier.id]);
+
+  const saldoTotal = (rows || []).reduce((a, p) => a + Number(p.balance || 0), 0);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-gradient-to-r from-orange-500 to-amber-600 text-white px-5 py-4 flex items-start justify-between gap-2">
+          <div>
+            <div className="text-lg font-bold">🚚 Compras de {supplier.name}</div>
+            <div className="text-xs text-orange-100">{total} compra(s){saldoTotal > 0 ? ` · le debés ${Q(saldoTotal)}` : ""}</div>
+          </div>
+          <button onClick={onClose} className="text-white/80 hover:text-white text-xl leading-none">✕</button>
+        </div>
+        <div className="p-4 overflow-y-auto">
+          {err && <div className="text-sm text-rose-600 dark:text-rose-400">{err}</div>}
+          {!rows && !err && <div className="text-sm text-slate-400 py-6 text-center">Cargando…</div>}
+          {rows && rows.length === 0 && <div className="text-sm text-slate-400 py-6 text-center">Este proveedor no tiene compras registradas.</div>}
+          {rows && rows.length > 0 && (
+            <div className="overflow-x-auto rounded-lg border border-slate-100 dark:border-slate-700">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
+                  <tr><th className="px-3 py-2">Folio</th><th className="px-3 py-2">Fecha</th><th className="px-3 py-2 text-right">Total</th>
+                      <th className="px-3 py-2 text-right">Saldo</th><th className="px-3 py-2">Pago</th><th className="px-3 py-2">Estado</th><th></th></tr>
+                </thead>
+                <tbody>
+                  {rows.map((p) => (
+                    <tr key={p.id} className="border-t border-slate-100 dark:border-slate-700">
+                      <td className="px-3 py-2 font-mono text-xs">{p.folio}</td>
+                      <td className="px-3 py-2 text-slate-500 dark:text-slate-400">{p.date}</td>
+                      <td className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">{Q(p.total)}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">{Number(p.balance) > 0 ? <b className="text-amber-700 dark:text-amber-400">{Q(p.balance)}</b> : "—"}</td>
+                      <td className="px-3 py-2"><span className={"rounded-full px-2 py-0.5 text-[11px] font-medium " + (PAY[p.payment_status] || "bg-slate-100 text-slate-600")}>{p.payment_status_display}</span></td>
+                      <td className="px-3 py-2 text-slate-500 dark:text-slate-400">{p.status_display}</td>
+                      <td className="px-3 py-2 text-right"><Link to={`/compras/${p.id}`} onClick={onClose} className="text-blue-600 dark:text-blue-400 hover:underline text-xs font-medium">Ver</Link></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {rows && total > rows.length && (
+            <p className="text-[11px] text-slate-400 mt-2">Mostrando las primeras {rows.length} de {total}. Para ver todas, entrá a <Link to="/compras" onClick={onClose} className="text-blue-600 hover:underline">Compras</Link>.</p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
