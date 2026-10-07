@@ -229,12 +229,20 @@ class PurchaseViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Mode
         # Saldo total de TODAS las cuentas por pagar (no solo la página actual)
         agg = qs.aggregate(total=Sum(F("total") - F("amount_paid")))
         total_balance = agg["total"] or Decimal("0")
+        # Cuentas VENCIDAS (fecha de vencimiento ya pasó): monto y cantidad.
+        from django.utils import timezone
+        today = timezone.localdate()
+        overdue = qs.filter(due_date__isnull=False, due_date__lt=today)
+        overdue_balance = overdue.aggregate(t=Sum(F("total") - F("amount_paid")))["t"] or Decimal("0")
+        overdue_count = overdue.count()
+        extra = {"total_balance": total_balance, "overdue_balance": overdue_balance,
+                 "overdue_count": overdue_count}
 
         page = self.paginate_queryset(qs)
         if page is not None:
             ser = PurchaseListSerializer(page, many=True)
             resp = self.get_paginated_response(ser.data)
-            resp.data["total_balance"] = total_balance
+            resp.data.update(extra)
             return resp
         ser = PurchaseListSerializer(qs, many=True)
-        return Response({"results": ser.data, "total_balance": total_balance})
+        return Response({"results": ser.data, **extra})

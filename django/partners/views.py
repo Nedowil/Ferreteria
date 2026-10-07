@@ -32,9 +32,18 @@ class SupplierViewSet(PermissionByActionMixin, viewsets.ModelViewSet):
     ordering = ["name"]
 
     def get_queryset(self):
+        from django.db.models import Sum, F, Q, Value, DecimalField
+        from django.db.models.functions import Coalesce
         qs = Supplier.objects.filter(deleted_at__isnull=True)
         if self.request.query_params.get("active") in ("1", "true", "True"):
             qs = qs.filter(active=True)
+        # Saldo que se le debe (compras recibidas no pagadas): se anota para
+        # mostrarlo en la lista sin una consulta por fila.
+        dec = DecimalField(max_digits=14, decimal_places=2)
+        qs = qs.annotate(owed=Coalesce(
+            Sum(F("purchases__total") - F("purchases__amount_paid"),
+                filter=Q(purchases__status="recibida") & ~Q(purchases__payment_status="pagada")),
+            Value(0, output_field=dec), output_field=dec))
         return apply_search(qs, self.request.query_params.get("search"))
 
     def perform_destroy(self, instance):

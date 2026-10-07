@@ -8,10 +8,25 @@ import { dialog } from "../../components/Dialog";
 import { toast } from "../../components/Toast";
 import Pagination from "../../components/Pagination";
 import { Avatar } from "../../utils/ui";
-import { SkeletonRows } from "../../components/Skeleton";
-import { EmptyRow } from "../../components/EmptyState";
+import { SkeletonRows, SkeletonCards } from "../../components/Skeleton";
+import { EmptyRow, EmptyState } from "../../components/EmptyState";
 
 const BLANK = { name: "", tax_id: "", contact_name: "", email: "", phone: "", address: "", notes: "", active: true };
+const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+function Kpi({ label, value, sub, icon, bar, accent }) {
+  return (
+    <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-5 overflow-hidden">
+      <div className="absolute inset-x-0 top-0 h-1" style={{ background: bar }} />
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-slate-500 dark:text-slate-400">{label}</div>
+        <span className="text-lg opacity-80">{icon}</span>
+      </div>
+      <div className={`text-2xl font-extrabold mt-1 tabular-nums break-words ${accent}`}>{value}</div>
+      {sub && <div className="text-xs text-slate-400 mt-0.5">{sub}</div>}
+    </div>
+  );
+}
 
 export default function SupplierList() {
   const { can } = useAuth();
@@ -26,6 +41,8 @@ export default function SupplierList() {
   const [satBusy, setSatBusy] = useState(false);
   const [satMsg, setSatMsg] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [summary, setSummary] = useState({ total_balance: 0, overdue_balance: 0 });
+  const seeMoney = can("cuentas_pagar.ver");
 
   const exportExcel = async () => {
     setExporting(true);
@@ -40,6 +57,7 @@ export default function SupplierList() {
         { header: "Teléfono", value: (r) => r.phone },
         { header: "Email", value: (r) => r.email },
         { header: "Compras", value: (r) => r.purchase_count },
+        { header: "Saldo", value: (r) => Number(r.balance || 0) },
       ], rows);
     } finally { setExporting(false); }
   };
@@ -53,7 +71,15 @@ export default function SupplierList() {
     }).finally(() => setLoaded(true));
   };
   const goPage = (p) => { setPage(p); load(p); };
-  useEffect(() => { load(1); }, []);
+  useEffect(() => {
+    load(1);
+    // Totales globales (deuda y vencido) para las tarjetas, si tiene permiso.
+    if (seeMoney) {
+      api.get("/purchases/payable/", { params: { page_size: 1 } })
+        .then((r) => setSummary({ total_balance: r.data.total_balance || 0, overdue_balance: r.data.overdue_balance || 0 }))
+        .catch(() => {});
+    }
+  }, []);
   // Al vaciar la búsqueda, se recargan todos los registros desde la página 1.
   const _firstLoad = useRef(true);
   useEffect(() => {
@@ -88,6 +114,20 @@ export default function SupplierList() {
     load();
   };
 
+  const comprasCell = (s) => (
+    can("compras.ver") && s.purchase_count > 0
+      ? <button onClick={() => setVerCompras(s)} title="Ver las compras de este proveedor"
+                className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 font-semibold hover:underline">
+          {s.purchase_count} <span className="text-[11px]">📋 ver</span>
+        </button>
+      : <span className="text-slate-500 dark:text-slate-400">{s.purchase_count}</span>
+  );
+  const saldoCell = (s) => (
+    Number(s.balance) > 0
+      ? <span className="font-bold text-rose-600 dark:text-rose-400 tabular-nums">{Q(s.balance)}</span>
+      : <span className="text-slate-400">—</span>
+  );
+
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
@@ -97,17 +137,57 @@ export default function SupplierList() {
           {can("proveedores.crear") && <button onClick={() => { setSatMsg(""); setEditing(BLANK); }} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 transition">+ Nuevo proveedor</button>}
         </div>
       </div>
+
+      {/* KPIs */}
+      <div className={"grid grid-cols-1 gap-4 mb-4 " + (seeMoney ? "sm:grid-cols-3" : "sm:grid-cols-1 max-w-xs")}>
+        <Kpi label="Proveedores" value={count} icon="🚚" bar="#ea580c" accent="text-orange-600 dark:text-orange-400" sub="Registrados" />
+        {seeMoney && <Kpi label="Por pagar (total)" value={Q(summary.total_balance)} icon="💰" bar="#dc2626"
+             accent={Number(summary.total_balance) > 0 ? "text-rose-600 dark:text-rose-400" : "text-slate-400"} sub="Deuda con proveedores" />}
+        {seeMoney && <Kpi label="Vencido" value={Q(summary.overdue_balance)} icon="⏰" bar="#d97706"
+             accent={Number(summary.overdue_balance) > 0 ? "text-amber-600 dark:text-amber-400" : "text-slate-400"}
+             sub={Number(summary.overdue_balance) > 0 ? "Atención: ya venció" : "Nada vencido 🎉"} />}
+      </div>
+
       <form onSubmit={(e) => { e.preventDefault(); setPage(1); load(1); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex gap-2">
         <input placeholder="Buscar por nombre, NIT, teléfono…" value={search} onChange={(e) => setSearch(e.target.value)}
-               className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-72" />
+               className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 flex-1 sm:flex-none sm:w-72" />
         <button className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition">Buscar</button>
       </form>
+
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Móvil: tarjetas */}
+        <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-700">
+          {items.map((s) => (
+            <div key={s.id} className="p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Avatar name={s.name} />
+                  <div className="min-w-0">
+                    <div className="font-medium text-slate-800 dark:text-slate-100 break-words">{s.name}</div>
+                    <div className="text-xs text-slate-400">{s.tax_id ? `NIT ${s.tax_id}` : "Sin NIT"}{s.phone ? ` · ${s.phone}` : ""}</div>
+                  </div>
+                </div>
+                <div className="text-right shrink-0">{saldoCell(s)}</div>
+              </div>
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-xs text-slate-500 dark:text-slate-400">Compras: {comprasCell(s)}</span>
+                <div className="flex gap-1.5">
+                  {can("proveedores.editar") && <button onClick={() => { setSatMsg(""); setEditing(s); }} className="rounded-md px-2.5 py-1 text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white">Editar</button>}
+                  {can("proveedores.eliminar") && <button onClick={() => remove(s.id)} className="rounded-md px-2.5 py-1 text-xs font-medium bg-red-600 hover:bg-red-700 text-white">Eliminar</button>}
+                </div>
+              </div>
+            </div>
+          ))}
+          {!loaded && items.length === 0 && <div className="p-4"><SkeletonCards count={5} /></div>}
+          {loaded && items.length === 0 && <EmptyState icon="🚚" title="Sin proveedores" hint="Agregá proveedores para registrar compras y pagos." />}
+        </div>
+
+        {/* Escritorio: tabla */}
+        <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
             <tr><th className="px-4 py-2.5">Nombre</th><th className="px-4 py-2.5">NIT</th><th className="px-4 py-2.5">Contacto</th>
-                <th className="px-4 py-2.5">Teléfono</th><th className="px-4 py-2.5 text-right">Compras</th><th className="px-4 py-2.5 text-right">Acciones</th></tr>
+                <th className="px-4 py-2.5">Teléfono</th><th className="px-4 py-2.5 text-right">Compras</th><th className="px-4 py-2.5 text-right">Saldo</th><th className="px-4 py-2.5 text-right">Acciones</th></tr>
           </thead>
           <tbody>
             {items.map((s) => (
@@ -116,14 +196,8 @@ export default function SupplierList() {
                 <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{s.tax_id || "—"}</td>
                 <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{s.contact_name || "—"}</td>
                 <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{s.phone || "—"}</td>
-                <td className="px-4 py-2 text-right">
-                  {can("compras.ver") && s.purchase_count > 0
-                    ? <button onClick={() => setVerCompras(s)} title="Ver las compras de este proveedor"
-                              className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 font-semibold hover:underline">
-                        {s.purchase_count} <span className="text-[11px]">📋 ver</span>
-                      </button>
-                    : <span className="text-slate-500 dark:text-slate-400">{s.purchase_count}</span>}
-                </td>
+                <td className="px-4 py-2 text-right">{comprasCell(s)}</td>
+                <td className="px-4 py-2 text-right">{saldoCell(s)}</td>
                 <td className="px-4 py-2 text-right">
                   <div className="inline-flex flex-wrap gap-1.5 justify-end">
                     {can("proveedores.editar") && <button onClick={() => { setSatMsg(""); setEditing(s); }} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-blue-600 hover:bg-blue-700 text-white">Editar</button>}
@@ -132,8 +206,8 @@ export default function SupplierList() {
                 </td>
               </tr>
             ))}
-            {!loaded && items.length === 0 && <SkeletonRows rows={8} cols={6} />}
-            {loaded && items.length === 0 && <EmptyRow colSpan={6} icon="🚚" title="Sin proveedores" hint="Agregá proveedores para registrar compras y pagos." />}
+            {!loaded && items.length === 0 && <SkeletonRows rows={8} cols={7} />}
+            {loaded && items.length === 0 && <EmptyRow colSpan={7} icon="🚚" title="Sin proveedores" hint="Agregá proveedores para registrar compras y pagos." />}
           </tbody>
         </table>
         </div>
@@ -186,7 +260,7 @@ function SupplierPurchasesModal({ supplier, onClose }) {
   const [rows, setRows] = useState(null);
   const [total, setTotal] = useState(0);
   const [err, setErr] = useState("");
-  const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const Qm = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const PAY = {
     pagada: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
     al_credito: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
@@ -207,7 +281,7 @@ function SupplierPurchasesModal({ supplier, onClose }) {
         <div className="bg-gradient-to-r from-orange-500 to-amber-600 text-white px-5 py-4 flex items-start justify-between gap-2">
           <div>
             <div className="text-lg font-bold">🚚 Compras de {supplier.name}</div>
-            <div className="text-xs text-orange-100">{total} compra(s){saldoTotal > 0 ? ` · le debés ${Q(saldoTotal)}` : ""}</div>
+            <div className="text-xs text-orange-100">{total} compra(s){saldoTotal > 0 ? ` · le debés ${Qm(saldoTotal)}` : ""}</div>
           </div>
           <button onClick={onClose} className="text-white/80 hover:text-white text-xl leading-none">✕</button>
         </div>
@@ -227,8 +301,8 @@ function SupplierPurchasesModal({ supplier, onClose }) {
                     <tr key={p.id} className="border-t border-slate-100 dark:border-slate-700">
                       <td className="px-3 py-2 font-mono text-xs">{p.folio}</td>
                       <td className="px-3 py-2 text-slate-500 dark:text-slate-400">{p.date}</td>
-                      <td className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">{Q(p.total)}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">{Number(p.balance) > 0 ? <b className="text-amber-700 dark:text-amber-400">{Q(p.balance)}</b> : "—"}</td>
+                      <td className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">{Qm(p.total)}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">{Number(p.balance) > 0 ? <b className="text-amber-700 dark:text-amber-400">{Qm(p.balance)}</b> : "—"}</td>
                       <td className="px-3 py-2"><span className={"rounded-full px-2 py-0.5 text-[11px] font-medium " + (PAY[p.payment_status] || "bg-slate-100 text-slate-600")}>{p.payment_status_display}</span></td>
                       <td className="px-3 py-2 text-slate-500 dark:text-slate-400">{p.status_display}</td>
                       <td className="px-3 py-2 text-right"><Link to={`/compras/${p.id}`} onClick={onClose} className="text-blue-600 dark:text-blue-400 hover:underline text-xs font-medium">Ver</Link></td>
