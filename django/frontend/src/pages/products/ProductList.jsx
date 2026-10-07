@@ -1306,12 +1306,6 @@ export default function ProductList() {
       {selected.size > 0 && (
         <div className="bg-teal-600 text-white rounded-lg px-4 py-2.5 mb-4 flex flex-wrap items-center gap-3 shadow">
           <span className="font-semibold text-sm">{selected.size} seleccionado(s)</span>
-          {can("productos.editar") && (
-            <button onClick={() => setBulkLoc({ ids: [...selected] })}
-                    className="bg-white text-teal-700 rounded-lg px-3 py-1.5 text-sm font-semibold hover:bg-teal-50 transition">
-              📍 Asignar ubicación
-            </button>
-          )}
           {can("compras.crear") && can("compras.recibir") && (
             <button onClick={() => setEntryOpen(true)}
                     title="Registrar que entró esta mercadería: elegís el proveedor, sube el stock y queda en cuentas por pagar"

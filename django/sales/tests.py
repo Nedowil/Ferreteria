@@ -448,6 +448,46 @@ class SaleServiceTests(TestCase):
         self.assertTrue(session.movements.filter(type=CashMovement.VENTA, sale=sale).exists())
         self.assertEqual(sale.cash_session_id, session.id)
 
+    def _venta_credito(self, paid="0"):
+        customer = Customer.objects.create(name="Cliente", credit_enabled=True)
+        return create_sale(
+            {"payment_method": "credito", "paid_amount": paid, "payment_status": "al_credito",
+             "customer_id": customer.id},
+            [{"product_id": self.prod.id, "quantity": "2", "unit_price": "85"}],  # total 170
+            user=self.user, branch=self.branch,
+        )
+
+    def test_abono_efectivo_entra_a_caja(self):
+        # Un abono en EFECTIVO a una cuenta por cobrar debe sumar al esperado de
+        # la caja (si no, al cierre aparecería un SOBRANTE).
+        session = open_session(self.user, 500, branch=self.branch)
+        sale = self._venta_credito(paid="0")  # al crédito, sin enganche
+        session.refresh_from_db()
+        self.assertEqual(session.expected_cash, Decimal("500.00"))  # aún nada de efectivo
+        register_payment(sale, "100", method="efectivo", user=self.user, branch=self.branch)
+        session.refresh_from_db()
+        self.assertEqual(session.expected_cash, Decimal("600.00"))  # 500 + 100 del abono
+        self.assertTrue(session.movements.filter(type=CashMovement.INGRESO, amount=Decimal("100")).exists())
+
+    def test_abono_tarjeta_no_toca_efectivo(self):
+        session = open_session(self.user, 500, branch=self.branch)
+        sale = self._venta_credito(paid="0")
+        register_payment(sale, "100", method="tarjeta", user=self.user, branch=self.branch)
+        session.refresh_from_db()
+        self.assertEqual(session.expected_cash, Decimal("500.00"))  # tarjeta no entra a efectivo
+        self.assertFalse(session.movements.filter(type=CashMovement.INGRESO).exists())
+
+    def test_cancelar_credito_parcial_revierte_solo_lo_cobrado(self):
+        # Venta al crédito con enganche de 50 en efectivo (total 170). Al
+        # cancelar, se reversa SOLO los 50 cobrados, no los 170 (si no, FALTANTE).
+        session = open_session(self.user, 500, branch=self.branch)
+        sale = self._venta_credito(paid="50")  # enganche 50 en efectivo
+        session.refresh_from_db()
+        self.assertEqual(session.expected_cash, Decimal("550.00"))  # 500 + 50 enganche
+        cancel_sale(sale, user=self.user)
+        session.refresh_from_db()
+        self.assertEqual(session.expected_cash, Decimal("500.00"))  # vuelve a 500 (reversa solo 50)
+
 
 class SalesSummaryProfitTests(TestCase):
     """Resumen de ventas: la ganancia = ingresos − costo (con el costo histórico

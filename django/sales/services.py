@@ -347,8 +347,14 @@ def cancel_sale(sale, *, user=None):
 
 
 @transaction.atomic
-def register_payment(sale, amount, *, date=None, method="efectivo", reference=None, notes=None, user=None):
-    """Registra un abono a una venta al crédito (cuentas por cobrar)."""
+def register_payment(sale, amount, *, date=None, method="efectivo", reference=None, notes=None, user=None, branch=None):
+    """Registra un abono a una venta al crédito (cuentas por cobrar).
+
+    Si el abono se cobra EN EFECTIVO, también entra a la caja abierta (como
+    ingreso): sin esto el dinero queda en la gaveta pero la caja no lo ve y el
+    cierre marcaría un sobrante. Los abonos con tarjeta/transferencia no tocan
+    el efectivo.
+    """
     sale = Sale.objects.select_for_update().get(pk=sale.pk)
     amount = Decimal(str(amount))
     if amount <= 0:
@@ -366,4 +372,11 @@ def register_payment(sale, amount, *, date=None, method="efectivo", reference=No
     else:
         sale.payment_status = Sale.PAY_PARCIAL
     sale.save(update_fields=["paid_amount", "payment_status", "updated_at"])
+
+    if method == "efectivo":
+        cash.register_account_payment_cash(
+            user, amount,
+            description=f"Abono venta {sale.folio}" + (f" · {sale.customer.name}" if sale.customer_id else ""),
+            branch=branch if branch is not None else sale.branch,
+        )
     return payment

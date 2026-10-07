@@ -139,6 +139,7 @@ class SaleViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.ModelVie
                 sale, d["amount"], date=d.get("date"),
                 method=d.get("payment_method", "efectivo"),
                 reference=d.get("reference"), notes=d.get("notes"), user=request.user,
+                branch=self.branch,
             )
         except services.SaleError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)

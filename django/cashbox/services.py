@@ -121,13 +121,21 @@ def register_sale(sale):
 
 
 def register_sale_cancellation(sale):
-    """Registra la cancelación de una venta como devolución en su caja."""
+    """Registra la cancelación de una venta como devolución en su caja.
+
+    Reversa el EFECTIVO/monto que realmente entró por la venta, no el total:
+    lo recibido menos el vuelto (incluye el enganche y los abonos ya cobrados,
+    que suman a paid_amount). Para una venta de contado normal esto equivale al
+    total; para una venta al crédito con enganche parcial, reversa solo lo que
+    de verdad se cobró —si no, la caja mostraría un FALTANTE.
+    """
     if not sale.cash_session_id:
         return None
     session = sale.cash_session
+    amount = Decimal(sale.paid_amount) - Decimal(sale.change_amount)
     mov = CashMovement.objects.create(
         session=session, user=sale.user, sale=sale, type=CashMovement.DEVOLUCION,
-        payment_method=sale.payment_method, amount=sale.total,
+        payment_method=sale.payment_method, amount=amount,
         description=f"Cancelación venta {sale.folio}",
     )
     if session.is_open:
@@ -239,6 +247,26 @@ def register_return_cash(user, amount, *, description=None, branch=None):
 
 def register_return_cancellation_cash(user, amount, *, description=None, branch=None):
     """Reversa de una devolución en efectivo (ingreso) al cancelarla."""
+    session = active_session(branch=branch, user=user)
+    if session is None:
+        return None
+    mov = CashMovement.objects.create(
+        session=session, user=user, type=CashMovement.INGRESO,
+        payment_method="efectivo", amount=Decimal(str(amount)), description=description,
+    )
+    _refresh_expected(session)
+    return mov
+
+
+def register_account_payment_cash(user, amount, *, description=None, branch=None):
+    """Registra el cobro EN EFECTIVO de un abono a cuentas por cobrar como
+    INGRESO de la caja de la sucursal.
+
+    Sin esto, el dinero del abono entra físicamente a la gaveta pero la caja no
+    lo "ve", y al cierre aparecería un SOBRANTE. Solo se llama para abonos en
+    efectivo (los de tarjeta/transferencia no tocan el efectivo). Devuelve el
+    CashMovement, o None si no hay caja abierta.
+    """
     session = active_session(branch=branch, user=user)
     if session is None:
         return None
