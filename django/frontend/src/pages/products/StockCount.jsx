@@ -259,6 +259,23 @@ export default function StockCount() {
         <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Modo:</span>
         <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="radio" name="mode" checked={mode === "set"} onChange={() => setMode("set")} /><span><b>Fijar existencia</b> (recuento total)</span></label>
         <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="radio" name="mode" checked={mode === "add"} onChange={() => setMode("add")} /><span><b>Sumar lo encontrado</b> (se agrega a lo que hay)</span></label>
+
+        {/* Aviso que cambia según el modo, para que nadie confunda "total" con
+            "lo que llegó" y borre el stock sin querer. */}
+        <div className={"w-full rounded-lg px-3 py-2 text-sm border flex items-start gap-2 " + (mode === "add"
+          ? "bg-emerald-50 dark:bg-emerald-900/15 border-emerald-200 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300"
+          : "bg-amber-50 dark:bg-amber-900/15 border-amber-200 dark:border-amber-500/30 text-amber-800 dark:text-amber-300")}>
+          <span className="text-base leading-none">{mode === "add" ? "➕" : "✏️"}</span>
+          <span>
+            {mode === "add"
+              ? <>Estás en <b>Sumar</b>: escribí <b>solo lo que llegó/encontraste</b>; se agrega a lo que ya hay. Ejemplo: tenías 10 y llegaron 5 → escribí <b>5</b> y queda <b>15</b>.</>
+              : <>Estás en <b>Fijar</b>: escribí el <b>total</b> que contaste; <b>reemplaza</b> lo que había. Ejemplo: tenías 10 y llegaron 5 → escribí <b>15</b> (si ponés 5, perderías los 10).</>}
+          </span>
+        </div>
+
+        <p className="w-full text-[11px] text-slate-400">
+          ¿Llegó mercadería comprada? Es mejor usar <b>“📥 Registrar entrada”</b> desde Productos: también suma al stock y además deja registrada la compra (proveedor, costo y cuentas por pagar).
+        </p>
       </div>
 
       {/* Búsqueda + filtro */}
