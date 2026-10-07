@@ -121,6 +121,14 @@ class Product(models.Model):
         "partners.Supplier", on_delete=models.SET_NULL, null=True, blank=True,
         related_name="products", verbose_name="proveedor habitual",
     )
+    # Cantidad que YA entró (ya se sumó al stock físico) pero todavía NO se
+    # asignó a un proveedor/compra. "Registrar entrada" la toma para armar la
+    # deuda (al crédito) y la deja en 0. Así la cantidad se escribe una sola vez
+    # (al ingresar la mercadería), y la entrada solo registra proveedor+crédito
+    # sin volver a tocar el stock.
+    pending_entry_qty = models.DecimalField(
+        "pendiente de asignar a proveedor", max_digits=14, decimal_places=4, default=0
+    )
 
     # Unidad base: la más pequeña en que se mide el stock (libra, onza, metro...)
     base_unit_label = models.CharField("unidad base", max_length=30, default="unidad")

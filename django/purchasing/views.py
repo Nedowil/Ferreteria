@@ -141,10 +141,14 @@ class PurchaseViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Mode
 
     @action(detail=False, methods=["post"], url_path="quick-entry")
     def quick_entry(self, request):
-        """Entrada rápida de mercadería desde la lista de productos: resuelve
-        (o crea) el proveedor, registra la compra y la recibe en un solo paso
-        (sube stock + actualiza costo), y guarda el proveedor habitual en cada
-        producto. Por defecto queda al crédito (suma a cuentas por pagar)."""
+        """Registrar entrada: asigna a un proveedor (y al crédito) la mercadería
+        que YA se ingresó al stock. La cantidad se escribió una sola vez al
+        ingresar el producto (alta con stock o 'ingresar stock'), por eso acá
+        NO se vuelve a sumar el stock: solo se registra la compra/deuda, se
+        actualiza el costo, se guarda el proveedor habitual en cada producto y
+        se descuenta lo 'pendiente de asignar'. Por defecto queda al crédito
+        (suma a cuentas por pagar)."""
+        from decimal import Decimal
         from django.utils import timezone
         from core.permissions import user_permission_codenames
         from partners.models import Supplier
@@ -189,15 +193,29 @@ class PurchaseViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Mode
         }
         try:
             purchase = create_purchase(data, d["items"], user=request.user, branch=self.branch)
-            purchase = receive_purchase(purchase, user=request.user)
+            # apply_stock=False: el stock YA se sumó al ingresar la mercadería;
+            # la entrada solo registra proveedor + crédito (deuda).
+            purchase = receive_purchase(purchase, user=request.user, apply_stock=False)
         except PurchaseError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         # Guardar el proveedor habitual en cada producto (control de "a quién le
-        # compro"). .update() es suficiente: no afecta el índice de búsqueda.
-        if d.get("set_product_supplier", True) and (is_super or "productos.editar" in perms):
-            pids = [it["product_id"] for it in d["items"]]
-            Product.objects.filter(pk__in=pids).update(supplier=supplier)
+        # compro") y DESCONTAR lo que estaba "pendiente de asignar", ya que esta
+        # entrada lo acaba de asignar a un proveedor.
+        can_edit = d.get("set_product_supplier", True) and (is_super or "productos.editar" in perms)
+        for it in d["items"]:
+            prod = Product.objects.filter(pk=it["product_id"]).first()
+            if not prod:
+                continue
+            fields = []
+            if can_edit:
+                prod.supplier = supplier
+                fields.append("supplier")
+            # Resta lo asignado de lo pendiente (sin bajar de cero).
+            pend = prod.pending_entry_qty or Decimal("0")
+            prod.pending_entry_qty = max(Decimal("0"), pend - Decimal(str(it["quantity"])))
+            fields.append("pending_entry_qty")
+            prod.save(update_fields=fields + ["updated_at"])
 
         purchase = self.get_queryset().get(pk=purchase.pk)
         return Response(PurchaseDetailSerializer(purchase).data, status=status.HTTP_201_CREATED)

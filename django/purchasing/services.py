@@ -87,8 +87,15 @@ def sync_items(purchase, items, manual_tax=Decimal("0")):
 
 
 @transaction.atomic
-def receive_purchase(purchase, user=None):
-    """Marca la compra como recibida y genera entradas de inventario."""
+def receive_purchase(purchase, user=None, apply_stock=True):
+    """Marca la compra como recibida.
+
+    apply_stock=True  → genera las entradas de inventario (suma al stock). Es el
+                        comportamiento normal de una compra.
+    apply_stock=False → NO suma stock (se usa cuando la mercadería YA se ingresó
+                        antes y esta compra solo registra el proveedor/crédito).
+    En ambos casos actualiza el costo de compra del producto al último recibido.
+    """
     purchase = Purchase.objects.select_for_update().get(pk=purchase.pk)
     if not purchase.is_pendiente:
         raise PurchaseError("Solo se pueden recibir compras pendientes.")
@@ -97,10 +104,11 @@ def receive_purchase(purchase, user=None):
 
     for item in purchase.items.select_related("product"):
         product = item.product
-        apply_movement(
-            product, InventoryMovement.ENTRADA, item.quantity,
-            reason=f"Compra {purchase.folio}", user=user, branch=purchase.branch,
-        )
+        if apply_stock:
+            apply_movement(
+                product, InventoryMovement.ENTRADA, item.quantity,
+                reason=f"Compra {purchase.folio}", user=user, branch=purchase.branch,
+            )
         # Actualiza el costo de compra del producto al último costo recibido
         product.purchase_price = item.unit_cost
         product.save(update_fields=["purchase_price", "updated_at"])

@@ -903,7 +903,10 @@ function StockEntryModal({ products, suppliers, onSupplierCreated, onClose, onDo
       product_id: p.id,
       name: p.name,
       unit: p.base_unit_label || "unidad",
-      quantity: "1",
+      // Precarga la cantidad PENDIENTE (lo que ya ingresaste y falta asignar a
+      // un proveedor). Si no hay pendiente, queda vacío.
+      quantity: Number(p.pending_entry_qty) > 0 ? String(Number(p.pending_entry_qty)) : "",
+      pending: Number(p.pending_entry_qty) || 0,
       // El costo puede venir oculto (sin permiso de ver costo): queda vacío para escribir.
       unit_cost: p.purchase_price === undefined || p.purchase_price === null ? "" : String(p.purchase_price),
     }))
@@ -948,7 +951,7 @@ function StockEntryModal({ products, suppliers, onSupplierCreated, onClose, onDo
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden max-h-[92vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="bg-gradient-to-r from-emerald-600 to-green-700 text-white px-5 py-4">
           <div className="text-lg font-bold">📥 Registrar entrada de mercadería</div>
-          <div className="text-xs text-emerald-100">{products.length} producto(s) · sube el stock y registra la compra</div>
+          <div className="text-xs text-emerald-100">{products.length} producto(s) · asigna proveedor y crédito (el stock ya lo ingresaste)</div>
         </div>
         <div className="p-5 space-y-4 overflow-y-auto">
           {err && <ErrorBanner message={err} />}
@@ -984,7 +987,7 @@ function StockEntryModal({ products, suppliers, onSupplierCreated, onClose, onDo
               <tbody>
                 {rows.map((r, i) => (
                   <tr key={r.product_id} className="border-t border-slate-100 dark:border-slate-700">
-                    <td className="px-3 py-2"><div className="font-medium text-slate-800 dark:text-slate-100">{r.name}</div><div className="text-[11px] text-slate-400">{r.unit}</div></td>
+                    <td className="px-3 py-2"><div className="font-medium text-slate-800 dark:text-slate-100">{r.name}</div><div className="text-[11px] text-slate-400">{r.unit}{r.pending > 0 ? ` · pendiente: ${r.pending}` : " · sin pendiente — ingresá stock primero"}</div></td>
                     <td className="px-3 py-2"><input type="number" min="0" step="any" value={r.quantity} onChange={(e) => setRow(i, "quantity", e.target.value)} className="w-20 border border-slate-300 dark:border-slate-600 rounded px-2 py-1.5 text-sm bg-white dark:bg-slate-900 tabular-nums" /></td>
                     <td className="px-3 py-2"><input type="number" min="0" step="any" value={r.unit_cost} onChange={(e) => setRow(i, "unit_cost", e.target.value)} placeholder="0.00" className="w-24 border border-slate-300 dark:border-slate-600 rounded px-2 py-1.5 text-sm bg-white dark:bg-slate-900 tabular-nums" /></td>
                   </tr>
@@ -1005,10 +1008,10 @@ function StockEntryModal({ products, suppliers, onSupplierCreated, onClose, onDo
           </div>
 
           <div className="flex items-center justify-between text-sm">
-            <span className="text-slate-500 dark:text-slate-400">Total aprox. (sin IVA)</span>
+            <span className="text-slate-500 dark:text-slate-400">Deuda aprox. (sin IVA)</span>
             <span className="font-bold text-slate-800 dark:text-slate-100 tabular-nums">Q{total.toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
-          <p className="text-[11px] text-slate-400">El IVA se calcula automáticamente. El proveedor queda guardado como <b>habitual</b> en cada producto.</p>
+          <p className="text-[11px] text-slate-400">Esto <b>no vuelve a sumar el stock</b> (ya lo ingresaste): solo registra la compra/deuda con el proveedor. El IVA se calcula automáticamente y el proveedor queda guardado como <b>habitual</b> en cada producto.</p>
           </>
           )}
         </div>
@@ -1121,6 +1124,24 @@ export default function ProductList() {
     if (!(await dialog.confirm(`¿Estás seguro de que deseas eliminar el producto "${nombre}"? Quedará en la papelera por si necesitás restaurarlo.`, { danger: true, okText: "Eliminar" }))) return;
     await api.delete(`/inventory/products/${p.id}/`);
     load();
+  };
+
+  // Ingresar mercadería que llegó de un producto que YA existe: suma al stock y
+  // la deja pendiente de asignar a un proveedor (después, "Registrar entrada").
+  // La cantidad se escribe una sola vez acá.
+  const receiveStock = async (p) => {
+    const unidad = p.base_unit_label || "unidad";
+    const raw = await dialog.prompt(`¿Cuántos ENTRARON de "${p.name}"? (en ${unidad})`, "", { okText: "Ingresar" });
+    if (raw === null) return;
+    const qty = Number(String(raw).replace(",", "."));
+    if (!Number.isFinite(qty) || qty <= 0) { toast.error("Poné una cantidad mayor que cero."); return; }
+    try {
+      const { data } = await api.post(`/inventory/products/${p.id}/receive-stock/`, { quantity: qty });
+      toast.success(`Ingresaste ${qty} ${unidad}. Stock ahora: ${Number(data.stock)}. Queda pendiente de asignar a un proveedor (Registrar entrada).`);
+      load(filters, page, { silent: true });
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "No se pudo ingresar el stock.");
+    }
   };
 
 
@@ -1258,9 +1279,13 @@ export default function ProductList() {
                     {p.is_low_stock
                       ? <span className="inline-block bg-red-100 text-red-700 rounded-full px-2 py-0.5 text-xs font-medium">{p.stock_display}</span>
                       : <span className="text-xs text-slate-500 dark:text-slate-400">{p.stock_display}</span>}
+                    {Number(p.pending_entry_qty) > 0 && (
+                      <div className="mt-0.5"><span className="inline-block bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300 rounded-full px-2 py-0.5 text-[11px] font-medium">pend. {Number(p.pending_entry_qty)}</span></div>
+                    )}
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2 mt-2">
+                  {can("productos.editar") && <button onClick={() => receiveStock(p)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-300 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-500/25">➕ Ingresar</button>}
                   {can("productos.etiquetar") && <button onClick={() => setLabeling(p)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-indigo-50 dark:bg-indigo-500/15 border border-indigo-300 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-500/25">Etiqueta</button>}
                   {can("inventario.ajustar") && <Link to={`/productos/${p.id}/inventario`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-teal-50 dark:bg-teal-500/15 border border-teal-300 dark:border-teal-500/30 text-teal-700 dark:text-teal-300 hover:bg-teal-100 dark:hover:bg-teal-500/25">Inventario</Link>}
                   {can("auditoria.ver") && <Link to={historyLink(p.id)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-violet-50 dark:bg-violet-500/15 border border-violet-300 dark:border-violet-500/30 text-violet-700 dark:text-violet-300 hover:bg-violet-100 dark:hover:bg-violet-500/25">Historial</Link>}
@@ -1310,9 +1335,13 @@ export default function ProductList() {
                   {p.is_low_stock
                     ? <span className="inline-block bg-red-100 text-red-700 rounded-full px-2 py-0.5 text-xs font-medium">{p.stock_display}</span>
                     : <span className="font-medium text-slate-700 dark:text-slate-200">{p.stock_display}</span>}
+                  {Number(p.pending_entry_qty) > 0 && (
+                    <div className="mt-0.5"><span title="Entró pero falta asignarlo a un proveedor. Usá 'Registrar entrada'." className="inline-block bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300 rounded-full px-2 py-0.5 text-[11px] font-medium">pend. {Number(p.pending_entry_qty)}</span></div>
+                  )}
                 </td>
                 <td className="px-4 py-2 text-right whitespace-nowrap">
                   <div className="inline-flex flex-wrap gap-1.5 justify-end">
+                  {can("productos.editar") && <button onClick={() => receiveStock(p)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-300 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-500/25" title="Ingresar mercadería que llegó: suma al stock y queda pendiente de asignar a proveedor">➕ Ingresar</button>}
                   {can("productos.etiquetar") && <button onClick={() => setLabeling(p)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-indigo-50 dark:bg-indigo-500/15 border border-indigo-300 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-500/25" title="Imprimir etiqueta con código de barras (Zebra)">Etiqueta</button>}
                   {can("productos.etiquetar") && <button onClick={() => setPriceTag({ single: p })} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-amber-50 dark:bg-amber-500/15 border border-amber-300 dark:border-amber-500/30 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-500/25" title="Imprimir etiqueta de precio para estante">Etiq. precio</button>}
                   {can("inventario.ajustar") && <Link to={`/productos/${p.id}/inventario`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-teal-50 dark:bg-teal-500/15 border border-teal-300 dark:border-teal-500/30 text-teal-700 dark:text-teal-300 hover:bg-teal-100 dark:hover:bg-teal-500/25">Inventario</Link>}

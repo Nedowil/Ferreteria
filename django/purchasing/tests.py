@@ -8,7 +8,8 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 
 from core.models import Branch
-from inventory.models import Product
+from inventory.models import InventoryMovement, Product
+from inventory.services import apply_movement
 from partners.models import Supplier
 from .models import Purchase
 from .services import (
@@ -132,7 +133,10 @@ class PurchaseServiceTests(TestCase):
 
 
 class QuickEntryApiTests(TestCase):
-    """Entrada rápida de mercadería (/api/purchases/quick-entry/)."""
+    """Flujo de entrada de mercadería:
+    1) se ingresa el stock (alta con stock / 'ingresar stock') -> sube stock + queda pendiente
+    2) 'Registrar entrada' asigna proveedor + crédito SIN volver a tocar el stock, y limpia lo pendiente.
+    """
 
     def setUp(self):
         User = get_user_model()
@@ -140,9 +144,11 @@ class QuickEntryApiTests(TestCase):
         self.admin = User.objects.create_user(
             username="a", email="a@test.com", password="x123", is_superuser=True
         )
-        self.prod = Product.objects.create(
-            sku="A-1", name="Clavo", tax_type="iva", stock=0, purchase_price=0
-        )
+        # Producto que YA existe con 160 en stock (como el tornillo del ejemplo).
+        self.prod = Product.objects.create(sku="A-1", name="Tornillo", tax_type="iva",
+                                            purchase_price=0)
+        apply_movement(self.prod, InventoryMovement.ENTRADA, Decimal("160"),
+                       reason="stock previo", branch=self.branch)
 
     def _client(self):
         c = APIClient()
@@ -151,26 +157,52 @@ class QuickEntryApiTests(TestCase):
                       HTTP_X_BRANCH_ID=str(self.branch.id))
         return c
 
-    def test_crea_proveedor_sube_stock_y_queda_al_credito(self):
+    def test_ingresar_stock_sube_y_deja_pendiente(self):
         c = self._client()
+        r = c.post(f"/api/inventory/products/{self.prod.id}/receive-stock/",
+                   {"quantity": "100"}, format="json")
+        self.assertEqual(r.status_code, 200, r.content)
+        self.prod.refresh_from_db()
+        self.assertEqual(self.prod.stock, Decimal("260"))            # 160 + 100
+        self.assertEqual(self.prod.pending_entry_qty, Decimal("100"))  # pendiente de asignar
+
+    def test_entrada_registra_credito_sin_tocar_stock_y_limpia_pendiente(self):
+        c = self._client()
+        # Primero se ingresa la mercadería (100): stock 160 -> 260, pendiente 100.
+        c.post(f"/api/inventory/products/{self.prod.id}/receive-stock/", {"quantity": "100"}, format="json")
+        self.prod.refresh_from_db()
+        stock_antes = self.prod.stock
+        # Ahora se registra la entrada al crédito con un proveedor nuevo.
         r = c.post("/api/purchases/quick-entry/", {
             "new_supplier": {"name": "Ferretera Nueva", "phone": "5555-0000"},
             "payment_status": "al_credito",
-            "items": [{"product_id": self.prod.id, "quantity": "10", "unit_cost": "7.50"}],
+            "items": [{"product_id": self.prod.id, "quantity": "100", "unit_cost": "7.50"}],
         }, format="json")
         self.assertEqual(r.status_code, 201, r.content)
         sup = Supplier.objects.get(name="Ferretera Nueva")
         self.prod.refresh_from_db()
-        self.assertEqual(self.prod.stock, Decimal("10"))            # stock subió
+        self.assertEqual(self.prod.stock, stock_antes)               # NO volvió a sumar (sigue 260)
+        self.assertEqual(self.prod.stock, Decimal("260"))
         self.assertEqual(self.prod.purchase_price, Decimal("7.50"))  # costo actualizado
-        self.assertEqual(self.prod.supplier_id, sup.id)             # proveedor habitual guardado
+        self.assertEqual(self.prod.supplier_id, sup.id)             # proveedor habitual
+        self.assertEqual(self.prod.pending_entry_qty, Decimal("0"))  # pendiente limpiado
         body = r.json()
         self.assertEqual(body["status"], "recibida")
         self.assertEqual(body["payment_status"], "al_credito")
-        # Aparece en cuentas por pagar con saldo
+        # La deuda (100 x 7.50 = 750 + IVA) aparece en cuentas por pagar.
         pay = c.get("/api/purchases/payable/")
-        self.assertEqual(pay.status_code, 200)
         self.assertGreater(float(pay.json()["total_balance"]), 0)
+
+    def test_producto_nuevo_con_stock_queda_pendiente(self):
+        c = self._client()
+        r = c.post("/api/inventory/products/", {
+            "name": "Machete damasco", "sale_price": "90", "purchase_price": "0",
+            "initial_stock": "10", "stock_input_mode": "base", "tax_type": "iva",
+        }, format="json")
+        self.assertEqual(r.status_code, 201, r.content)
+        p = Product.objects.get(name="Machete damasco")
+        self.assertEqual(p.stock, Decimal("10"))
+        self.assertEqual(p.pending_entry_qty, Decimal("10"))  # queda pendiente de asignar
 
     def test_reusa_proveedor_existente_por_nombre_sin_duplicar(self):
         Supplier.objects.create(name="Ferretera Vieja")

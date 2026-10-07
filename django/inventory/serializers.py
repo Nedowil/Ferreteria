@@ -86,7 +86,7 @@ class ProductListSerializer(serializers.ModelSerializer):
             "tax_type", "sells_by_measure", "measure_step",
             "base_unit_label", "container_label", "container_factor", "container_price",
             "stock", "branch_stock", "ubicacion", "ubicacion_name", "supplier", "supplier_name",
-            "min_stock",
+            "min_stock", "pending_entry_qty",
             "stock_display", "is_low_stock", "active", "image", "presentations", "price_code",
         ]
 

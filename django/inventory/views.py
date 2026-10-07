@@ -1,6 +1,6 @@
 """API REST del módulo de inventario (Django REST Framework)."""
 
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from django.conf import settings
 from django.db.models import F
@@ -160,6 +160,7 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
         # El kardex (ver e insertar movimientos) es para quien gestiona
         # inventario, no para cualquiera que pueda ver productos.
         "movements": {"GET": "inventario.ajustar", "POST": "inventario.ajustar"},
+        "receive_stock": "productos.editar",
         "zebra_test": "configuracion.gestionar",
     }
     queryset = (
@@ -209,6 +210,10 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
                 reason="Stock inicial", user=self.request.user, branch=self.branch,
             )
             product.refresh_from_db()
+            # Producto nuevo = mercadería que entró: esa cantidad queda pendiente
+            # de asignar a un proveedor (para "Registrar entrada").
+            product.pending_entry_qty = qty
+            product.save(update_fields=["pending_entry_qty", "updated_at"])
 
     def perform_update(self, serializer):
         serializer.validated_data.pop("initial_stock", None)
@@ -229,6 +234,38 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
         instance.deleted_at = timezone.now()
         instance.active = False
         instance.save(update_fields=["deleted_at", "active", "updated_at"])
+
+    @action(detail=True, methods=["post"], url_path="receive-stock")
+    def receive_stock(self, request, pk=None):
+        """Ingresar mercadería que llegó de un producto que YA existe: suma al
+        stock físico y deja esa cantidad PENDIENTE de asignar a un proveedor
+        (para después registrarla al crédito en 'Registrar entrada'). La
+        cantidad se escribe una sola vez acá."""
+        product = self.get_object()
+        raw = request.data.get("quantity")
+        mode = request.data.get("input_mode", "base")
+        try:
+            qty = Decimal(str(raw))
+        except (TypeError, ValueError, InvalidOperation):
+            return Response({"detail": "Cantidad inválida."}, status=status.HTTP_400_BAD_REQUEST)
+        if qty <= 0:
+            return Response({"detail": "La cantidad debe ser mayor que cero."},
+                            status=status.HTTP_400_BAD_REQUEST)
+        base_qty = qty
+        if mode == "container" and product.container_factor:
+            base_qty = qty * product.container_factor
+        apply_movement(
+            product, InventoryMovement.ENTRADA, base_qty,
+            reason="Ingreso de mercadería (pendiente de proveedor)",
+            user=request.user, branch=self.branch,
+        )
+        product.refresh_from_db()
+        product.pending_entry_qty = (product.pending_entry_qty or Decimal("0")) + base_qty
+        product.save(update_fields=["pending_entry_qty", "updated_at"])
+        return Response({
+            "id": product.id, "stock": product.stock,
+            "pending_entry_qty": product.pending_entry_qty,
+        })
 
     # ---- Papelera de productos ----
 
