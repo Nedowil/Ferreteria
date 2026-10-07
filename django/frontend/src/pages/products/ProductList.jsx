@@ -893,6 +893,87 @@ function MergeProductsModal({ onClose, onDone }) {
   );
 }
 
+// Modal: INGRESAR mercadería que llegó de un producto que ya existe. Deja elegir
+// la UNIDAD en que entró (la base, el empaque/caja, o una presentación), convierte
+// a la unidad base, suma al stock y lo deja pendiente de asignar a un proveedor.
+function ReceiveStockModal({ product, onClose, onDone }) {
+  const p = product;
+  const base = p.base_unit_label || "unidad";
+  // Unidades disponibles para ESTE producto: base + empaque (si tiene) + presentaciones.
+  const options = [{ key: "base", label: base, factor: 1 }];
+  if (p.container_label && Number(p.container_factor) > 0) {
+    options.push({ key: "container", label: p.container_label, factor: Number(p.container_factor) });
+  }
+  (p.presentations || []).forEach((pr, i) => {
+    if (Number(pr.units_factor) > 0) options.push({ key: `pres-${i}`, label: pr.label, factor: Number(pr.units_factor) });
+  });
+
+  const [qty, setQty] = useState("");
+  const [unitKey, setUnitKey] = useState("base");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const sel = options.find((o) => o.key === unitKey) || options[0];
+  const n = Number(String(qty).replace(",", "."));
+  const baseQty = Number.isFinite(n) ? Math.round(n * sel.factor * 10000) / 10000 : 0;
+
+  const submit = async () => {
+    setErr("");
+    if (!Number.isFinite(n) || n <= 0) { setErr("Poné una cantidad mayor que cero."); return; }
+    setBusy(true);
+    try {
+      const { data } = await api.post(`/inventory/products/${p.id}/receive-stock/`, { quantity: baseQty, input_mode: "base" });
+      toast.success(`Ingresaste ${n} ${sel.label}${sel.key !== "base" ? ` = ${baseQty} ${base}` : ""}. Stock: ${Number(data.stock)}. Queda pendiente de asignar a proveedor.`);
+      onDone();
+    } catch (e) {
+      setErr(e.response?.data?.detail || "No se pudo ingresar el stock.");
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-gradient-to-r from-emerald-600 to-green-700 text-white px-5 py-4">
+          <div className="text-lg font-bold">➕ Ingresar mercadería</div>
+          <div className="text-xs text-emerald-100 break-words">{p.name}</div>
+        </div>
+        <div className="p-5 space-y-4">
+          {err && <ErrorBanner message={err} />}
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">¿Cuánto entró?</label>
+              <input autoFocus type="number" step="any" min="0" value={qty} onChange={(e) => setQty(e.target.value)}
+                     onKeyDown={(e) => e.key === "Enter" && submit()}
+                     className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 outline-none focus:ring-2 focus:ring-emerald-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Unidad</label>
+              <select value={unitKey} onChange={(e) => setUnitKey(e.target.value)}
+                      className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 outline-none focus:ring-2 focus:ring-emerald-500">
+                {options.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+              </select>
+            </div>
+          </div>
+          {sel.key !== "base" && n > 0 && (
+            <p className="text-xs text-slate-500 dark:text-slate-400">= <b>{baseQty}</b> {base} &nbsp;(1 {sel.label} = {sel.factor} {base})</p>
+          )}
+          {options.length === 1 && (
+            <p className="text-[11px] text-slate-400">Este producto solo tiene la unidad «{base}». Para ingresar por caja/empaque, agregá el empaque o una presentación en la ficha del producto.</p>
+          )}
+          <p className="text-[11px] text-slate-400">Suma al stock y queda <b>pendiente de asignar a un proveedor</b> (después, con «Registrar entrada»).</p>
+          <div className="flex gap-2">
+            <button onClick={onClose} className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition">Cancelar</button>
+            <button onClick={submit} disabled={busy || !(n > 0)}
+                    className="flex-1 bg-gradient-to-r from-emerald-600 to-green-700 text-white rounded-lg py-2.5 text-sm font-semibold shadow hover:from-emerald-700 hover:to-green-800 transition disabled:opacity-50">
+              {busy ? "Ingresando…" : "➕ Ingresar"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Modal: registrar la ENTRADA de mercadería que llegó. Desde los productos
 // marcados, elegís (o creás) el proveedor; registra la compra Y la recibe en un
 // solo paso (sube el stock + actualiza el costo). Por defecto queda al crédito
@@ -1042,6 +1123,7 @@ export default function ProductList() {
   const [ubicaciones, setUbicaciones] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [entryOpen, setEntryOpen] = useState(false); // modal de entrada de mercadería
+  const [receiveFor, setReceiveFor] = useState(null); // producto al que se le ingresa stock (modal)
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
@@ -1087,13 +1169,13 @@ export default function ProductList() {
     if (!autoRefreshOn) return undefined; // ya pasó la fecha: sin auto-refresh
     const t = setInterval(() => {
       if (document.hidden) return;
-      if (labeling || priceTag || bulkLoc || entryOpen) return;
+      if (labeling || priceTag || bulkLoc || entryOpen || receiveFor) return;
       if (searchRef.current && document.activeElement === searchRef.current) return;
       load(filters, page, { silent: true });
     }, 7000);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters, page, labeling, priceTag, bulkLoc, entryOpen, autoRefreshOn]);
+  }, [filters, page, labeling, priceTag, bulkLoc, entryOpen, receiveFor, autoRefreshOn]);
 
   const applyFilters = (e) => { e.preventDefault(); setPage(1); load(filters, 1); };
 
@@ -1126,23 +1208,11 @@ export default function ProductList() {
     load();
   };
 
-  // Ingresar mercadería que llegó de un producto que YA existe: suma al stock y
-  // la deja pendiente de asignar a un proveedor (después, "Registrar entrada").
-  // La cantidad se escribe una sola vez acá.
-  const receiveStock = async (p) => {
-    const unidad = p.base_unit_label || "unidad";
-    const raw = await dialog.prompt(`¿Cuántos ENTRARON de "${p.name}"? (en ${unidad})`, "", { okText: "Ingresar" });
-    if (raw === null) return;
-    const qty = Number(String(raw).replace(",", "."));
-    if (!Number.isFinite(qty) || qty <= 0) { toast.error("Poné una cantidad mayor que cero."); return; }
-    try {
-      const { data } = await api.post(`/inventory/products/${p.id}/receive-stock/`, { quantity: qty });
-      toast.success(`Ingresaste ${qty} ${unidad}. Stock ahora: ${Number(data.stock)}. Queda pendiente de asignar a un proveedor (Registrar entrada).`);
-      load(filters, page, { silent: true });
-    } catch (e) {
-      toast.error(e.response?.data?.detail || "No se pudo ingresar el stock.");
-    }
-  };
+  // Ingresar mercadería que llegó de un producto que YA existe: abre un modal
+  // donde se elige la UNIDAD (base, empaque/caja o presentación). Suma al stock
+  // y la deja pendiente de asignar a un proveedor. La cantidad se escribe una
+  // sola vez acá.
+  const receiveStock = (p) => setReceiveFor(p);
 
 
   const exportExcel = async () => {
@@ -1376,6 +1446,13 @@ export default function ProductList() {
                     onDone={() => { setBulkLoc(null); setSelected(new Set()); load(); }} />}
       {restoreLoc && <RestoreLocationsModal onClose={() => setRestoreLoc(false)} onDone={() => load()} />}
       {mergeOpen && <MergeProductsModal onClose={() => setMergeOpen(false)} onDone={() => { setMergeOpen(false); setSelected(new Set()); load(); }} />}
+      {receiveFor && (
+        <ReceiveStockModal
+          product={receiveFor}
+          onClose={() => setReceiveFor(null)}
+          onDone={() => { setReceiveFor(null); load(filters, page, { silent: true }); }}
+        />
+      )}
       {entryOpen && (
         <StockEntryModal
           products={(data.results || []).filter((p) => selected.has(p.id))}
