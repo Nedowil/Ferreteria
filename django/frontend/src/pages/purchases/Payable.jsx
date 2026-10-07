@@ -60,6 +60,52 @@ function DuePill({ due }) {
   return <span className="text-slate-500 dark:text-slate-400 text-xs">{due}</span>;
 }
 
+// Tarjeta de una cuenta por pagar: riel de color (vencida/por vencer/al día),
+// avatar, folio como chip, saldo grande y barra de avance de pago.
+function AccountCard({ p }) {
+  const st = dueState(p.due_date);
+  const rail = st?.kind === "vencida" ? "#e11d48" : st?.kind === "pronto" ? "#f59e0b" : "#3b82f6";
+  const t = Number(p.total) || 0, paid = Number(p.amount_paid) || 0;
+  const pct = t > 0 ? Math.min(100, Math.round((paid / t) * 100)) : 0;
+  return (
+    <div className="flex rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md transition overflow-hidden">
+      <div className="w-1.5 shrink-0" style={{ background: rail }} />
+      <div className="flex-1 p-4 sm:p-5 min-w-0">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <Avatar name={p.supplier_name} />
+            <div className="min-w-0">
+              <div className="font-semibold text-slate-800 dark:text-slate-100 truncate">{p.supplier_name}</div>
+              <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                <span className="font-mono text-[11px] bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 rounded px-1.5 py-0.5">{p.folio}</span>
+                <DuePill due={p.due_date} />
+              </div>
+            </div>
+          </div>
+          <div className="text-right shrink-0">
+            <div className="text-[11px] text-slate-400 uppercase tracking-wide">Saldo</div>
+            <div className="text-xl sm:text-2xl font-extrabold text-rose-600 dark:text-rose-400 tabular-nums leading-tight">{Q(p.balance)}</div>
+          </div>
+        </div>
+
+        <div className="mt-3">
+          <div className="flex justify-between text-[11px] text-slate-500 dark:text-slate-400 mb-1">
+            <span>Pagado <b className="tabular-nums">{Q(paid)}</b></span>
+            <span>{pct}% de <b className="tabular-nums">{Q(t)}</b></span>
+          </div>
+          <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
+            <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-green-600 transition-all" style={{ width: pct + "%" }} />
+          </div>
+        </div>
+
+        <div className="mt-3 flex items-center justify-end">
+          <Link to={`/compras/${p.id}`} className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold shadow-sm transition bg-blue-600 hover:bg-blue-700 text-white">💵 Abonar</Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Payable() {
   const [data, setData] = useState({ results: [], total_balance: 0, overdue_balance: 0, overdue_count: 0 });
   const [loaded, setLoaded] = useState(false);
@@ -125,73 +171,22 @@ export default function Payable() {
         {(filters.from || filters.to) && <button type="button" onClick={() => { setFilters({ from: "", to: "" }); setPage(1); api.get("/purchases/payable/", { params: { page: 1 } }).then((r) => { setData(r.data); setLoaded(true); }); }} className="text-sm text-slate-500 dark:text-slate-400 px-2 py-2 hover:underline">Limpiar</button>}
       </form>
 
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
-        {/* Móvil: tarjetas */}
-        <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-700">
-          {data.results.map((p) => (
-            <div key={p.id} className={"p-4" + (dueState(p.due_date)?.kind === "vencida" ? " bg-rose-50/40 dark:bg-rose-900/10" : "")}>
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <Avatar name={p.supplier_name} />
-                  <div className="min-w-0">
-                    <div className="font-medium text-slate-800 dark:text-slate-100 break-words">{p.supplier_name}</div>
-                    <div className="text-xs text-slate-400 font-mono">{p.folio}</div>
-                  </div>
-                </div>
-                <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold tabular-nums bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300 shrink-0">{Q(p.balance)}</span>
-              </div>
-              <div className="mt-2"><PayProgress paid={p.amount_paid} total={p.total} /></div>
-              <div className="flex items-center justify-between mt-2">
-                <DuePill due={p.due_date} />
-                <Link to={`/compras/${p.id}`} className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold shadow-sm transition bg-blue-600 hover:bg-blue-700 text-white">💵 Abonar</Link>
-              </div>
-            </div>
-          ))}
-          {!loaded && data.results.length === 0 && <div className="p-4"><SkeletonRows rows={5} cols={1} /></div>}
-          {loaded && data.results.length === 0 && <EmptyState icon="🎉" title="Sin cuentas por pagar" hint="No tenés saldos pendientes con proveedores." />}
+      {/* Lista de cuentas en TARJETAS (se ve más que una tabla plana) */}
+      {!loaded ? (
+        <div className="space-y-3">{[0, 1, 2].map((i) => <div key={i} className="h-28 rounded-2xl sk" />)}</div>
+      ) : data.results.length === 0 ? (
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
+          <EmptyState icon="🎉" title="Sin cuentas por pagar" hint="No tenés saldos pendientes con proveedores." />
         </div>
-
-        {/* Escritorio: tabla */}
-        <div className="hidden md:block overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-700 text-slate-100 text-left text-xs uppercase tracking-wide">
-            <tr><th className="px-4 py-3">Folio</th><th className="px-4 py-3">Proveedor</th><th className="px-4 py-3">Vence</th>
-                <th className="px-4 py-3">Pago</th><th className="px-4 py-3 text-center">Saldo</th><th className="px-4 py-3 text-right">Acción</th></tr>
-          </thead>
-          <tbody>
-            {data.results.map((p) => {
-              const vencida = dueState(p.due_date)?.kind === "vencida";
-              return (
-              <tr key={p.id} className={"border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700/70 transition" + (vencida ? " bg-rose-50/40 dark:bg-rose-900/10" : "")}>
-                <td className="px-4 py-3 pl-5 font-mono text-xs text-slate-500 dark:text-slate-400" style={{ borderLeft: "4px solid " + (vencida ? "#e11d48" : "transparent") }}>{p.folio}</td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <Avatar name={p.supplier_name} />
-                    <span className="font-semibold text-slate-800 dark:text-slate-100 truncate">{p.supplier_name}</span>
-                  </div>
-                </td>
-                <td className="px-4 py-3"><DuePill due={p.due_date} /></td>
-                <td className="px-4 py-3"><PayProgress paid={p.amount_paid} total={p.total} /></td>
-                <td className="px-4 py-3 text-center"><span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold tabular-nums bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">{Q(p.balance)}</span></td>
-                <td className="px-4 py-3 text-right"><Link to={`/compras/${p.id}`} className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold shadow-sm transition bg-blue-600 hover:bg-blue-700 text-white">💵 Abonar</Link></td>
-              </tr>
-              );
-            })}
-            {!loaded && data.results.length === 0 && <SkeletonRows rows={8} cols={6} />}
-            {loaded && data.results.length === 0 && <EmptyRow colSpan={6} icon="🎉" title="Sin cuentas por pagar" hint="No tenés saldos pendientes con proveedores." />}
-          </tbody>
-          {data.results.length > 0 && (
-            <tfoot>
-              <tr className="border-t-2 border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/40">
-                <td colSpan={4} className="px-4 py-3 text-right font-semibold text-slate-600 dark:text-slate-300">Total en esta página</td>
-                <td className="px-4 py-3 text-center"><span className="inline-flex items-center rounded-full px-3 py-1 text-sm font-extrabold tabular-nums bg-rose-600 text-white">{Q(data.results.reduce((a, p) => a + Number(p.balance || 0), 0))}</span></td>
-                <td></td>
-              </tr>
-            </tfoot>
-          )}
-        </table>
+      ) : (
+        <div className="space-y-3">
+          {data.results.map((p) => <AccountCard key={p.id} p={p} />)}
+          <div className="flex items-center justify-end gap-3 px-1 pt-1">
+            <span className="text-sm text-slate-500 dark:text-slate-400">Total en esta página</span>
+            <span className="inline-flex items-center rounded-full px-4 py-1.5 text-base font-extrabold tabular-nums bg-rose-600 text-white shadow">{Q(data.results.reduce((a, p) => a + Number(p.balance || 0), 0))}</span>
+          </div>
         </div>
-      </div>
+      )}
       <Pagination page={page} count={data.count} onPage={goPage} label="cuentas" />
     </div>
   );
