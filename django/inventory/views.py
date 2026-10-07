@@ -164,7 +164,7 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
     }
     queryset = (
         Product.objects.filter(deleted_at__isnull=True)
-        .select_related("category", "brand", "unit", "ubicacion")
+        .select_related("category", "brand", "unit", "ubicacion", "supplier")
         .prefetch_related("presentations", "stocks", "extra_barcodes")
         .order_by("-created_at")
     )
@@ -173,7 +173,7 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
     # códigos ADICIONALES heredados al combinar duplicados): así un código con
     # dígitos repetidos —o una etiqueta vieja— siempre encuentra su producto.
     exact_search_fields = ["barcode", "sku", "extra_barcodes__code"]
-    filterset_fields = ["category", "brand", "active", "ubicacion"]
+    filterset_fields = ["category", "brand", "active", "ubicacion", "supplier"]
     ordering_fields = ["name", "sale_price", "stock", "created_at", "times_sold"]
 
     def get_serializer_class(self):

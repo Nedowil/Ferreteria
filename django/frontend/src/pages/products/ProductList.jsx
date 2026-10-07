@@ -893,6 +893,138 @@ function MergeProductsModal({ onClose, onDone }) {
   );
 }
 
+// Modal: registrar la ENTRADA de mercadería que llegó. Desde los productos
+// marcados, elegís (o creás) el proveedor; registra la compra Y la recibe en un
+// solo paso (sube el stock + actualiza el costo). Por defecto queda al crédito
+// (suma a cuentas por pagar) y guarda el proveedor habitual en cada producto.
+function StockEntryModal({ products, suppliers, onSupplierCreated, onClose, onDone }) {
+  const [rows, setRows] = useState(
+    products.map((p) => ({
+      product_id: p.id,
+      name: p.name,
+      unit: p.base_unit_label || "unidad",
+      quantity: "1",
+      // El costo puede venir oculto (sin permiso de ver costo): queda vacío para escribir.
+      unit_cost: p.purchase_price === undefined || p.purchase_price === null ? "" : String(p.purchase_price),
+    }))
+  );
+  const [supplierName, setSupplierName] = useState("");
+  const [newNit, setNewNit] = useState("");
+  const [newPhone, setNewPhone] = useState("");
+  const [payment, setPayment] = useState("al_credito");
+  const [dueDate, setDueDate] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const trimmed = supplierName.trim();
+  const matched = suppliers.find((s) => s.name.toLowerCase() === trimmed.toLowerCase());
+  const isNew = trimmed.length > 0 && !matched;
+  const setRow = (i, field, val) => setRows((rs) => rs.map((r, j) => (j === i ? { ...r, [field]: val } : r)));
+  const total = rows.reduce((acc, r) => acc + (Number(r.quantity) || 0) * (Number(r.unit_cost) || 0), 0);
+
+  const submit = async () => {
+    setErr("");
+    if (!trimmed) { setErr("Escribí o elegí el proveedor."); return; }
+    const items = rows
+      .map((r) => ({ product_id: r.product_id, quantity: Number(r.quantity) || 0, unit_cost: Number(r.unit_cost) || 0 }))
+      .filter((it) => it.quantity > 0);
+    if (items.length === 0) { setErr("Poné una cantidad mayor que cero en al menos un producto."); return; }
+    const payload = { items, payment_status: payment, due_date: payment === "al_credito" && dueDate ? dueDate : null };
+    if (matched) payload.supplier_id = matched.id;
+    else payload.new_supplier = { name: trimmed, tax_id: newNit, phone: newPhone };
+    setBusy(true);
+    try {
+      const { data } = await api.post("/purchases/quick-entry/", payload);
+      if (isNew && data.supplier) onSupplierCreated({ id: data.supplier, name: data.supplier_name || trimmed });
+      toast.success(`Entrada registrada: ${items.length} producto(s). El stock ya subió${payment === "al_credito" ? " y quedó en cuentas por pagar" : ""}.`);
+      onDone();
+    } catch (e) {
+      setErr(e.response?.data?.detail || "No se pudo registrar la entrada.");
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden max-h-[92vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-gradient-to-r from-emerald-600 to-green-700 text-white px-5 py-4">
+          <div className="text-lg font-bold">📥 Registrar entrada de mercadería</div>
+          <div className="text-xs text-emerald-100">{products.length} producto(s) · sube el stock y registra la compra</div>
+        </div>
+        <div className="p-5 space-y-4 overflow-y-auto">
+          {err && <ErrorBanner message={err} />}
+          {products.length === 0 ? (
+            <p className="text-sm text-amber-600">Los productos que marcaste no están en esta página. Cerrá, volvé a marcarlos en la página donde aparecen y registrá la entrada.</p>
+          ) : (
+          <>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Proveedor</label>
+            <input list="entry-suppliers" value={supplierName} onChange={(e) => setSupplierName(e.target.value)}
+                   placeholder="Escribí el nombre (si no existe, se crea)"
+                   className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 outline-none focus:ring-2 focus:ring-emerald-500" />
+            <datalist id="entry-suppliers">
+              {suppliers.map((s) => <option key={s.id} value={s.name} />)}
+            </datalist>
+            {matched && <p className="text-xs text-emerald-600 mt-1">✓ Proveedor existente.</p>}
+            {isNew && (
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <p className="col-span-2 text-xs text-amber-600">Se creará el proveedor «{trimmed}».</p>
+                <input value={newNit} onChange={(e) => setNewNit(e.target.value)} placeholder="NIT (opcional)"
+                       className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900" />
+                <input value={newPhone} onChange={(e) => setNewPhone(e.target.value)} placeholder="Teléfono (opcional)"
+                       className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900" />
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-100 dark:bg-slate-900/60 text-slate-500 dark:text-slate-400 text-left text-xs uppercase tracking-wide">
+                <tr><th className="px-3 py-2">Producto</th><th className="px-3 py-2 w-24">Cantidad</th><th className="px-3 py-2 w-28">Costo unit.</th></tr>
+              </thead>
+              <tbody>
+                {rows.map((r, i) => (
+                  <tr key={r.product_id} className="border-t border-slate-100 dark:border-slate-700">
+                    <td className="px-3 py-2"><div className="font-medium text-slate-800 dark:text-slate-100">{r.name}</div><div className="text-[11px] text-slate-400">{r.unit}</div></td>
+                    <td className="px-3 py-2"><input type="number" min="0" step="any" value={r.quantity} onChange={(e) => setRow(i, "quantity", e.target.value)} className="w-20 border border-slate-300 dark:border-slate-600 rounded px-2 py-1.5 text-sm bg-white dark:bg-slate-900 tabular-nums" /></td>
+                    <td className="px-3 py-2"><input type="number" min="0" step="any" value={r.unit_cost} onChange={(e) => setRow(i, "unit_cost", e.target.value)} placeholder="0.00" className="w-24 border border-slate-300 dark:border-slate-600 rounded px-2 py-1.5 text-sm bg-white dark:bg-slate-900 tabular-nums" /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Pago:</span>
+            <label className="flex items-center gap-1.5 text-sm"><input type="radio" name="entry-pay" checked={payment === "al_credito"} onChange={() => setPayment("al_credito")} /> Al crédito</label>
+            <label className="flex items-center gap-1.5 text-sm"><input type="radio" name="entry-pay" checked={payment === "pagada"} onChange={() => setPayment("pagada")} /> Contado</label>
+            {payment === "al_credito" && (
+              <label className="flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-300">Vence:
+                <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm bg-white dark:bg-slate-900" />
+              </label>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-slate-500 dark:text-slate-400">Total aprox. (sin IVA)</span>
+            <span className="font-bold text-slate-800 dark:text-slate-100 tabular-nums">Q{total.toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          </div>
+          <p className="text-[11px] text-slate-400">El IVA se calcula automáticamente. El proveedor queda guardado como <b>habitual</b> en cada producto.</p>
+          </>
+          )}
+        </div>
+
+        <div className="p-5 pt-0 flex gap-2">
+          <button onClick={onClose} className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition">Cancelar</button>
+          <button onClick={submit} disabled={busy || products.length === 0}
+                  className="flex-1 bg-gradient-to-r from-emerald-600 to-green-700 text-white rounded-lg py-2.5 text-sm font-semibold shadow hover:from-emerald-700 hover:to-green-800 transition disabled:opacity-50">
+            {busy ? "Registrando…" : "📥 Registrar entrada"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ProductList() {
   const [searchParams] = useSearchParams();
   const [data, setData] = useState({ results: [], count: 0 });
@@ -900,11 +1032,13 @@ export default function ProductList() {
   // un producto top o la lista de "por reponer").
   const [filters, setFilters] = useState({
     search: searchParams.get("search") || "",
-    brand: "", ubicacion: "",
+    brand: "", ubicacion: "", supplier: "",
     low_stock: searchParams.get("low_stock") === "1",
   });
   const [brands, setBrands] = useState([]);
   const [ubicaciones, setUbicaciones] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
+  const [entryOpen, setEntryOpen] = useState(false); // modal de entrada de mercadería
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
@@ -920,6 +1054,7 @@ export default function ProductList() {
   useEffect(() => {
     api.get("/inventory/brands/?page_size=200").then((r) => setBrands(r.data.results || r.data));
     api.get("/inventory/locations/?page_size=200").then((r) => setUbicaciones(r.data.results || r.data)).catch(() => {});
+    if (can("compras.crear")) api.get("/suppliers/?page_size=200").then((r) => setSuppliers(r.data.results || r.data)).catch(() => {});
     api.get("/company-settings/").then((r) => setCompanyName(r.data.commercial_name || "Ferretería Central")).catch(() => {});
   }, []);
 
@@ -929,6 +1064,7 @@ export default function ProductList() {
     if (f.search) params.search = f.search;
     if (f.brand) params.brand = f.brand;
     if (f.ubicacion) params.ubicacion = f.ubicacion;
+    if (f.supplier) params.supplier = f.supplier;
     if (f.low_stock) params.low_stock = 1;
     api.get("/inventory/products/", { params })
       .then((r) => setData(r.data))
@@ -948,13 +1084,13 @@ export default function ProductList() {
     if (!autoRefreshOn) return undefined; // ya pasó la fecha: sin auto-refresh
     const t = setInterval(() => {
       if (document.hidden) return;
-      if (labeling || priceTag || bulkLoc) return;
+      if (labeling || priceTag || bulkLoc || entryOpen) return;
       if (searchRef.current && document.activeElement === searchRef.current) return;
       load(filters, page, { silent: true });
     }, 7000);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters, page, labeling, priceTag, bulkLoc, autoRefreshOn]);
+  }, [filters, page, labeling, priceTag, bulkLoc, entryOpen, autoRefreshOn]);
 
   const applyFilters = (e) => { e.preventDefault(); setPage(1); load(filters, 1); };
 
@@ -1060,6 +1196,15 @@ export default function ProductList() {
           <option value="">Todas las ubicaciones</option>
           {ubicaciones.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
         </select>
+        {can("compras.crear") && suppliers.length > 0 && (
+          <select value={filters.supplier}
+                  onChange={(e) => { const next = { ...filters, supplier: e.target.value }; setFilters(next); setPage(1); load(next, 1); }}
+                  title="Filtrar por proveedor habitual (a quién se le compra)"
+                  className="border border-slate-300 dark:border-slate-600 rounded px-2 py-2 text-sm">
+            <option value="">Todos los proveedores</option>
+            {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        )}
         <label className="flex items-center gap-1 text-sm">
           <input type="checkbox" checked={filters.low_stock}
                  onChange={(e) => setFilters({ ...filters, low_stock: e.target.checked })} /> Stock bajo
@@ -1074,6 +1219,13 @@ export default function ProductList() {
             <button onClick={() => setBulkLoc({ ids: [...selected] })}
                     className="bg-white text-teal-700 rounded-lg px-3 py-1.5 text-sm font-semibold hover:bg-teal-50 transition">
               📍 Asignar ubicación
+            </button>
+          )}
+          {can("compras.crear") && can("compras.recibir") && (
+            <button onClick={() => setEntryOpen(true)}
+                    title="Registrar que entró esta mercadería: elegís el proveedor, sube el stock y queda en cuentas por pagar"
+                    className="bg-white text-emerald-700 rounded-lg px-3 py-1.5 text-sm font-semibold hover:bg-emerald-50 transition">
+              📥 Registrar entrada
             </button>
           )}
           <button onClick={() => setSelected(new Set())} className="text-teal-100 hover:text-white text-sm ml-auto">Limpiar selección</button>
@@ -1195,6 +1347,15 @@ export default function ProductList() {
                     onDone={() => { setBulkLoc(null); setSelected(new Set()); load(); }} />}
       {restoreLoc && <RestoreLocationsModal onClose={() => setRestoreLoc(false)} onDone={() => load()} />}
       {mergeOpen && <MergeProductsModal onClose={() => setMergeOpen(false)} onDone={() => { setMergeOpen(false); setSelected(new Set()); load(); }} />}
+      {entryOpen && (
+        <StockEntryModal
+          products={(data.results || []).filter((p) => selected.has(p.id))}
+          suppliers={suppliers}
+          onSupplierCreated={(s) => setSuppliers((prev) => [...prev, s].sort((a, b) => a.name.localeCompare(b.name)))}
+          onClose={() => setEntryOpen(false)}
+          onDone={() => { setEntryOpen(false); setSelected(new Set()); load(); }}
+        />
+      )}
     </div>
   );
 }

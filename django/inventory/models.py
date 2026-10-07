@@ -114,6 +114,13 @@ class Product(models.Model):
         Ubicacion, on_delete=models.SET_NULL, null=True, blank=True, related_name="products",
         verbose_name="ubicación",
     )
+    # Proveedor habitual: a quién se le compra normalmente este producto. Se
+    # guarda para tener control de "qué le compro a quién" y para autollenar la
+    # próxima entrada de mercadería. Se asigna al registrar una entrada/compra.
+    supplier = models.ForeignKey(
+        "partners.Supplier", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="products", verbose_name="proveedor habitual",
+    )
 
     # Unidad base: la más pequeña en que se mide el stock (libra, onza, metro...)
     base_unit_label = models.CharField("unidad base", max_length=30, default="unidad")

@@ -73,6 +73,7 @@ class ProductListSerializer(serializers.ModelSerializer):
     is_low_stock = serializers.BooleanField(read_only=True)
     branch_stock = serializers.SerializerMethodField()
     ubicacion_name = serializers.CharField(source="ubicacion.name", read_only=True, default=None)
+    supplier_name = serializers.CharField(source="supplier.name", read_only=True, default=None)
     presentations = ProductPresentationSerializer(many=True, read_only=True)
     price_code = serializers.SerializerMethodField()
     barcodes = serializers.SerializerMethodField()
@@ -84,7 +85,8 @@ class ProductListSerializer(serializers.ModelSerializer):
             "purchase_price", "sale_price", "wholesale_price", "wholesale_min_quantity",
             "tax_type", "sells_by_measure", "measure_step",
             "base_unit_label", "container_label", "container_factor", "container_price",
-            "stock", "branch_stock", "ubicacion", "ubicacion_name", "min_stock",
+            "stock", "branch_stock", "ubicacion", "ubicacion_name", "supplier", "supplier_name",
+            "min_stock",
             "stock_display", "is_low_stock", "active", "image", "presentations", "price_code",
         ]
 
@@ -172,13 +174,14 @@ class ProductSerializer(serializers.ModelSerializer):
         choices=["base", "container"], required=False, write_only=True, default="base"
     )
     ubicacion_name = serializers.CharField(source="ubicacion.name", read_only=True, default=None)
+    supplier_name = serializers.CharField(source="supplier.name", read_only=True, default=None)
 
     class Meta:
         model = Product
         fields = [
             "id", "sku", "barcode", "name", "description",
             "category", "brand", "unit", "ubicacion", "category_name", "brand_name", "unit_name",
-            "ubicacion_name",
+            "ubicacion_name", "supplier", "supplier_name",
             "base_unit_label", "container_label", "container_factor", "container_price",
             "tax_type", "purchase_price", "sale_price",
             "wholesale_price", "wholesale_min_quantity", "container_wholesale_price",

@@ -3,7 +3,9 @@
 from datetime import date
 from decimal import Decimal
 
+from django.contrib.auth import get_user_model
 from django.test import TestCase
+from rest_framework.test import APIClient
 
 from core.models import Branch
 from inventory.models import Product
@@ -127,3 +129,62 @@ class PurchaseServiceTests(TestCase):
                              [{"product_id": self.p_iva.id, "quantity": "1", "unit_cost": "1"}], branch=self.branch)
         self.assertEqual(p1.folio, "C-000001")
         self.assertEqual(p2.folio, "C-000002")
+
+
+class QuickEntryApiTests(TestCase):
+    """Entrada rápida de mercadería (/api/purchases/quick-entry/)."""
+
+    def setUp(self):
+        User = get_user_model()
+        self.branch = Branch.objects.create(name="Matriz", code="M", is_main=True)
+        self.admin = User.objects.create_user(
+            username="a", email="a@test.com", password="x123", is_superuser=True
+        )
+        self.prod = Product.objects.create(
+            sku="A-1", name="Clavo", tax_type="iva", stock=0, purchase_price=0
+        )
+
+    def _client(self):
+        c = APIClient()
+        r = c.post("/api/auth/token/", {"email": "a@test.com", "password": "x123"}, format="json")
+        c.credentials(HTTP_AUTHORIZATION=f"Bearer {r.json()['access']}",
+                      HTTP_X_BRANCH_ID=str(self.branch.id))
+        return c
+
+    def test_crea_proveedor_sube_stock_y_queda_al_credito(self):
+        c = self._client()
+        r = c.post("/api/purchases/quick-entry/", {
+            "new_supplier": {"name": "Ferretera Nueva", "phone": "5555-0000"},
+            "payment_status": "al_credito",
+            "items": [{"product_id": self.prod.id, "quantity": "10", "unit_cost": "7.50"}],
+        }, format="json")
+        self.assertEqual(r.status_code, 201, r.content)
+        sup = Supplier.objects.get(name="Ferretera Nueva")
+        self.prod.refresh_from_db()
+        self.assertEqual(self.prod.stock, Decimal("10"))            # stock subió
+        self.assertEqual(self.prod.purchase_price, Decimal("7.50"))  # costo actualizado
+        self.assertEqual(self.prod.supplier_id, sup.id)             # proveedor habitual guardado
+        body = r.json()
+        self.assertEqual(body["status"], "recibida")
+        self.assertEqual(body["payment_status"], "al_credito")
+        # Aparece en cuentas por pagar con saldo
+        pay = c.get("/api/purchases/payable/")
+        self.assertEqual(pay.status_code, 200)
+        self.assertGreater(float(pay.json()["total_balance"]), 0)
+
+    def test_reusa_proveedor_existente_por_nombre_sin_duplicar(self):
+        Supplier.objects.create(name="Ferretera Vieja")
+        c = self._client()
+        r = c.post("/api/purchases/quick-entry/", {
+            "new_supplier": {"name": "ferretera vieja"},
+            "items": [{"product_id": self.prod.id, "quantity": "2", "unit_cost": "5"}],
+        }, format="json")
+        self.assertEqual(r.status_code, 201, r.content)
+        self.assertEqual(Supplier.objects.filter(name__iexact="ferretera vieja").count(), 1)
+
+    def test_sin_proveedor_da_error(self):
+        c = self._client()
+        r = c.post("/api/purchases/quick-entry/", {
+            "items": [{"product_id": self.prod.id, "quantity": "1", "unit_cost": "1"}],
+        }, format="json")
+        self.assertEqual(r.status_code, 400)

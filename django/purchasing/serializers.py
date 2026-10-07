@@ -89,6 +89,46 @@ class PurchaseWriteSerializer(serializers.Serializer):
         return value
 
 
+class NewSupplierSerializer(serializers.Serializer):
+    """Datos mínimos para crear un proveedor al vuelo desde la entrada rápida."""
+    name = serializers.CharField(max_length=255)
+    tax_id = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    phone = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+
+class QuickEntryWriteSerializer(serializers.Serializer):
+    """Entrada rápida de mercadería desde la lista de productos.
+
+    Registra la compra Y la recibe en un solo paso (sube stock + actualiza el
+    costo). El proveedor puede ser uno existente (supplier_id) o uno nuevo
+    (new_supplier). Por defecto queda al crédito.
+    """
+    supplier_id = serializers.IntegerField(required=False, allow_null=True)
+    new_supplier = NewSupplierSerializer(required=False)
+    payment_status = serializers.ChoiceField(
+        choices=[c[0] for c in Purchase.PAY_CHOICES], required=False, default=Purchase.PAY_CREDITO
+    )
+    due_date = serializers.DateField(required=False, allow_null=True)
+    invoice_number = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    notes = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    # Guardar el proveedor como "proveedor habitual" en cada producto (control).
+    set_product_supplier = serializers.BooleanField(required=False, default=True)
+    items = PurchaseItemWriteSerializer(many=True)
+
+    def validate_items(self, value):
+        if not value:
+            raise serializers.ValidationError("Agregá al menos un producto.")
+        return value
+
+    def validate(self, attrs):
+        has_new = bool(attrs.get("new_supplier") and (attrs["new_supplier"].get("name") or "").strip())
+        if not attrs.get("supplier_id") and not has_new:
+            raise serializers.ValidationError(
+                "Elegí un proveedor existente o escribí el nombre de uno nuevo."
+            )
+        return attrs
+
+
 class PaymentWriteSerializer(serializers.Serializer):
     amount = RoundingDecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0.01"))
     date = serializers.DateField(required=False)

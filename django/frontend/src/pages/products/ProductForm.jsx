@@ -15,7 +15,7 @@ const EMPTY = {
   min_stock: "", sells_by_measure: false, measure_step: "",
   active: true, public_visible: true,
   initial_stock: "", stock_input_mode: "",
-  ubicacion: "",
+  ubicacion: "", supplier: "",
 };
 
 // La "Marca" se muestra en el formulario, el filtro y el menú. Para ocultarla
@@ -197,6 +197,7 @@ export default function ProductForm() {
   const [form, setForm] = useState(EMPTY);
   const [brands, setBrands] = useState([]);
   const [ubicaciones, setUbicaciones] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
   const [errors, setErrors] = useState({});
   const [busy, setBusy] = useState(false);
   const [dupes, setDupes] = useState([]);   // posibles duplicados por nombre parecido
@@ -216,6 +217,9 @@ export default function ProductForm() {
 
   useEffect(() => {
     api.get("/inventory/brands/?page_size=200").then((r) => setBrands(r.data.results || r.data));
+    // Proveedores para elegir el "proveedor habitual" del producto (a quién se
+    // le compra). Si no hay permiso de compras, queda vacío y no se muestra.
+    api.get("/suppliers/?page_size=200").then((r) => setSuppliers(r.data.results || r.data)).catch(() => {});
     // Ubicaciones ordenadas de la MÁS RECIENTE a la más antigua (id desc): así
     // la sección que se acaba de crear aparece de primero en la lista y no hay
     // que bajar hasta el final cuando ya existen muchas secciones.
@@ -388,7 +392,7 @@ export default function ProductForm() {
     // editar llega como URL o "" desde la API; enviarla como texto rompe el
     // ImageField ("no era un archivo"). Se omite siempre.
     delete payload.image;
-    ["category", "brand", "unit", "container_factor", "container_price", "wholesale_price",
+    ["category", "brand", "unit", "ubicacion", "supplier", "container_factor", "container_price", "wholesale_price",
      "wholesale_min_quantity", "container_wholesale_price", "measure_step",
      "container_label", "barcode", "contractor_price", "container_contractor_price"].forEach((k) => {
       if (payload[k] === "") payload[k] = null;
@@ -544,6 +548,14 @@ export default function ProductForm() {
           {SHOW_MARCA && (
             <div>
               <SelectField label="Marca" name="brand" form={form} onChange={set} options={brands} empty="— Sin marca —" />
+            </div>
+          )}
+          {suppliers.length > 0 && (
+            <div>
+              <SelectField label="Proveedor habitual" name="supplier" form={form} onChange={set} options={suppliers} empty="— Sin proveedor —" />
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                A quién se le compra normalmente. Se asigna solo al registrar una entrada de mercadería.
+              </p>
             </div>
           )}
         </div>

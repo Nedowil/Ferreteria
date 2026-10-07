@@ -17,6 +17,7 @@ from .serializers import (
     PurchaseListSerializer,
     PurchasePaymentSerializer,
     PurchaseWriteSerializer,
+    QuickEntryWriteSerializer,
 )
 from .services import (
     PurchaseError,
@@ -34,6 +35,7 @@ class PurchaseViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Mode
         "create": "compras.crear", "update": "compras.crear", "partial_update": "compras.crear",
         "destroy": "compras.cancelar", "cancel": "compras.cancelar",
         "receive": "compras.recibir",
+        "quick_entry": "compras.crear",
         "payments": {"GET": "compras.ver", "POST": "compras.crear"},
     }
     queryset = (
@@ -136,6 +138,69 @@ class PurchaseViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Mode
         except PurchaseError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(PurchasePaymentSerializer(payment).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=["post"], url_path="quick-entry")
+    def quick_entry(self, request):
+        """Entrada rápida de mercadería desde la lista de productos: resuelve
+        (o crea) el proveedor, registra la compra y la recibe en un solo paso
+        (sube stock + actualiza costo), y guarda el proveedor habitual en cada
+        producto. Por defecto queda al crédito (suma a cuentas por pagar)."""
+        from django.utils import timezone
+        from core.permissions import user_permission_codenames
+        from partners.models import Supplier
+        from inventory.models import Product
+
+        is_super = request.user.is_superuser
+        perms = user_permission_codenames(request.user)
+        # La entrada recibe la mercadería, así que también exige poder recibir.
+        if not is_super and "compras.recibir" not in perms:
+            return Response({"detail": "No tenés permiso para recibir mercadería."},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        ser = QuickEntryWriteSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        d = ser.validated_data
+
+        # Resolver el proveedor: existente, o reusar/crear uno por nombre.
+        if d.get("supplier_id"):
+            supplier = Supplier.objects.filter(pk=d["supplier_id"], deleted_at__isnull=True).first()
+            if not supplier:
+                return Response({"detail": "Proveedor inexistente."}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            ns = d["new_supplier"]
+            name = ns["name"].strip()
+            # Si ya existe uno con el mismo nombre, se reutiliza (evita duplicados).
+            supplier = Supplier.objects.filter(deleted_at__isnull=True, name__iexact=name).first()
+            if not supplier:
+                if not is_super and "proveedores.crear" not in perms:
+                    return Response({"detail": "No tenés permiso para crear proveedores."},
+                                    status=status.HTTP_403_FORBIDDEN)
+                supplier = Supplier.objects.create(
+                    name=name, tax_id=(ns.get("tax_id") or None), phone=(ns.get("phone") or None),
+                )
+
+        data = {
+            "supplier_id": supplier.pk,
+            "date": timezone.localdate(),
+            "invoice_number": d.get("invoice_number"),
+            "notes": d.get("notes"),
+            "payment_status": d.get("payment_status", Purchase.PAY_CREDITO),
+            "due_date": d.get("due_date"),
+        }
+        try:
+            purchase = create_purchase(data, d["items"], user=request.user, branch=self.branch)
+            purchase = receive_purchase(purchase, user=request.user)
+        except PurchaseError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Guardar el proveedor habitual en cada producto (control de "a quién le
+        # compro"). .update() es suficiente: no afecta el índice de búsqueda.
+        if d.get("set_product_supplier", True) and (is_super or "productos.editar" in perms):
+            pids = [it["product_id"] for it in d["items"]]
+            Product.objects.filter(pk__in=pids).update(supplier=supplier)
+
+        purchase = self.get_queryset().get(pk=purchase.pk)
+        return Response(PurchaseDetailSerializer(purchase).data, status=status.HTTP_201_CREATED)
 
     @action(detail=False, methods=["get"], url_path="payable")
     def payable(self, request):
