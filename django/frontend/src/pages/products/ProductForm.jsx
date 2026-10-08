@@ -92,10 +92,10 @@ function SearchPicker({ label, options, value, onChange, onCreated, canCreate,
       const { data } = await api.post(endpoint, { name });
       onCreated(data);
       pick(data.id);
-      toast.success(`${createWord[0].toUpperCase() + createWord.slice(1)} «${data.name}» creada.`);
+      toast.success(`Se creó «${data.name}».`);
     } catch (e) {
       const d = e.response?.data;
-      toast.error(d?.detail || (d && d.name && d.name[0]) || `No se pudo crear la ${createWord}.`);
+      toast.error(d?.detail || (d && d.name && d.name[0]) || `No se pudo crear ${createWord ? "la " + createWord : "el registro"}.`);
     } finally { setBusy(false); }
   };
 
@@ -647,12 +647,21 @@ export default function ProductForm() {
               />
             </div>
           )}
-          {suppliers.length > 0 && (
+          {(suppliers.length > 0 || can("proveedores.crear")) && (
             <div>
-              <SelectField label="Proveedor habitual" name="supplier" form={form} onChange={set} options={suppliers} empty="— Sin proveedor —" />
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                A quién se le compra normalmente. Se asigna solo al registrar una entrada de mercadería.
-              </p>
+              <SearchPicker
+                label="Proveedor habitual"
+                options={suppliers}
+                value={form.supplier}
+                onChange={(id) => set("supplier", id)}
+                onCreated={(s) => setSuppliers((prev) => [...prev, s].sort((a, c) => (a.name || "").localeCompare(c.name || "")))}
+                canCreate={can("proveedores.crear")}
+                endpoint="/suppliers/"
+                emptyLabel="— Sin proveedor —"
+                placeholder="Buscar proveedor…"
+                createWord="proveedor"
+                hint={<>A quién se le compra normalmente. Escribí para buscar{can("proveedores.crear") ? " o crear uno nuevo" : ""}.</>}
+              />
             </div>
           )}
         </div>
