@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import api from "../../api/client";
 import { dialog } from "../../components/Dialog";
 import { toast } from "../../components/Toast";
+import { useAuth } from "../../auth/AuthContext";
 
 const EMPTY = {
   sku: "", barcode: "", name: "", description: "",
@@ -58,6 +59,81 @@ function TextField({ label, name, form, errors, onChange, type = "text", hint, p
              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
       {hint && <p className="text-xs text-slate-400 mt-1">{hint}</p>}
       {errors[name] && <p className="text-red-600 text-xs mt-1">{String(errors[name])}</p>}
+    </div>
+  );
+}
+
+// Selector con BÚSQUEDA por nombre y creación al vuelo. Reemplaza el
+// desplegable nativo (que no deja buscar) por una lista filtrable; si lo que
+// escribís no existe, ofrece crear el registro ahí mismo (marca, sección…).
+function SearchPicker({ label, options, value, onChange, onCreated, canCreate,
+                        endpoint, emptyLabel, placeholder, createWord, hint, prepend = false }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [busy, setBusy] = useState(false);
+  const boxRef = useRef(null);
+  const selected = options.find((o) => String(o.id) === String(value));
+  const q = query.trim().toLowerCase();
+  const filtered = q ? options.filter((o) => (o.name || "").toLowerCase().includes(q)) : options;
+  const exact = options.find((o) => (o.name || "").trim().toLowerCase() === q);
+
+  useEffect(() => {
+    const onDoc = (e) => { if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  const pick = (id) => { onChange(id); setOpen(false); setQuery(""); };
+  const createAndPick = async () => {
+    const name = query.trim();
+    if (!name || busy) return;
+    setBusy(true);
+    try {
+      const { data } = await api.post(endpoint, { name });
+      onCreated(data);
+      pick(data.id);
+      toast.success(`${createWord[0].toUpperCase() + createWord.slice(1)} «${data.name}» creada.`);
+    } catch (e) {
+      const d = e.response?.data;
+      toast.error(d?.detail || (d && d.name && d.name[0]) || `No se pudo crear la ${createWord}.`);
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="relative" ref={boxRef}>
+      <label className="block text-sm font-medium mb-1">{label}</label>
+      <button type="button" onClick={() => setOpen((o) => !o)}
+              className="w-full flex items-center justify-between bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm text-left">
+        <span className={selected ? "text-slate-800 dark:text-slate-100" : "text-slate-400"}>{selected ? selected.name : emptyLabel}</span>
+        <span className="text-slate-400 text-xs">▾</span>
+      </button>
+      {open && (
+        <div className="absolute z-20 mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg">
+          <div className="p-2 border-b border-slate-100 dark:border-slate-700">
+            <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)}
+                   placeholder={placeholder}
+                   onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); if (q && !exact && canCreate) createAndPick(); else if (filtered[0]) pick(filtered[0].id); } }}
+                   className="w-full border border-slate-300 dark:border-slate-600 rounded px-2 py-1.5 text-sm bg-white dark:bg-slate-900 outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div className="max-h-56 overflow-y-auto py-1">
+            <button type="button" onClick={() => pick("")} className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-500">{emptyLabel}</button>
+            {filtered.map((o) => (
+              <button type="button" key={o.id} onClick={() => pick(o.id)}
+                      className={"w-full text-left px-3 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 " + (String(o.id) === String(value) ? "bg-blue-50 dark:bg-blue-900/20 font-medium text-blue-700 dark:text-blue-300" : "text-slate-700 dark:text-slate-200")}>
+                {o.name}
+              </button>
+            ))}
+            {q && !exact && canCreate && (
+              <button type="button" onClick={createAndPick} disabled={busy}
+                      className="w-full text-left px-3 py-2 text-sm text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 font-semibold border-t border-slate-100 dark:border-slate-700">
+                {busy ? "Creando…" : `➕ Crear ${createWord} «${query.trim()}»`}
+              </button>
+            )}
+            {q && filtered.length === 0 && !canCreate && <div className="px-3 py-2 text-xs text-slate-400">Sin resultados.</div>}
+          </div>
+        </div>
+      )}
+      {hint && <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{hint}</p>}
     </div>
   );
 }
@@ -194,6 +270,7 @@ export default function ProductForm() {
   const { id } = useParams();
   const navigate = useNavigate();
   const editing = Boolean(id);
+  const { can } = useAuth();
   const [form, setForm] = useState(EMPTY);
   const [brands, setBrands] = useState([]);
   const [ubicaciones, setUbicaciones] = useState([]);
@@ -538,16 +615,36 @@ export default function ProductForm() {
         </div>
         <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <SelectField label="Ubicación" name="ubicacion" form={form} onChange={set}
-                         options={ubicaciones} empty="— Sin ubicación —" />
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Pasillo/estante donde está el producto. Se administran en <b>Ubicaciones</b>.
-            </p>
+            <SearchPicker
+              label="Ubicación"
+              options={ubicaciones}
+              value={form.ubicacion}
+              onChange={(id) => set("ubicacion", id)}
+              onCreated={(u) => setUbicaciones((prev) => [u, ...prev])}
+              canCreate={can("catalogos.gestionar")}
+              endpoint="/inventory/locations/"
+              emptyLabel="— Sin ubicación —"
+              placeholder="Buscar sección/ubicación…"
+              createWord="sección"
+              hint={<>Pasillo/estante/sección donde está el producto. Escribí para buscar{can("catalogos.gestionar") ? " o crear una nueva" : ""}.</>}
+            />
           </div>
           {/* Marca al lado de Ubicación. Para ocultarla, poné SHOW_MARCA = false. */}
           {SHOW_MARCA && (
             <div>
-              <SelectField label="Marca" name="brand" form={form} onChange={set} options={brands} empty="— Sin marca —" />
+              <SearchPicker
+                label="Marca"
+                options={brands}
+                value={form.brand}
+                onChange={(id) => set("brand", id)}
+                onCreated={(b) => setBrands((prev) => [...prev, b].sort((a, c) => (a.name || "").localeCompare(c.name || "")))}
+                canCreate={can("catalogos.gestionar")}
+                endpoint="/inventory/brands/"
+                emptyLabel="— Sin marca —"
+                placeholder="Buscar marca…"
+                createWord="marca"
+                hint={<>De quién es: Bayer, Truper, Stanley… Escribí para buscar{can("catalogos.gestionar") ? " o crear una nueva" : ""}.</>}
+              />
             </div>
           )}
           {suppliers.length > 0 && (
