@@ -138,6 +138,68 @@ function SearchPicker({ label, options, value, onChange, onCreated, canCreate,
   );
 }
 
+// Combo para la UNIDAD BASE (texto libre: unidad, libra, metro…). Sugiere del
+// catálogo de unidades mientras escribís; si lo que ponés no existe, lo podés
+// guardar en el catálogo para la próxima (la abreviatura se deriva del nombre).
+function UnitBaseCombo({ value, onChange, units, onUnitCreated, canCreate }) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const boxRef = useRef(null);
+  const q = (value || "").trim().toLowerCase();
+  const filtered = q ? units.filter((u) => (u.name || "").toLowerCase().includes(q)) : units;
+  const exact = units.find((u) => (u.name || "").trim().toLowerCase() === q);
+
+  useEffect(() => {
+    const onDoc = (e) => { if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  const createUnit = async () => {
+    const name = (value || "").trim();
+    if (!name || busy) return;
+    setBusy(true);
+    try {
+      const { data } = await api.post("/inventory/units/", { name, abbreviation: name.slice(0, 10) });
+      onUnitCreated(data);
+      onChange(data.name);
+      setOpen(false);
+      toast.success(`Se guardó la unidad «${data.name}».`);
+    } catch (e) {
+      const d = e.response?.data;
+      toast.error(d?.detail || (d && d.name && d.name[0]) || "No se pudo guardar la unidad.");
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="relative" ref={boxRef}>
+      <label className="block text-sm font-medium mb-1">Unidad base</label>
+      <input value={value || ""} autoComplete="off"
+             onChange={(e) => { onChange(e.target.value); setOpen(true); }}
+             onFocus={() => setOpen(true)}
+             placeholder="unidad / libra / metro…"
+             className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
+      {open && (filtered.length > 0 || (q && !exact && canCreate)) && (
+        <div className="absolute z-20 mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg max-h-48 overflow-y-auto">
+          {filtered.map((u) => (
+            <button type="button" key={u.id} onClick={() => { onChange(u.name); setOpen(false); }}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200">
+              {u.name}{u.abbreviation ? <span className="text-slate-400"> ({u.abbreviation})</span> : null}
+            </button>
+          ))}
+          {q && !exact && canCreate && (
+            <button type="button" onClick={createUnit} disabled={busy}
+                    className="w-full text-left px-3 py-2 text-sm text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 font-semibold border-t border-slate-100 dark:border-slate-700">
+              {busy ? "Guardando…" : `➕ Guardar unidad «${(value || "").trim()}»`}
+            </button>
+          )}
+        </div>
+      )}
+      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">La más pequeña en que medís el stock. Escribí para buscar{canCreate ? " o guardar una nueva" : ""}.</p>
+    </div>
+  );
+}
+
 function SelectField({ label, name, form, onChange, options, empty, labelKey = "name" }) {
   return (
     <div className="min-w-0">
@@ -275,6 +337,8 @@ export default function ProductForm() {
   const [brands, setBrands] = useState([]);
   const [ubicaciones, setUbicaciones] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [units, setUnits] = useState([]);
   const [errors, setErrors] = useState({});
   const [busy, setBusy] = useState(false);
   const [dupes, setDupes] = useState([]);   // posibles duplicados por nombre parecido
@@ -294,6 +358,8 @@ export default function ProductForm() {
 
   useEffect(() => {
     api.get("/inventory/brands/?page_size=200").then((r) => setBrands(r.data.results || r.data));
+    api.get("/inventory/categories/?page_size=200").then((r) => setCategories(r.data.results || r.data)).catch(() => {});
+    api.get("/inventory/units/?page_size=200").then((r) => setUnits(r.data.results || r.data)).catch(() => {});
     // Proveedores para elegir el "proveedor habitual" del producto (a quién se
     // le compra). Si no hay permiso de compras, queda vacío y no se muestra.
     api.get("/suppliers/?page_size=200").then((r) => setSuppliers(r.data.results || r.data)).catch(() => {});
@@ -616,6 +682,21 @@ export default function ProductForm() {
         <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <SearchPicker
+              label="Categoría"
+              options={categories}
+              value={form.category}
+              onChange={(id) => set("category", id)}
+              onCreated={(c) => setCategories((prev) => [...prev, c].sort((a, d) => (a.name || "").localeCompare(d.name || "")))}
+              canCreate={can("catalogos.gestionar")}
+              endpoint="/inventory/categories/"
+              emptyLabel="— Sin categoría —"
+              placeholder="Buscar categoría…"
+              createWord="categoría"
+              hint={<>Tipo de producto (tornillos, pinturas…). Escribí para buscar{can("catalogos.gestionar") ? " o crear una nueva" : ""}.</>}
+            />
+          </div>
+          <div>
+            <SearchPicker
               label="Ubicación"
               options={ubicaciones}
               value={form.ubicacion}
@@ -693,7 +774,9 @@ export default function ProductForm() {
       <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 border-l-4 p-5" style={{ borderLeftColor: "#0ea5e9" }}>
         <SecHead icon="📐" color="#0ea5e9" title="Unidad y empaque" subtitle='Ej.: empaque "caja", factor 50 → 1 caja = 50 unidades base.' />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <TextField label="Unidad base" name="base_unit_label" form={form} errors={errors} onChange={set} placeholder="unidad" />
+          <UnitBaseCombo value={form.base_unit_label} onChange={(v) => set("base_unit_label", v)}
+                         units={units} onUnitCreated={(u) => setUnits((prev) => [...prev, u].sort((a, c) => (a.name || "").localeCompare(c.name || "")))}
+                         canCreate={can("catalogos.gestionar")} />
           <TextField label="Empaque" name="container_label" form={form} errors={errors} onChange={set} />
           <TextField label="Factor de empaque" name="container_factor" form={form} errors={errors} onChange={set} />
           <TextField label="Precio por empaque" name="container_price" form={form} errors={errors} onChange={set} type="number" placeholder="0" />
