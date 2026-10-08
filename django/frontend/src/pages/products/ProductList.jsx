@@ -999,10 +999,22 @@ function StockEntryModal({ products, suppliers, onSupplierCreated, onClose, onDo
   const [dueDate, setDueDate] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [supOpen, setSupOpen] = useState(false); // dropdown de sugerencias de proveedor
+  const supRef = useRef(null);
 
   const trimmed = supplierName.trim();
   const matched = suppliers.find((s) => s.name.toLowerCase() === trimmed.toLowerCase());
   const isNew = trimmed.length > 0 && !matched;
+  // Sugerencias en vivo: proveedores cuyo nombre CONTIENE lo que vas escribiendo.
+  const supMatches = (trimmed
+    ? suppliers.filter((s) => (s.name || "").toLowerCase().includes(trimmed.toLowerCase()))
+    : suppliers).slice(0, 8);
+
+  useEffect(() => {
+    const onDoc = (e) => { if (supRef.current && !supRef.current.contains(e.target)) setSupOpen(false); };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
   const setRow = (i, field, val) => setRows((rs) => rs.map((r, j) => (j === i ? { ...r, [field]: val } : r)));
   const total = rows.reduce((acc, r) => acc + (Number(r.quantity) || 0) * (Number(r.unit_cost) || 0), 0);
 
@@ -1034,20 +1046,30 @@ function StockEntryModal({ products, suppliers, onSupplierCreated, onClose, onDo
           <div className="text-lg font-bold">📥 Registrar entrada de mercadería</div>
           <div className="text-xs text-emerald-100">{products.length} producto(s) · asigna proveedor y crédito (el stock ya lo ingresaste)</div>
         </div>
-        <div className="p-5 space-y-4 overflow-y-auto">
+        <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 min-h-0">
           {err && <ErrorBanner message={err} />}
           {products.length === 0 ? (
             <p className="text-sm text-amber-600">Los productos que marcaste no están en esta página. Cerrá, volvé a marcarlos en la página donde aparecen y registrá la entrada.</p>
           ) : (
           <>
-          <div>
+          <div className="relative" ref={supRef}>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Proveedor</label>
-            <input list="entry-suppliers" value={supplierName} onChange={(e) => setSupplierName(e.target.value)}
+            <input value={supplierName} autoComplete="off"
+                   onChange={(e) => { setSupplierName(e.target.value); setSupOpen(true); }}
+                   onFocus={() => setSupOpen(true)}
                    placeholder="Escribí el nombre (si no existe, se crea)"
                    className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 outline-none focus:ring-2 focus:ring-emerald-500" />
-            <datalist id="entry-suppliers">
-              {suppliers.map((s) => <option key={s.id} value={s.name} />)}
-            </datalist>
+            {supOpen && supMatches.length > 0 && (
+              <div className="absolute z-30 mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg max-h-48 overflow-y-auto">
+                {supMatches.map((s) => (
+                  <button type="button" key={s.id}
+                          onClick={() => { setSupplierName(s.name); setSupOpen(false); }}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200">
+                    {s.name}{s.phone ? <span className="text-slate-400"> · {s.phone}</span> : null}
+                  </button>
+                ))}
+              </div>
+            )}
             {matched && <p className="text-xs text-emerald-600 mt-1">✓ Proveedor existente.</p>}
             {isNew && (
               <div className="mt-2 grid grid-cols-2 gap-2">
