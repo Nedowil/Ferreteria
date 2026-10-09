@@ -947,3 +947,65 @@ class MergeKeepsBarcodeTests(TestCase):
                                 {"name": "Nuevo", "barcode": "222BBB", "sale_price": "5"}, format="json")
         self.assertEqual(r.status_code, 400)
         self.assertIn("barcode", r.json())
+
+
+class MovementsEndpointTests(TestCase):
+    """Kardex: filtro por fecha, paginación y totales del rango filtrado."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from rest_framework.test import APIClient
+        from django.utils import timezone
+        import datetime
+
+        User = get_user_model()
+        self.branch = Branch.objects.create(name="Matriz", code="M", is_main=True)
+        self.product = Product.objects.create(
+            sku="KRX-0001", name="Clavo 2in", sale_price=Decimal("1"),
+            purchase_price=Decimal("0.5"), stock=Decimal("0"),
+        )
+        self.admin = User.objects.create_user(
+            username="a", email="a@test.com", password="x123", is_superuser=True
+        )
+        self.client = APIClient()
+        r = self.client.post("/api/auth/token/", {"email": "a@test.com", "password": "x123"}, format="json")
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {r.json()['access']}",
+            HTTP_X_BRANCH_ID=str(self.branch.id),
+        )
+
+        # 3 movimientos en 3 días distintos (entrada 10, salida 4, entrada 6).
+        self._mv("entrada", 10, days_ago=2)
+        self._mv("salida", 4, days_ago=1)
+        self._mv("entrada", 6, days_ago=0)
+
+    def _mv(self, mtype, qty, days_ago):
+        from django.utils import timezone
+        import datetime
+        m = apply_movement(self.product, mtype, Decimal(qty), user=self.admin, branch=self.branch)
+        when = timezone.now() - datetime.timedelta(days=days_ago)
+        InventoryMovement.objects.filter(pk=m.pk).update(created_at=when)
+        return m
+
+    def test_totales_sobre_todo_el_rango(self):
+        r = self.client.get(f"/api/inventory/products/{self.product.id}/movements/")
+        self.assertEqual(r.status_code, 200, r.content)
+        data = r.json()
+        self.assertEqual(Decimal(str(data["totals"]["entradas"])), Decimal("16"))
+        self.assertEqual(Decimal(str(data["totals"]["salidas"])), Decimal("4"))
+        self.assertEqual(data["count"], 3)
+
+    def test_filtro_por_fecha_recorta_totales(self):
+        from django.utils import timezone
+        import datetime
+        hoy = (timezone.now()).date().isoformat()
+        r = self.client.get(
+            f"/api/inventory/products/{self.product.id}/movements/",
+            {"from": hoy, "to": hoy},
+        )
+        self.assertEqual(r.status_code, 200, r.content)
+        data = r.json()
+        # Solo la entrada de hoy (6).
+        self.assertEqual(data["count"], 1)
+        self.assertEqual(Decimal(str(data["totals"]["entradas"])), Decimal("6"))
+        self.assertEqual(Decimal(str(data["totals"]["salidas"])), Decimal("0"))

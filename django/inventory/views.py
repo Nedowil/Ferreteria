@@ -418,10 +418,32 @@ class ProductViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Model
     def movements(self, request, pk=None):
         product = self.get_object()
         if request.method == "GET":
-            qs = product.movements.select_related("user", "branch")
+            from django.db.models import Q, Sum
+            from django.utils.dateparse import parse_date
+            qs = product.movements.select_related("user", "branch").order_by("-created_at", "-id")
+            p = request.query_params
+            if p.get("from"):
+                d = parse_date(p["from"])
+                if d:
+                    qs = qs.filter(created_at__date__gte=d)
+            if p.get("to"):
+                d = parse_date(p["to"])
+                if d:
+                    qs = qs.filter(created_at__date__lte=d)
+            if p.get("type") in ("entrada", "salida", "ajuste"):
+                qs = qs.filter(type=p["type"])
+            # Totales sobre TODO el rango filtrado (no solo la página actual).
+            agg = qs.aggregate(
+                entradas=Sum("quantity", filter=Q(type="entrada")),
+                salidas=Sum("quantity", filter=Q(type="salida")),
+            )
+            totals = {"entradas": agg["entradas"] or 0, "salidas": agg["salidas"] or 0}
             page = self.paginate_queryset(qs)
-            ser = MovementSerializer(page if page is not None else qs, many=True)
-            return self.get_paginated_response(ser.data) if page is not None else Response(ser.data)
+            if page is not None:
+                resp = self.get_paginated_response(MovementSerializer(page, many=True).data)
+                resp.data["totals"] = totals
+                return resp
+            return Response({"results": MovementSerializer(qs, many=True).data, "totals": totals})
 
         # POST: aplicar movimiento
         ser = MovementCreateSerializer(data=request.data)
