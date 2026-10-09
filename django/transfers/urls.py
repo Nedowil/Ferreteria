@@ -1,0 +1,10 @@
+"""Rutas de la API de Transferencias."""
+
+from rest_framework.routers import DefaultRouter
+
+from . import views
+
+router = DefaultRouter()
+router.register("transfers", views.BranchTransferViewSet, basename="transfer")
+
+urlpatterns = router.urls
