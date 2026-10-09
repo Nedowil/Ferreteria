@@ -71,7 +71,10 @@ PERMISSIONS = [
     # Entregar la caja (cambio de responsable / relevo) SIN poder abrirla ni
     # cerrarla: permite que el cajero termine su turno entregando la caja.
     ("caja.entregar", "Entregar caja (cambio de responsable)", "Caja"),
-    ("caja.movimientos", "Movimientos de caja", "Caja"),
+    ("caja.movimientos", "Movimientos de caja (registrar egresos)", "Caja"),
+    # Meter efectivo (ingreso) es más sensible que sacarlo: podría usarse para
+    # tapar un faltante. Por eso va aparte y por defecto solo lo tiene el admin.
+    ("caja.ingreso", "Registrar ingreso de efectivo en caja", "Caja"),
     # Anti-fraude (cuadre a ciegas): ver el efectivo esperado y la diferencia.
     # El cajero cierra su caja SIN ver el esperado; solo el supervisor lo ve.
     ("caja.ver_esperado", "Ver efectivo esperado y diferencia de caja", "Caja"),

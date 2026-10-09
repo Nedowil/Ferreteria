@@ -106,6 +106,17 @@ class CashSessionViewSet(PermissionByActionMixin, viewsets.ReadOnlyModelViewSet)
         session = self.get_object()
         ser = MovementWriteSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
+        # Un EGRESO (sacar efectivo) lo puede hacer quien tenga 'caja.movimientos'.
+        # Un INGRESO (meter efectivo) es más sensible —podría usarse para tapar un
+        # faltante—, así que requiere además el permiso 'caja.ingreso' (por
+        # defecto solo el admin). El cajero solo puede registrar egresos.
+        if ser.validated_data["type"] == "ingreso":
+            from core.permissions import user_permission_codenames
+            if not request.user.is_superuser and "caja.ingreso" not in user_permission_codenames(request.user):
+                return Response(
+                    {"detail": "No tenés permiso para registrar INGRESOS de efectivo. "
+                               "Solo egresos. Pedí autorización al administrador."},
+                    status=status.HTTP_403_FORBIDDEN)
         try:
             services.register_movement(
                 session, ser.validated_data["type"], ser.validated_data["amount"],

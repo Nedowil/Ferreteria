@@ -242,6 +242,27 @@ class CashPermissionTests(TestCase):
                                {"counted_cash": "150"}, format="json")
         self.assertEqual(r_admin.status_code, 200)
 
+    def test_cajero_puede_egreso_pero_no_ingreso(self):
+        from core.permissions import user_permission_codenames
+        self.assertNotIn("caja.ingreso", user_permission_codenames(self.cajero))
+        s = open_session(self.cajero, 100, branch=self.branch)
+        cc = self._c("ca@t.com")
+        # Egreso (sacar efectivo): permitido.
+        r_eg = cc.post(f"/api/cashbox/cash-sessions/{s.id}/movement/",
+                       {"type": "egreso", "amount": "35", "description": "Transporte"}, format="json")
+        self.assertEqual(r_eg.status_code, 200, r_eg.content)
+        # Ingreso (meter efectivo): bloqueado (403).
+        r_in = cc.post(f"/api/cashbox/cash-sessions/{s.id}/movement/",
+                       {"type": "ingreso", "amount": "50", "description": "x"}, format="json")
+        self.assertEqual(r_in.status_code, 403)
+
+    def test_admin_si_puede_ingreso(self):
+        s = open_session(self.cajero, 100, branch=self.branch)
+        admin_c = self._c("ad@t.com")
+        r_in = admin_c.post(f"/api/cashbox/cash-sessions/{s.id}/movement/",
+                            {"type": "ingreso", "amount": "50", "description": "Fondo"}, format="json")
+        self.assertEqual(r_in.status_code, 200, r_in.content)
+
 
 class CashHistoryFilterTests(TestCase):
     """Historial de caja: filtro por fecha de apertura y movimientos por sesión."""

@@ -34,11 +34,13 @@ export default function CashBox() {
   const canClose = can("caja.cerrar");
   // Entregar la caja (relevo) tiene su propio permiso, sin relación con abrir.
   const canHandover = !canClose && can("caja.entregar");
+  // Meter efectivo (ingreso) requiere permiso aparte; el cajero solo saca (egreso).
+  const canIngreso = can("caja.ingreso");
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [opening, setOpening] = useState({ opening_amount: "", opening_notes: "" });
-  const [mov, setMov] = useState({ type: "ingreso", amount: "", description: "" });
+  const [mov, setMov] = useState({ type: canIngreso ? "ingreso" : "egreso", amount: "", description: "" });
   const [counted, setCounted] = useState("");
   // Cambio de responsable (relevo): el que se va cuenta y entrega su efectivo;
   // la caja sigue abierta y el que la reciba queda registrado solo cuando entra
@@ -144,7 +146,7 @@ export default function CashBox() {
     e.preventDefault(); setError("");
     try {
       await api.post(`/cashbox/cash-sessions/${session.id}/movement/`, mov);
-      setMov({ type: "ingreso", amount: "", description: "" });
+      setMov({ type: canIngreso ? "ingreso" : "egreso", amount: "", description: "" });
       load();
     } catch (err) { setError(err.response?.data?.detail || "Error"); }
   };
@@ -311,11 +313,18 @@ export default function CashBox() {
               {can("caja.movimientos") && (
               <form onSubmit={addMovement} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 space-y-3">
                 <h3 className="font-semibold">Movimiento manual</h3>
-                <select value={mov.type} onChange={(e) => setMov({ ...mov, type: e.target.value })}
-                        className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-800">
-                  <option value="ingreso">Ingreso</option>
-                  <option value="egreso">Egreso</option>
-                </select>
+                {canIngreso ? (
+                  <select value={mov.type} onChange={(e) => setMov({ ...mov, type: e.target.value })}
+                          className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-800">
+                    <option value="ingreso">Ingreso</option>
+                    <option value="egreso">Egreso</option>
+                  </select>
+                ) : (
+                  <div className="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/40 text-slate-600 dark:text-slate-300 flex items-center justify-between">
+                    <span><b>Egreso</b> (salida de efectivo)</span>
+                    <span className="text-[11px] text-slate-400">solo egresos</span>
+                  </div>
+                )}
                 <input type="number" step="any" required placeholder="Monto" value={mov.amount}
                        onChange={(e) => setMov({ ...mov, amount: e.target.value })}
                        className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm" />
