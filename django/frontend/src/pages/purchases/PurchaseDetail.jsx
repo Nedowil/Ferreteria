@@ -92,9 +92,29 @@ export default function PurchaseDetail() {
                 ))}
               </tbody>
               <tfoot className="text-sm">
-                <tr className="border-t"><td colSpan="4" className="px-4 py-1 text-right text-slate-500 dark:text-slate-400">Subtotal</td><td className="px-4 py-1 text-right">Q{p.subtotal}</td></tr>
-                <tr><td colSpan="4" className="px-4 py-1 text-right text-slate-500 dark:text-slate-400">IVA</td><td className="px-4 py-1 text-right">Q{p.tax}</td></tr>
-                <tr className="font-semibold"><td colSpan="4" className="px-4 py-1 text-right">Total</td><td className="px-4 py-1 text-right">Q{p.total}</td></tr>
+                {(() => {
+                  // IVA incluido: el total NO se forma sumando el IVA al subtotal
+                  // (el costo ya lo trae). Mostramos base + IVA incluido = total.
+                  const sub = Number(p.subtotal), iva = Number(p.tax), tot = Number(p.total);
+                  const ivaIncluido = Math.abs(sub + iva - tot) > 0.005;
+                  if (ivaIncluido) {
+                    const base = (tot - iva).toFixed(2);
+                    return (
+                      <>
+                        <tr className="border-t"><td colSpan="4" className="px-4 py-1 text-right text-slate-500 dark:text-slate-400">Base (sin IVA)</td><td className="px-4 py-1 text-right">Q{base}</td></tr>
+                        <tr><td colSpan="4" className="px-4 py-1 text-right text-slate-500 dark:text-slate-400">IVA (incluido)</td><td className="px-4 py-1 text-right">Q{iva.toFixed(2)}</td></tr>
+                        <tr className="font-semibold"><td colSpan="4" className="px-4 py-1 text-right">Total</td><td className="px-4 py-1 text-right">Q{tot.toFixed(2)}</td></tr>
+                      </>
+                    );
+                  }
+                  return (
+                    <>
+                      <tr className="border-t"><td colSpan="4" className="px-4 py-1 text-right text-slate-500 dark:text-slate-400">Subtotal</td><td className="px-4 py-1 text-right">Q{p.subtotal}</td></tr>
+                      <tr><td colSpan="4" className="px-4 py-1 text-right text-slate-500 dark:text-slate-400">IVA</td><td className="px-4 py-1 text-right">Q{p.tax}</td></tr>
+                      <tr className="font-semibold"><td colSpan="4" className="px-4 py-1 text-right">Total</td><td className="px-4 py-1 text-right">Q{p.total}</td></tr>
+                    </>
+                  );
+                })()}
               </tfoot>
             </table>
             </div>

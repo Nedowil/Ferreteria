@@ -17,8 +17,17 @@ export default function PurchaseForm() {
   const [results, setResults] = useState([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  // Configuración de IVA de la empresa (misma regla que el POS).
+  const [taxRate, setTaxRate] = useState(12);
+  const [ivaIncluido, setIvaIncluido] = useState(true);
 
   useEffect(() => { api.get("/suppliers/?active=1&page_size=200").then((r) => setSuppliers(r.data.results || r.data)); }, []);
+  useEffect(() => {
+    api.get("/company-settings/").then((r) => {
+      setTaxRate(Number(r.data.default_tax_rate || 12));
+      setIvaIncluido(r.data.prices_include_tax !== false);
+    }).catch(() => {});
+  }, []);
 
   // Compra sugerida: si llegamos desde "Stock bajo" con partidas prellenadas.
   useEffect(() => {
@@ -44,8 +53,12 @@ export default function PurchaseForm() {
 
   const subtotal = items.reduce((s, i) => s + Number(i.quantity || 0) * Number(i.unit_cost || 0), 0);
   const ivaBase = items.filter((i) => i.tax_type !== "exento").reduce((s, i) => s + Number(i.quantity || 0) * Number(i.unit_cost || 0), 0);
-  const tax = Math.round(ivaBase * 0.12 * 100) / 100;
-  const total = subtotal + tax;
+  // Si los precios incluyen IVA, se DESGLOSA del costo y el total = suma de costos.
+  // Si no, se suma por fuera (comportamiento clásico).
+  const tax = ivaIncluido
+    ? Math.round((ivaBase - ivaBase / (1 + taxRate / 100)) * 100) / 100
+    : Math.round(ivaBase * (taxRate / 100) * 100) / 100;
+  const total = ivaIncluido ? subtotal : subtotal + tax;
 
   const submit = async (e) => {
     e.preventDefault();
@@ -152,8 +165,17 @@ export default function PurchaseForm() {
         </div>
         <div className="flex justify-end mt-4">
           <div className="w-64 text-sm space-y-1">
-            <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">Subtotal</span><span>Q{subtotal.toFixed(2)}</span></div>
-            <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">IVA (12%)</span><span>Q{tax.toFixed(2)}</span></div>
+            {ivaIncluido ? (
+              <>
+                <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">Base (sin IVA)</span><span>Q{(total - tax).toFixed(2)}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">IVA ({taxRate}%) incluido</span><span>Q{tax.toFixed(2)}</span></div>
+              </>
+            ) : (
+              <>
+                <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">Subtotal</span><span>Q{subtotal.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">IVA ({taxRate}%)</span><span>Q{tax.toFixed(2)}</span></div>
+              </>
+            )}
             <div className="flex justify-between font-semibold text-base border-t pt-1"><span>Total</span><span>Q{total.toFixed(2)}</span></div>
           </div>
         </div>

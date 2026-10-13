@@ -34,8 +34,23 @@ class PurchaseServiceTests(TestCase):
             {"product_id": self.p_exento.id, "quantity": "5", "unit_cost": "20", "tax_type": "exento"},
         ]
 
-    def test_totales_iva_solo_sobre_gravado(self):
-        # gravado = 100, exento = 100, subtotal = 200, IVA 12% de 100 = 12
+    def test_totales_iva_incluido_se_desglosa(self):
+        # Por defecto la empresa trabaja con "precios incluyen IVA": el costo
+        # YA trae el IVA, así que se DESGLOSA (no se suma por fuera).
+        # gravado = 100 (con IVA), exento = 100, subtotal = 200.
+        # IVA contenido = 100 - 100/1.12 = 10.71 ; total = 200 (lo que se paga).
+        purchase = create_purchase(
+            {"supplier_id": self.supplier.id, "date": date(2026, 6, 29)},
+            self._items(), branch=self.branch,
+        )
+        self.assertEqual(purchase.subtotal, Decimal("200.00"))
+        self.assertEqual(purchase.tax, Decimal("10.71"))
+        self.assertEqual(purchase.total, Decimal("200.00"))
+
+    def test_totales_iva_por_fuera_se_suma(self):
+        # Si la empresa trabaja con el IVA por fuera, se suma encima del costo.
+        from core.models import CompanySetting
+        CompanySetting.objects.create(default_tax_rate=Decimal("12"), prices_include_tax=False)
         purchase = create_purchase(
             {"supplier_id": self.supplier.id, "date": date(2026, 6, 29)},
             self._items(), branch=self.branch,

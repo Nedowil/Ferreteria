@@ -5,7 +5,6 @@ Portado de App\\Services\\PurchaseService de Laravel.
 
 from decimal import Decimal
 
-from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
@@ -68,22 +67,61 @@ def sync_items(purchase, items, manual_tax=Decimal("0")):
             subtotal=line, tax_type=tax_type,
         )
 
-    rate = Decimal(str(settings.COMPANY_DEFAULT_TAX_RATE))
-    if manual_tax > 0:
-        final_tax = manual_tax
-    elif rate > 0:
-        final_tax = (subtotal_gravado * rate / 100).quantize(Decimal("0.01"))
-    else:
-        final_tax = Decimal("0")
-
+    final_tax, total = _compute_tax_total(subtotal, subtotal_gravado, manual_tax)
     purchase.subtotal = subtotal
     purchase.tax = final_tax
-    purchase.total = subtotal + final_tax
+    purchase.total = total
     # Una compra marcada como pagada se considera saldada por completo.
     if purchase.payment_status == Purchase.PAY_PAGADA:
         purchase.amount_paid = purchase.total
     purchase.payment_status = _derive_payment_status(purchase)
     purchase.save()
+
+
+def _compute_tax_total(subtotal, subtotal_gravado, manual_tax=Decimal("0")):
+    """Devuelve (IVA, total) según la configuración de la empresa.
+
+    Misma regla que el POS: si la empresa trabaja con "precios incluyen IVA"
+    (lo habitual en Guatemala), el costo que se escribe YA trae el IVA adentro,
+    así que el IVA se DESGLOSA del costo y el total es la suma de costos. Si la
+    empresa trabaja con el IVA por fuera, se suma encima (comportamiento previo).
+    """
+    from core.pricing import tax_config
+    rate, include_tax = tax_config()
+    if manual_tax > 0:
+        final_tax = manual_tax
+    elif rate > 0 and include_tax:
+        # IVA contenido en el costo gravado: base = gravado / (1 + tasa/100).
+        final_tax = (subtotal_gravado - subtotal_gravado / (1 + rate / 100)).quantize(Decimal("0.01"))
+    elif rate > 0:
+        final_tax = (subtotal_gravado * rate / 100).quantize(Decimal("0.01"))
+    else:
+        final_tax = Decimal("0")
+    total = subtotal if include_tax else subtotal + final_tax
+    return final_tax, total
+
+
+def recompute_purchase(purchase):
+    """Recalcula subtotal/IVA/total de una compra existente a partir de sus
+    partidas ya guardadas, aplicando la regla de IVA vigente. No toca las
+    partidas; solo corrige los totales (y el saldo si estaba pagada).
+    """
+    subtotal = Decimal("0")
+    subtotal_gravado = Decimal("0")
+    for it in purchase.items.all():
+        line = Decimal(it.subtotal)
+        subtotal += line
+        if it.tax_type != Product.TAX_EXENTO:
+            subtotal_gravado += line
+    final_tax, total = _compute_tax_total(subtotal, subtotal_gravado)
+    purchase.subtotal = subtotal
+    purchase.tax = final_tax
+    purchase.total = total
+    if purchase.payment_status == Purchase.PAY_PAGADA:
+        purchase.amount_paid = purchase.total
+    purchase.payment_status = _derive_payment_status(purchase)
+    purchase.save(update_fields=["subtotal", "tax", "total", "amount_paid", "payment_status"])
+    return purchase
 
 
 @transaction.atomic
