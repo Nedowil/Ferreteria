@@ -2,6 +2,7 @@
 
 from datetime import datetime
 
+from django.conf import settings
 from django.http import FileResponse
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -16,14 +17,19 @@ _PERM = HasPermission.require("backup.gestionar")
 @api_view(["GET", "POST"])
 @permission_classes([_PERM])
 def backup_list_or_run(request):
-    """GET: lista los respaldos. POST: genera uno nuevo."""
+    """GET: lista los respaldos + estado. POST: genera uno nuevo."""
     if request.method == "POST":
         keep = int(request.data.get("keep") or 14)
         ts = datetime.now().strftime("%Y-%m-%d_%H%M%S")
         result = backups.create_backup(ts, keep=keep)
         return Response({"detail": "Respaldo generado.", **result},
                         status=status.HTTP_201_CREATED)
-    return Response(backups.list_backups())
+    return Response({
+        "items": backups.list_backups(),
+        # ¿Hay almacenamiento externo (S3/B2) configurado? En Render el disco es
+        # efímero, así que sin esto los respaldos se pierden en cada deploy.
+        "remote_configured": bool(getattr(settings, "BACKUP_S3_BUCKET", "")),
+    })
 
 
 @api_view(["GET"])

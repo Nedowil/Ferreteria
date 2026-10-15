@@ -159,7 +159,9 @@ class PurchaseApiTests(ApiTestBase):
         }, format="json")
         self.assertEqual(r.status_code, 201, r.content)
         pid = r.json()["id"]
-        self.assertEqual(Decimal(r.json()["total"]), Decimal("840.00"))  # 750 + 12% IVA
+        # Precios incluyen IVA (config por defecto): el costo ya lo trae, el
+        # total es lo que se paga al proveedor (= suma de costos), el IVA va dentro.
+        self.assertEqual(Decimal(r.json()["total"]), Decimal("750.00"))
 
         # Recibir -> genera stock y actualiza costo
         r = self.client.post(f"/api/purchases/{pid}/receive/", {}, format="json")
@@ -176,14 +178,14 @@ class PurchaseApiTests(ApiTestBase):
         # Cuentas por pagar trae total agregado
         r = self.client.get("/api/purchases/payable/")
         self.assertEqual(r.status_code, 200)
-        self.assertEqual(Decimal(r.json()["total_balance"]), Decimal("840.00"))
+        self.assertEqual(Decimal(r.json()["total_balance"]), Decimal("750.00"))
 
         # Abono parcial
         r = self.client.post(f"/api/purchases/{pid}/payments/", {"amount": "400"}, format="json")
         self.assertEqual(r.status_code, 201, r.content)
         r = self.client.get(f"/api/purchases/{pid}/")
         self.assertEqual(r.json()["payment_status"], "parcial")
-        self.assertEqual(Decimal(r.json()["balance"]), Decimal("440.00"))
+        self.assertEqual(Decimal(r.json()["balance"]), Decimal("350.00"))
 
     def test_compra_sin_partidas_rechazada(self):
         supplier = Supplier.objects.create(name="Prov2")
@@ -240,7 +242,8 @@ class BackupApiTests(APITestCase):
         # Listar
         r = c.get("/api/backups/")
         self.assertEqual(r.status_code, 200)
-        self.assertTrue(any(b["filename"] == fname for b in r.json()))
+        self.assertIn("remote_configured", r.json())
+        self.assertTrue(any(b["filename"] == fname for b in r.json()["items"]))
         # Descargar
         r = c.get(f"/api/backups/{fname}/download/")
         self.assertEqual(r.status_code, 200)
@@ -535,3 +538,44 @@ class PinLockoutTests(APITestCase):
         # Tras el éxito, vuelve a tener los 5 intentos disponibles.
         for _ in range(4):
             self.assertEqual(self._try(c, "0000").status_code, 400)
+
+
+class AutoBackupTriggerTests(APITestCase):
+    """El respaldo automático se reclama y corre una sola vez al día."""
+
+    def setUp(self):
+        import core.autobackup as ab
+        ab._last_check = None  # reinicia el throttle por proceso
+
+    def test_reclama_el_dia_y_dispara_una_vez(self):
+        from unittest import mock
+        from django.utils import timezone
+        from core.models import CompanySetting
+        import core.autobackup as ab
+
+        # hora 0 => siempre "ya pasó la hora"; sin último respaldo.
+        CompanySetting.objects.create(auto_backup_enabled=True, auto_backup_hour=0)
+        hoy = timezone.localtime().date()
+
+        with mock.patch.object(ab.threading, "Thread") as T:
+            ab.maybe_run_auto_backup()
+        self.assertTrue(T.called)  # se lanzó el respaldo en segundo plano
+        cs = CompanySetting.objects.first()
+        self.assertEqual(cs.auto_backup_last_run, hoy)
+
+        # Segunda visita el mismo día: no vuelve a disparar.
+        ab._last_check = None
+        with mock.patch.object(ab.threading, "Thread") as T2:
+            ab.maybe_run_auto_backup()
+        self.assertFalse(T2.called)
+
+    def test_desactivado_no_dispara(self):
+        from unittest import mock
+        from core.models import CompanySetting
+        import core.autobackup as ab
+
+        CompanySetting.objects.create(auto_backup_enabled=False, auto_backup_hour=0)
+        with mock.patch.object(ab.threading, "Thread") as T:
+            ab.maybe_run_auto_backup()
+        self.assertFalse(T.called)
+        self.assertIsNone(CompanySetting.objects.first().auto_backup_last_run)

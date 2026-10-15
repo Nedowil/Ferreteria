@@ -214,6 +214,13 @@ class CompanySetting(models.Model):
     public_catalog_intro = models.TextField(blank=True, null=True)
     public_catalog_whatsapp = models.CharField(max_length=30, blank=True, null=True)
 
+    # Respaldo automático (sin cron externo): un chequeo ligero en cada visita
+    # genera el respaldo del día una sola vez, a partir de la hora configurada.
+    auto_backup_enabled = models.BooleanField("respaldo automático", default=True)
+    auto_backup_hour = models.PositiveSmallIntegerField("hora del respaldo (0-23)", default=2)
+    auto_backup_keep = models.PositiveSmallIntegerField("respaldos a conservar", default=14)
+    auto_backup_last_run = models.DateField("último respaldo automático", null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

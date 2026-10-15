@@ -12,6 +12,7 @@ class CompanySettingSerializer(serializers.ModelSerializer):
     class Meta:
         model = CompanySetting
         exclude = ["created_at", "updated_at"]
+        read_only_fields = ["auto_backup_last_run"]
 
 
 class BranchSerializer(serializers.ModelSerializer):

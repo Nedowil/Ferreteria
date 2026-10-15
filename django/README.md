@@ -127,8 +127,13 @@ DEBUG=False .venv/bin/gunicorn config.wsgi:application --bind 0.0.0.0:8000 --wor
 - Email (para el reseteo de contraseña): definir `EMAIL_BACKEND=…smtp…` y las
   variables `EMAIL_*` + `FRONTEND_URL`. Sin SMTP, los correos se imprimen en la
   consola del servidor. Los límites de intentos se ajustan con `THROTTLE_*`.
-- Respaldos automáticos: programar `manage.py backup_run --keep=14` por cron
-  (los respaldos quedan en el volumen `backups`).
+- Respaldos automáticos: vienen activados de fábrica. Sin necesidad de cron, el
+  sistema genera un respaldo diario a la hora configurada (Admin → Respaldos),
+  aprovechando el tráfico normal (un chequeo barato en cada visita). También se
+  puede programar `manage.py backup_run --keep=14` por cron si se prefiere.
+  En hosts con disco efímero (p. ej. Render) definí las variables `BACKUP_S3_*`
+  para subir cada respaldo a un almacenamiento externo (S3/Backblaze/MinIO), si
+  no se pierden al redeploy.
 - FEL: poner `FEL_DRIVER=infile` y las credenciales `FEL_INFILE_*` cuando estén.
 
 Cubren la lógica crítica: servicio de stock (`apply_movement`: entrada/salida/

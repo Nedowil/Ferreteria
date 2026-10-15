@@ -84,6 +84,8 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # Guarda el request actual para la auditoría (thread-local)
     "audit.context.AuditContextMiddleware",
+    # Dispara el respaldo automático diario sin cron externo (chequeo barato).
+    "core.autobackup_middleware.AutoBackupMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
