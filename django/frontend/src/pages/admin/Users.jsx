@@ -220,7 +220,7 @@ export default function Users() {
         title={sheet?.name}
         subtitle={sheet?.email}
         actions={sheet ? [
-          { label: "Editar", icon: "✏️", hidden: !can("usuarios.editar"), onClick: () => openEdit(sheet) },
+          { label: "Editar", icon: "✏️", color: "blue", hidden: !can("usuarios.editar"), onClick: () => openEdit(sheet) },
           { label: "Eliminar", icon: "🗑️", danger: true, hidden: !can("usuarios.eliminar"), onClick: () => remove(sheet.id) },
         ] : []}
       />

@@ -1459,14 +1459,14 @@ export default function ProductList() {
         title={sheet?.name}
         subtitle={sheet ? `${sheet.sku}${sheet.brand_name ? ` · ${sheet.brand_name}` : ""}` : ""}
         actions={sheet ? [
-          { label: "Ingresar / entrada de stock", icon: "➕", hidden: !can("productos.editar"),
+          { label: "Ingresar / entrada de stock", icon: "➕", color: "emerald", hidden: !can("productos.editar"),
             onClick: () => receiveStock(sheet) },
-          { label: "Imprimir etiqueta", icon: "🏷️", hidden: !can("productos.etiquetar"),
+          { label: "Imprimir etiqueta", icon: "🏷️", color: "indigo", hidden: !can("productos.etiquetar"),
             onClick: () => setLabeling(sheet) },
-          { label: "Inventario (Kardex)", icon: "📊", hidden: !can("inventario.ajustar"),
+          { label: "Inventario (Kardex)", icon: "📊", color: "teal", hidden: !can("inventario.ajustar"),
             to: `/productos/${sheet.id}/inventario` },
-          { label: "Historial", icon: "🕑", hidden: !can("auditoria.ver"), to: historyLink(sheet.id) },
-          { label: "Editar", icon: "✏️", hidden: !can("productos.editar"), to: `/productos/${sheet.id}/editar` },
+          { label: "Historial", icon: "🕑", color: "violet", hidden: !can("auditoria.ver"), to: historyLink(sheet.id) },
+          { label: "Editar", icon: "✏️", color: "blue", hidden: !can("productos.editar"), to: `/productos/${sheet.id}/editar` },
           { label: "Eliminar", icon: "🗑️", danger: true, hidden: !can("productos.eliminar"),
             onClick: () => remove(sheet) },
         ] : []}

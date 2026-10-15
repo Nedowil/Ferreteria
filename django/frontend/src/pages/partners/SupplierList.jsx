@@ -241,10 +241,10 @@ export default function SupplierList() {
         title={sheet?.name}
         subtitle={sheet ? (sheet.tax_id ? `NIT ${sheet.tax_id}` : "Sin NIT") : ""}
         actions={sheet ? [
-          { label: `Ver compras${sheet.purchase_count ? ` (${sheet.purchase_count})` : ""}`, icon: "📋",
+          { label: `Ver compras${sheet.purchase_count ? ` (${sheet.purchase_count})` : ""}`, icon: "📋", color: "indigo",
             hidden: !(can("compras.ver") && sheet.purchase_count > 0),
             onClick: () => setVerCompras(sheet) },
-          { label: "Editar", icon: "✏️", hidden: !can("proveedores.editar"),
+          { label: "Editar", icon: "✏️", color: "blue", hidden: !can("proveedores.editar"),
             onClick: () => { setSatMsg(""); setEditing(sheet); } },
           { label: "Eliminar", icon: "🗑️", danger: true, hidden: !can("proveedores.eliminar"),
             onClick: () => remove(sheet.id) },

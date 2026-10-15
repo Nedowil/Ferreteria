@@ -184,8 +184,8 @@ export default function CustomerList() {
         title={sheet?.name}
         subtitle={sheet ? (sheet.tax_id ? `NIT ${sheet.tax_id}` : "Sin NIT") : ""}
         actions={sheet ? [
-          { label: "Historial de compras", icon: "🧾", to: `/clientes/${sheet.id}/historial` },
-          { label: "Editar", icon: "✏️", hidden: !can("clientes.editar"),
+          { label: "Historial de compras", icon: "🧾", color: "violet", to: `/clientes/${sheet.id}/historial` },
+          { label: "Editar", icon: "✏️", color: "blue", hidden: !can("clientes.editar"),
             onClick: () => { setSatMsg(""); setEditing(sheet); } },
           { label: "Eliminar", icon: "🗑️", danger: true, hidden: !can("clientes.eliminar"),
             onClick: () => remove(sheet.id) },
