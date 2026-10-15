@@ -566,11 +566,16 @@ export default function POS() {
       : it));
   }, [customerId]);
 
-  const subtotal = cart.reduce((s, i) => s + Number(i.quantity || 0) * Number(i.unit_price || 0), 0);
-  const lineDiscTotal = cart.reduce((s, i) => s + lineDisc(i), 0);
+  // Redondea a centavos cada línea ANTES de sumar, igual que el backend
+  // (core.pricing.money con ROUND_HALF_UP). Así el total que ve el cajero y el
+  // ticket coinciden EXACTO con lo que el servidor guarda y cobra, sin que
+  // aparezcan/falten centavos por redondear la suma una sola vez.
+  const round2 = (n) => Math.round((Number(n) + 1e-9) * 100) / 100;
+  const subtotal = cart.reduce((s, i) => s + round2(Number(i.quantity || 0) * Number(i.unit_price || 0)), 0);
+  const lineDiscTotal = cart.reduce((s, i) => s + round2(lineDisc(i)), 0);
   // El descuento GENERAL se limita a lo que queda después de los descuentos por línea.
   const discountNum = Math.min(Math.max(0, Number(discount || 0)), Math.max(0, subtotal - lineDiscTotal));
-  const total = Math.max(0, subtotal - lineDiscTotal - discountNum);
+  const total = Math.max(0, round2(subtotal - lineDiscTotal - discountNum));
   // Si la empresa no acepta otros métodos, el método de pago siempre es efectivo
   // (aunque una venta pausada hubiera traído otro).
   useEffect(() => { if (!multiPayment && paymentMethod !== "efectivo") setPaymentMethod("efectivo"); }, [multiPayment, paymentMethod]);
@@ -808,10 +813,15 @@ export default function POS() {
         }
       }
 
-      publishDisplay({ type: "sale", company: companyName, total, paid: payload.paid_amount, change });
+      // Usar el total y el vuelto EXACTOS que calculó el servidor (fuente de
+      // verdad), para que el ticket y la pantalla del cliente coincidan al
+      // centavo con lo guardado, sin depender del redondeo del navegador.
+      const backTotal = data.total != null ? Number(data.total) : total;
+      const backChange = data.change_amount != null ? Number(data.change_amount) : change;
+      publishDisplay({ type: "sale", company: companyName, total: backTotal, paid: payload.paid_amount, change: backChange });
       setLastSale({
         id: data.id, folio: data.folio || `#${data.id}`,
-        total, paid: Number(payload.paid_amount || 0), change,
+        total: backTotal, paid: Number(payload.paid_amount || 0), change: backChange,
         method: paymentMethod, credit, fel,
       });
       // Limpia para la siguiente venta (la pantalla de cliente vuelve a "idle").

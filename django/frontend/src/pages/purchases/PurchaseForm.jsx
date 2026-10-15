@@ -51,8 +51,11 @@ export default function PurchaseForm() {
   const updateItem = (idx, field, value) => setItems(items.map((it, i) => i === idx ? { ...it, [field]: value } : it));
   const removeItem = (idx) => setItems(items.filter((_, i) => i !== idx));
 
-  const subtotal = items.reduce((s, i) => s + Number(i.quantity || 0) * Number(i.unit_cost || 0), 0);
-  const ivaBase = items.filter((i) => i.tax_type !== "exento").reduce((s, i) => s + Number(i.quantity || 0) * Number(i.unit_cost || 0), 0);
+  // Redondea cada línea antes de sumar (igual que el backend), para que la vista
+  // previa coincida al centavo con el total que se guarda.
+  const r2 = (n) => Math.round((Number(n) + 1e-9) * 100) / 100;
+  const subtotal = items.reduce((s, i) => s + r2(Number(i.quantity || 0) * Number(i.unit_cost || 0)), 0);
+  const ivaBase = items.filter((i) => i.tax_type !== "exento").reduce((s, i) => s + r2(Number(i.quantity || 0) * Number(i.unit_cost || 0)), 0);
   // Si los precios incluyen IVA, se DESGLOSA del costo y el total = suma de costos.
   // Si no, se suma por fuera (comportamiento clásico).
   const tax = ivaIncluido

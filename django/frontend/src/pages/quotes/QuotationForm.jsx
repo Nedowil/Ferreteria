@@ -73,11 +73,14 @@ export default function QuotationForm() {
   const rm = (idx) => setItems(items.filter((_, i) => i !== idx));
 
   const money = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const total = items.reduce((s, i) => s + Number(i.quantity || 0) * Number(i.unit_price || 0), 0);
+  // Redondea cada línea antes de sumar (igual que el backend), para que el total
+  // de la cotización coincida al centavo con el que se guarda.
+  const r2 = (n) => Math.round((Number(n) + 1e-9) * 100) / 100;
+  const total = items.reduce((s, i) => s + r2(Number(i.quantity || 0) * Number(i.unit_price || 0)), 0);
   // Los precios incluyen IVA (12%): se desglosa para el resumen; las líneas
   // exentas no aportan IVA.
   const totalIVA = items.reduce((s, i) => {
-    const line = Number(i.quantity || 0) * Number(i.unit_price || 0);
+    const line = r2(Number(i.quantity || 0) * Number(i.unit_price || 0));
     return s + (i.tax_type === "iva" ? line - line / 1.12 : 0);
   }, 0);
   const subtotal = total - totalIVA;

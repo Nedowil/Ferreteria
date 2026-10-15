@@ -209,10 +209,13 @@ export default function ReturnCreate() {
 
   // Total a devolver: suma de (cantidad a devolver × precio) de cada producto.
   const priceOf = (it) => Number(it.effective_unit_price ?? it.unit_price) || 0;
+  // Redondea cada línea antes de sumar (igual que el backend), para que el
+  // reembolso mostrado coincida al centavo con el que se registra.
+  const r2 = (n) => Math.round((Number(n) + 1e-9) * 100) / 100;
   const total = mode === "sin_ticket"
-    ? items.reduce((a, i) => a + Number(i.quantity || 0) * Number(i.unit_price || 0), 0)
+    ? items.reduce((a, i) => a + r2(Number(i.quantity || 0) * Number(i.unit_price || 0)), 0)
     : (sale ? sale.items.filter((it) => !removed.includes(it.id))
-        .reduce((a, it) => a + Number(qtys[it.id] || 0) * priceOf(it), 0) : 0);
+        .reduce((a, it) => a + r2(Number(qtys[it.id] || 0) * priceOf(it)), 0) : 0);
 
   const submit = async () => {
     setError(""); setBusy(true);

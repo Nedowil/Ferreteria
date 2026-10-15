@@ -1017,7 +1017,9 @@ function StockEntryModal({ products, suppliers, onSupplierCreated, onClose, onDo
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
   const setRow = (i, field, val) => setRows((rs) => rs.map((r, j) => (j === i ? { ...r, [field]: val } : r)));
-  const total = rows.reduce((acc, r) => acc + (Number(r.quantity) || 0) * (Number(r.unit_cost) || 0), 0);
+  // Redondea cada línea antes de sumar (igual que el backend), para que la
+  // "deuda aprox." coincida al centavo con lo que se guarda.
+  const total = rows.reduce((acc, r) => acc + Math.round(((Number(r.quantity) || 0) * (Number(r.unit_cost) || 0) + 1e-9) * 100) / 100, 0);
 
   const submit = async () => {
     setErr("");
