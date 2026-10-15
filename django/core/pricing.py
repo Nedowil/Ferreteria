@@ -58,20 +58,36 @@ def compute_totals(lines, global_discount=0):
 
     `lines`: lista de dicts con ``gross`` (cantidad*precio), ``line_discount`` y
     ``tax_type`` ('iva' | 'exento').
+
+    Cada línea se redondea a centavos ANTES de sumar, igual que lo que se muestra
+    y se guarda por línea. Así el total es la suma EXACTA de las líneas y no
+    aparecen "centavos fantasma" por redondear la suma una sola vez (lo que hacía
+    que a algunas ventas con precios/cantidades fraccionadas el total les quedara
+    uno o dos centavos por encima de lo que sumaban las líneas del ticket).
     """
-    subtotal_gravado = sum((l["gross"] for l in lines if l["tax_type"] != "exento"), Decimal("0"))
-    subtotal_exento = sum((l["gross"] for l in lines if l["tax_type"] == "exento"), Decimal("0"))
-    subtotal = subtotal_gravado + subtotal_exento
+    gravado = Decimal("0")        # neto por línea (bruto - desc. de línea), parte gravada
+    exento = Decimal("0")         # idem, parte exenta
+    subtotal = Decimal("0")       # suma de brutos redondeados por línea (antes de descuentos)
+    line_discounts = Decimal("0")
+    for l in lines:
+        gross = money(l["gross"])
+        ld = money(l.get("line_discount") or 0)
+        subtotal += gross
+        line_discounts += ld
+        if l["tax_type"] != "exento":
+            gravado += gross - ld
+        else:
+            exento += gross - ld
 
-    line_discounts = sum((l.get("line_discount") or Decimal("0") for l in lines), Decimal("0"))
-    total_discount = min(line_discounts + Decimal(global_discount or 0), subtotal)
-
-    if subtotal > 0:
-        disc_gravado = total_discount * subtotal_gravado / subtotal
+    base_neto = gravado + exento  # neto tras descuentos de línea
+    gdisc = min(Decimal(global_discount or 0), base_neto)
+    if base_neto > 0:
+        disc_gravado = money(gdisc * gravado / base_neto)
     else:
         disc_gravado = Decimal("0")
-    base_gravado = subtotal_gravado - disc_gravado
-    base_exento = subtotal_exento - (total_discount - disc_gravado)
+    base_gravado = gravado - disc_gravado
+    base_exento = exento - (gdisc - disc_gravado)
+    total_discount = line_discounts + gdisc
 
     rate, include_tax = tax_config()
     if include_tax:
