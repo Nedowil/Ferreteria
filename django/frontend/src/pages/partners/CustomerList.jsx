@@ -10,6 +10,7 @@ import Pagination from "../../components/Pagination";
 import { Avatar } from "../../utils/ui";
 import { SkeletonRows, SkeletonCards } from "../../components/Skeleton";
 import { EmptyState, EmptyRow } from "../../components/EmptyState";
+import ActionSheet from "../../components/ActionSheet";
 
 const BLANK = { name: "", tax_id: "", email: "", phone: "", address: "", notes: "",
   active: true, customer_type: "retail", wholesale_discount_percent: "", credit_limit: "", credit_enabled: false };
@@ -28,6 +29,7 @@ export default function CustomerList() {
   const [search, setSearch] = useState("");
   const [type, setType] = useState("");
   const [editing, setEditing] = useState(null);
+  const [sheet, setSheet] = useState(null); // cliente con el menú flotante abierto (móvil)
   const [satBusy, setSatBusy] = useState(false);
   const [satMsg, setSatMsg] = useState("");
   const [exporting, setExporting] = useState(false);
@@ -120,7 +122,8 @@ export default function CustomerList() {
         {/* Móvil: tarjetas */}
         <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-700">
           {items.map((c) => (
-            <div key={c.id} className="p-4">
+            <button key={c.id} type="button" onClick={() => setSheet(c)}
+                    className="block w-full text-left p-4 active:bg-slate-50 dark:active:bg-slate-700/40 transition-colors">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <Avatar name={c.name} size={28} />
@@ -133,13 +136,9 @@ export default function CustomerList() {
               </div>
               <div className="flex items-center justify-between gap-2 mt-2">
                 <span className="text-sm text-slate-500 dark:text-slate-400">Saldo: <b className="text-slate-700 dark:text-slate-200">Q{c.credit_balance}</b></span>
-                <div className="flex flex-wrap gap-2">
-                  <Link to={`/clientes/${c.id}/historial`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">🧾 Historial</Link>
-                  {can("clientes.editar") && <button onClick={() => { setSatMsg(""); setEditing(c); }} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-blue-600 hover:bg-blue-700 text-white">Editar</button>}
-                  {can("clientes.eliminar") && <button onClick={() => remove(c.id)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-red-600 hover:bg-red-700 text-white">Eliminar</button>}
-                </div>
+                <span className="text-xs text-slate-400">Tocá para ver acciones ›</span>
               </div>
-            </div>
+            </button>
           ))}
           {!loaded && items.length === 0 && <SkeletonCards count={6} />}
           {loaded && items.length === 0 && <EmptyState icon="🧑" title="Sin clientes" hint="Agregá tus clientes para asociarlos a ventas y cuentas." />}
@@ -177,6 +176,21 @@ export default function CustomerList() {
       </div>
 
       <Pagination page={page} count={count} pageSize={PAGE_SIZE} onPage={goPage} label="clientes" />
+
+      {/* Menú flotante de acciones (móvil) */}
+      <ActionSheet
+        open={!!sheet}
+        onClose={() => setSheet(null)}
+        title={sheet?.name}
+        subtitle={sheet ? (sheet.tax_id ? `NIT ${sheet.tax_id}` : "Sin NIT") : ""}
+        actions={sheet ? [
+          { label: "Historial de compras", icon: "🧾", to: `/clientes/${sheet.id}/historial` },
+          { label: "Editar", icon: "✏️", hidden: !can("clientes.editar"),
+            onClick: () => { setSatMsg(""); setEditing(sheet); } },
+          { label: "Eliminar", icon: "🗑️", danger: true, hidden: !can("clientes.eliminar"),
+            onClick: () => remove(sheet.id) },
+        ] : []}
+      />
 
       {editing && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4" onClick={() => setEditing(null)}>

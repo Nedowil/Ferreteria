@@ -10,6 +10,7 @@ import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 import { dialog } from "../../components/Dialog";
 import { SkeletonRows, SkeletonCards } from "../../components/Skeleton";
 import { EmptyState, EmptyRow } from "../../components/EmptyState";
+import ActionSheet from "../../components/ActionSheet";
 import { printZpl } from "../../utils/zebraBrowserPrint";
 
 // Enlace a la auditoría del producto (quién lo creó, editó o eliminó).
@@ -1150,6 +1151,7 @@ export default function ProductList() {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [labeling, setLabeling] = useState(null); // producto a etiquetar (modal)
+  const [sheet, setSheet] = useState(null); // producto con el menú flotante abierto (móvil)
   const [priceTag, setPriceTag] = useState(null); // {single?} para etiquetas de precio
   const [bulkLoc, setBulkLoc] = useState(null);   // {ids:[...]|null} con el modal abierto
   const [restoreLoc, setRestoreLoc] = useState(false); // modal de recuperar ubicaciones
@@ -1353,7 +1355,7 @@ export default function ProductList() {
                   ? <img src={p.image} alt={p.name} className="h-full w-full object-contain" loading="lazy" />
                   : <span className="text-lg text-slate-300">📦</span>}
               </div>
-              <div className="min-w-0 flex-1">
+              <button type="button" onClick={() => setSheet(p)} className="min-w-0 flex-1 text-left">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <div className="font-medium text-slate-800 dark:text-slate-100 break-words">{p.name}</div>
@@ -1370,15 +1372,8 @@ export default function ProductList() {
                     )}
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {can("productos.editar") && <button onClick={() => receiveStock(p)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-300 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-500/25">➕ Ingresar</button>}
-                  {can("productos.etiquetar") && <button onClick={() => setLabeling(p)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-indigo-50 dark:bg-indigo-500/15 border border-indigo-300 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-500/25">Etiqueta</button>}
-                  {can("inventario.ajustar") && <Link to={`/productos/${p.id}/inventario`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-teal-50 dark:bg-teal-500/15 border border-teal-300 dark:border-teal-500/30 text-teal-700 dark:text-teal-300 hover:bg-teal-100 dark:hover:bg-teal-500/25">Inventario</Link>}
-                  {can("auditoria.ver") && <Link to={historyLink(p.id)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-violet-50 dark:bg-violet-500/15 border border-violet-300 dark:border-violet-500/30 text-violet-700 dark:text-violet-300 hover:bg-violet-100 dark:hover:bg-violet-500/25">Historial</Link>}
-                  {can("productos.editar") && <Link to={`/productos/${p.id}/editar`} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-blue-600 hover:bg-blue-700 text-white">Editar</Link>}
-                  {can("productos.eliminar") && <button onClick={() => remove(p)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-red-600 hover:bg-red-700 text-white">Eliminar</button>}
-                </div>
-              </div>
+                <div className="mt-2 text-xs text-slate-400">Tocá para ver acciones ›</div>
+              </button>
             </div>
           ))}
           {loading && data.results.length === 0 && <SkeletonCards count={6} />}
@@ -1456,6 +1451,26 @@ export default function ProductList() {
       )}
 
       {labeling && <LabelPrintModal product={labeling} companyName={companyName} onClose={() => setLabeling(null)} />}
+
+      {/* Menú flotante de acciones (móvil) */}
+      <ActionSheet
+        open={!!sheet}
+        onClose={() => setSheet(null)}
+        title={sheet?.name}
+        subtitle={sheet ? `${sheet.sku}${sheet.brand_name ? ` · ${sheet.brand_name}` : ""}` : ""}
+        actions={sheet ? [
+          { label: "Ingresar / entrada de stock", icon: "➕", hidden: !can("productos.editar"),
+            onClick: () => receiveStock(sheet) },
+          { label: "Imprimir etiqueta", icon: "🏷️", hidden: !can("productos.etiquetar"),
+            onClick: () => setLabeling(sheet) },
+          { label: "Inventario (Kardex)", icon: "📊", hidden: !can("inventario.ajustar"),
+            to: `/productos/${sheet.id}/inventario` },
+          { label: "Historial", icon: "🕑", hidden: !can("auditoria.ver"), to: historyLink(sheet.id) },
+          { label: "Editar", icon: "✏️", hidden: !can("productos.editar"), to: `/productos/${sheet.id}/editar` },
+          { label: "Eliminar", icon: "🗑️", danger: true, hidden: !can("productos.eliminar"),
+            onClick: () => remove(sheet) },
+        ] : []}
+      />
       {priceTag && <PriceTagsModal single={priceTag.single} filters={filters} companyName={companyName} count={data.count} onClose={() => setPriceTag(null)} />}
       {bulkLoc && <BulkLocationModal filters={filters} count={data.count} ids={bulkLoc.ids}
                     onClose={() => setBulkLoc(null)}

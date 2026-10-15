@@ -10,6 +10,7 @@ import Pagination from "../../components/Pagination";
 import { Avatar } from "../../utils/ui";
 import { SkeletonRows, SkeletonCards } from "../../components/Skeleton";
 import { EmptyRow, EmptyState } from "../../components/EmptyState";
+import ActionSheet from "../../components/ActionSheet";
 
 const BLANK = { name: "", tax_id: "", contact_name: "", email: "", phone: "", address: "", notes: "", active: true };
 const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -35,6 +36,7 @@ export default function SupplierList() {
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState(null);
   const [verCompras, setVerCompras] = useState(null); // proveedor cuyas compras se muestran (modal)
+  const [sheet, setSheet] = useState(null); // proveedor con el menú flotante abierto (móvil)
   const [satBusy, setSatBusy] = useState(false);
   const [satMsg, setSatMsg] = useState("");
   const [exporting, setExporting] = useState(false);
@@ -166,7 +168,8 @@ export default function SupplierList() {
         {/* Móvil: tarjetas */}
         <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-700">
           {items.map((s) => (
-            <div key={s.id} className="p-4">
+            <button key={s.id} type="button" onClick={() => setSheet(s)}
+                    className="block w-full text-left p-4 active:bg-slate-50 dark:active:bg-slate-700/40 transition-colors">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <Avatar name={s.name} />
@@ -177,14 +180,11 @@ export default function SupplierList() {
                 </div>
                 <div className="text-right shrink-0">{saldoCell(s)}</div>
               </div>
-              <div className="flex items-center justify-between mt-2">
-                <span className="text-xs text-slate-500 dark:text-slate-400">Compras: {comprasCell(s)}</span>
-                <div className="flex gap-1.5">
-                  {can("proveedores.editar") && <button onClick={() => { setSatMsg(""); setEditing(s); }} className="rounded-md px-2.5 py-1 text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white">Editar</button>}
-                  {can("proveedores.eliminar") && <button onClick={() => remove(s.id)} className="rounded-md px-2.5 py-1 text-xs font-medium bg-red-600 hover:bg-red-700 text-white">Eliminar</button>}
-                </div>
+              <div className="flex items-center justify-between mt-2 text-xs text-slate-500 dark:text-slate-400">
+                <span>{s.purchase_count > 0 ? `${s.purchase_count} ${s.purchase_count === 1 ? "compra" : "compras"}` : "Sin compras"}</span>
+                <span className="text-slate-400">Tocá para ver acciones ›</span>
               </div>
-            </div>
+            </button>
           ))}
           {!loaded && items.length === 0 && <div className="p-4"><SkeletonCards count={5} /></div>}
           {loaded && items.length === 0 && <EmptyState icon="🚚" title="Sin proveedores" hint="Agregá proveedores para registrar compras y pagos." />}
@@ -233,6 +233,23 @@ export default function SupplierList() {
       <Pagination page={page} count={count} pageSize={PAGE_SIZE} onPage={goPage} label="proveedores" />
 
       {verCompras && <SupplierPurchasesModal supplier={verCompras} onClose={() => setVerCompras(null)} />}
+
+      {/* Menú flotante de acciones (móvil) */}
+      <ActionSheet
+        open={!!sheet}
+        onClose={() => setSheet(null)}
+        title={sheet?.name}
+        subtitle={sheet ? (sheet.tax_id ? `NIT ${sheet.tax_id}` : "Sin NIT") : ""}
+        actions={sheet ? [
+          { label: `Ver compras${sheet.purchase_count ? ` (${sheet.purchase_count})` : ""}`, icon: "📋",
+            hidden: !(can("compras.ver") && sheet.purchase_count > 0),
+            onClick: () => setVerCompras(sheet) },
+          { label: "Editar", icon: "✏️", hidden: !can("proveedores.editar"),
+            onClick: () => { setSatMsg(""); setEditing(sheet); } },
+          { label: "Eliminar", icon: "🗑️", danger: true, hidden: !can("proveedores.eliminar"),
+            onClick: () => remove(sheet.id) },
+        ] : []}
+      />
 
       {editing && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4" onClick={() => setEditing(null)}>

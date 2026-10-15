@@ -10,6 +10,7 @@ import Pagination from "../../components/Pagination";
 import { Avatar, avColor } from "../../utils/ui";
 import { SkeletonRows, SkeletonCards } from "../../components/Skeleton";
 import { EmptyState, EmptyRow } from "../../components/EmptyState";
+import ActionSheet from "../../components/ActionSheet";
 
 // Chip de rol con color propio derivado del nombre (para distinguirlos).
 const RoleChip = ({ role }) => {
@@ -30,6 +31,7 @@ export default function Users() {
   const [branches, setBranches] = useState([]);
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState(null);
+  const [sheet, setSheet] = useState(null); // usuario con el menú flotante abierto (móvil)
   const [error, setError] = useState("");
 
   const load = (p = page) => {
@@ -141,7 +143,8 @@ export default function Users() {
         {/* Móvil: tarjetas */}
         <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-700">
           {users.map((u) => (
-            <div key={u.id} className="p-4">
+            <button key={u.id} type="button" onClick={() => setSheet(u)}
+                    className="block w-full text-left p-4 active:bg-slate-50 dark:active:bg-slate-700/40 transition-colors">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <Avatar name={u.name} size={28} />
@@ -159,11 +162,8 @@ export default function Users() {
                 {u.is_device && <span className="inline-flex items-center gap-0.5 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300 px-1.5 py-0.5 text-[10px] font-medium">🖥️ equipo</span>}
                 <span>· {u.branches.map((b) => b.name).join(", ") || "sin sucursal"}</span>
               </div>
-              <div className="flex flex-wrap gap-2 mt-3">
-                {can("usuarios.editar") && <button onClick={() => openEdit(u)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-blue-600 hover:bg-blue-700 text-white">Editar</button>}
-                {can("usuarios.eliminar") && <button onClick={() => remove(u.id)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium shadow-sm transition bg-red-600 hover:bg-red-700 text-white">Eliminar</button>}
-              </div>
-            </div>
+              <div className="mt-2 text-xs text-slate-400">Tocá para ver acciones ›</div>
+            </button>
           ))}
           {!loaded && users.length === 0 && <SkeletonCards count={6} />}
           {loaded && users.length === 0 && <EmptyState icon="👥" title="Sin usuarios" hint="Agregá usuarios y asignales un rol." />}
@@ -212,6 +212,18 @@ export default function Users() {
       </div>
 
       <Pagination page={page} count={count} pageSize={PAGE_SIZE} onPage={goPage} label="usuarios" />
+
+      {/* Menú flotante de acciones (móvil) */}
+      <ActionSheet
+        open={!!sheet}
+        onClose={() => setSheet(null)}
+        title={sheet?.name}
+        subtitle={sheet?.email}
+        actions={sheet ? [
+          { label: "Editar", icon: "✏️", hidden: !can("usuarios.editar"), onClick: () => openEdit(sheet) },
+          { label: "Eliminar", icon: "🗑️", danger: true, hidden: !can("usuarios.eliminar"), onClick: () => remove(sheet.id) },
+        ] : []}
+      />
 
       {editing && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4" onClick={() => setEditing(null)}>
