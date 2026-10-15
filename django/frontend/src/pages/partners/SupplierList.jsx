@@ -238,6 +238,7 @@ export default function SupplierList() {
       <ActionSheet
         open={!!sheet}
         onClose={() => setSheet(null)}
+        accent="amber"
         title={sheet?.name}
         subtitle={sheet ? (sheet.tax_id ? `NIT ${sheet.tax_id}` : "Sin NIT") : ""}
         actions={sheet ? [

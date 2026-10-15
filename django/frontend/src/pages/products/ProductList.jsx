@@ -1456,6 +1456,7 @@ export default function ProductList() {
       <ActionSheet
         open={!!sheet}
         onClose={() => setSheet(null)}
+        accent="emerald"
         title={sheet?.name}
         subtitle={sheet ? `${sheet.sku}${sheet.brand_name ? ` · ${sheet.brand_name}` : ""}` : ""}
         actions={sheet ? [

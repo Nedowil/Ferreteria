@@ -12,6 +12,7 @@ import { Link } from "react-router-dom";
  *
  * Props:
  *   open, onClose, title, subtitle
+ *   accent: color del encabezado por módulo — blue|emerald|violet|amber|rose|teal|indigo (default blue).
  *   actions: [{ label, icon?, color?, onClick?, to?, danger?, hidden?, keepOpen?, desc? }]
  *     color: blue|indigo|emerald|teal|violet|amber|rose|red|slate (default slate).
  *     danger: fuerza rojo. desc: línea secundaria opcional bajo la etiqueta.
@@ -30,7 +31,18 @@ const CHIP = {
   slate: "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300",
 };
 
-export default function ActionSheet({ open, onClose, title, subtitle, actions = [] }) {
+// Acento del encabezado por módulo: {degradado de fondo, barra lateral}.
+const ACCENT = {
+  blue: { head: "from-blue-50 to-indigo-50/60 dark:from-blue-500/10 dark:to-indigo-500/5", bar: "from-blue-500 to-indigo-500" },
+  emerald: { head: "from-emerald-50 to-teal-50/60 dark:from-emerald-500/10 dark:to-teal-500/5", bar: "from-emerald-500 to-teal-500" },
+  violet: { head: "from-violet-50 to-fuchsia-50/60 dark:from-violet-500/10 dark:to-fuchsia-500/5", bar: "from-violet-500 to-fuchsia-500" },
+  amber: { head: "from-amber-50 to-orange-50/60 dark:from-amber-500/10 dark:to-orange-500/5", bar: "from-amber-500 to-orange-500" },
+  rose: { head: "from-rose-50 to-pink-50/60 dark:from-rose-500/10 dark:to-pink-500/5", bar: "from-rose-500 to-pink-500" },
+  teal: { head: "from-teal-50 to-cyan-50/60 dark:from-teal-500/10 dark:to-cyan-500/5", bar: "from-teal-500 to-cyan-500" },
+  indigo: { head: "from-indigo-50 to-blue-50/60 dark:from-indigo-500/10 dark:to-blue-500/5", bar: "from-indigo-500 to-blue-500" },
+};
+
+export default function ActionSheet({ open, onClose, title, subtitle, actions = [], accent = "blue" }) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e) => { if (e.key === "Escape") onClose(); };
@@ -42,7 +54,8 @@ export default function ActionSheet({ open, onClose, title, subtitle, actions = 
   const items = actions.filter((a) => a && !a.hidden);
 
   const row = "group w-full flex items-center gap-3.5 px-3 py-2.5 rounded-2xl text-left transition-colors active:bg-slate-100 dark:active:bg-slate-700/60 ";
-  const chipCls = (a) => "w-10 h-10 rounded-2xl flex items-center justify-center text-xl shrink-0 shadow-sm " + (CHIP[a.danger ? "red" : (a.color || "slate")] || CHIP.slate);
+  const chipCls = (a) => "w-10 h-10 rounded-full flex items-center justify-center text-xl shrink-0 shadow-sm " + (CHIP[a.danger ? "red" : (a.color || "slate")] || CHIP.slate);
+  const acc = ACCENT[accent] || ACCENT.blue;
   const labelCls = (a) => "flex-1 min-w-0 font-semibold " + (a.danger ? "text-red-600 dark:text-red-400" : "text-slate-700 dark:text-slate-100");
 
   const inner = (a) => (
@@ -68,8 +81,8 @@ export default function ActionSheet({ open, onClose, title, subtitle, actions = 
         </div>
 
         {(title || subtitle) && (
-          <div className="relative px-5 pt-3 sm:pt-5 pb-3.5 bg-gradient-to-br from-blue-50 to-indigo-50/60 dark:from-blue-500/10 dark:to-indigo-500/5 border-b border-slate-100 dark:border-slate-700">
-            <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-blue-500 to-indigo-500" />
+          <div className={"relative px-5 pt-3 sm:pt-5 pb-3.5 bg-gradient-to-br border-b border-slate-100 dark:border-slate-700 " + acc.head}>
+            <div className={"absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b " + acc.bar} />
             {title && <div className="font-bold text-slate-800 dark:text-slate-50 break-words leading-snug pl-1.5">{title}</div>}
             {subtitle && <div className="text-xs text-slate-500 dark:text-slate-400 break-words mt-0.5 pl-1.5">{subtitle}</div>}
           </div>

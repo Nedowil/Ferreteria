@@ -217,6 +217,7 @@ export default function Users() {
       <ActionSheet
         open={!!sheet}
         onClose={() => setSheet(null)}
+        accent="blue"
         title={sheet?.name}
         subtitle={sheet?.email}
         actions={sheet ? [

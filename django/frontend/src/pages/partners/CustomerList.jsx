@@ -181,6 +181,7 @@ export default function CustomerList() {
       <ActionSheet
         open={!!sheet}
         onClose={() => setSheet(null)}
+        accent="violet"
         title={sheet?.name}
         subtitle={sheet ? (sheet.tax_id ? `NIT ${sheet.tax_id}` : "Sin NIT") : ""}
         actions={sheet ? [
