@@ -579,3 +579,20 @@ class AutoBackupTriggerTests(APITestCase):
             ab.maybe_run_auto_backup()
         self.assertFalse(T.called)
         self.assertIsNone(CompanySetting.objects.first().auto_backup_last_run)
+
+
+class ComputeTotalsRoundingTests(APITestCase):
+    """El total nunca difiere de la suma de las líneas redondeadas (sin
+    'centavos fantasma'), en ventas/cotizaciones/devoluciones."""
+
+    def test_total_igual_a_suma_de_lineas(self):
+        from decimal import Decimal
+        from core.pricing import compute_totals, money
+        lines = [
+            {"gross": Decimal("0.333"), "line_discount": Decimal("0"), "tax_type": "iva"},
+            {"gross": Decimal("0.333"), "line_discount": Decimal("0"), "tax_type": "iva"},
+            {"gross": Decimal("0.335"), "line_discount": Decimal("0"), "tax_type": "iva"},
+        ]
+        _sub, _disc, _tax, total = compute_totals(lines)
+        suma = sum((money(l["gross"] - l["line_discount"]) for l in lines), Decimal("0"))
+        self.assertEqual(total, suma)

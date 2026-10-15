@@ -235,3 +235,26 @@ class QuickEntryApiTests(TestCase):
             "items": [{"product_id": self.prod.id, "quantity": "1", "unit_cost": "1"}],
         }, format="json")
         self.assertEqual(r.status_code, 400)
+
+
+class PurchaseRoundingTests(TestCase):
+    """El total de la compra cuadra EXACTO con la suma de las partidas, aun con
+    costos/cantidades que dan fracciones de centavo (bug de 'faltan centavos')."""
+
+    def setUp(self):
+        self.branch = Branch.objects.create(name="Matriz", code="M", is_main=True)
+        self.supplier = Supplier.objects.create(name="Prov")
+        self.p = Product.objects.create(sku="FR-1", name="Fraccion", tax_type="iva", stock=0)
+
+    def test_total_coincide_con_suma_de_lineas(self):
+        from decimal import Decimal
+        # 3 partidas a 0.335 → cada una se redondea a 0.34; total = 1.02.
+        items = [{"product_id": self.p.id, "quantity": "1", "unit_cost": "0.335", "tax_type": "iva"}
+                 for _ in range(3)]
+        purchase = create_purchase(
+            {"supplier_id": self.supplier.id, "date": date(2026, 6, 29)},
+            items, branch=self.branch,
+        )
+        suma_lineas = sum((Decimal(it.subtotal) for it in purchase.items.all()), Decimal("0"))
+        self.assertEqual(purchase.total, suma_lineas)
+        self.assertEqual(purchase.total, Decimal("1.02"))

@@ -51,13 +51,17 @@ def sync_items(purchase, items, manual_tax=Decimal("0")):
     """
     purchase.items.all().delete()
 
+    from core.pricing import money
     subtotal = Decimal("0")
     subtotal_gravado = Decimal("0")
     for item in items:
         product = Product.objects.filter(pk=item["product_id"]).first()
         qty = Decimal(str(item["quantity"]))
         cost = Decimal(str(item["unit_cost"]))
-        line = qty * cost
+        # Redondear la línea a centavos ANTES de sumar, igual que se guarda y se
+        # muestra por partida. Así el total de la compra (y la cuenta por pagar)
+        # cuadra EXACTO con la suma de las líneas y no faltan/sobran centavos.
+        line = money(qty * cost)
         tax_type = item.get("tax_type") or (product.tax_type if product else Product.TAX_IVA)
         subtotal += line
         if tax_type != Product.TAX_EXENTO:
