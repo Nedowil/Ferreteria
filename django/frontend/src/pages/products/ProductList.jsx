@@ -1157,6 +1157,10 @@ export default function ProductList() {
   const [restoreLoc, setRestoreLoc] = useState(false); // modal de recuperar ubicaciones
   const [mergeOpen, setMergeOpen] = useState(false);   // modal de combinar duplicados
   const [selected, setSelected] = useState(new Set()); // ids marcados con casillas
+  // Guardamos también el OBJETO de cada producto marcado (no solo el id), para
+  // que las acciones masivas (ej. "Registrar entrada") incluyan TODOS los
+  // seleccionados aunque estén en otra página o búsqueda, no solo los visibles.
+  const [selectedData, setSelectedData] = useState(() => new Map());
   const [companyName, setCompanyName] = useState("Ferretería Central");
   const { can } = useAuth();
 
@@ -1204,15 +1208,24 @@ export default function ProductList() {
   const applyFilters = (e) => { e.preventDefault(); setPage(1); load(filters, 1); };
 
   // --- Selección con casillas (para asignar ubicación a los marcados) ---
-  const toggleOne = (id) => setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleOne = (p) => {
+    setSelected((s) => { const n = new Set(s); n.has(p.id) ? n.delete(p.id) : n.add(p.id); return n; });
+    setSelectedData((m) => { const n = new Map(m); n.has(p.id) ? n.delete(p.id) : n.set(p.id, p); return n; });
+  };
   const pageIds = (data.results || []).map((p) => p.id);
   const allOnPageSelected = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
-  const toggleAllOnPage = () => setSelected((s) => {
-    const n = new Set(s);
-    if (allOnPageSelected) pageIds.forEach((id) => n.delete(id));
-    else pageIds.forEach((id) => n.add(id));
-    return n;
-  });
+  const toggleAllOnPage = () => {
+    const addAll = !allOnPageSelected;
+    setSelected((s) => { const n = new Set(s); pageIds.forEach((id) => addAll ? n.add(id) : n.delete(id)); return n; });
+    setSelectedData((m) => { const n = new Map(m); (data.results || []).forEach((p) => addAll ? n.set(p.id, p) : n.delete(p.id)); return n; });
+  };
+  const clearSelection = () => { setSelected(new Set()); setSelectedData(new Map()); };
+  // Todos los seleccionados (de cualquier página), con datos frescos si el
+  // producto está en la página actual, o los guardados al marcarlo si no.
+  const selectedProducts = (() => {
+    const fresh = new Map((data.results || []).map((p) => [p.id, p]));
+    return [...selected].map((id) => fresh.get(id) || selectedData.get(id)).filter(Boolean);
+  })();
 
   // Al escribir en la búsqueda: si se borra todo el texto, se recargan todos
   // los productos automáticamente (sin tener que presionar "Filtrar").
@@ -1337,7 +1350,7 @@ export default function ProductList() {
               📥 Registrar entrada
             </button>
           )}
-          <button onClick={() => setSelected(new Set())} className="text-teal-100 hover:text-white text-sm ml-auto">Limpiar selección</button>
+          <button onClick={clearSelection} className="text-teal-100 hover:text-white text-sm ml-auto">Limpiar selección</button>
         </div>
       )}
 
@@ -1347,7 +1360,7 @@ export default function ProductList() {
           {data.results.map((p) => (
             <div key={p.id} className="p-4 flex gap-3">
               {can("productos.editar") && (
-                <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggleOne(p.id)}
+                <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggleOne(p)}
                        className="mt-1 h-4 w-4 shrink-0 accent-teal-600" aria-label="Seleccionar" />
               )}
               <div className="h-12 w-12 shrink-0 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex items-center justify-center overflow-hidden">
@@ -1396,7 +1409,7 @@ export default function ProductList() {
           <tbody>
             {data.results.map((p) => (
               <tr key={p.id} className={"border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-700/70 transition" + (selected.has(p.id) ? " bg-teal-50/60 dark:bg-teal-900/20" : "")}>
-                {can("productos.editar") && <td className="px-3 py-2"><input type="checkbox" checked={selected.has(p.id)} onChange={() => toggleOne(p.id)} className="h-4 w-4 accent-teal-600 align-middle" aria-label="Seleccionar" /></td>}
+                {can("productos.editar") && <td className="px-3 py-2"><input type="checkbox" checked={selected.has(p.id)} onChange={() => toggleOne(p)} className="h-4 w-4 accent-teal-600 align-middle" aria-label="Seleccionar" /></td>}
                 <td className="px-4 py-2">
                   <div className="h-10 w-10 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex items-center justify-center overflow-hidden">
                     {p.image
@@ -1475,9 +1488,9 @@ export default function ProductList() {
       {priceTag && <PriceTagsModal single={priceTag.single} filters={filters} companyName={companyName} count={data.count} onClose={() => setPriceTag(null)} />}
       {bulkLoc && <BulkLocationModal filters={filters} count={data.count} ids={bulkLoc.ids}
                     onClose={() => setBulkLoc(null)}
-                    onDone={() => { setBulkLoc(null); setSelected(new Set()); load(); }} />}
+                    onDone={() => { setBulkLoc(null); clearSelection(); load(); }} />}
       {restoreLoc && <RestoreLocationsModal onClose={() => setRestoreLoc(false)} onDone={() => load()} />}
-      {mergeOpen && <MergeProductsModal onClose={() => setMergeOpen(false)} onDone={() => { setMergeOpen(false); setSelected(new Set()); load(); }} />}
+      {mergeOpen && <MergeProductsModal onClose={() => setMergeOpen(false)} onDone={() => { setMergeOpen(false); clearSelection(); load(); }} />}
       {receiveFor && (
         <ReceiveStockModal
           product={receiveFor}
@@ -1487,11 +1500,11 @@ export default function ProductList() {
       )}
       {entryOpen && (
         <StockEntryModal
-          products={(data.results || []).filter((p) => selected.has(p.id))}
+          products={selectedProducts}
           suppliers={suppliers}
           onSupplierCreated={(s) => setSuppliers((prev) => [...prev, s].sort((a, b) => a.name.localeCompare(b.name)))}
           onClose={() => setEntryOpen(false)}
-          onDone={() => { setEntryOpen(false); setSelected(new Set()); load(); }}
+          onDone={() => { setEntryOpen(false); clearSelection(); load(); }}
         />
       )}
     </div>
