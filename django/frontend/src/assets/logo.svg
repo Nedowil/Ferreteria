@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 320" role="img" aria-label="Ferretería Central">
+  <rect width="560" height="320" fill="#ffffff"/>
+
+  <!-- Emblem: crossed open-end wrenches inside a ring -->
+  <g transform="translate(280,110)">
+    <circle cx="0" cy="0" r="92" fill="none" stroke="#111111" stroke-width="7"/>
+    <g fill="none" stroke="#111111" stroke-width="15" stroke-linecap="round">
+      <!-- Wrench 1 (rotated -32deg) -->
+      <g transform="rotate(-32)">
+        <line x1="0" y1="58" x2="0" y2="-30"/>
+        <path d="M -18 -44 A 22 22 0 1 0 18 -44" fill="none"/>
+      </g>
+      <!-- Wrench 2 (rotated +32deg) -->
+      <g transform="rotate(32)">
+        <line x1="0" y1="58" x2="0" y2="-30"/>
+        <path d="M -18 -44 A 22 22 0 1 0 18 -44" fill="none"/>
+      </g>
+    </g>
+  </g>
+
+  <!-- Wordmark -->
+  <g fill="#111111" font-family="Georgia, 'Times New Roman', serif" text-anchor="middle">
+    <text x="280" y="258" font-size="50" font-weight="700" letter-spacing="4">FERRETERÍA</text>
+    <text x="280" y="298" font-size="32" font-weight="400" letter-spacing="20">CENTRAL</text>
+  </g>
+</svg>
