@@ -20,6 +20,12 @@ User = get_user_model()
 
 class SaleServiceTests(TestCase):
     def setUp(self):
+        # Régimen GENERAL: el IVA se desglosa (en Pequeño Contribuyente sería 0,
+        # igual que en el DTE de la FEL).
+        from core.models import CompanySetting
+        CompanySetting.objects.all().delete()
+        CompanySetting.objects.create(
+            tax_regime="GENERAL", default_tax_rate=Decimal("12"), prices_include_tax=True)
         self.branch = Branch.objects.create(name="Matriz", code="M", is_main=True)
         self.user = User.objects.create_user(username="v", email="v@test.com", password="x")
         self.prod = Product.objects.create(

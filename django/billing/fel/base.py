@@ -94,7 +94,10 @@ CENTS = Decimal("0.01")
 
 
 def _q(v):
-    return Decimal(v).quantize(CENTS)
+    # Redondeo ÚNICO del sistema (HALF_UP), compartido con core.pricing.money,
+    # para que el DTE y el total/IVA guardado en la venta coincidan al centavo.
+    from core.pricing import money
+    return money(v)
 
 
 def _distribute_discount(grosses, total_discount):
@@ -122,12 +125,11 @@ def _item(i, *, name, quantity, unit_price, gross, descuento, unit_label,
     gross = _q(gross)
     descuento = _q(descuento)
     total = gross - descuento
-    if pequeno or tax_type == "exento" or rate <= 0:
-        iva = Decimal("0")
-    elif company.prices_include_tax:
-        iva = _q(total - total / (1 + rate / 100))
-    else:
-        iva = _q(total * rate / 100)
+    # IVA por línea con la MISMA función que usa la venta (core.pricing.line_tax),
+    # así el DTE y el ticket muestran exactamente el mismo IVA.
+    from core.pricing import line_tax
+    iva = line_tax(total, rate, bool(company.prices_include_tax),
+                   exento=(tax_type == "exento"), pequeno=pequeno)
     return {
         "linea": i,
         "descripcion": name,

@@ -876,3 +876,45 @@ class ThermalPrintingTests(TestCase):
         c.force_authenticate(admin)
         r = c.post(f"/api/sales/{self.sale.id}/print-epos/")
         self.assertEqual(r.status_code, 400)
+
+
+class IvaConsistencyTests(TestCase):
+    """El IVA y el total de la venta (compute_totals) coinciden EXACTO con los
+    del DTE de la FEL (_items_and_totals), porque ambos usan core.pricing.line_tax
+    con el mismo redondeo. Evita el descuadre de 1-2 centavos entre ticket y FEL."""
+
+    def _rows(self):
+        return [
+            {"name": "A", "quantity": "3", "unit_price": "8.333", "discount": 0,
+             "unit_label": None, "base_unit_label": "uni", "tax_type": "iva"},
+            {"name": "B", "quantity": "2", "unit_price": "12.505", "discount": 0,
+             "unit_label": None, "base_unit_label": "uni", "tax_type": "iva"},
+            {"name": "C", "quantity": "1", "unit_price": "0.335", "discount": 0,
+             "unit_label": None, "base_unit_label": "uni", "tax_type": "exento"},
+        ]
+
+    def _compare(self, pequeno):
+        from core.pricing import compute_totals
+        from billing.fel.base import _items_and_totals
+        cs = CompanySetting.current()
+        cs.tax_regime = "PEQUENO_CONTRIBUYENTE" if pequeno else "GENERAL"
+        cs.default_tax_rate = Decimal("12"); cs.prices_include_tax = True; cs.save()
+        rows = self._rows()
+        lines = [{"gross": Decimal(r["quantity"]) * Decimal(r["unit_price"]),
+                  "line_discount": Decimal("0"), "tax_type": r["tax_type"]} for r in rows]
+        _sub, _disc, tax, total = compute_totals(lines)
+        _items, gran_total, total_iva = _items_and_totals(rows, 0, cs, Decimal("12"), pequeno)
+        self.assertEqual(total, gran_total)
+        self.assertEqual(tax, total_iva)
+
+    def test_general(self):
+        self._compare(pequeno=False)
+
+    def test_pequeno_contribuyente_iva_cero(self):
+        from core.pricing import compute_totals
+        cs = CompanySetting.current()
+        cs.tax_regime = "PEQUENO_CONTRIBUYENTE"; cs.save()
+        lines = [{"gross": Decimal("255"), "line_discount": Decimal("0"), "tax_type": "iva"}]
+        _sub, _disc, tax, _total = compute_totals(lines)
+        self.assertEqual(tax, Decimal("0"))
+        self._compare(pequeno=True)

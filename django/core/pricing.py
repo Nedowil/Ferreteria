@@ -27,6 +27,35 @@ def tax_config():
     return Decimal(str(settings.COMPANY_DEFAULT_TAX_RATE)), bool(settings.COMPANY_PRICES_INCLUDE_TAX)
 
 
+def is_pequeno_contribuyente():
+    """True si la empresa es Pequeño Contribuyente (no desglosa IVA en el DTE)."""
+    try:
+        from core.models import CompanySetting
+        cs = CompanySetting.objects.first()
+        if cs is not None:
+            return cs.tax_regime == "PEQUENO_CONTRIBUYENTE"
+    except Exception:
+        pass
+    return False
+
+
+def line_tax(line_total, rate, include_tax, *, exento=False, pequeno=False):
+    """IVA de UNA sola línea. FUENTE ÚNICA de verdad del IVA, usada tanto por el
+    total de la venta/cotización/devolución (compute_totals) como por el DTE de
+    la FEL, para que SIEMPRE coincidan al centavo (mismo redondeo, HALF_UP).
+
+    - Pequeño Contribuyente, línea exenta o tasa 0 ⇒ IVA 0.
+    - Precios con IVA incluido ⇒ se DESGLOSA del total de la línea.
+    - IVA por fuera ⇒ se calcula sobre el total de la línea.
+    """
+    line_total = Decimal(line_total)
+    if pequeno or exento or rate <= 0:
+        return Decimal("0")
+    if include_tax:
+        return money(line_total - line_total / (1 + rate / 100))
+    return money(line_total * rate / 100)
+
+
 def effective_line_discounts(grosses, line_discounts, sale_discount):
     """Descuento EFECTIVO por línea = descuento propio de la línea + la parte
     prorrateada del descuento global de la venta (proporcional al bruto de cada
@@ -59,42 +88,35 @@ def compute_totals(lines, global_discount=0):
     `lines`: lista de dicts con ``gross`` (cantidad*precio), ``line_discount`` y
     ``tax_type`` ('iva' | 'exento').
 
-    Cada línea se redondea a centavos ANTES de sumar, igual que lo que se muestra
-    y se guarda por línea. Así el total es la suma EXACTA de las líneas y no
-    aparecen "centavos fantasma" por redondear la suma una sola vez (lo que hacía
-    que a algunas ventas con precios/cantidades fraccionadas el total les quedara
-    uno o dos centavos por encima de lo que sumaban las líneas del ticket).
+    Cada línea se redondea a centavos ANTES de sumar, y el IVA se calcula POR
+    LÍNEA con `line_tax` (la MISMA función que usa la FEL). Así:
+      - el total es la suma EXACTA de las líneas (sin "centavos fantasma"), y
+      - el IVA guardado/impreso coincide al centavo con el del DTE de la FEL.
     """
-    gravado = Decimal("0")        # neto por línea (bruto - desc. de línea), parte gravada
-    exento = Decimal("0")         # idem, parte exenta
-    subtotal = Decimal("0")       # suma de brutos redondeados por línea (antes de descuentos)
-    line_discounts = Decimal("0")
-    for l in lines:
-        gross = money(l["gross"])
-        ld = money(l.get("line_discount") or 0)
-        subtotal += gross
-        line_discounts += ld
-        if l["tax_type"] != "exento":
-            gravado += gross - ld
-        else:
-            exento += gross - ld
-
-    base_neto = gravado + exento  # neto tras descuentos de línea
-    gdisc = min(Decimal(global_discount or 0), base_neto)
-    if base_neto > 0:
-        disc_gravado = money(gdisc * gravado / base_neto)
-    else:
-        disc_gravado = Decimal("0")
-    base_gravado = gravado - disc_gravado
-    base_exento = exento - (gdisc - disc_gravado)
-    total_discount = line_discounts + gdisc
-
     rate, include_tax = tax_config()
-    if include_tax:
-        tax = base_gravado - (base_gravado / (1 + rate / 100)) if rate > 0 else Decimal("0")
-        total = base_gravado + base_exento
-    else:
-        tax = base_gravado * rate / 100 if rate > 0 else Decimal("0")
-        total = base_gravado + tax + base_exento
+    pequeno = is_pequeno_contribuyente()
+
+    # Brutos y descuentos de línea, redondeados por línea (lo que se muestra).
+    grosses = [money(l["gross"]) for l in lines]
+    line_discs = [money(l.get("line_discount") or 0) for l in lines]
+    subtotal = sum(grosses, Decimal("0"))
+    sum_line_disc = sum(line_discs, Decimal("0"))
+
+    # Descuento global prorrateado entre líneas (el sobrante de redondeo ajusta en
+    # la última), con el MISMO reparto que la FEL. Se capa a lo que queda.
+    base_tras_linea = subtotal - sum_line_disc
+    gextra = max(Decimal("0"), min(Decimal(global_discount or 0), base_tras_linea))
+    eff = effective_line_discounts(grosses, line_discs, sum_line_disc + gextra)
+
+    total_discount = Decimal("0")
+    tax = Decimal("0")
+    total = Decimal("0")
+    for l, g, d in zip(lines, grosses, eff):
+        line_total = g - d
+        total_discount += d
+        iva = line_tax(line_total, rate, include_tax,
+                       exento=(l["tax_type"] == "exento"), pequeno=pequeno)
+        tax += iva
+        total += line_total if include_tax else (line_total + iva)
 
     return money(subtotal), money(total_discount), money(tax), money(total)
