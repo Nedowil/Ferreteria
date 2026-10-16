@@ -7,6 +7,14 @@ import { dialog } from "../../components/Dialog";
 import { toast } from "../../components/Toast";
 import { useAuth } from "../../auth/AuthContext";
 
+// Quita los ceros decimales sobrantes para MOSTRAR (ej. "0.0000"→"0",
+// "85.0000"→"85", "1.5000"→"1.5"). Así, al reabrir un producto, los campos no
+// aparecen con decimales que el usuario no escribió. No toca enteros ("100").
+const trimDec = (v) => {
+  if (typeof v !== "string" || !/^-?\d*\.\d+$/.test(v)) return v;
+  return v.replace(/0+$/, "").replace(/\.$/, "");
+};
+
 const EMPTY = {
   sku: "", barcode: "", name: "", description: "",
   category: "", brand: "", unit: "",
@@ -376,16 +384,16 @@ export default function ProductForm() {
       api.get(`/inventory/products/${id}/`).then((r) => {
         const d = r.data;
         if (d.image) setImagePreview(d.image);
-        setForm({ ...EMPTY, ...Object.fromEntries(Object.entries(d).map(([k, v]) => [k, v === null ? "" : v])) });
+        setForm({ ...EMPTY, ...Object.fromEntries(Object.entries(d).map(([k, v]) => [k, v === null ? "" : trimDec(v)])) });
         // En BD el precio se guarda por unidad base. Si hay empaque, el de COMPRA
         // se muestra por empaque (precio_base × factor) para que cuadre el round-trip.
         const cf = Number(d.container_factor) || 0;
         const pmode = cf > 0 ? "container" : "base";
         setPurchaseMode(pmode);
         setPurchaseRaw(Number(d.purchase_price) > 0
-          ? String(pmode === "container" ? +(Number(d.purchase_price) * cf).toFixed(2) : d.purchase_price)
+          ? String(pmode === "container" ? +(Number(d.purchase_price) * cf).toFixed(2) : trimDec(String(d.purchase_price)))
           : "");
-        setSaleRaw(Number(d.sale_price) > 0 ? String(d.sale_price) : "");
+        setSaleRaw(Number(d.sale_price) > 0 ? trimDec(String(d.sale_price)) : "");
         setPresentations((d.presentations || []).map((p) => ({
           label: p.label, units_factor: String(Number(p.units_factor)),
           price: String(Number(p.price)), reverseN: "",
