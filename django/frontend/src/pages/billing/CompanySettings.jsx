@@ -13,6 +13,7 @@ const SECTIONS = [
   { id: "pos", label: "Seguridad del POS", icon: "🛡️", color: "#f59e0b", subtitle: "Ganancia mínima y control del efectivo." },
   { id: "termica", label: "Impresora térmica", icon: "🖨️", color: "#6366f1", subtitle: "Impresión de tickets de venta." },
   { id: "zebra", label: "Impresora Zebra", icon: "🏷️", color: "#14b8a6", subtitle: "Etiquetas de código de barras y precio." },
+  { id: "ticket", label: "Mensaje del ticket", icon: "💬", color: "#ec4899", subtitle: "Agradecimiento y frase al pie del ticket." },
   { id: "catalogo", label: "Catálogo público", icon: "🌐", color: "#0ea5e9", subtitle: "Tu catálogo visible en internet." },
   { id: "papelera", label: "Papelera", icon: "🗑️", color: "#f43f5e", subtitle: "Cuándo se borran los productos eliminados." },
 ];
@@ -404,6 +405,29 @@ export default function CompanySettings() {
             Imprimir etiqueta de prueba
           </button>
           <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">Guarda los cambios antes de probar.</span>
+        </div>
+      </div>
+    );
+    if (tab === "ticket") return (
+      <div className="grid grid-cols-1 gap-4">
+        <Field label="Mensaje de agradecimiento">
+          <input className={input} value={c.ticket_thanks ?? ""} placeholder="¡Gracias por su compra!"
+                 onChange={(e) => set("ticket_thanks", e.target.value)} />
+        </Field>
+        <Field label="Frase del pie del ticket (podés usar varias líneas)">
+          <textarea className={input} rows={3} value={c.ticket_footer ?? ""}
+                    placeholder={"«Pon en manos del Señor todas tus obras, y tus proyectos se cumplirán.»\nProverbios 16:3"}
+                    onChange={(e) => set("ticket_footer", e.target.value)} />
+        </Field>
+        <div className="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-700/30 border border-slate-100 dark:border-slate-700 rounded-lg p-3 leading-relaxed">
+          Aparecen al final de cada ticket (y en la impresora térmica). Cada <b>renglón</b> de la
+          frase se imprime en una línea. Dejá un campo <b>vacío</b> para no mostrarlo.
+        </div>
+        {/* Vista previa del pie */}
+        <div className="border border-dashed border-slate-300 dark:border-slate-600 rounded-xl p-4 text-center bg-white dark:bg-slate-900">
+          <div className="text-[11px] uppercase tracking-wide text-slate-400 mb-2">Vista previa</div>
+          {(c.ticket_thanks ?? "") && <div className="font-bold text-sm">{c.ticket_thanks}</div>}
+          {(c.ticket_footer ?? "") && <div className="italic text-xs mt-1 whitespace-pre-line text-slate-600 dark:text-slate-300">{c.ticket_footer}</div>}
         </div>
       </div>
     );

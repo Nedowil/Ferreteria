@@ -342,10 +342,14 @@ def _render_ticket(e, ticket, *, reprint=None, auto_cut=True):
         if txt:
             e.align(1).line(txt)
 
-    e.align(1).feed(1).line("Gracias por su compra!")
-    e.line("«Pon en manos del Señor todas tus obras,")
-    e.line("y tus proyectos se cumplirán.»")
-    e.line("Proverbios 16:3")
+    # Mensaje de agradecimiento y pie del ticket (configurables en Empresa).
+    thanks = co.get("thanks", "¡Gracias por su compra!")
+    if thanks:
+        e.align(1).feed(1).line(thanks)
+    footer = co.get("footer", "")
+    for ln in str(footer).splitlines():
+        if ln.strip():
+            e.align(1).line(ln)
     if reprint:
         e.feed(1)
         e.align(1).bold(True).line(f"** COPIA - REIMPRESION No. {reprint.get('copy_number')} **").bold(False)

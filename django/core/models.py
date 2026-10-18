@@ -207,6 +207,13 @@ class CompanySetting(models.Model):
     # Muestra a los cajeros como botones en la pantalla de PIN (compu compartida).
     pin_quick_login = models.BooleanField(default=True)
 
+    # Pie del ticket (editable desde Empresa, sin tocar el código).
+    ticket_thanks = models.CharField(
+        "mensaje de agradecimiento", max_length=120, default="¡Gracias por su compra!")
+    ticket_footer = models.TextField(
+        "frase del pie del ticket", blank=True, default=(
+            "«Pon en manos del Señor todas tus obras, y tus proyectos se cumplirán.»\nProverbios 16:3"))
+
     # Catálogo público
     public_catalog_enabled = models.BooleanField(default=False)
     public_catalog_show_prices = models.BooleanField(default=True)

@@ -207,6 +207,8 @@ def build_ticket(sale):
             "tax_rate": str(company.default_tax_rate),
             "currency": company.currency_code,
             "phrases": company.phrases or [],
+            "thanks": company.ticket_thanks or "",
+            "footer": company.ticket_footer or "",
             "printer_mode": company.printer_mode,
         },
         "sale": {

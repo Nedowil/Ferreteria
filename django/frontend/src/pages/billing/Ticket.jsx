@@ -70,7 +70,10 @@ function saleText(t) {
     lines.push(`Autorización: ${fel.uuid}`);
   }
   lines.push("");
-  lines.push("¡Gracias por su compra!");
+  lines.push(company.thanks !== undefined ? company.thanks : "¡Gracias por su compra!");
+  const footer = company.footer !== undefined ? company.footer
+    : "«Pon en manos del Señor todas tus obras, y tus proyectos se cumplirán.»\nProverbios 16:3";
+  for (const ln of String(footer || "").split("\n")) if (ln.trim()) lines.push(ln);
   return lines.join("\n");
 }
 
@@ -557,11 +560,20 @@ function TicketPaper({ company, sale, fel, qr, phrases }) {
           {qr && <img src={qr} alt="QR" className="mx-auto mt-2" style={{ width: 120, height: 120 }} />}
         </div>
       )}
-      <div className="text-center mt-3 font-bold">¡Gracias por su compra!</div>
-      <div className="text-center mt-2 text-[11px]">
-        <div className="italic">«Pon en manos del Señor todas tus obras, y tus proyectos se cumplirán.»</div>
-        <div>Proverbios 16:3</div>
-      </div>
+      {(() => {
+        // Mensaje de agradecimiento y pie del ticket (editables en Empresa).
+        // Si el payload no los trae (ticket viejo), se usan los valores por defecto.
+        const thanks = company.thanks !== undefined ? company.thanks
+          : "¡Gracias por su compra!";
+        const footer = company.footer !== undefined ? company.footer
+          : "«Pon en manos del Señor todas tus obras, y tus proyectos se cumplirán.»\nProverbios 16:3";
+        return (
+          <>
+            {thanks && <div className="text-center mt-3 font-bold">{thanks}</div>}
+            {footer && <div className="text-center mt-2 text-[11px] italic whitespace-pre-line">{footer}</div>}
+          </>
+        );
+      })()}
     </div>
   );
 }
