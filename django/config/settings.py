@@ -7,7 +7,9 @@ producción y SQLite para desarrollo rápido (controlado por variables de entorn
 
 from pathlib import Path
 import os
+import sys
 
+from django.core.exceptions import ImproperlyConfigured
 from corsheaders.defaults import default_headers as default_cors_headers
 from dotenv import load_dotenv
 
@@ -24,20 +26,41 @@ def env_bool(name: str, default: bool = False) -> bool:
     return val.strip().lower() in {"1", "true", "yes", "on"}
 
 
-SECRET_KEY = os.getenv(
-    "SECRET_KEY",
-    "django-insecure-dev-key-change-me-in-production-please-0123456789",
-)
+# DEBUG apagado por defecto: en producción NUNCA debe exponer trazas. Para
+# desarrollo local, poné DEBUG=True en el entorno/.env.
+DEBUG = env_bool("DEBUG", False)
 
-DEBUG = env_bool("DEBUG", True)
+# "Producción real" = sin DEBUG y fuera de los tests. En ese caso exigimos que
+# los secretos/hosts vengan del entorno y abortamos si falta algo crítico, para
+# no arrancar jamás con una SECRET_KEY pública ni con ALLOWED_HOSTS abierto.
+_RUNNING_TESTS = "test" in sys.argv or "PYTEST_CURRENT_TEST" in os.environ
+_IS_PROD = not DEBUG and not _RUNNING_TESTS
 
-ALLOWED_HOSTS = [h.strip() for h in os.getenv("ALLOWED_HOSTS", "*").split(",") if h.strip()]
-# Dominios de producción siempre permitidos (aunque se restrinja ALLOWED_HOSTS
-# por variable de entorno), para no bloquear el dominio ni el health check.
-if "*" not in ALLOWED_HOSTS:
-    for _h in ("ferreteriacentral.net", "www.ferreteriacentral.net", "ferreteria-g7zl.onrender.com"):
-        if _h not in ALLOWED_HOSTS:
-            ALLOWED_HOSTS.append(_h)
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    if _IS_PROD:
+        raise ImproperlyConfigured(
+            "Falta la variable de entorno SECRET_KEY. Definila con una clave "
+            "larga y aleatoria antes de arrancar en producción."
+        )
+    # Solo en desarrollo/tests se usa una clave de relleno.
+    SECRET_KEY = "django-insecure-dev-key-change-me-in-production-please-0123456789"
+
+# Dominios de producción conocidos (siempre permitidos, para no bloquear el
+# dominio ni el health check de Render aunque falte ALLOWED_HOSTS).
+_PROD_HOSTS = ["ferreteriacentral.net", "www.ferreteriacentral.net", "ferreteria-g7zl.onrender.com"]
+_hosts_env = os.getenv("ALLOWED_HOSTS", "").strip()
+if _hosts_env:
+    ALLOWED_HOSTS = [h.strip() for h in _hosts_env.split(",") if h.strip()]
+elif DEBUG:
+    # En desarrollo aceptamos cualquier host (comodín) por comodidad.
+    ALLOWED_HOSTS = ["*"]
+else:
+    # En producción NO usamos "*": solo los dominios conocidos (abajo se agregan).
+    ALLOWED_HOSTS = []
+for _h in _PROD_HOSTS:
+    if "*" not in ALLOWED_HOSTS and _h not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(_h)
 
 
 # Application definition
@@ -73,6 +96,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # Cabeceras CSP + Permissions-Policy (las que no pone Django por defecto).
+    "core.security_headers.SecurityHeadersMiddleware",
     # WhiteNoise sirve los archivos estáticos (incluido el SPA) en producción.
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",

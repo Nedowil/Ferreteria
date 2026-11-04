@@ -596,3 +596,14 @@ class ComputeTotalsRoundingTests(APITestCase):
         _sub, _disc, _tax, total = compute_totals(lines)
         suma = sum((money(l["gross"] - l["line_discount"]) for l in lines), Decimal("0"))
         self.assertEqual(total, suma)
+
+
+class SecurityHeadersTests(APITestCase):
+    """CSP y Permissions-Policy presentes en las respuestas."""
+
+    def test_csp_y_permissions_policy(self):
+        r = self.client.get("/healthz")
+        self.assertIn("Content-Security-Policy", r.headers)
+        self.assertIn("frame-ancestors 'none'", r.headers["Content-Security-Policy"])
+        self.assertIn("script-src 'self'", r.headers["Content-Security-Policy"])
+        self.assertIn("Permissions-Policy", r.headers)
