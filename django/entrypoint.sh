@@ -31,6 +31,12 @@ python manage.py purgar_auditoria --meses "${AUDIT_RETENTION_MONTHS:-36}" --yes 
 echo "==> Vaciando papelera de productos vencidos…"
 python manage.py purgar_productos --yes || true
 
+# Limpieza de la lista negra de JWT: borra los tokens YA vencidos de las tablas
+# de revocación (token_blacklist) para que no crezcan con el tiempo. Los tokens
+# vigentes (y los revocados aún no vencidos) se conservan. "|| true" por si acaso.
+echo "==> Limpiando tokens JWT vencidos…"
+python manage.py flushexpiredtokens || true
+
 # Datos de demostración solo si se pide explícitamente.
 if [ "${SEED_DEMO:-false}" = "true" ]; then
   echo "==> Sembrando datos de demostración…"
