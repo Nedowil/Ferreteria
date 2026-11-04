@@ -72,7 +72,7 @@ export default function InventoryShow() {
     const rows = await fetchAll(`/inventory/products/${id}/movements/`, {
       ...(filters.from ? { from: filters.from } : {}), ...(filters.to ? { to: filters.to } : {}),
     });
-    exportToExcel(`kardex-${product.sku}`, [
+    await exportToExcel(`kardex-${product.sku}`, [
       { header: "Fecha", value: (m) => new Date(m.created_at).toLocaleString("es-GT") },
       { header: "Tipo", value: (m) => m.type_display },
       { header: "Cantidad", value: (m) => Number(m.quantity) },

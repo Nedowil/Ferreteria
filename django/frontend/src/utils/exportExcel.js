@@ -1,23 +1,43 @@
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import api from "../api/client";
 
-// Exporta filas a un archivo .xlsx.
+// Construye un libro ExcelJS con una hoja: encabezado + filas + ancho de columnas.
 // columns: [{ header: "Folio", value: (row) => row.folio }]
-export function exportToExcel(filename, columns, rows, sheetName = "Datos") {
+// Se exporta aparte para poder probarlo sin tocar el DOM.
+export function buildWorkbook(columns, rows, sheetName = "Datos") {
   const header = columns.map((c) => c.header);
   const body = rows.map((r) => columns.map((c) => {
     const v = c.value(r);
     return v === null || v === undefined ? "" : v;
   }));
-  const ws = XLSX.utils.aoa_to_sheet([header, ...body]);
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet(sheetName);
   // Ancho de columnas aproximado al contenido.
-  ws["!cols"] = columns.map((c, i) => {
+  ws.columns = columns.map((c, i) => {
     const max = Math.max(c.header.length, ...body.map((row) => String(row[i] ?? "").length));
-    return { wch: Math.min(Math.max(max + 2, 8), 50) };
+    return { width: Math.min(Math.max(max + 2, 8), 50) };
   });
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, sheetName);
-  XLSX.writeFile(wb, filename.endsWith(".xlsx") ? filename : `${filename}.xlsx`);
+  ws.addRow(header);
+  ws.getRow(1).font = { bold: true };
+  body.forEach((row) => ws.addRow(row));
+  return wb;
+}
+
+// Exporta filas a un archivo .xlsx (descarga en el navegador).
+export async function exportToExcel(filename, columns, rows, sheetName = "Datos") {
+  const wb = buildWorkbook(columns, rows, sheetName);
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename.endsWith(".xlsx") ? filename : `${filename}.xlsx`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 // Trae TODAS las filas de un endpoint paginado (respeta los filtros dados).

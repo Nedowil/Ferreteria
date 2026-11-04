@@ -82,7 +82,7 @@ export default function AuditLog() {
     setExporting("excel");
     try {
       const rows = await fetchAll("/audit-logs/", activeParams());
-      exportToExcel("auditoria", cols(), rows);
+      await exportToExcel("auditoria", cols(), rows);
     } finally { setExporting(""); }
   };
 

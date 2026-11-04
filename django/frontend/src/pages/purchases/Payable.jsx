@@ -130,7 +130,7 @@ export default function Payable() {
     setExporting(true);
     try {
       const rows = await fetchAll("/purchases/payable/", buildParams());
-      exportToExcel("cuentas-por-pagar", [
+      await exportToExcel("cuentas-por-pagar", [
         { header: "Proveedor", value: (r) => r.supplier_name },
         { header: "Folio", value: (r) => r.folio },
         { header: "Vence", value: (r) => r.due_date },

@@ -41,7 +41,7 @@ export default function CustomerList() {
       if (search) params.search = search;
       if (type) params.customer_type = type;
       const rows = await fetchAll("/customers/", params);
-      exportToExcel("clientes", [
+      await exportToExcel("clientes", [
         { header: "Nombre", value: (r) => r.name },
         { header: "NIT", value: (r) => r.tax_id },
         { header: "Tipo", value: (r) => r.type_label },

@@ -69,7 +69,7 @@ export default function Invoices() {
     setExporting(true);
     try {
       const { data: rows } = await api.get("/invoices/sat-export/", { params: invParams() });
-      exportToExcel("InformacionDTE-FEL", [
+      await exportToExcel("InformacionDTE-FEL", [
         { header: "Fecha de emisión", value: (r) => r.fecha_emision },
         { header: "Número de Autorización", value: (r) => r.autorizacion },
         { header: "Tipo de DTE (nombre)", value: (r) => r.tipo_dte },

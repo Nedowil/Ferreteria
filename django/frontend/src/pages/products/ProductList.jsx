@@ -1266,7 +1266,7 @@ export default function ProductList() {
       // Columnas completas y listas para volver a IMPORTAR en otro sistema
       // (nombres en español que el importador reconoce). El stock va numérico
       // para que se importe correctamente.
-      exportToExcel("productos", [
+      await exportToExcel("productos", [
         { header: "SKU", value: (r) => r.sku },
         { header: "Código", value: (r) => r.barcode },
         { header: "Producto", value: (r) => r.name },

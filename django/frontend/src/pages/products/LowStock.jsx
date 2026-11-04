@@ -44,7 +44,7 @@ export default function LowStock() {
     setExporting(true);
     try {
       const data = await fetchAll("/inventory/products/low-stock/", ubicacion ? { ubicacion } : {});
-      exportToExcel("stock-bajo", [
+      await exportToExcel("stock-bajo", [
         { header: "SKU", value: (r) => r.sku },
         { header: "Producto", value: (r) => r.name },
         { header: "Ubicación", value: (r) => r.ubicacion_name || "" },

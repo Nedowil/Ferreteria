@@ -115,7 +115,7 @@ export default function SupplierBills() {
     setExporting(true);
     try {
       const all = await fetchAll("/supplier-bills/", params());
-      exportToExcel("facturas-proveedor", [
+      await exportToExcel("facturas-proveedor", [
         { header: "Fecha de pago", value: (b) => b.paid_on },
         { header: "Proveedor", value: (b) => b.supplier_name },
         { header: "N° factura", value: (b) => b.invoice_number || "" },

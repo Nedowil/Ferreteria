@@ -128,7 +128,7 @@ export default function SalesList() {
     setExporting(true);
     try {
       const rows = await fetchAll("/sales/", params);
-      exportToExcel("ventas", [
+      await exportToExcel("ventas", [
         { header: "Folio", value: (s) => s.folio },
         { header: "Cliente", value: (s) => s.customer_name || "Consumidor final" },
         { header: "Fecha", value: (s) => new Date(s.date).toLocaleString("es-GT") },

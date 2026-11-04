@@ -25,7 +25,7 @@ export default function Receivable() {
     setExporting(true);
     try {
       const rows = await fetchAll("/sales/receivable/", buildParams());
-      exportToExcel("cuentas-por-cobrar", [
+      await exportToExcel("cuentas-por-cobrar", [
         { header: "Folio", value: (s) => s.folio },
         { header: "Cliente", value: (s) => s.customer_name || "Consumidor final" },
         { header: "Total", value: (s) => Number(s.total) },

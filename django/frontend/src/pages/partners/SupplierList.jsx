@@ -49,7 +49,7 @@ export default function SupplierList() {
       const params = {};
       if (search) params.search = search;
       const rows = await fetchAll("/suppliers/", params);
-      exportToExcel("proveedores", [
+      await exportToExcel("proveedores", [
         { header: "Nombre", value: (r) => r.name },
         { header: "NIT", value: (r) => r.tax_id },
         { header: "Contacto", value: (r) => r.contact_name },

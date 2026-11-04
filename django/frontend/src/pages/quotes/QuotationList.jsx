@@ -50,7 +50,7 @@ export default function QuotationList() {
     setExporting(true);
     try {
       const rows = await fetchAll("/quotations/", buildParams());
-      exportToExcel("cotizaciones", [
+      await exportToExcel("cotizaciones", [
         { header: "Folio", value: (q) => q.folio },
         { header: "Cliente", value: (q) => q.customer_name || "Sin cliente" },
         { header: "Fecha", value: (q) => q.date },

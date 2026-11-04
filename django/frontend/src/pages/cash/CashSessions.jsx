@@ -120,7 +120,7 @@ export default function CashSessions() {
       if (from) filters.from = from;
       if (to) filters.to = to;
       const rows = await fetchAll("/cashbox/cash-sessions/", filters);
-      exportToExcel("sesiones-caja", [
+      await exportToExcel("sesiones-caja", [
         { header: "#", value: (r) => r.id },
         { header: "Cajero", value: (r) => r.user_name },
         { header: "Apertura", value: (r) => (r.opened_at ? new Date(r.opened_at).toLocaleString("es-GT") : "") },

@@ -32,7 +32,7 @@ export default function PublicCatalog() {
       ];
       if (showPrices) cols.push({ header: "Precio (Q)", value: (p) => (p.price != null ? Number(p.price) : "") });
       cols.push({ header: "Disponibilidad", value: (p) => (p.in_stock ? "Disponible" : "Agotado") });
-      exportToExcel(`catalogo-${bizName}`, cols, rows);
+      await exportToExcel(`catalogo-${bizName}`, cols, rows);
     } finally { setExporting(""); }
   };
 

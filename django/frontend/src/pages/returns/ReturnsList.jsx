@@ -37,7 +37,7 @@ export default function ReturnsList() {
     setExporting(true);
     try {
       const rows = await fetchAll("/returns/", buildParams());
-      exportToExcel("devoluciones", [
+      await exportToExcel("devoluciones", [
         { header: "Folio", value: (r) => r.folio },
         { header: "Venta", value: (r) => r.sale_folio || "Sin ticket" },
         { header: "Fecha", value: (r) => new Date(r.date).toLocaleString("es-GT") },

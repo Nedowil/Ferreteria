@@ -65,7 +65,7 @@ export default function CashBox() {
     setExporting("excel");
     try {
       const rows = await fetchAll(`/cashbox/cash-sessions/${session.id}/movements/`);
-      exportToExcel(`movimientos-caja`, movCols(), rows);
+      await exportToExcel(`movimientos-caja`, movCols(), rows);
     } finally { setExporting(""); }
   };
 

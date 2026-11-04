@@ -67,7 +67,7 @@ export default function PurchaseList() {
     setExporting(true);
     try {
       const rows = await fetchAll("/purchases/", buildParams());
-      exportToExcel("compras", [
+      await exportToExcel("compras", [
         { header: "Folio", value: (r) => r.folio },
         { header: "Proveedor", value: (r) => r.supplier_name },
         { header: "Fecha", value: (r) => (r.date ? new Date(r.date).toLocaleString("es-GT") : "") },
