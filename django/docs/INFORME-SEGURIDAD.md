@@ -80,8 +80,12 @@ Leyenda: ✅ corregido/implementado · 🟢 ya estaba bien · ⚙️ requiere ac
   Se activó la lista negra de tokens (`token_blacklist`), un endpoint de
   `logout` que revoca el refresh token, rotación con blacklist
   (`BLACKLIST_AFTER_ROTATION=True`) y limpieza automática de tokens vencidos en
-  cada arranque (`flushexpiredtokens`). También se acortó la vida del token de
-  equipo (de 10 años a 180 días por defecto).
+  cada arranque (`flushexpiredtokens`). El token del EQUIPO (terminal del POS) se
+  mantiene de larga vida (~10 años por defecto) por decisión operativa: los
+  cajeros tienen dificultad para iniciar sesión y olvidan sus usuarios. El riesgo
+  se mitiga porque ahora "cerrar sesión" revoca el token de verdad, así que un
+  equipo perdido/robado se puede cortar sin esperar a que caduque. Ajustable con
+  `DEVICE_REFRESH_DAYS`.
   _Commits:_ `f93102b`, `f2dc3a8` · _Archivos:_ `core/auth_views.py`,
   `config/settings.py`, `config/urls.py`, `frontend/src/auth/AuthContext.jsx`,
   `entrypoint.sh`.

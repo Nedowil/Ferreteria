@@ -79,12 +79,15 @@ def _log_pin_lockout(user, request):
 # computadora del mostrador y queda lista "para siempre". Además se renueva sola
 # cada vez que se usa (device-refresh), así que el reloj se reinicia solo.
 # Para revocarla, basta con desactivar la cuenta de equipo (is_active=False).
-# Duración de la sesión del EQUIPO (computadora compartida del POS). Antes eran
-# ~10 años (riesgo: un token filtrado valía casi para siempre). Ahora por defecto
-# 180 días y configurable; al pasar ese tiempo, un admin vuelve a iniciar sesión
-# en el equipo. Además cada renovación rota y revoca el token anterior.
+# Duración de la sesión del EQUIPO (computadora compartida del POS). Se deja
+# larga a propósito (~10 años por defecto) porque los cajeros tienen dificultad
+# para iniciar sesión y olvidan sus usuarios; la terminal registrada no debe
+# pedir login seguido. El riesgo de un token de tan larga vida se mitiga porque
+# ahora cada renovación ROTA y revoca el token anterior, y "cerrar sesión" lo
+# revoca de verdad (blacklist): si se pierde o roban el equipo, se corta el
+# acceso aunque falten años para que caduque. Ajustable con DEVICE_REFRESH_DAYS.
 import os as _os
-DEVICE_REFRESH_LIFETIME = timedelta(days=int(_os.getenv("DEVICE_REFRESH_DAYS", "180")))
+DEVICE_REFRESH_LIFETIME = timedelta(days=int(_os.getenv("DEVICE_REFRESH_DAYS", "3650")))
 
 
 class EmailOrUsernameTokenSerializer(TokenObtainPairSerializer):
