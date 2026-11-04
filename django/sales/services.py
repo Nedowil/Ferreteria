@@ -218,8 +218,12 @@ def create_sale(data, items, *, user=None, branch=None, offline_uuid=None, force
     return sale
 
 
-def sync_offline_sale(entry, *, user=None, branch=None):
+def sync_offline_sale(entry, *, user=None, branch=None, special_authorized=False):
     """Sincroniza UNA venta creada offline. Idempotente por `offline_uuid`.
+
+    `special_authorized`: si el usuario puede autorizar precios bajo costo /
+    descuentos altos (permiso 'ventas.autorizar_especial'). Sin él, la venta
+    offline se re-valida como una venta normal (anti-fraude).
 
     Devuelve un dict con el resultado: {uuid, ok, id, folio, duplicate?, error?}.
     Nunca lanza: los errores se devuelven en el dict para no frenar el lote.
@@ -242,17 +246,20 @@ def sync_offline_sale(entry, *, user=None, branch=None):
         "paid_amount": entry.get("paid_amount") or 0,
         "notes": entry.get("notes"),
     }
-    # force=True: el supervisor decidió registrar la venta offline aunque no haya
-    # stock (ya se cobró y/o se dio comprobante). Se deja constancia en las notas.
-    force = bool(entry.get("force"))
+    # force=True (saltar control de stock) y la autorización de precios bajo
+    # costo / descuentos altos SOLO valen si el usuario tiene el permiso
+    # 'ventas.autorizar_especial'. Así un cajero no puede disfrazar de "offline"
+    # una venta fraudulenta (bajo costo / sin margen) para evitar el control.
+    force = bool(entry.get("force")) and special_authorized
     if force:
         nota = "Venta offline forzada (sin stock) — ajustar inventario."
         data["notes"] = f"{data['notes']} · {nota}" if data.get("notes") else nota
     try:
-        # La venta offline YA ocurrió físicamente: no se puede bloquear a
-        # posteriori por descuento/precio; se registra y queda en la bitácora.
+        # Si el usuario NO está autorizado, se re-valida la ganancia mínima en el
+        # servidor (igual que una venta online): una venta offline bajo costo sin
+        # autorización se rechaza y queda para que la registre un supervisor.
         sale = create_sale(data, items, user=user, branch=branch, offline_uuid=uuid,
-                           force=force, special_authorized=True)
+                           force=force, special_authorized=special_authorized)
     except StockConflictError as e:
         # Conflicto: la venta ya ocurrió offline pero ya no hay stock. No se
         # puede registrar sola; requiere que el supervisor reponga o la descarte.

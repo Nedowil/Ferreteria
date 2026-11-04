@@ -112,8 +112,13 @@ class SaleViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.ModelVie
         sales = request.data.get("sales")
         if not isinstance(sales, list):
             return Response({"detail": "Se espera 'sales' como lista."}, status=status.HTTP_400_BAD_REQUEST)
+        # La autorización de precios bajo costo / forzar stock depende del permiso
+        # del usuario, NO de un flag que mande el cliente (anti-fraude).
+        from core.permissions import user_permission_codenames
+        special = "ventas.autorizar_especial" in user_permission_codenames(request.user)
         results = [
-            services.sync_offline_sale(entry, user=request.user, branch=self.branch)
+            services.sync_offline_sale(entry, user=request.user, branch=self.branch,
+                                       special_authorized=special)
             for entry in sales
         ]
         return Response({"results": results})

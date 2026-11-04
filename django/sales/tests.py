@@ -158,12 +158,34 @@ class SaleServiceTests(TestCase):
             "payment_status": "pagada", "paid_amount": "850", "force": True,
             "items": [{"product_id": self.prod.id, "quantity": "10", "unit_price": "85", "units_factor": "1"}],
         }
-        r = sync_offline_sale(entry, user=self.user, branch=self.branch)
+        # Forzar stock negativo SOLO lo puede un usuario autorizado.
+        r = sync_offline_sale(entry, user=self.user, branch=self.branch, special_authorized=True)
         self.assertTrue(r["ok"])
         sale = Sale.objects.get(offline_uuid="uuid-forz")
         self.assertIn("ajustar inventario", (sale.notes or ""))
         self.prod.refresh_from_db()
         self.assertEqual(self.prod.stock, Decimal("-5"))  # 5 - 10
+
+    def test_sync_offline_sin_autorizacion_no_puede_forzar_ni_vender_bajo_costo(self):
+        # Un cajero SIN 'ventas.autorizar_especial' no puede: (a) forzar stock
+        # negativo, ni (b) sincronizar una venta bajo costo disfrazada de offline.
+        self.prod.stock = Decimal("1")
+        self.prod.save(update_fields=["stock"])
+        # (a) force se ignora: sin stock → conflicto, no se crea.
+        r = sync_offline_sale(
+            {"offline_uuid": "u-force", "payment_method": "efectivo", "paid_amount": "850",
+             "force": True,
+             "items": [{"product_id": self.prod.id, "quantity": "10", "unit_price": "85"}]},
+            user=self.user, branch=self.branch, special_authorized=False)
+        self.assertFalse(r["ok"])
+        self.assertFalse(Sale.objects.filter(offline_uuid="u-force").exists())
+        # (b) venta bajo costo (costo 60, precio 1) sin autorización → rechazada.
+        r2 = sync_offline_sale(
+            {"offline_uuid": "u-bajocosto", "payment_method": "efectivo", "paid_amount": "1",
+             "items": [{"product_id": self.prod.id, "quantity": "1", "unit_price": "1"}]},
+            user=self.user, branch=self.branch, special_authorized=False)
+        self.assertFalse(r2["ok"])
+        self.assertFalse(Sale.objects.filter(offline_uuid="u-bajocosto").exists())
 
     def test_reimpresion_marca_copia_y_deja_rastro(self):
         # La 1ª impresión es ORIGINAL; de la 2ª en adelante es COPIA y se cuenta.
