@@ -48,7 +48,9 @@ class QuotationViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Mod
             d = parse_date(p["to"])
             if d:
                 qs = qs.filter(date__lte=d)
-        return qs
+        # Aislamiento por sucursal.
+        from core.api_utils import scope_to_branch
+        return scope_to_branch(qs, self.request)
 
     def get_serializer_class(self):
         if self.action == "list":

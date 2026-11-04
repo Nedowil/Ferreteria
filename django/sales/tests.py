@@ -525,3 +525,47 @@ class SalesSummaryProfitTests(TestCase):
         self.assertEqual(Decimal(str(d["total_income"])), Decimal("255.00"))
         self.assertEqual(Decimal(str(d["total_cost"])), Decimal("180.00"))
         self.assertEqual(Decimal(str(d["total_profit"])), Decimal("75.00"))
+
+
+class BranchIsolationAPITests(TestCase):
+    """Un usuario no-admin solo ve/afecta ventas de su propia sucursal (no IDOR)."""
+
+    def setUp(self):
+        from django.contrib.auth.models import Group
+        from rest_framework.test import APIClient
+        from core.models import BranchUser
+        from core.permissions import sync_permissions, ROLE_MATRIX
+        self.a = Branch.objects.create(name="Sucursal A", code="A", is_main=True)
+        self.b = Branch.objects.create(name="Sucursal B", code="B")
+        self.prod = Product.objects.create(sku="X-1", name="Tubo", sale_price=Decimal("10"),
+                                            purchase_price=Decimal("5"), stock=Decimal("100"), tax_type="iva")
+        perms = sync_permissions()
+        for role, codes in ROLE_MATRIX.items():
+            g, _ = Group.objects.get_or_create(name=role)
+            g.permissions.set([perms[c] for c in codes if c in perms])
+        User = get_user_model()
+        # Cajero de la sucursal A (no admin).
+        self.cajero = User.objects.create_user(username="ca", email="ca@test.com", password="x123")
+        self.cajero.groups.add(Group.objects.get(name="vendedor"))
+        BranchUser.objects.create(user=self.cajero, branch=self.a)
+        # Venta en la sucursal B.
+        admin = User.objects.create_user(username="ad", email="ad@test.com", password="x", is_superuser=True)
+        open_session(admin, 100, branch=self.b)
+        self.sale_b = create_sale(
+            {"payment_method": "efectivo", "paid_amount": "10"},
+            [{"product_id": self.prod.id, "quantity": "1", "unit_price": "10", "tax_type": "iva"}],
+            user=admin, branch=self.b,
+        )
+        self.c = APIClient()
+        r = self.c.post("/api/auth/token/", {"email": "ca@test.com", "password": "x123"}, format="json")
+        self.c.credentials(HTTP_AUTHORIZATION=f"Bearer {r.json()['access']}", HTTP_X_BRANCH_ID=str(self.a.id))
+
+    def test_cajero_no_ve_venta_de_otra_sucursal(self):
+        # No aparece en el listado...
+        r = self.c.get("/api/sales/")
+        data = r.json()
+        items = data["results"] if isinstance(data, dict) else data
+        folios = [s["folio"] for s in items]
+        self.assertNotIn(self.sale_b.folio, folios)
+        # ...ni se puede abrir por id (IDOR cerrado).
+        self.assertEqual(self.c.get(f"/api/sales/{self.sale_b.id}/").status_code, 404)

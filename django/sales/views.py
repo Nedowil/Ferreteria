@@ -66,7 +66,9 @@ class SaleViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.ModelVie
             d = parse_date(params["to"])
             if d:
                 qs = qs.filter(date__date__lte=d)
-        return qs
+        # Aislamiento por sucursal: un no-admin solo ve ventas de su sucursal.
+        from core.api_utils import scope_to_branch
+        return scope_to_branch(qs, self.request)
 
     def create(self, request, *args, **kwargs):
         ser = SaleWriteSerializer(data=request.data)

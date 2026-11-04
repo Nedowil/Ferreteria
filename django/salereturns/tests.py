@@ -154,6 +154,9 @@ class RefundAuthorizationAPITests(TestCase):
         admin_group.permissions.add(perms["devoluciones.reembolsar"])
         self.seller = User.objects.create_user(username="s", email="s@test.com", password="x123")
         self.seller.groups.add(Group.objects.get(name="vendedor"))
+        # El cajero pertenece a su sucursal (necesario con el aislamiento por sucursal).
+        from core.models import BranchUser
+        BranchUser.objects.create(user=self.seller, branch=self.branch)
         self.boss = User.objects.create_user(username="a", email="a@test.com", password="x123", is_superuser=True)
         open_session(self.seller, 1000, branch=self.branch)
         self.sale = create_sale(

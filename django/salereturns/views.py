@@ -54,7 +54,9 @@ class SaleReturnViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Mo
             d = parse_date(params["to"])
             if d:
                 qs = qs.filter(date__date__lte=d)
-        return qs
+        # Aislamiento por sucursal.
+        from core.api_utils import scope_to_branch
+        return scope_to_branch(qs, self.request)
 
     def _cash_refund_blocked(self, request, data):
         """Anti-fraude: pagar EFECTIVO por una devolución requiere el permiso
@@ -117,9 +119,14 @@ class SaleReturnViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Mo
         necesita además 'ventas.ver' para cargar la venta."""
         from sales.models import Sale
         from sales.serializers import SaleDetailSerializer
+        from core.api_utils import scope_to_branch
         folio = (request.query_params.get("folio") or "").strip()
         sid = request.query_params.get("id")
-        qs = Sale.objects.select_related("customer").prefetch_related("items__product")
+        # Solo se pueden cargar ventas de la propia sucursal (aislamiento).
+        qs = scope_to_branch(
+            Sale.objects.select_related("customer").prefetch_related("items__product"),
+            request,
+        )
         sale = None
         if sid:
             sale = qs.filter(pk=sid).first()

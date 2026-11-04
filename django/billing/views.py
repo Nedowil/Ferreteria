@@ -40,7 +40,9 @@ class InvoiceViewSet(viewsets.ReadOnlyModelViewSet):
             d = parse_date(p["to"])
             if d:
                 qs = qs.filter(sale__date__date__lte=d)
-        return qs
+        # Aislamiento por sucursal (la factura hereda la sucursal de su venta).
+        from core.api_utils import scope_to_branch
+        return scope_to_branch(qs, self.request, field="sale__branch")
 
     @action(detail=True, methods=["post"], permission_classes=[HasPermission.require("facturas.anular")])
     def annul(self, request, pk=None):
