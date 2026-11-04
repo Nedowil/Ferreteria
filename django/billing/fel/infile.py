@@ -248,7 +248,10 @@ class InfileCertifier(FelCertifier):
         para no perder la causa detrás de un opaco "HTTP Error 500".
         """
         try:
-            with urllib.request.urlopen(req, timeout=self.TIMEOUT) as resp:
+            # nosec B310: la URL proviene del endpoint configurado del
+            # certificador (INFILE/SAT), siempre https y nunca de entrada del
+            # usuario; no hay riesgo de esquemas file:// ni custom.
+            with urllib.request.urlopen(req, timeout=self.TIMEOUT) as resp:  # nosec B310
                 return json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
             raw = ""
@@ -387,7 +390,8 @@ class InfileCertifier(FelCertifier):
         hdrs = {"Content-Type": f"multipart/form-data; boundary={boundary}"}
         hdrs.update(headers or {})
         req = urllib.request.Request(url, data=body, headers=hdrs, method="POST")
-        with urllib.request.urlopen(req, timeout=self.TIMEOUT) as resp:
+        # nosec B310: URL del certificador configurado (INFILE/SAT), https fijo.
+        with urllib.request.urlopen(req, timeout=self.TIMEOUT) as resp:  # nosec B310
             return json.loads(resp.read().decode("utf-8"))
 
     def lookup_tax_id(self, tax_id: str) -> dict:

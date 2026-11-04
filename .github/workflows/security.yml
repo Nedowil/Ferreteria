@@ -1,0 +1,109 @@
+name: Seguridad (SAST + SCA)
+
+# Análisis de seguridad automatizado en cada push/PR y, además, una vez por
+# semana para detectar avisos (CVE) publicados DESPUÉS de haber mezclado código:
+#
+#   - SCA backend  : pip-audit sobre requirements.txt (dependencias vulnerables).
+#   - SAST backend : Bandit sobre el código Python (patrones inseguros).
+#   - SCA frontend : npm audit sobre las dependencias que SÍ llegan al navegador.
+#
+# La "puerta" (lo que hace fallar el job) está calibrada para los riesgos que
+# de verdad afectan a producción; los avisos de herramientas de build/test se
+# reportan pero no rompen el pipeline.
+
+on:
+  push:
+    paths:
+      - "django/**"
+      - ".github/workflows/security.yml"
+  pull_request:
+    paths:
+      - "django/**"
+      - ".github/workflows/security.yml"
+  schedule:
+    # Lunes 08:17 UTC (~02:17 en Guatemala). Reauditar el árbol ya mezclado
+    # contra la base de avisos más reciente.
+    - cron: "17 8 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sca-backend:
+    name: SCA backend (pip-audit)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: django
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar pip-audit
+        run: pip install pip-audit
+
+      # Falla si alguna dependencia declarada tiene un aviso conocido.
+      # --strict trata cualquier error de resolución como fallo.
+      - name: Auditar dependencias de Python
+        run: pip-audit -r requirements.txt --strict --desc
+
+  sast-backend:
+    name: SAST backend (Bandit)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: django
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar Bandit
+        run: pip install "bandit[toml]"
+
+      # Analiza el código propio. Se excluyen tests, migraciones y el venv.
+      # La puerta rompe solo ante hallazgos de severidad ALTA y confianza
+      # media/alta (-iii = alta confianza no aplica a -ll; usamos -ll -i).
+      # Reporte completo (todas las severidades) aunque no rompa.
+      - name: Reporte Bandit (informativo)
+        run: bandit -r . -x ./.venv,./frontend,./*/migrations,./*/tests.py,./*/tests --severity-level low --confidence-level low || true
+
+      - name: Puerta Bandit (falla ante severidad alta)
+        run: bandit -r . -x ./.venv,./frontend,./*/migrations,./*/tests.py,./*/tests -ll -i
+
+  sca-frontend:
+    name: SCA frontend (npm audit)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: django/frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: django/frontend/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      # Informativo: todo el árbol, cualquier severidad.
+      - name: Reporte npm audit (informativo)
+        run: npm audit || true
+
+      # Puerta: solo lo que llega al navegador (--omit=dev) y de severidad
+      # alta o superior. Los avisos de herramientas de build/test (vite,
+      # vitest, esbuild, postcss, jsdom) no rompen el pipeline.
+      - name: Puerta npm audit (runtime, alta+)
+        run: npm audit --omit=dev --audit-level=high
