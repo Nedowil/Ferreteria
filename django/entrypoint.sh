@@ -2,20 +2,35 @@
 # Arranque del contenedor: migra, prepara estáticos, bootstrap y sirve con gunicorn.
 set -e
 
+# Usuario de BD con privilegios mínimos (opcional). Si definís
+# MIGRATION_DATABASE_URL, los pasos que MODIFICAN el esquema o lo preparan por
+# primera vez (migrate, createcachetable, init_app) se ejecutan con ESE usuario
+# privilegiado (dueño del esquema), mientras que la app (gunicorn) sirve con el
+# usuario restringido de DATABASE_URL (solo SELECT/INSERT/UPDATE/DELETE, sin
+# DROP/ALTER). Ver django/docs/SEGURIDAD-BD.md. Si no la definís, todo usa
+# DATABASE_URL como siempre (comportamiento idéntico al anterior).
+run_ddl() {
+  if [ -n "${MIGRATION_DATABASE_URL:-}" ]; then
+    DATABASE_URL="$MIGRATION_DATABASE_URL" "$@"
+  else
+    "$@"
+  fi
+}
+
 echo "==> Aplicando migraciones…"
-python manage.py migrate --noinput
+run_ddl python manage.py migrate --noinput
 
 # Tabla de caché en BD (DatabaseCache): guarda los contadores de rate limiting y
 # el bloqueo de PIN compartidos entre TODOS los workers. Es idempotente: si la
 # tabla ya existe, no hace nada.
 echo "==> Preparando tabla de caché…"
-python manage.py createcachetable
+run_ddl python manage.py createcachetable
 
 echo "==> Recolectando estáticos…"
 python manage.py collectstatic --noinput
 
 echo "==> Bootstrap (permisos, roles, sucursal, admin)…"
-python manage.py init_app
+run_ddl python manage.py init_app
 
 # Retención de la bitácora (auditoría): conserva los últimos N meses y borra lo
 # anterior, para que la tabla no crezca sin límite con los años. Por defecto 36
