@@ -75,6 +75,7 @@ INSTALLED_APPS = [
     "django.contrib.humanize",
     # Terceros
     "rest_framework",
+    "rest_framework_simplejwt.token_blacklist",  # revocación efectiva de refresh tokens
     "corsheaders",
     "django_filters",
     # Apps del proyecto
@@ -375,7 +376,9 @@ SIMPLE_JWT = {
     # La sesión se cierra sola a las 11 horas de iniciada (auto-logout).
     "REFRESH_TOKEN_LIFETIME": timedelta(hours=11),
     "ROTATE_REFRESH_TOKENS": True,
-    "BLACKLIST_AFTER_ROTATION": False,
+    # Al rotar, el refresh viejo queda en lista negra: un token robado deja de
+    # servir en cuanto el legítimo renueva, y el logout puede revocarlo.
+    "BLACKLIST_AFTER_ROTATION": True,
     "USER_ID_FIELD": "id",
     "USER_ID_CLAIM": "user_id",
 }

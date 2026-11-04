@@ -100,6 +100,9 @@ export function AuthProvider({ children }) {
   // Botón "Salir": si hay equipo, vuelve a perfiles; si no, cierra sesión.
   const logout = () => {
     if (tokenStore.hasDevice) { exitProfile(); return; }
+    // Revoca el refresh en el servidor (lista negra) antes de limpiar el cliente.
+    const refresh = tokenStore.refresh;
+    if (refresh) { try { api.post("/auth/logout/", { refresh }); } catch { /* no bloquear el cierre */ } }
     tokenStore.clear();
     setUser(null);
     window.location.href = "/login";

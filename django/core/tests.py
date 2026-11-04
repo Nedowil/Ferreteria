@@ -607,3 +607,24 @@ class SecurityHeadersTests(APITestCase):
         self.assertIn("frame-ancestors 'none'", r.headers["Content-Security-Policy"])
         self.assertIn("script-src 'self'", r.headers["Content-Security-Policy"])
         self.assertIn("Permissions-Policy", r.headers)
+
+
+class LogoutRevocationTests(APITestCase):
+    """El logout revoca el refresh token (lista negra) y ya no se puede renovar."""
+
+    def test_logout_revoca_refresh(self):
+        from django.contrib.auth import get_user_model
+        U = get_user_model()
+        U.objects.create_user(username="lo", email="lo@test.com", password="x123")
+        r = self.client.post("/api/auth/token/", {"email": "lo@test.com", "password": "x123"}, format="json")
+        refresh = r.json()["refresh"]
+        # Antes del logout, el refresh sirve.
+        ok = self.client.post("/api/auth/token/refresh/", {"refresh": refresh}, format="json")
+        self.assertEqual(ok.status_code, 200)
+        new_refresh = ok.json().get("refresh", refresh)
+        # Logout del refresh vigente.
+        out = self.client.post("/api/auth/logout/", {"refresh": new_refresh}, format="json")
+        self.assertEqual(out.status_code, 205)
+        # Después del logout, ese refresh ya no renueva.
+        again = self.client.post("/api/auth/token/refresh/", {"refresh": new_refresh}, format="json")
+        self.assertEqual(again.status_code, 401)

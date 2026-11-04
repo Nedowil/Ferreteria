@@ -23,6 +23,7 @@ api_patterns = [
     # Autenticación JWT
     path("auth/token/", auth_views.ThrottledTokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path("auth/logout/", auth_views.logout, name="logout"),
     path("auth/profiles/", auth_views.profiles, name="profiles"),
     path("auth/switch-profile/", auth_views.switch_profile, name="switch_profile"),
     path("auth/device-refresh/", auth_views.device_refresh, name="device_refresh"),

@@ -79,7 +79,12 @@ def _log_pin_lockout(user, request):
 # computadora del mostrador y queda lista "para siempre". Además se renueva sola
 # cada vez que se usa (device-refresh), así que el reloj se reinicia solo.
 # Para revocarla, basta con desactivar la cuenta de equipo (is_active=False).
-DEVICE_REFRESH_LIFETIME = timedelta(days=3650)  # ~10 años
+# Duración de la sesión del EQUIPO (computadora compartida del POS). Antes eran
+# ~10 años (riesgo: un token filtrado valía casi para siempre). Ahora por defecto
+# 180 días y configurable; al pasar ese tiempo, un admin vuelve a iniciar sesión
+# en el equipo. Además cada renovación rota y revoca el token anterior.
+import os as _os
+DEVICE_REFRESH_LIFETIME = timedelta(days=int(_os.getenv("DEVICE_REFRESH_DAYS", "180")))
 
 
 class EmailOrUsernameTokenSerializer(TokenObtainPairSerializer):
@@ -175,7 +180,32 @@ def device_refresh(request):
         return Response({"detail": "Sesión de equipo inválida."}, status=status.HTTP_401_UNAUTHORIZED)
     new = RefreshToken.for_user(user)
     new.set_exp(lifetime=DEVICE_REFRESH_LIFETIME)
+    # Rotación: el token de equipo anterior queda revocado (si se filtró, muere).
+    try:
+        old.blacklist()
+    except Exception:
+        pass
     return Response({"access": str(new.access_token), "refresh": str(new)})
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def logout(request):
+    """Cierra la sesión revocando el refresh token (lo pone en lista negra).
+
+    Idempotente: si el token ya no sirve o no se manda, responde 205 igual para
+    que el cliente pueda limpiar su estado sin trabarse.
+    """
+    from rest_framework_simplejwt.exceptions import TokenError
+    raw = request.data.get("refresh") or ""
+    if raw:
+        try:
+            RefreshToken(raw).blacklist()
+        except TokenError:
+            pass
+        except Exception:
+            pass
+    return Response(status=status.HTTP_205_RESET_CONTENT)
 
 
 @api_view(["POST"])
