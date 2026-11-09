@@ -20,7 +20,7 @@ export default function PagadoCard({ pagado }) {
           <option className="text-slate-800" value="todo">Histórico</option>
         </select>
       </div>
-      <div className="text-3xl font-extrabold mt-1 tabular-nums break-words drop-shadow-sm leading-tight">{Q(val)}</div>
+      <div className="text-2xl sm:text-3xl font-extrabold mt-1 tabular-nums whitespace-nowrap drop-shadow-sm leading-tight">{Q(val)}</div>
       <div className="text-xs opacity-90 mt-1">A proveedores · {LABEL[range]}</div>
       <div className="absolute right-4 bottom-3 text-4xl opacity-25 select-none pointer-events-none">💸</div>
     </div>

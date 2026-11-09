@@ -17,7 +17,7 @@ function Kpi({ label, value, sub, icon, gradient }) {
   return (
     <div className={`relative rounded-2xl p-5 text-white shadow-lg bg-gradient-to-br ${gradient} overflow-hidden`}>
       <div className="text-sm opacity-90">{label}</div>
-      <div className="text-3xl font-extrabold mt-1 tabular-nums break-words drop-shadow-sm leading-tight">{value}</div>
+      <div className="text-2xl sm:text-3xl font-extrabold mt-1 tabular-nums whitespace-nowrap drop-shadow-sm leading-tight">{value}</div>
       {sub && <div className="text-xs opacity-90 mt-1">{sub}</div>}
       <div className="absolute right-4 bottom-3 text-4xl opacity-25 select-none pointer-events-none">{icon}</div>
     </div>
@@ -162,7 +162,7 @@ export default function Payable() {
 
       {/* KPIs — solo visibles para el administrador */}
       {isAdmin && (!loaded ? <SkeletonKpis count={4} /> : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
           <Kpi label="Saldo total pendiente" value={Q(totalDebt)} icon="🧾" gradient="from-rose-500 to-red-600"
                sub="Lo que debés a proveedores" />
           <Kpi label="Cuentas pendientes" value={nCuentas} icon="📄" gradient="from-indigo-500 to-blue-600"

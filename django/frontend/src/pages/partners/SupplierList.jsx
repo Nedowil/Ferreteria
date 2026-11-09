@@ -20,7 +20,7 @@ function Kpi({ label, value, sub, icon, gradient }) {
   return (
     <div className={`relative rounded-2xl p-5 text-white shadow-lg bg-gradient-to-br ${gradient} overflow-hidden`}>
       <div className="text-sm opacity-90">{label}</div>
-      <div className="text-3xl font-extrabold mt-1 tabular-nums break-words drop-shadow-sm leading-tight">{value}</div>
+      <div className="text-2xl sm:text-3xl font-extrabold mt-1 tabular-nums whitespace-nowrap drop-shadow-sm leading-tight">{value}</div>
       {sub && <div className="text-xs opacity-90 mt-1">{sub}</div>}
       <div className="absolute right-4 bottom-3 text-4xl opacity-25 select-none pointer-events-none">{icon}</div>
     </div>
@@ -154,7 +154,7 @@ export default function SupplierList() {
       </div>
 
       {/* KPIs */}
-      <div className={"grid grid-cols-1 gap-4 mb-4 " + (seeMoney ? "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5" : "sm:grid-cols-1 max-w-xs")}>
+      <div className={"grid grid-cols-1 gap-4 mb-4 " + (seeMoney ? "sm:grid-cols-2 lg:grid-cols-3" : "sm:grid-cols-1 max-w-xs")}>
         <Kpi label="Proveedores" value={count} icon="🚚" gradient="from-orange-500 to-amber-600" sub="Registrados" />
         {seeMoney && <Kpi label="Por pagar (total)" value={Q(summary.total_balance)} icon="💰"
              gradient={Number(summary.total_balance) > 0 ? "from-rose-500 to-red-600" : "from-emerald-500 to-green-600"} sub="Deuda con proveedores" />}
