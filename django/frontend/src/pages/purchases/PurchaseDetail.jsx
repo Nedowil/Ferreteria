@@ -12,6 +12,8 @@ const STATUS_BADGE = {
   cancelada: "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400",
 };
 
+const Qm = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
 export default function PurchaseDetail() {
   const { can } = useAuth();
   const { id } = useParams();
@@ -152,23 +154,34 @@ export default function PurchaseDetail() {
           </section>
 
           {p.status === "recibida" && (
-            <section className="bg-white dark:bg-slate-800 rounded-lg shadow p-5">
-              <h3 className="font-semibold mb-1">Cuenta por pagar</h3>
-              <div className="text-sm mb-3">
-                <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">Pagado</span><span>Q{p.amount_paid}</span></div>
-                <div className="flex justify-between font-semibold"><span>Saldo</span><span className={hasBalance ? "text-red-600" : "text-green-600"}>Q{p.balance}</span></div>
+            <section className={"rounded-2xl shadow-lg overflow-hidden border-2 " + (hasBalance ? "border-indigo-300 dark:border-indigo-800 ring-2 ring-indigo-100 dark:ring-indigo-900/40" : "border-emerald-200 dark:border-emerald-900/50")}>
+              <div className={"px-5 py-3 text-white bg-gradient-to-r " + (hasBalance ? "from-indigo-600 to-blue-600" : "from-emerald-500 to-green-600")}>
+                <h3 className="font-bold text-base flex items-center gap-2">{hasBalance ? "💵 Registrar abono" : "✓ Cuenta saldada"}</h3>
+                <p className="text-xs text-white/80">Cuenta por pagar de esta compra</p>
               </div>
-              {hasBalance ? (
-                <form onSubmit={submitPay} className="space-y-2">
-                  <input type="number" step="any" placeholder="Monto del abono" value={pay.amount} required
-                         onChange={(e) => setPay({ ...pay, amount: e.target.value })} className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
-                  <select value={pay.payment_method} onChange={(e) => setPay({ ...pay, payment_method: e.target.value })} className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm">
-                    <option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option><option value="cheque">Cheque</option><option value="tarjeta">Tarjeta</option>
-                  </select>
-                  <input placeholder="Referencia (opcional)" value={pay.reference} onChange={(e) => setPay({ ...pay, reference: e.target.value })} className="w-full border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
-                  <button className="w-full bg-blue-600 text-white rounded px-4 py-2 text-sm font-medium">Registrar abono</button>
-                </form>
-              ) : <p className="text-sm text-green-600">Compra pagada por completo ✓</p>}
+              <div className="p-5 bg-white dark:bg-slate-800">
+                <div className={"flex items-center justify-between rounded-xl px-4 py-3 mb-4 " + (hasBalance ? "bg-rose-50 dark:bg-rose-900/20" : "bg-emerald-50 dark:bg-emerald-900/20")}>
+                  <div>
+                    <div className="text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400">Saldo pendiente</div>
+                    <div className={"text-2xl font-extrabold tabular-nums leading-tight " + (hasBalance ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400")}>{Qm(p.balance)}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400">Pagado</div>
+                    <div className="text-sm font-semibold text-slate-700 dark:text-slate-200 tabular-nums">{Qm(p.amount_paid)}</div>
+                  </div>
+                </div>
+                {hasBalance ? (
+                  <form onSubmit={submitPay} className="space-y-2">
+                    <input type="number" step="any" placeholder="Monto del abono" value={pay.amount} required
+                           onChange={(e) => setPay({ ...pay, amount: e.target.value })} className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-900 rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <select value={pay.payment_method} onChange={(e) => setPay({ ...pay, payment_method: e.target.value })} className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-900 rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                      <option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option><option value="cheque">Cheque</option><option value="tarjeta">Tarjeta</option>
+                    </select>
+                    <input placeholder="Referencia (opcional)" value={pay.reference} onChange={(e) => setPay({ ...pay, reference: e.target.value })} className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-900 rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <button className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white rounded-lg px-4 py-2.5 text-sm font-semibold shadow-md active:scale-[.98] transition">💵 Registrar abono</button>
+                  </form>
+                ) : <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Compra pagada por completo ✓</p>}
+              </div>
             </section>
           )}
         </div>
