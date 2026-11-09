@@ -998,6 +998,7 @@ function StockEntryModal({ products, suppliers, onSupplierCreated, onClose, onDo
   const [newPhone, setNewPhone] = useState("");
   const [payment, setPayment] = useState("al_credito");
   const [dueDate, setDueDate] = useState("");
+  const [invoice, setInvoice] = useState(""); // No. de factura / serie / recibo (opcional)
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [supOpen, setSupOpen] = useState(false); // dropdown de sugerencias de proveedor
@@ -1029,6 +1030,7 @@ function StockEntryModal({ products, suppliers, onSupplierCreated, onClose, onDo
       .filter((it) => it.quantity > 0);
     if (items.length === 0) { setErr("Poné una cantidad mayor que cero en al menos un producto."); return; }
     const payload = { items, payment_status: payment, due_date: payment === "al_credito" && dueDate ? dueDate : null };
+    if (invoice.trim()) payload.invoice_number = invoice.trim();
     if (matched) payload.supplier_id = matched.id;
     else payload.new_supplier = { name: trimmed, tax_id: newNit, phone: newPhone };
     setBusy(true);
@@ -1111,6 +1113,12 @@ function StockEntryModal({ products, suppliers, onSupplierCreated, onClose, onDo
                 <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm bg-white dark:bg-slate-900" />
               </label>
             )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">No. de factura / recibo <span className="text-slate-400 font-normal">(opcional)</span></label>
+            <input value={invoice} onChange={(e) => setInvoice(e.target.value)} placeholder="Ej: Serie A 001234, o el No. de recibo"
+                   className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 outline-none focus:ring-2 focus:ring-emerald-500" />
           </div>
 
           <div className="flex items-center justify-between text-sm">
