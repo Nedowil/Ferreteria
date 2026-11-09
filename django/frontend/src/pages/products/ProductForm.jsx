@@ -15,6 +15,10 @@ const trimDec = (v) => {
   return v.replace(/0+$/, "").replace(/\.$/, "");
 };
 
+// La ferretería no usa categorías: se oculta el campo en el formulario. Para
+// volver a mostrarlo, poné esto en true (no hace falta ningún otro cambio).
+const MOSTRAR_CATEGORIA = false;
+
 const EMPTY = {
   sku: "", barcode: "", name: "", description: "",
   category: "", brand: "", unit: "",
@@ -688,6 +692,7 @@ export default function ProductForm() {
                     className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-sm" />
         </div>
         <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {MOSTRAR_CATEGORIA && (
           <div>
             <SearchPicker
               label="Categoría"
@@ -703,6 +708,7 @@ export default function ProductForm() {
               hint={<>Tipo de producto (tornillos, pinturas…). Escribí para buscar{can("catalogos.gestionar") ? " o crear una nueva" : ""}.</>}
             />
           </div>
+          )}
           <div>
             <SearchPicker
               label="Ubicación"
