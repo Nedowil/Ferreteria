@@ -28,6 +28,17 @@ export default function ReportDamage() {
   };
   useEffect(loadMine, []);
 
+  // En "Mis reportes recientes" los PENDIENTES (y rechazados) se muestran siempre,
+  // como ahora. Los APROBADOS solo se ven durante ~2 semanas después de aprobados
+  // y luego desaparecen de la lista, para que no se alargue con el tiempo.
+  const DOS_SEMANAS_MS = 14 * 24 * 60 * 60 * 1000;
+  const visibleMine = mine.filter((r) => {
+    if (r.status !== "aprobada") return true;
+    const ref = r.reviewed_at || r.created_at; // fecha de aprobación
+    if (!ref) return true;                      // sin fecha: no ocultar
+    return Date.now() - new Date(ref).getTime() <= DOS_SEMANAS_MS;
+  });
+
   // Búsqueda de producto (con debounce simple).
   useEffect(() => {
     const q = search.trim();
@@ -127,11 +138,11 @@ export default function ReportDamage() {
         </button>
       </div>
 
-      {mine.length > 0 && (
+      {visibleMine.length > 0 && (
         <div className="mt-6">
           <h2 className="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-2">Mis reportes recientes</h2>
           <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700">
-            {mine.slice(0, 15).map((r) => (
+            {visibleMine.slice(0, 15).map((r) => (
               <div key={r.id} className="px-4 py-2.5 flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">{r.product_name} <span className="text-slate-400">×{Number(r.quantity)}</span></div>
