@@ -63,12 +63,10 @@ export default function PurchaseDetail() {
 
   return (
     <div className="max-w-4xl">
-      <div className="flex justify-end mb-3">
-        <button onClick={() => navigate("/compras")} className="inline-flex items-center gap-1 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-slate-400 transition">← Volver</button>
-      </div>
-
-      {/* Encabezado con color: identidad de la compra y total a la vista */}
+      {/* Encabezado con color: identidad de la compra y total a la vista. El
+          botón "Volver" va dentro, para no robar una fila entera arriba. */}
       <div className="relative overflow-hidden rounded-2xl p-5 sm:p-6 mb-5 text-white shadow-lg bg-gradient-to-br from-slate-800 via-slate-800 to-indigo-900">
+        <button onClick={() => navigate("/compras")} className="relative z-10 inline-flex items-center gap-1 text-sm font-semibold text-white bg-white/15 hover:bg-white/25 border border-white/20 rounded-lg px-3 py-1.5 mb-4 transition active:scale-95">← Volver</button>
         <div className="relative z-10 flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-indigo-200 text-sm font-medium"><span>🛒</span><span>Compra</span></div>
