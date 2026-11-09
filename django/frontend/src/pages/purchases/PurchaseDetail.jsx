@@ -66,8 +66,8 @@ export default function PurchaseDetail() {
       {/* Encabezado con color: identidad de la compra y total a la vista. El
           botón "Volver" va dentro, para no robar una fila entera arriba. */}
       <div className="relative overflow-hidden rounded-2xl p-5 sm:p-6 mb-5 text-white shadow-lg bg-gradient-to-br from-slate-800 via-slate-800 to-indigo-900">
-        <button onClick={() => navigate("/compras")} className="relative z-10 inline-flex items-center gap-1 text-sm font-semibold text-white bg-white/15 hover:bg-white/25 border border-white/20 rounded-lg px-3 py-1.5 mb-4 transition active:scale-95">← Volver</button>
-        <div className="relative z-10 flex flex-wrap items-start justify-between gap-4">
+        <button onClick={() => navigate("/compras")} className="absolute top-4 right-4 z-20 inline-flex items-center gap-1 text-sm font-semibold text-white bg-white/15 hover:bg-white/25 border border-white/20 rounded-lg px-3 py-1.5 transition active:scale-95">← Volver</button>
+        <div className="relative z-10 flex flex-wrap items-end justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-indigo-200 text-sm font-medium"><span>🛒</span><span>Compra</span></div>
             <div className="text-2xl sm:text-3xl font-extrabold font-mono tracking-tight mt-0.5">{p.folio}</div>
