@@ -12,6 +12,13 @@ const STATUS_BADGE = {
   cancelada: "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400",
 };
 
+// Chip del estado para el encabezado de color (fondo oscuro): translúcido.
+const STATUS_PILL = {
+  pendiente: "bg-amber-400/25 text-amber-100",
+  recibida: "bg-emerald-400/25 text-emerald-100",
+  cancelada: "bg-slate-400/25 text-slate-100",
+};
+
 const Qm = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default function PurchaseDetail() {
@@ -56,38 +63,57 @@ export default function PurchaseDetail() {
 
   return (
     <div className="max-w-4xl">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-bold flex items-center gap-2 flex-wrap">
-          <span>Compra <span className="font-mono text-indigo-600 dark:text-indigo-400">{p.folio}</span></span>
-          <span className={"text-xs px-2 py-0.5 rounded-full font-semibold " + STATUS_BADGE[p.status]}>{p.status_display}</span>
-        </h1>
+      <div className="flex justify-end mb-3">
         <button onClick={() => navigate("/compras")} className="inline-flex items-center gap-1 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-slate-400 transition">← Volver</button>
+      </div>
+
+      {/* Encabezado con color: identidad de la compra y total a la vista */}
+      <div className="relative overflow-hidden rounded-2xl p-5 sm:p-6 mb-5 text-white shadow-lg bg-gradient-to-br from-slate-800 via-slate-800 to-indigo-900">
+        <div className="relative z-10 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-indigo-200 text-sm font-medium"><span>🛒</span><span>Compra</span></div>
+            <div className="text-2xl sm:text-3xl font-extrabold font-mono tracking-tight mt-0.5">{p.folio}</div>
+            <div className="mt-1 text-slate-200">{p.supplier_name}</div>
+            <span className={"inline-block mt-2 text-xs px-2.5 py-0.5 rounded-full font-semibold " + (STATUS_PILL[p.status] || "bg-white/20")}>{p.status_display}</span>
+          </div>
+          <div className="text-right">
+            <div className="text-[11px] uppercase tracking-wide text-indigo-200">Total</div>
+            <div className="text-3xl font-extrabold tabular-nums leading-tight whitespace-nowrap">{Qm(p.total)}</div>
+            <div className="text-xs text-slate-300 mt-0.5">{p.date}</div>
+          </div>
+        </div>
+        <div className="absolute -right-4 -bottom-6 text-[7rem] opacity-10 select-none pointer-events-none">🧾</div>
       </div>
       {error && <ErrorBanner message={error} className="mb-4" />}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2 space-y-5">
           <section className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-5">
-            <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
-              <div className="col-span-2 sm:col-span-1">
-                <div className="text-[11px] uppercase tracking-wide text-slate-400">Proveedor</div>
-                <div className="font-semibold text-slate-800 dark:text-slate-100">{p.supplier_name}</div>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-sm">
+              <div className="col-span-2 sm:col-span-1 flex items-start gap-2.5">
+                <span className="grid place-items-center w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-base shrink-0">🏢</span>
+                <div><div className="text-[11px] uppercase tracking-wide text-slate-400">Proveedor</div>
+                  <div className="font-semibold text-slate-800 dark:text-slate-100">{p.supplier_name}</div></div>
               </div>
-              <div>
-                <div className="text-[11px] uppercase tracking-wide text-slate-400">Fecha</div>
-                <div className="font-medium text-slate-700 dark:text-slate-200">{p.date}</div>
+              <div className="flex items-start gap-2.5">
+                <span className="grid place-items-center w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-base shrink-0">📅</span>
+                <div><div className="text-[11px] uppercase tracking-wide text-slate-400">Fecha</div>
+                  <div className="font-medium text-slate-700 dark:text-slate-200">{p.date}</div></div>
               </div>
-              <div>
-                <div className="text-[11px] uppercase tracking-wide text-slate-400">Factura</div>
-                <div className="font-medium text-slate-700 dark:text-slate-200">{p.invoice_number || "—"}</div>
+              <div className="flex items-start gap-2.5">
+                <span className="grid place-items-center w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-base shrink-0">🧾</span>
+                <div><div className="text-[11px] uppercase tracking-wide text-slate-400">Factura</div>
+                  <div className="font-medium text-slate-700 dark:text-slate-200">{p.invoice_number || "—"}</div></div>
               </div>
-              <div>
-                <div className="text-[11px] uppercase tracking-wide text-slate-400">Sucursal</div>
-                <div className="font-medium text-slate-700 dark:text-slate-200">{p.branch_name || "—"}</div>
+              <div className="flex items-start gap-2.5">
+                <span className="grid place-items-center w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-base shrink-0">🏬</span>
+                <div><div className="text-[11px] uppercase tracking-wide text-slate-400">Sucursal</div>
+                  <div className="font-medium text-slate-700 dark:text-slate-200">{p.branch_name || "—"}</div></div>
               </div>
-              {p.received_at && <div>
-                <div className="text-[11px] uppercase tracking-wide text-slate-400">Recibida</div>
-                <div className="font-medium text-slate-700 dark:text-slate-200">{new Date(p.received_at).toLocaleString()}</div>
+              {p.received_at && <div className="flex items-start gap-2.5">
+                <span className="grid place-items-center w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-base shrink-0">📦</span>
+                <div><div className="text-[11px] uppercase tracking-wide text-slate-400">Recibida</div>
+                  <div className="font-medium text-slate-700 dark:text-slate-200">{new Date(p.received_at).toLocaleString()}</div></div>
               </div>}
             </div>
           </section>
@@ -123,7 +149,7 @@ export default function PurchaseDetail() {
                       <>
                         <tr className="border-t border-slate-100 dark:border-slate-700"><td colSpan="4" className="px-4 py-1.5 text-right text-slate-500 dark:text-slate-400">Base (sin IVA)</td><td className="px-4 py-1.5 text-right tabular-nums">{Qm(base)}</td></tr>
                         <tr><td colSpan="4" className="px-4 py-1.5 text-right text-slate-500 dark:text-slate-400">IVA (incluido)</td><td className="px-4 py-1.5 text-right tabular-nums">{Qm(iva)}</td></tr>
-                        <tr className="bg-slate-100 dark:bg-slate-900/60"><td colSpan="4" className="px-4 py-2.5 text-right font-bold text-slate-700 dark:text-slate-200">Total</td><td className="px-4 py-2.5 text-right text-base font-extrabold tabular-nums text-slate-900 dark:text-white">{Qm(tot)}</td></tr>
+                        <tr className="bg-indigo-50 dark:bg-indigo-900/25 border-t-2 border-indigo-200 dark:border-indigo-800"><td colSpan="4" className="px-4 py-3 text-right font-bold text-indigo-900 dark:text-indigo-200">Total</td><td className="px-4 py-3 text-right text-lg font-extrabold tabular-nums text-indigo-700 dark:text-indigo-300">{Qm(tot)}</td></tr>
                       </>
                     );
                   }
@@ -131,7 +157,7 @@ export default function PurchaseDetail() {
                     <>
                       <tr className="border-t border-slate-100 dark:border-slate-700"><td colSpan="4" className="px-4 py-1.5 text-right text-slate-500 dark:text-slate-400">Subtotal</td><td className="px-4 py-1.5 text-right tabular-nums">{Qm(p.subtotal)}</td></tr>
                       <tr><td colSpan="4" className="px-4 py-1.5 text-right text-slate-500 dark:text-slate-400">IVA</td><td className="px-4 py-1.5 text-right tabular-nums">{Qm(p.tax)}</td></tr>
-                      <tr className="bg-slate-100 dark:bg-slate-900/60"><td colSpan="4" className="px-4 py-2.5 text-right font-bold text-slate-700 dark:text-slate-200">Total</td><td className="px-4 py-2.5 text-right text-base font-extrabold tabular-nums text-slate-900 dark:text-white">{Qm(p.total)}</td></tr>
+                      <tr className="bg-indigo-50 dark:bg-indigo-900/25 border-t-2 border-indigo-200 dark:border-indigo-800"><td colSpan="4" className="px-4 py-3 text-right font-bold text-indigo-900 dark:text-indigo-200">Total</td><td className="px-4 py-3 text-right text-lg font-extrabold tabular-nums text-indigo-700 dark:text-indigo-300">{Qm(p.total)}</td></tr>
                     </>
                   );
                 })()}
