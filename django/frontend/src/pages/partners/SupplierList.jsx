@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { PageTitle } from "../../components/PageTitle";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
+import PagadoCard from "../../components/PagadoCard";
 import { exportToExcel, fetchAll } from "../../utils/exportExcel";
 import { dialog } from "../../components/Dialog";
 import { toast } from "../../components/Toast";
@@ -41,6 +42,7 @@ export default function SupplierList() {
   const [satMsg, setSatMsg] = useState("");
   const [exporting, setExporting] = useState(false);
   const [summary, setSummary] = useState({ total_balance: 0, overdue_balance: 0 });
+  const [stats, setStats] = useState(null); // comprado del mes + pagado por periodo
   // Las tarjetas de dinero (deuda total y vencido) son datos sensibles: solo el
   // administrador las ve. El backend tampoco envía esos totales a los demás.
   const seeMoney = !!user && (user.is_superuser || (user.roles || []).includes("admin"));
@@ -79,6 +81,7 @@ export default function SupplierList() {
       api.get("/purchases/payable/", { params: { page_size: 1 } })
         .then((r) => setSummary({ total_balance: r.data.total_balance || 0, overdue_balance: r.data.overdue_balance || 0 }))
         .catch(() => {});
+      api.get("/purchases/supplier-stats/").then((r) => setStats(r.data)).catch(() => {});
     }
   }, []);
   // Al vaciar la búsqueda, se recargan todos los registros desde la página 1.
@@ -151,13 +154,16 @@ export default function SupplierList() {
       </div>
 
       {/* KPIs */}
-      <div className={"grid grid-cols-1 gap-4 mb-4 " + (seeMoney ? "sm:grid-cols-3" : "sm:grid-cols-1 max-w-xs")}>
+      <div className={"grid grid-cols-1 gap-4 mb-4 " + (seeMoney ? "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5" : "sm:grid-cols-1 max-w-xs")}>
         <Kpi label="Proveedores" value={count} icon="🚚" gradient="from-orange-500 to-amber-600" sub="Registrados" />
         {seeMoney && <Kpi label="Por pagar (total)" value={Q(summary.total_balance)} icon="💰"
              gradient={Number(summary.total_balance) > 0 ? "from-rose-500 to-red-600" : "from-emerald-500 to-green-600"} sub="Deuda con proveedores" />}
         {seeMoney && <Kpi label="Vencido" value={Q(summary.overdue_balance)} icon="⏰"
              gradient={Number(summary.overdue_balance) > 0 ? "from-amber-500 to-orange-600" : "from-slate-400 to-slate-500"}
              sub={Number(summary.overdue_balance) > 0 ? "Atención: ya venció" : "Nada vencido 🎉"} />}
+        {seeMoney && <Kpi label="Comprado este mes" value={Q(stats?.comprado_mes)} icon="🛒"
+             gradient="from-violet-500 to-purple-600" sub="Total de compras del mes" />}
+        {seeMoney && <PagadoCard pagado={stats?.pagado} />}
       </div>
 
       <form onSubmit={(e) => { e.preventDefault(); setPage(1); load(1); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex gap-2">

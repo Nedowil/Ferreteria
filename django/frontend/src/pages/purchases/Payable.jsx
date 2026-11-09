@@ -8,6 +8,7 @@ import { SkeletonRows, SkeletonKpis } from "../../components/Skeleton";
 import { EmptyRow, EmptyState } from "../../components/EmptyState";
 import { Avatar } from "../../utils/ui";
 import { useAuth } from "../../auth/AuthContext";
+import PagadoCard from "../../components/PagadoCard";
 
 const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -58,7 +59,7 @@ function DuePill({ due }) {
     return <span className={base + "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300"} title={due}>⚠ Vencida · hace {st.days}d</span>;
   if (st.kind === "pronto")
     return <span className={base + "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"} title={due}>Vence en {st.days}d</span>;
-  return <span className="text-slate-500 dark:text-slate-400 text-xs">{due}</span>;
+  return <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 dark:text-slate-300" title="Fecha de vencimiento">📅 {due}</span>;
 }
 
 // Tarjeta de una cuenta por pagar: riel de color (vencida/por vencer/al día),
@@ -78,7 +79,7 @@ function AccountCard({ p }) {
             <div className="min-w-0">
               <div className="font-semibold text-slate-800 dark:text-slate-100 truncate">{p.supplier_name}</div>
               <div className="flex flex-wrap items-center gap-2 mt-0.5">
-                <span className="font-mono text-[11px] bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 rounded px-1.5 py-0.5">{p.folio}</span>
+                <span className="font-mono text-xs font-bold bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-100 rounded px-2 py-0.5 tracking-tight">{p.folio}</span>
                 <DuePill due={p.due_date} />
               </div>
             </div>
@@ -114,9 +115,10 @@ export default function Payable() {
   const isAdmin = !!user && (user.is_superuser || (user.roles || []).includes("admin"));
   const [data, setData] = useState({ results: [], total_balance: 0, overdue_balance: 0, overdue_count: 0 });
   const [loaded, setLoaded] = useState(false);
-  const [filters, setFilters] = useState({ from: "", to: "" });
+  const [filters, setFilters] = useState({ from: "", to: "", search: "" });
   const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState(false);
+  const [stats, setStats] = useState(null); // pagado por periodo (solo admin)
 
   const buildParams = () => {
     const params = {};
@@ -125,7 +127,10 @@ export default function Payable() {
   };
   const load = (p = page) => api.get("/purchases/payable/", { params: { ...buildParams(), page: p } }).then((r) => setData(r.data)).finally(() => setLoaded(true));
   const goPage = (p) => { setPage(p); load(p); };
-  useEffect(() => { load(1); }, []);
+  useEffect(() => {
+    load(1);
+    if (isAdmin) api.get("/purchases/supplier-stats/").then((r) => setStats(r.data)).catch(() => {});
+  }, []);
 
   const totalDebt = Number(data.total_balance || 0);
   const overdue = Number(data.overdue_balance || 0);
@@ -156,24 +161,29 @@ export default function Payable() {
       </div>
 
       {/* KPIs — solo visibles para el administrador */}
-      {isAdmin && (!loaded ? <SkeletonKpis count={3} /> : (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+      {isAdmin && (!loaded ? <SkeletonKpis count={4} /> : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
           <Kpi label="Saldo total pendiente" value={Q(totalDebt)} icon="🧾" gradient="from-rose-500 to-red-600"
                sub="Lo que debés a proveedores" />
           <Kpi label="Cuentas pendientes" value={nCuentas} icon="📄" gradient="from-indigo-500 to-blue-600"
                sub="Compras al crédito sin saldar" />
           <Kpi label="Vencido" value={Q(overdue)} icon="⏰" gradient={overdue > 0 ? "from-amber-500 to-orange-600" : "from-slate-400 to-slate-500"}
                sub={data.overdue_count > 0 ? `${data.overdue_count} cuenta(s) vencida(s)` : "Nada vencido 🎉"} />
+          <PagadoCard pagado={stats?.pagado} />
         </div>
       ))}
 
       <form onSubmit={(e) => { e.preventDefault(); setPage(1); load(1); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex flex-wrap gap-2 items-end">
+        <div className="flex-1 min-w-[200px]"><label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">Buscar proveedor</label>
+          <input type="text" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                 placeholder="Nombre del proveedor (aunque esté mal escrito)…"
+                 className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-900 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" /></div>
         <div><label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">Desde</label>
           <input type="date" value={filters.from} onChange={(e) => setFilters({ ...filters, from: e.target.value })} className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" /></div>
         <div><label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">Hasta</label>
           <input type="date" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" /></div>
         <button className="bg-slate-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-slate-800 transition">Buscar</button>
-        {(filters.from || filters.to) && <button type="button" onClick={() => { setFilters({ from: "", to: "" }); setPage(1); api.get("/purchases/payable/", { params: { page: 1 } }).then((r) => { setData(r.data); setLoaded(true); }); }} className="text-sm text-slate-500 dark:text-slate-400 px-2 py-2 hover:underline">Limpiar</button>}
+        {(filters.from || filters.to || filters.search) && <button type="button" onClick={() => { setFilters({ from: "", to: "", search: "" }); setPage(1); api.get("/purchases/payable/", { params: { page: 1 } }).then((r) => { setData(r.data); setLoaded(true); }); }} className="text-sm text-slate-500 dark:text-slate-400 px-2 py-2 hover:underline">Limpiar</button>}
       </form>
 
       {/* Lista de cuentas en TARJETAS (se ve más que una tabla plana) */}

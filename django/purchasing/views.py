@@ -1,5 +1,6 @@
 """API de Compras."""
 
+from datetime import timedelta
 from decimal import Decimal
 
 from django.db.models import F, Sum
@@ -29,9 +30,41 @@ from .services import (
 )
 
 
+def _normalize(s):
+    """Minúsculas y sin acentos, para comparar nombres sin importar tildes/mayúsculas."""
+    import unicodedata
+    s = unicodedata.normalize("NFKD", s or "").encode("ascii", "ignore").decode()
+    return s.lower().strip()
+
+
+def fuzzy_supplier_ids(qs, term):
+    """IDs de proveedores de `qs` cuyo nombre se parece a `term`, tolerando errores
+    de tipeo. Combina: coincidencia por substring (sin acentos), similitud global y
+    similitud por palabra. Pensado para catálogos chicos (decenas de proveedores)."""
+    from difflib import SequenceMatcher
+    nterm = _normalize(term)
+    if not nterm:
+        return []
+    ids, seen = [], set()
+    for sid, name in qs.values_list("supplier_id", "supplier__name").distinct():
+        if sid in seen:
+            continue
+        seen.add(sid)
+        nname = _normalize(name)
+        match = (
+            nterm in nname
+            or SequenceMatcher(None, nterm, nname).ratio() >= 0.55
+            or any(SequenceMatcher(None, nterm, w).ratio() >= 0.7 for w in nname.split())
+        )
+        if match:
+            ids.append(sid)
+    return ids
+
+
 class PurchaseViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.ModelViewSet):
     perms_map = {
         "list": "compras.ver", "retrieve": "compras.ver", "payable": "cuentas_pagar.ver",
+        "supplier_stats": "cuentas_pagar.ver",
         "create": "compras.crear", "update": "compras.crear", "partial_update": "compras.crear",
         "destroy": "compras.cancelar", "cancel": "compras.cancelar",
         "receive": "compras.recibir",
@@ -228,6 +261,12 @@ class PurchaseViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Mode
         qs = (self.get_queryset()
               .filter(status=Purchase.STATUS_RECIBIDA)
               .exclude(payment_status=Purchase.PAY_PAGADA))
+        # Búsqueda por proveedor TOLERANTE A ERRORES de tipeo (fuzzy). Útil cuando
+        # se escribe mal el nombre del proveedor.
+        term = (request.query_params.get("search") or "").strip()
+        if term:
+            ids = fuzzy_supplier_ids(qs, term)
+            qs = qs.filter(supplier_id__in=ids)
         # Saldo total de TODAS las cuentas por pagar (no solo la página actual)
         agg = qs.aggregate(total=Sum(F("total") - F("amount_paid")))
         total_balance = agg["total"] or Decimal("0")
@@ -254,3 +293,64 @@ class PurchaseViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Mode
             return resp
         ser = PurchaseListSerializer(qs, many=True)
         return Response({"results": ser.data, **extra})
+
+    def _paid_between(self, base_qs, start, end):
+        """Dinero efectivamente PAGADO a proveedores en [start, end] (inclusive).
+
+        Se compone de dos fuentes, sin doble conteo:
+          - Pago de contado al crear la compra (payment_status=pagada): queda en
+            amount_paid sin registro en PurchasePayment; se fecha por la compra.
+          - Abonos a crédito (PurchasePayment): se fechan por el pago.
+
+        Pagado = (amount_paid de compras del periodo − abonos de ESAS compras)
+                 + abonos cuyo PAGO cae en el periodo.
+        El primer paréntesis es justo la parte de contado (fechada por la compra).
+        start/end en None = sin límite (histórico "todo").
+        """
+        from .models import PurchasePayment
+        vivas = base_qs.exclude(status=Purchase.STATUS_CANCELADA)
+        compras_periodo = vivas
+        if start:
+            compras_periodo = compras_periodo.filter(date__gte=start)
+        if end:
+            compras_periodo = compras_periodo.filter(date__lte=end)
+        pagado_total_compras = compras_periodo.aggregate(t=Sum("amount_paid"))["t"] or Decimal("0")
+        abonos_de_esas = (PurchasePayment.objects.filter(purchase__in=compras_periodo)
+                          .aggregate(t=Sum("amount"))["t"] or Decimal("0"))
+        contado = pagado_total_compras - abonos_de_esas
+        abonos_periodo_qs = PurchasePayment.objects.filter(purchase__in=vivas)
+        if start:
+            abonos_periodo_qs = abonos_periodo_qs.filter(date__gte=start)
+        if end:
+            abonos_periodo_qs = abonos_periodo_qs.filter(date__lte=end)
+        abonos_periodo = abonos_periodo_qs.aggregate(t=Sum("amount"))["t"] or Decimal("0")
+        return contado + abonos_periodo
+
+    @action(detail=False, methods=["get"], url_path="supplier-stats")
+    def supplier_stats(self, request):
+        """Métricas para el panel de Proveedores: comprado del mes y pagado por
+        periodo (mes actual / mes anterior / todo). Datos sensibles: solo admin."""
+        from core.api_utils import is_admin, scope_to_branch
+        if not is_admin(request.user):
+            return Response({})
+
+        from django.utils import timezone
+        base = scope_to_branch(Purchase.objects.all(), request)
+        today = timezone.localdate()
+
+        # Comprado este mes: valor de las compras (no canceladas) con fecha en el mes.
+        comprado_mes = (base.exclude(status=Purchase.STATUS_CANCELADA)
+                        .filter(date__year=today.year, date__month=today.month)
+                        .aggregate(t=Sum("total"))["t"] or Decimal("0"))
+
+        # Rango del mes anterior.
+        first_this = today.replace(day=1)
+        prev_end = first_this - timedelta(days=1)
+        prev_start = prev_end.replace(day=1)
+
+        pagado = {
+            "mes": self._paid_between(base, first_this, today),
+            "mes_anterior": self._paid_between(base, prev_start, prev_end),
+            "todo": self._paid_between(base, None, None),
+        }
+        return Response({"comprado_mes": comprado_mes, "pagado": pagado})
