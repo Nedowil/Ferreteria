@@ -237,8 +237,14 @@ class PurchaseViewSet(PermissionByActionMixin, BranchContextMixin, viewsets.Mode
         overdue = qs.filter(due_date__isnull=False, due_date__lt=today)
         overdue_balance = overdue.aggregate(t=Sum(F("total") - F("amount_paid")))["t"] or Decimal("0")
         overdue_count = overdue.count()
-        extra = {"total_balance": total_balance, "overdue_balance": overdue_balance,
-                 "overdue_count": overdue_count}
+        # Los totales agregados (deuda total, vencido) son información sensible:
+        # solo se envían al administrador. El resto ve la lista pero no el resumen.
+        from core.api_utils import is_admin
+        if is_admin(request.user):
+            extra = {"total_balance": total_balance, "overdue_balance": overdue_balance,
+                     "overdue_count": overdue_count}
+        else:
+            extra = {}
 
         page = self.paginate_queryset(qs)
         if page is not None:

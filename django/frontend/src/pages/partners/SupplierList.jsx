@@ -27,7 +27,7 @@ function Kpi({ label, value, sub, icon, gradient }) {
 }
 
 export default function SupplierList() {
-  const { can } = useAuth();
+  const { can, user } = useAuth();
   const [items, setItems] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [count, setCount] = useState(0);
@@ -41,7 +41,9 @@ export default function SupplierList() {
   const [satMsg, setSatMsg] = useState("");
   const [exporting, setExporting] = useState(false);
   const [summary, setSummary] = useState({ total_balance: 0, overdue_balance: 0 });
-  const seeMoney = can("cuentas_pagar.ver");
+  // Las tarjetas de dinero (deuda total y vencido) son datos sensibles: solo el
+  // administrador las ve. El backend tampoco envía esos totales a los demás.
+  const seeMoney = !!user && (user.is_superuser || (user.roles || []).includes("admin"));
 
   const exportExcel = async () => {
     setExporting(true);

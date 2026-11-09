@@ -7,6 +7,7 @@ import Pagination from "../../components/Pagination";
 import { SkeletonRows, SkeletonKpis } from "../../components/Skeleton";
 import { EmptyRow, EmptyState } from "../../components/EmptyState";
 import { Avatar } from "../../utils/ui";
+import { useAuth } from "../../auth/AuthContext";
 
 const Q = (v) => "Q" + Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -107,6 +108,10 @@ function AccountCard({ p }) {
 }
 
 export default function Payable() {
+  const { user } = useAuth();
+  // Las tarjetas de resumen (deuda total, vencido) son datos sensibles: solo las
+  // ve el administrador. El backend tampoco envía los totales a los demás.
+  const isAdmin = !!user && (user.is_superuser || (user.roles || []).includes("admin"));
   const [data, setData] = useState({ results: [], total_balance: 0, overdue_balance: 0, overdue_count: 0 });
   const [loaded, setLoaded] = useState(false);
   const [filters, setFilters] = useState({ from: "", to: "" });
@@ -150,8 +155,8 @@ export default function Payable() {
         <button onClick={exportExcel} disabled={exporting} className="self-start border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-100 transition">{exporting ? "Exportando…" : "⬇️ Excel"}</button>
       </div>
 
-      {/* KPIs */}
-      {!loaded ? <SkeletonKpis count={3} /> : (
+      {/* KPIs — solo visibles para el administrador */}
+      {isAdmin && (!loaded ? <SkeletonKpis count={3} /> : (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
           <Kpi label="Saldo total pendiente" value={Q(totalDebt)} icon="🧾" gradient="from-rose-500 to-red-600"
                sub="Lo que debés a proveedores" />
@@ -160,7 +165,7 @@ export default function Payable() {
           <Kpi label="Vencido" value={Q(overdue)} icon="⏰" gradient={overdue > 0 ? "from-amber-500 to-orange-600" : "from-slate-400 to-slate-500"}
                sub={data.overdue_count > 0 ? `${data.overdue_count} cuenta(s) vencida(s)` : "Nada vencido 🎉"} />
         </div>
-      )}
+      ))}
 
       <form onSubmit={(e) => { e.preventDefault(); setPage(1); load(1); }} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4 flex flex-wrap gap-2 items-end">
         <div><label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">Desde</label>

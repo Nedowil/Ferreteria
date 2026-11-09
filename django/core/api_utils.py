@@ -19,6 +19,20 @@ def get_request_branch(request):
     return None
 
 
+def is_admin(user):
+    """¿El usuario es administrador? (superusuario o rol/grupo "admin").
+
+    Fuente única para decidir quién ve información sensible agregada (p. ej. los
+    totales de cuentas por pagar). El resto de usuarios, aunque tengan permiso
+    para entrar al módulo, no ve esos resúmenes.
+    """
+    return bool(
+        user
+        and getattr(user, "is_authenticated", False)
+        and (user.is_superuser or user.groups.filter(name="admin").exists())
+    )
+
+
 def scope_to_branch(qs, request, field="branch"):
     """Limita un queryset a la(s) sucursal(es) del usuario (aislamiento multi-sucursal).
 
@@ -33,7 +47,7 @@ def scope_to_branch(qs, request, field="branch"):
     user = getattr(request, "user", None)
     if not user or not user.is_authenticated:
         return qs.none()
-    if user.is_superuser or user.groups.filter(name="admin").exists():
+    if is_admin(user):
         return qs
     branch_ids = list(user.branches.values_list("id", flat=True))
     return qs.filter(Q(**{f"{field}__in": branch_ids}) | Q(**{f"{field}__isnull": True}))
