@@ -164,8 +164,26 @@ export default function CashBox() {
   // (cajero) no puede verlo; declara su conteo sin saber cuánto "debería" haber.
   const blind = !!session && session.current_expected == null;
 
+  // Estado del cuadre (solo cuando el usuario ve lo esperado y ya escribió algo):
+  // "falta" (rojo), "sobra" (ámbar) o "cuadra" (verde). Pinta TODO el módulo de
+  // caja para que se note de un vistazo si está mal, sobra o coincide.
+  const diffVal = (!blind && session && counted !== "" && !isNaN(Number(counted)))
+    ? Number(counted) - Number(session.current_expected) : null;
+  const cuadre = diffVal === null ? null : (Math.abs(diffVal) < 0.005 ? "cuadra" : (diffVal < 0 ? "falta" : "sobra"));
+  const PAGE_TINT = {
+    falta: "bg-rose-50 dark:bg-rose-950/30 ring-1 ring-rose-200 dark:ring-rose-900/50",
+    sobra: "bg-amber-50 dark:bg-amber-950/30 ring-1 ring-amber-200 dark:ring-amber-900/50",
+    cuadra: "bg-emerald-50 dark:bg-emerald-950/30 ring-1 ring-emerald-200 dark:ring-emerald-900/50",
+  };
+  const CIERRE = {
+    falta: { chip: "FALTA", chipBg: "bg-rose-600", card: "border-rose-400 bg-rose-50 ring-4 ring-rose-100 dark:bg-rose-950/30 dark:ring-rose-900/40", head: "text-rose-800 dark:text-rose-300", panelBorder: "border-rose-200 dark:border-rose-900/50", icon: "⚠️", iconBg: "bg-rose-100 dark:bg-rose-900/40", title: "Falta ", titleCol: "text-rose-700 dark:text-rose-300", sub: "Hay menos efectivo del esperado", subCol: "text-rose-600/90 dark:text-rose-400", diffBg: "bg-rose-100 dark:bg-rose-900/40", diffLab: "text-rose-500", diffCol: "text-rose-700 dark:text-rose-300", btn: "from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700" },
+    sobra: { chip: "SOBRA", chipBg: "bg-amber-500", card: "border-amber-400 bg-amber-50 ring-4 ring-amber-100 dark:bg-amber-950/30 dark:ring-amber-900/40", head: "text-amber-800 dark:text-amber-300", panelBorder: "border-amber-200 dark:border-amber-900/50", icon: "⬆️", iconBg: "bg-amber-100 dark:bg-amber-900/40", title: "Sobra ", titleCol: "text-amber-700 dark:text-amber-300", sub: "Hay más efectivo del esperado", subCol: "text-amber-600/90 dark:text-amber-400", diffBg: "bg-amber-100 dark:bg-amber-900/40", diffLab: "text-amber-600", diffCol: "text-amber-700 dark:text-amber-300", btn: "from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700" },
+    cuadra: { chip: "CUADRA", chipBg: "bg-emerald-600", card: "border-emerald-400 bg-emerald-50 ring-4 ring-emerald-100 dark:bg-emerald-950/30 dark:ring-emerald-900/40", head: "text-emerald-800 dark:text-emerald-300", panelBorder: "border-emerald-200 dark:border-emerald-900/50", icon: "✅", iconBg: "bg-emerald-100 dark:bg-emerald-900/40", title: "¡Caja cuadrada!", titleCol: "text-emerald-700 dark:text-emerald-300", sub: "El efectivo coincide exacto", subCol: "text-emerald-600/90 dark:text-emerald-400", diffBg: "bg-emerald-100 dark:bg-emerald-900/40", diffLab: "text-emerald-600", diffCol: "text-emerald-700 dark:text-emerald-300", btn: "from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700" },
+  };
+  const st = cuadre ? CIERRE[cuadre] : null;
+
   return (
-    <div>
+    <div className={"rounded-2xl p-3 sm:p-4 transition-colors duration-300 " + (cuadre ? PAGE_TINT[cuadre] : "")}>
       <div className="flex items-center justify-between mb-4 gap-3">
         <div className="flex items-center gap-2 flex-wrap">
           <h1 className="text-lg font-semibold">Caja</h1>
@@ -336,23 +354,34 @@ export default function CashBox() {
               )}
 
               {canClose && (
-              <form onSubmit={closeCash} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 space-y-3">
-                <h3 className="font-semibold">Arqueo y cierre</h3>
+              <form onSubmit={closeCash} className={"rounded-2xl border-2 shadow-sm p-5 space-y-3 transition-colors duration-300 " + (st ? st.card : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700")}>
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className={"font-bold flex items-center gap-2 " + (st ? st.head : "")}>💵 Arqueo y cierre</h3>
+                  {st && <span className={"text-xs font-extrabold px-2.5 py-1 rounded-full text-white tracking-wide " + st.chipBg}>{st.chip}</span>}
+                </div>
                 <input type="number" step="any" required placeholder="Efectivo contado" value={counted}
                        onChange={(e) => setCounted(e.target.value)}
-                       className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm" />
-                {counted !== "" && !blind && (
-                  <div className="text-sm flex justify-between">
-                    <span className="text-slate-500 dark:text-slate-400">Diferencia</span>
-                    <span className={Number(counted) - Number(session.current_expected) < 0 ? "text-red-600 font-medium" : "text-green-600 font-medium"}>
-                      {money(Number(counted) - Number(session.current_expected))}
-                    </span>
+                       className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 rounded-lg px-3 py-2 text-sm" />
+                {st && (
+                  <div className={"rounded-xl bg-white/80 dark:bg-slate-900/50 border p-3 " + st.panelBorder}>
+                    <div className="flex items-center gap-3">
+                      <div className={"grid place-items-center w-11 h-11 rounded-xl text-2xl shrink-0 " + st.iconBg}>{st.icon}</div>
+                      <div>
+                        <div className={"text-xl font-extrabold leading-tight " + st.titleCol}>{cuadre === "cuadra" ? st.title : st.title + money(Math.abs(diffVal))}</div>
+                        <div className={"text-sm " + st.subCol}>{st.sub}</div>
+                      </div>
+                    </div>
+                    <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                      <div className="rounded-lg bg-slate-50 dark:bg-slate-800 py-2"><div className="text-[10px] uppercase tracking-wide text-slate-400">Esperado</div><div className="font-bold tabular-nums text-slate-700 dark:text-slate-200">{money(session.current_expected)}</div></div>
+                      <div className="rounded-lg bg-slate-50 dark:bg-slate-800 py-2"><div className="text-[10px] uppercase tracking-wide text-slate-400">Contado</div><div className="font-bold tabular-nums text-slate-700 dark:text-slate-200">{money(Number(counted))}</div></div>
+                      <div className={"rounded-lg py-2 " + st.diffBg}><div className={"text-[10px] uppercase tracking-wide " + st.diffLab}>Diferencia</div><div className={"font-extrabold tabular-nums " + st.diffCol}>{(diffVal > 0 ? "+" : "") + money(diffVal)}</div></div>
+                    </div>
                   </div>
                 )}
                 {blind && (
                   <div className="text-xs text-slate-400">La diferencia la revisa el supervisor al cerrar.</div>
                 )}
-                <button className="w-full text-white rounded-lg px-4 py-2.5 text-sm font-semibold bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 transition">Cerrar caja</button>
+                <button className={"w-full text-white rounded-lg px-4 py-2.5 text-sm font-semibold bg-gradient-to-r transition " + (st ? st.btn : "from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700")}>{cuadre === "cuadra" ? "Cerrar caja ✓" : "Cerrar caja"}</button>
               </form>
               )}
 
